@@ -32,13 +32,14 @@ class AppHelpers {
     
     /**
      * Obtiene la URL base de la aplicación (raíz del proyecto, sin /public).
-     * Así base + '/public/...' genera la URL correcta y se evita doble public/public.
+     * Detecta automáticamente localhost vs producción: en localhost usa /mistorneos
+     * si APP_URL no está definida; en producción se recomienda definir APP_URL en .env.
      */
     public static function getBaseUrl(): string {
         if (self::$base_url === null) {
             $fromEnv = class_exists('Env') ? Env::get('APP_URL') : null;
             $fromConfig = $GLOBALS['APP_CONFIG']['app']['base_url'] ?? null;
-            
+
             if (!empty($fromEnv)) {
                 self::$base_url = rtrim($fromEnv, '/');
             } elseif (!empty($fromConfig) && $fromConfig !== '/') {
@@ -51,11 +52,15 @@ class AppHelpers {
                     self::$base_url = rtrim($cfg, '/');
                 }
             } else {
+                // Auto-detección: localhost/127.0.0.1 → /mistorneos; producción → raíz o APP_URL en .env
                 $protocol = isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? 'https' : 'http';
                 $host = $_SERVER['HTTP_HOST'] ?? 'localhost';
-                self::$base_url = $protocol . '://' . $host . '/mistorneos';
+                $hostLower = strtolower($host);
+                $isLocalhost = ($hostLower === 'localhost' || $hostLower === '127.0.0.1'
+                    || strpos($hostLower, 'localhost:') === 0 || strpos($hostLower, '127.0.0.1:') === 0);
+                $path = $isLocalhost ? '/mistorneos' : '';
+                self::$base_url = $protocol . '://' . $host . $path;
             }
-            // Devolver raíz del proyecto (sin /public) para que base + '/public/...' sea correcto
             if (str_ends_with(self::$base_url, '/public')) {
                 self::$base_url = rtrim(substr(self::$base_url, 0, -7), '/');
             }

@@ -1,1 +1,69 @@
-﻿*.zip
+# =============================================================================
+# Mistorneos - PHP Project .gitignore
+# =============================================================================
+
+# Dependencias Composer
+/vendor/
+
+# Variables de entorno (credenciales, secretos)
+.env
+.env.local
+.env.*.local
+
+# Archivos comprimidos
+*.zip
+*.tar
+*.tar.gz
+*.rar
+*.7z
+
+# Logs
+*.log
+/logs/
+/storage/logs/
+*.log.*
+
+# Caché
+/cache/
+/caches/
+/storage/cache/
+/storage/framework/cache/
+*.cache
+.cache/
+
+# Sesiones (si se guardan en disco)
+/storage/sessions/
+
+# Subidas generadas por la app (opcional; quita si quieres versionar ejemplos)
+# /upload/
+# /storage/app/
+
+# IDE y editores
+.idea/
+.vscode/
+*.sublime-project
+*.sublime-workspace
+*.swp
+*.swo
+*~
+
+# Sistema operativo
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# PHPUnit / pruebas
+.phpunit.result.cache
+/phpunit.xml
+coverage/
+.coverage
+
+# Composer (lock opcional en libs; en apps suele versionarse)
+# composer.lock
+
+# Archivos temporales
+/tmp/
+/temp/
+*.tmp
+*.temp
+*.bak
