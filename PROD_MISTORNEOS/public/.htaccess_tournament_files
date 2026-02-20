@@ -1,0 +1,48 @@
+# Permitir acceso directo a archivos de torneos
+# Este archivo debe copiarse/renombrarse según la configuración del servidor
+
+# Si usas Apache, puedes agregar estas reglas al .htaccess principal
+# o crear un .htaccess en upload/tournaments/
+
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    
+    # Permitir acceso directo a archivos en upload/tournaments/
+    # (Las reglas específicas dependen de tu configuración)
+</IfModule>
+
+# Permitir listado de archivos (opcional, para debug)
+# Options +Indexes
+
+# Tipos MIME para archivos comunes
+<IfModule mod_mime.c>
+    AddType image/jpeg .jpg .jpeg
+    AddType image/png .png
+    AddType image/gif .gif
+    AddType application/pdf .pdf
+    AddType application/msword .doc
+    AddType application/vnd.openxmlformats-officedocument.wordprocessingml.document .docx
+</IfModule>
+
+# Habilitar compresión para documentos
+<IfModule mod_deflate.c>
+    AddOutputFilterByType DEFLATE application/pdf
+    AddOutputFilterByType DEFLATE application/msword
+</IfModule>
+
+# Headers de seguridad
+<IfModule mod_headers.c>
+    # Prevenir hotlinking (opcional)
+    # SetEnvIf Referer "^https://laestaciondeldomino\.com" local_ref
+    # Header set Content-Disposition "inline" env=local_ref
+    
+    # Cache para archivos estáticos
+    <FilesMatch "\.(jpg|jpeg|png|gif|pdf|doc|docx)$">
+        Header set Cache-Control "max-age=2592000, public"
+    </FilesMatch>
+</IfModule>
+
+
+
+
+

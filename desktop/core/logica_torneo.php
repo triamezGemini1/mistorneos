@@ -1,0 +1,320 @@
+<?php
+/**
+ * Lógica vital de torneo para desktop/core.
+ * Este archivo no debe producir salida (no echo/print, sin espacio antes de <?php) para evitar "headers already sent".
+ * Funciones extraídas de modules/torneo_gestion.php:
+ * - generarRonda()
+ * - actualizarEstadisticasInscritos()
+ * y dependencias: recalcularClasificacionEquiposYJugadores, recalcularPosiciones,
+ * actualizarEstadisticasEquipos, recalcularPosicionesEquipos, asignarNumeroSecuencialPorEquipo.
+ * Usa DB::pdo() de db_bridge (SQLite local).
+ */
+require_once __DIR__ . '/db_bridge.php';
+require_once __DIR__ . '/MesaAsignacionService.php';
+require_once __DIR__ . '/MesaAsignacionEquiposService.php';
+require_once __DIR__ . '/InscritosHelper.php';
+
+/** Filtro evento local: fragmento SQL y bind para inscritos/partiresul (solo cuando DESKTOP_ENTIDAD_ID > 0). */
+function logica_torneo_where_entidad(string $alias = ''): array
+{
+    $eid = DB::getEntidadId();
+    if ($eid <= 0) return ['sql' => '', 'bind' => []];
+    $col = $alias !== '' ? $alias . '.entidad_id' : 'entidad_id';
+    return ['sql' => " AND {$col} = ?", 'bind' => [$eid]];
+}
+
+/**
+ * Genera una nueva ronda.
+ * Versión desktop: retorna ['success' => bool, 'message' => string] en lugar de redirect/exit.
+ *
+ * @param int   $torneo_id
+ * @param int   $user_id
+ * @param bool  $is_admin_general
+ * @param array $opciones Opciones de estrategia (evita depender de $_POST):
+ *   - estrategia_ronda2: para individual/parejas (default 'separar')
+ *   - estrategia_asignacion: para equipos (default 'secuencial')
+ */
+function generarRonda($torneo_id, $user_id, $is_admin_general, array $opciones = []) {
+    try {
+        $pdo = DB::pdo();
+        $stmt = $pdo->prepare("SELECT nombre, rondas, modalidad FROM tournaments WHERE id = ?");
+        $stmt->execute([$torneo_id]);
+        $torneo = $stmt->fetch(PDO::FETCH_ASSOC);
+        if (!$torneo) {
+            return ['success' => false, 'message' => 'Torneo no encontrado'];
+        }
+        $total_rondas = (int)($torneo['rondas'] ?? 0);
+        $modalidad = (int)($torneo['modalidad'] ?? 0);
+        $es_torneo_equipos = ($modalidad === 3);
+
+        if ($es_torneo_equipos) {
+            $mesaService = new MesaAsignacionEquiposService();
+        } else {
+            $mesaService = new MesaAsignacionService();
+        }
+
+        $ultima_ronda = $mesaService->obtenerUltimaRonda($torneo_id);
+        if ($ultima_ronda > 0) {
+            $todas_completas = $mesaService->todasLasMesasCompletas($torneo_id, $ultima_ronda);
+            if (!$todas_completas) {
+                $mesas_incompletas = $mesaService->contarMesasIncompletas($torneo_id, $ultima_ronda);
+                return ['success' => false, 'message' => "Faltan resultados en {$mesas_incompletas} mesa(s) de la ronda {$ultima_ronda}"];
+            }
+        }
+
+        try {
+            actualizarEstadisticasInscritos($torneo_id);
+        } catch (Exception $e) {
+            return ['success' => false, 'message' => 'Error al actualizar estadísticas: ' . $e->getMessage()];
+        }
+
+        $proxima_ronda = $ultima_ronda + 1;
+        $estrategia = $es_torneo_equipos
+            ? ($opciones['estrategia_asignacion'] ?? $_POST['estrategia_asignacion'] ?? 'secuencial')
+            : ($opciones['estrategia_ronda2'] ?? $_POST['estrategia_ronda2'] ?? 'separar');
+
+        $resultado = $mesaService->generarAsignacionRonda($torneo_id, $proxima_ronda, $total_rondas, $estrategia);
+
+        if ($resultado['success']) {
+            try {
+                actualizarEstadisticasInscritos($torneo_id);
+            } catch (Exception $e) {
+                // log only
+            }
+            $mensaje = $resultado['message'];
+            if (isset($resultado['total_mesas'])) $mensaje .= ': ' . $resultado['total_mesas'] . ' mesas';
+            if (isset($resultado['total_equipos'])) $mensaje .= ', ' . $resultado['total_equipos'] . ' equipos';
+            if (isset($resultado['jugadores_bye']) && $resultado['jugadores_bye'] > 0) $mensaje .= ', ' . $resultado['jugadores_bye'] . ' jugadores BYE';
+            return ['success' => true, 'message' => $mensaje];
+        }
+        return ['success' => false, 'message' => $resultado['message']];
+    } catch (Exception $e) {
+        return ['success' => false, 'message' => 'Error al generar ronda: ' . $e->getMessage()];
+    }
+}
+
+/**
+ * Actualizar estadísticas de todos los inscritos basándose en PartiResul
+ */
+function actualizarEstadisticasInscritos($torneo_id) {
+    $pdo = DB::pdo();
+    $stmt = $pdo->prepare("SELECT puntos FROM tournaments WHERE id = ?");
+    $stmt->execute([$torneo_id]);
+    $torneo = $stmt->fetch(PDO::FETCH_ASSOC);
+    if (!$torneo) {
+        throw new Exception("Torneo no encontrado");
+    }
+    $entI = logica_torneo_where_entidad('i');
+    $stmt = $pdo->prepare("SELECT id, id_usuario, torneo_id FROM inscritos i WHERE i.torneo_id = ? AND i.estatus != 4" . $entI['sql']);
+    $stmt->execute(array_merge([$torneo_id], $entI['bind']));
+    $inscritos = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    if (empty($inscritos)) {
+        return;
+    }
+
+    foreach ($inscritos as $inscrito) {
+        $idUsuario = (int)$inscrito['id_usuario'];
+        $entP = logica_torneo_where_entidad();
+        $stmt = $pdo->prepare("SELECT DISTINCT partida, mesa FROM partiresul WHERE id_torneo = ? AND id_usuario = ? AND registrado = 1" . $entP['sql'] . " ORDER BY partida, mesa");
+        $stmt->execute(array_merge([$torneo_id, $idUsuario], $entP['bind']));
+        $mesasJugador = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        $totalGanados = $totalPerdidos = $totalEfectividad = $totalPuntos = $totalSancion = $totalChancletas = $totalZapatos = $ultimaTarjeta = 0;
+        $fechaUltimaTarjeta = null;
+
+        foreach ($mesasJugador as $mesaInfo) {
+            $partida = (int)$mesaInfo['partida'];
+            $mesa = (int)$mesaInfo['mesa'];
+
+            if ($mesa === 0) {
+                $stmt = $pdo->prepare("SELECT resultado1, resultado2, efectividad, sancion, fecha_partida FROM partiresul WHERE id_torneo = ? AND id_usuario = ? AND partida = ? AND mesa = 0 AND registrado = 1" . $entP['sql'] . " LIMIT 1");
+                $stmt->execute(array_merge([$torneo_id, $idUsuario, $partida], $entP['bind']));
+                $rowBye = $stmt->fetch(PDO::FETCH_ASSOC);
+                if ($rowBye) {
+                    $totalGanados++;
+                    $totalEfectividad += (int)($rowBye['efectividad'] ?? 0);
+                    $totalPuntos += (int)($rowBye['resultado1'] ?? 0);
+                    $totalSancion += (int)($rowBye['sancion'] ?? 0);
+                }
+                continue;
+            }
+
+            $stmt = $pdo->prepare("SELECT * FROM partiresul WHERE id_torneo = ? AND partida = ? AND mesa = ?" . $entP['sql'] . " ORDER BY secuencia");
+            $stmt->execute(array_merge([$torneo_id, $partida, $mesa], $entP['bind']));
+            $jugadoresMesa = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            $jugadorActual = null;
+            foreach ($jugadoresMesa as $jugador) {
+                if ((int)$jugador['id_usuario'] == $idUsuario) {
+                    $jugadorActual = $jugador;
+                    break;
+                }
+            }
+            if (!$jugadorActual) continue;
+
+            $hayForfaitMesa = false;
+            $hayTarjetaGraveMesa = false;
+            foreach ($jugadoresMesa as $jugador) {
+                if ((int)$jugador['ff'] == 1) $hayForfaitMesa = true;
+                $t = (int)$jugador['tarjeta'];
+                if ($t == 3 || $t == 4) $hayTarjetaGraveMesa = true;
+            }
+
+            $resultado1 = (int)$jugadorActual['resultado1'];
+            $resultado2 = (int)$jugadorActual['resultado2'];
+            $efectividad = (int)$jugadorActual['efectividad'];
+            $ff = (int)$jugadorActual['ff'];
+            $tarjeta = (int)$jugadorActual['tarjeta'];
+            $sancion = (int)$jugadorActual['sancion'];
+            $chancleta = (int)$jugadorActual['chancleta'];
+            $zapato = (int)$jugadorActual['zapato'];
+            $fechaPartida = $jugadorActual['fecha_partida'];
+
+            $gano = false;
+            if ($hayForfaitMesa) $gano = ($ff == 0);
+            elseif ($hayTarjetaGraveMesa) $gano = !($tarjeta == 3 || $tarjeta == 4);
+            else $gano = ($resultado1 > $resultado2);
+
+            if ($gano) $totalGanados++; else $totalPerdidos++;
+            $totalEfectividad += $efectividad;
+            $totalPuntos += $resultado1;
+            $totalSancion += $sancion;
+            if ($gano) {
+                $totalChancletas += $chancleta;
+                $totalZapatos += $zapato;
+            }
+            if ($tarjeta > 0 && ($fechaUltimaTarjeta === null || $fechaPartida > $fechaUltimaTarjeta)) {
+                $ultimaTarjeta = $tarjeta;
+                $fechaUltimaTarjeta = $fechaPartida;
+            }
+        }
+
+        $entU = logica_torneo_where_entidad();
+        $stmt = $pdo->prepare("UPDATE inscritos SET ganados = ?, perdidos = ?, efectividad = ?, puntos = ?, sancion = ?, chancletas = ?, zapatos = ?, tarjeta = ? WHERE torneo_id = ? AND id_usuario = ?" . $entU['sql']);
+        $stmt->execute(array_merge([$totalGanados, $totalPerdidos, $totalEfectividad, $totalPuntos, $totalSancion, $totalChancletas, $totalZapatos, $ultimaTarjeta, $torneo_id, $idUsuario], $entU['bind']));
+    }
+
+    recalcularClasificacionEquiposYJugadores($torneo_id);
+}
+
+function recalcularClasificacionEquiposYJugadores($torneo_id) {
+    recalcularPosiciones($torneo_id);
+    actualizarEstadisticasEquipos($torneo_id);
+    asignarNumeroSecuencialPorEquipo($torneo_id);
+}
+
+function actualizarEstadisticasEquipos($torneo_id) {
+    $pdo = DB::pdo();
+    $stmt = $pdo->prepare("SELECT modalidad FROM tournaments WHERE id = ?");
+    $stmt->execute([$torneo_id]);
+    $torneo = $stmt->fetch(PDO::FETCH_ASSOC);
+    if (!$torneo || (int)($torneo['modalidad'] ?? 0) !== 3) return;
+
+    $ent = logica_torneo_where_entidad();
+    $sql = "SELECT codigo_equipo, SUM(puntos) as puntos_equipo, SUM(ganados) as ganados_equipo, SUM(perdidos) as perdidos_equipo, SUM(efectividad) as efectividad_equipo, SUM(sancion) as sancion_equipo, COUNT(*) as total_jugadores FROM inscritos WHERE torneo_id = ? AND codigo_equipo IS NOT NULL AND codigo_equipo != '' AND estatus != 4" . $ent['sql'] . " GROUP BY codigo_equipo";
+    $stmt = $pdo->prepare($sql);
+    $stmt->execute(array_merge([$torneo_id], $ent['bind']));
+    $estadisticasEquipos = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    if (empty($estadisticasEquipos)) return;
+
+    $stmtUpdate = $pdo->prepare("UPDATE equipos SET puntos = ?, ganados = ?, perdidos = ?, efectividad = ?, sancion = ?, fecha_actualizacion = CURRENT_TIMESTAMP WHERE id_torneo = ? AND codigo_equipo = ?");
+    foreach ($estadisticasEquipos as $stats) {
+        $stmtUpdate->execute([
+            (int)($stats['puntos_equipo'] ?? 0),
+            (int)($stats['ganados_equipo'] ?? 0),
+            (int)($stats['perdidos_equipo'] ?? 0),
+            (int)($stats['efectividad_equipo'] ?? 0),
+            (int)($stats['sancion_equipo'] ?? 0),
+            $torneo_id,
+            $stats['codigo_equipo']
+        ]);
+    }
+    recalcularPosicionesEquipos($torneo_id);
+}
+
+function recalcularPosicionesEquipos($torneo_id) {
+    $pdo = DB::pdo();
+    $stmt = $pdo->prepare("SELECT codigo_equipo, puntos, ganados, efectividad FROM equipos WHERE id_torneo = ? AND estatus = 0 ORDER BY ganados DESC, efectividad DESC, puntos DESC, codigo_equipo ASC");
+    $stmt->execute([$torneo_id]);
+    $equipos = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    if (empty($equipos)) return;
+
+    $ent = logica_torneo_where_entidad();
+    $stmtUpdate = $pdo->prepare("UPDATE equipos SET posicion = ? WHERE id_torneo = ? AND codigo_equipo = ?");
+    $stmtUpdateInscritos = $pdo->prepare("UPDATE inscritos SET clasiequi = ? WHERE torneo_id = ? AND codigo_equipo = ? AND estatus != 4" . $ent['sql']);
+    $posicion = 1;
+    foreach ($equipos as $equipo) {
+        $stmtUpdate->execute([$posicion, $torneo_id, $equipo['codigo_equipo']]);
+        $stmtUpdateInscritos->execute(array_merge([$posicion, $torneo_id, $equipo['codigo_equipo']], $ent['bind']));
+        $posicion++;
+    }
+}
+
+function asignarNumeroSecuencialPorEquipo($torneo_id) {
+    $pdo = DB::pdo();
+    $ent = logica_torneo_where_entidad();
+    $stmtEquipos = $pdo->prepare("SELECT DISTINCT codigo_equipo FROM inscritos WHERE torneo_id = ? AND codigo_equipo IS NOT NULL AND codigo_equipo != '' AND estatus != 4" . $ent['sql']);
+    $stmtEquipos->execute(array_merge([$torneo_id], $ent['bind']));
+    $codigos = $stmtEquipos->fetchAll(PDO::FETCH_COLUMN);
+    $stmtJugadores = $pdo->prepare("SELECT id FROM inscritos WHERE torneo_id = ? AND codigo_equipo = ? AND estatus != 4" . $ent['sql'] . " ORDER BY CAST(ganados AS SIGNED) DESC, CAST(efectividad AS SIGNED) DESC, CAST(puntos AS SIGNED) DESC, id_usuario ASC");
+    $stmtUpdateNumero = $pdo->prepare("UPDATE inscritos SET numero = ? WHERE id = ?");
+    foreach ($codigos as $codigo) {
+        $stmtJugadores->execute(array_merge([$torneo_id, $codigo], $ent['bind']));
+        $jugadoresEquipo = $stmtJugadores->fetchAll(PDO::FETCH_ASSOC);
+        $numeroSecuencial = 1;
+        foreach ($jugadoresEquipo as $jug) {
+            $stmtUpdateNumero->execute([$numeroSecuencial, $jug['id']]);
+            $numeroSecuencial++;
+        }
+    }
+}
+
+function recalcularPosiciones($torneo_id) {
+    $pdo = DB::pdo();
+    $stmt = $pdo->prepare("SELECT modalidad, nombre FROM tournaments WHERE id = ?");
+    $stmt->execute([$torneo_id]);
+    $torneo = $stmt->fetch(PDO::FETCH_ASSOC);
+    if (!$torneo) return;
+
+    $modalidad = $torneo['modalidad'] ?? 1;
+    $tipoTorneo = is_numeric($modalidad) ? (int)$modalidad : 1;
+    if ($tipoTorneo < 1 || $tipoTorneo > 3) $tipoTorneo = 1;
+    $limitePosiciones = ($tipoTorneo == 2) ? 20 : (($tipoTorneo == 3) ? 10 : 30);
+
+    $ent = logica_torneo_where_entidad();
+    $pdo->prepare("UPDATE inscritos SET posicion = 0 WHERE torneo_id = ?" . $ent['sql'])->execute(array_merge([$torneo_id], $ent['bind']));
+    $stmt = $pdo->prepare("SELECT id, id_usuario, CAST(ganados AS SIGNED) as ganados, CAST(efectividad AS SIGNED) as efectividad, CAST(puntos AS SIGNED) as puntos FROM inscritos WHERE torneo_id = ? AND estatus != 4" . $ent['sql'] . " ORDER BY CAST(ganados AS SIGNED) DESC, CAST(efectividad AS SIGNED) DESC, CAST(puntos AS SIGNED) DESC");
+    $stmt->execute(array_merge([$torneo_id], $ent['bind']));
+    $inscritos = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    if (empty($inscritos)) return;
+
+    $existeClasiRanking = false;
+    try {
+        if ($pdo->getAttribute(PDO::ATTR_DRIVER_NAME) === 'sqlite') {
+            $stmt = $pdo->query("SELECT name FROM sqlite_master WHERE type='table' AND name='clasiranking' LIMIT 1");
+            $existeClasiRanking = ($stmt && $stmt->fetch() !== false);
+        } else {
+            $stmt = $pdo->query("SELECT 1 FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA = DATABASE() AND LOWER(TABLE_NAME) = 'clasiranking' LIMIT 1");
+            $existeClasiRanking = ($stmt && $stmt->fetch() !== false);
+        }
+    } catch (Exception $e) {}
+
+    $posicion = 1;
+    $stmtUpdate = $pdo->prepare("UPDATE inscritos SET posicion = ?, ptosrnk = ? WHERE id = ?");
+    foreach ($inscritos as $inscrito) {
+        $id = (int)$inscrito['id'];
+        $ganados = (int)($inscrito['ganados'] ?? 0);
+        $ptosrnk = 1;
+        if ($existeClasiRanking && $posicion <= $limitePosiciones) {
+            try {
+                $stmt = $pdo->prepare("SELECT puntos_posicion, puntos_por_partida_ganada FROM clasiranking WHERE tipo_torneo = ? AND clasificacion = ? LIMIT 1");
+                $stmt->execute([$tipoTorneo, $posicion]);
+                $ranking = $stmt->fetch(PDO::FETCH_ASSOC);
+                if ($ranking) {
+                    $ptosrnk = (int)$ranking['puntos_posicion'] + ($ganados * (int)$ranking['puntos_por_partida_ganada']) + 1;
+                }
+            } catch (Exception $e) {}
+        }
+        $stmtUpdate->execute([$posicion, $ptosrnk, $id]);
+        $posicion++;
+    }
+}

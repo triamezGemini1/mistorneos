@@ -1,0 +1,494 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Manual Operativo Rápido - Administrador de organización</title>
+  <style>
+    :root {
+      --primary: #1f6feb;
+      --accent: #0f9566;
+      --bg: #f7f9fc;
+      --card: #ffffff;
+      --text: #0f172a;
+      --muted: #4b5563;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Segoe UI", Arial, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+      padding: 24px;
+    }
+    header {
+      background: linear-gradient(135deg, var(--primary), #5b8def);
+      color: white;
+      padding: 24px;
+      border-radius: 12px;
+      box-shadow: 0 6px 18px rgba(0,0,0,0.08);
+    }
+    h1 { margin: 0 0 8px; }
+    h2 { margin: 24px 0 12px; color: var(--primary); }
+    h3 { margin: 16px 0 8px; color: var(--accent); }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+      gap: 16px;
+      margin-top: 16px;
+    }
+    .card {
+      background: var(--card);
+      padding: 16px;
+      border-radius: 12px;
+      box-shadow: 0 6px 18px rgba(0,0,0,0.06);
+    }
+    ul { padding-left: 20px; margin: 8px 0; }
+    ol { padding-left: 20px; margin: 8px 0; }
+    .pill {
+      display: inline-block;
+      padding: 4px 10px;
+      border-radius: 999px;
+      background: #e5edff;
+      color: var(--primary);
+      font-weight: 600;
+      font-size: 12px;
+      margin-right: 6px;
+    }
+    .cta {
+      background: var(--primary);
+      color: white;
+      padding: 12px 16px;
+      border-radius: 10px;
+      display: inline-block;
+      text-decoration: none;
+      font-weight: 700;
+      margin: 8px 8px 8px 0;
+      box-shadow: 0 6px 18px rgba(31,111,235,0.25);
+    }
+    .cta.secondary {
+      background: var(--accent);
+      box-shadow: 0 6px 18px rgba(15,149,102,0.25);
+    }
+    .capture {
+      margin: 12px 0;
+      padding: 12px;
+      border: 1px dashed #cbd5e1;
+      background: #f8fafc;
+      border-radius: 10px;
+      color: var(--muted);
+      font-size: 14px;
+    }
+    .capture strong { color: var(--primary); }
+    .footer {
+      margin-top: 24px;
+      font-size: 12px;
+      color: var(--muted);
+      text-align: center;
+    }
+    .new-feature {
+      background: #fff3cd;
+      border-left: 4px solid #ffc107;
+      padding: 8px 12px;
+      margin: 8px 0;
+      border-radius: 4px;
+    }
+    .new-feature::before {
+      content: "🆕 ";
+      font-weight: bold;
+    }
+    @media print {
+      body { background: white; padding: 0; }
+      header { box-shadow: none; border: 1px solid #e5e7eb; }
+      .card { box-shadow: none; border: 1px solid #e5e7eb; }
+      .cta { box-shadow: none; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="pill">Manual Operativo Rápido</div>
+    <h1>Administrador de organización</h1>
+    <p>Guía corta para operar el sistema día a día. Para detalle completo consulta <code>docs/MANUAL_ADMINISTRADOR_CLUB.md</code>.</p>
+    <a class="cta" href="javascript:window.print()">Imprimir / Guardar como PDF</a>
+    <a class="cta secondary" href="#usuario-comun">Ver sección Usuario Común</a>
+  </header>
+
+  <section class="grid">
+    <div class="card">
+      <h2>1) Antes de empezar</h2>
+      <ul>
+        <li>URL: <strong>http://laestaciondeldominohoy.com/mistorneos/public/login.php</strong></li>
+        <li>Ten a mano usuario, contraseña, datos de club, fechas y reglas del torneo.</li>
+        <li>Recuperar contraseña: "¿Olvidaste tu contraseña?" o "Recuperar usuario" desde login.</li>
+      </ul>
+      <div class="capture"><strong>Captura sugerida:</strong> 
+        <img id="modalImage" src="assets\images\admin_club\login.png" alt="" class="img-fluid" style="max-height: 40vh; width: auto;">
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>2) Acceso y sesión</h2>
+      <ul>
+        <li>Inicio de sesión y cambio de clave en primer acceso.</li>
+        <li>Recuperar contraseña desde "¿Olvidaste tu contraseña?" (revisa correo).</li>
+        <li>Recuperar usuario desde "Recuperar usuario" (sin correo).</li>
+        <li>Cierra sesión al terminar, sobre todo en equipos compartidos.</li>
+      </ul>
+      <div class="capture"><strong>Captura sugerida:</strong> 
+        formulario de recuperación.
+      <img id="modalImage" src="assets\images\admin_club\restcontraseña.png" alt="" class="img-fluid" style="max-height: 40vh; width: auto;">
+</div>
+    </div>
+  </section>
+
+  <section class="grid">
+    <div class="card">
+      <h2>3) Dashboard y menú</h2>
+      <ul>
+        <li>Stats: afiliados, torneos creados/programados, inscripciones pendientes.</li>
+        <li>Accesos rápidos: nuevo torneo, invitar, gestionar inscripciones.</li>
+        <li>Menú: Dashboard, Torneos, Inscritos, Invitaciones a Jugadores, Link de Invitación, Finanzas, Estadísticas.</li>
+      </ul>
+      <div class="capture">
+      <img id="modalImage" src="assets\images\admin_club\dashboard.png" alt="" class="img-fluid" style="max-height: 40vh; width: auto;">
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>4) Crear torneo (flujo rápido)</h2>
+      <ol>
+        <li>Menú <strong>Torneos</strong> → <strong>Nuevo Torneo</strong>.</li>
+        <li>Completa básicos (nombre, fecha, lugar) y configuración (clase, modalidad, tiempo, puntos, rondas, costo, ranking, pareja por club).</li>
+        <li class="new-feature">Nuevo: Marca "Evento Nacional" para eventos masivos con inscripción pública desde móviles.</li>
+        <li class="new-feature">Nuevo: Selecciona "Cuenta Bancaria" si el evento tiene pagos en línea.</li>
+        <li>Opcional: subir invitación PDF, normas, afiche.</li>
+        <li>Guardar: se genera PDF de invitación automáticamente.</li>
+      </ol>
+      <div class="capture"><strong>Captura sugerida:</strong> 
+        <img id="modalImage" src="assets\images\admin_club\nuevo_torneo.png" alt="" class="img-fluid" style="max-height: 40vh; width: auto;">
+      </div>
+    </div>
+  </section>
+
+  <section class="grid">
+    <div class="card">
+      <h2>5) Eventos Nacionales</h2>
+      <div class="new-feature">Funcionalidad nueva: Permite inscripción pública desde dispositivos móviles</div>
+      <ul>
+        <li>Al crear torneo, marca "Evento Nacional".</li>
+        <li>Selecciona una cuenta bancaria para pagos (si aplica).</li>
+        <li>El evento aparecerá en la sección "Eventos Nacionales" del landing público.</li>
+        <li>Los usuarios pueden inscribirse desde su móvil sin estar registrados previamente.</li>
+        <li>El sistema busca automáticamente datos del usuario por cédula.</li>
+        <li>Si es nuevo usuario, se crea automáticamente y se notifica al organizador por WhatsApp.</li>
+        <li>Los usuarios pueden reportar pagos desde el formulario público.</li>
+      </ul>
+      <div class="capture"><strong>Captura sugerida:</strong> 
+        <img id="modalImage" src="assets\images\admin_club\landing3.png" alt="" class="img-fluid" style="max-height: 40vh; width: auto;">
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>6) Cuentas Bancarias</h2>
+      <div class="new-feature">Funcionalidad nueva: Gestión de cuentas para recibir pagos</div>
+      <ul>
+        <li>Menú <strong>Cuentas Bancarias</strong> (solo Admin General/Torneo).</li>
+        <li>Crear cuenta: Ingresa cédula del propietario, el sistema busca automáticamente nombre y teléfono.</li>
+        <li>Completa: banco, teléfono (pago móvil), número de cuenta (opcional), tipo de cuenta (opcional).</li>
+        <li>Asocia la cuenta al crear/editar un torneo "Evento Nacional".</li>
+        <li>Los usuarios verán los datos de pago en un modal flotante.</li>
+        <li>Revisa reportes de pago en <strong>Reportes de Pago</strong>.</li>
+      </ul>
+      <div class="capture"><strong>Captura sugerida:</strong> 
+        <img id="modalImage" src="assets\images\admin_club\cuentasbancarias.png" alt="" class="img-fluid" style="max-height: 40vh; width: auto;">
+      </div>
+    </div>
+  </section>
+
+  <section class="grid">
+    <div class="card">
+      <h2>7) Invitar y afiliar al club</h2>
+      <ul>
+        <li>Menú <strong>Link de Invitación</strong> 
+          <img id="modalImage" src="assets\images\admin_club\link_invitacion_club.png" alt="" class="img-fluid" style="max-height: 40vh; width: auto;">
+        </li>
+        <li>Copia y comparte el link; abre WhatsApp Web con mensaje pre-armado.</li>
+        <li>El link registra al usuario ya asociado a tu club.</li>
+      </ul>
+      <div class="capture"><strong>Captura sugerida:</strong> página de "Link de Invitación" con botón copiar/WhatsApp.</div>
+    </div>
+
+    <div class="card">
+      <h2>8) Invitar jugadores a un torneo</h2>
+      <ol>
+        <li>Menú <strong>Invitaciones a Jugadores</strong> o botón <strong>Invitar por WhatsApp</strong> desde el torneo.</li>
+        <li>Selecciona torneo y jugadores (buscar por nombre/cédula o "Seleccionar todos").</li>
+        <img id="modalImage" src="assets\images\admin_club\invitaciones_jugadores.png" alt="" class="img-fluid" style="max-height: 40vh; width: auto;">
+        <li>Enviar: abre WhatsApp Web con mensajes personalizados (datos del torneo, club, link, PDF si existe).</li>
+        <li>Link público del torneo en <strong>Link de Invitación a Torneo</strong>.</li>
+      </ol>
+      <div class="capture"><strong>Captura sugerida:</strong> listado de jugadores con casillas y botón enviar.</div>
+    </div>
+  </section>
+
+  <section class="grid">
+    <div class="card">
+      <h2>9) Gestionar inscripciones</h2>
+      <ul>
+        <li>Menú <strong>Inscritos</strong>: filtra por torneo/estado/fecha.</li>
+        <li>Confirmar: botón <strong>Confirmar</strong> en pendientes.</li>
+        <li>Cancelar: botón <strong>Cancelar</strong> (notifica al participante).</li>
+        <li>Inscribir manual/on-site: en panel del torneo, <strong>Nueva Inscripción
+          
+        <li class="new-feature">Nuevo: En "Inscribir en el Sitio" puedes ver atletas de toda tu entidad (no solo tu club).</li>
+      </ul>        
+   <div class="capture"><strong>Captura sugerida:</strong> 
+        lista de inscripciones con filtros y acciones.
+        <img id="modalImage" src="assets\images\admin_club\gestionar_inscripciones.png" alt="" class="img-fluid" style="max-height: 40vh; width: auto;">
+        </strong> / 
+    </div>    
+    
+      </div>
+
+    <div class="card">
+      <h2>10) Administrar torneo</h2>
+      <ol>
+        
+        <li>Revisar inscripciones: confirmar/rechazar/exportar.</li>
+        <li>Generar rondas: con inscripciones confirmadas → <strong>Generar Rondas</strong> → ajusta si hace falta.</li>
+        <li>Registrar resultados: <strong>Registrar Resultados</strong> → selecciona ronda → ingresa puntos/resultados.</li>
+        <li>Ver/publicar: <strong>Ver Resultados</strong> (tabla, rondas, estadísticas; exportar/imprimir).</li>
+        <li class="new-feature">Nuevo: <strong>Cronómetro de Ronda</strong>: Botón "ACTIVAR CRONÓMETRO DE RONDA" en el panel. Configura tiempo (se inicializa con el tiempo del torneo), inicia/detiene, emite alarmas al finalizar (tsunami) y 3 minutos después (terremoto).</li>
+        <li class="new-feature">Nuevo: <strong>Podios de Equipos</strong>: Para torneos de equipos, el botón "Podios" muestra podios con fotos y estadísticas de cada jugador del equipo.</li>
+        <li>Galería: <strong>Galería de Fotos</strong> → subir imágenes del evento.</li>
+      </ol>
+      <div class="capture"><strong>Captura sugerida:</strong> panel de administración con botones clave.</div>
+      <li>En <strong>Torneos</strong>, entra a <strong>Administrar</strong>
+         <img id="modalImage" src="assets\images\admin_club\panel_admin_torneo.png" alt="" class="img-fluid" style="max-height: 40vh; width: auto;">
+        </li>
+    </div>
+  </section>
+
+  <section class="grid">
+    <div class="card">
+      <h2>11) Reportes de Pago</h2>
+      <div class="new-feature">Funcionalidad nueva: Revisión y confirmación de pagos reportados por usuarios</div>
+      <ul>
+        <li>Menú <strong>Reportes de Pago</strong> (solo Admin General/Torneo).</li>
+        <li>Ver lista de pagos reportados por usuarios de eventos masivos.</li>
+        <li>Filtrar por estado: Pendiente, Confirmado, Rechazado.</li>
+        <li>Confirmar o rechazar pagos con validación automática de API bancaria (si está configurada).</li>
+        <li>Ver detalles: usuario, torneo, monto, referencia, fecha, tipo de pago.</li>
+        <li>Badge con número de pagos pendientes en el menú.</li>
+      </ul>    
+        <div class="capture"><strong>Captura sugerida:</strong>
+        vista de resultados.
+      <img id="modalImage" src="assets\images\admin_club\pagosusuario.png" alt="" class="img-fluid" style="max-height: 40vh; width: auto;">
+    </div>
+    </div>
+
+    <div class="card">
+      <h2>12) Estadísticas y ranking</h2>
+      <ul>
+        <li>Menú <strong>Estadísticas</strong>: afiliados, torneos, participaciones, gráficos.</li>
+        <li>Por torneo: inscritos, clubes participantes, resultados y participación.</li>
+        <li>Ranking: mejores jugadores según participaciones y puntos.</li>
+        <li class="new-feature">Nuevo: Los reportes muestran "ID Usuario" en lugar de cédula para mayor privacidad.</li>
+      </ul>
+      <div class="capture"><strong>Captura sugerida:</strong> vista de resultados.
+      <img id="modalImage" src="assets\images\admin_club\estadisticas_ranking.png" alt="" class="img-fluid" style="max-height: 40vh; width: auto;">
+        </li>
+      </div>
+    </div>
+  </section>
+
+  <section class="grid">
+    <div class="card">
+      <h2>13) Buenas prácticas rápidas</h2>
+      <ul>
+        <li>Contraseña segura; cámbiala si sospechas uso indebido.</li>
+        <li>Cierra sesión siempre.</li>
+        <li>Exporta listas/reportes para respaldo al cerrar un evento.</li>
+        <li>Usa el cronómetro durante las rondas para control de tiempo.</li>
+        <li>Revisa regularmente los reportes de pago pendientes.</li>
+      </ul>
+    </div>
+
+    <div class="card">
+      <h2>14) FAQ express</h2>
+      <ul>
+        <li><strong>Editar torneo con inscritos:</strong> solo datos generales; cambios de modalidad/clase → Admin General.</li>
+        <li><strong>Participante no pagó:</strong> Finanzas → recordatorio o registrar pago; puedes cancelar inscripción.</li>
+        <li><strong>Generar rondas:</strong> panel del torneo → inscripciones confirmadas → Generar Rondas → revisa/ajusta.</li>
+        <li><strong>Evento masivo:</strong> Marca "Evento Nacional" al crear, selecciona cuenta bancaria, los usuarios se inscriben desde el landing público.</li>
+        <li><strong>Cronómetro no funciona:</strong> Verifica que el navegador permita audio, activa el cronómetro desde el panel del torneo.</li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- SECCIÓN USUARIO COMÚN -->
+  <section id="usuario-comun" style="margin-top: 48px; padding-top: 24px; border-top: 3px solid var(--primary);">
+    <header style="background: linear-gradient(135deg, var(--accent), #0f9566);">
+      <div class="pill">Manual Operativo Rápido</div>
+      <h1>Usuario Común</h1>
+      <p>Guía para jugadores y participantes del sistema. Para detalle completo consulta <code>docs/MANUAL_USUARIO_COMUN.md</code>.</p>
+      <a class="cta" href="javascript:window.print()">Imprimir / Guardar como PDF</a>
+    </header>
+
+    <section class="grid">
+      <div class="card">
+        <h2>1) Acceso al sistema</h2>
+        <ul>
+          <li>URL: <strong>http://laestaciondeldominohoy.com/mistorneos/public/login.php</strong></li>
+          <li>Ingresa usuario y contraseña.</li>
+          <li>Recuperar contraseña: "¿Olvidaste tu contraseña?" o "Recuperar usuario".</li>
+          <li>Primera vez: el sistema puede pedirte cambiar la contraseña.</li>
+        </ul>
+      </div>
+
+      <div class="card">
+        <h2>2) Portal del usuario</h2>
+        <ul>
+          <li>Al iniciar sesión verás tu portal personal.</li>
+          <li>Menú: Inicio, Torneos Programados, Resultados, Ranking, Clubes, Mis Inscripciones, Mi Perfil.</li>
+          <li>Dashboard muestra: torneos próximos, tus inscripciones, resultados recientes, ranking.</li>
+        </ul>
+      </div>
+    </section>
+
+    <section class="grid">
+      <div class="card">
+        <h2>3) Ver torneos programados</h2>
+        <ul>
+          <li>Menú <strong>Torneos Programados</strong>.</li>
+          <li>Ver lista de torneos disponibles con: nombre, fecha, lugar, modalidad, costo.</li>
+          <li>Filtrar por fecha, modalidad, club, costo.</li>
+          <li>Haz clic en un torneo para ver detalles completos.</li>
+          <li class="new-feature">Nuevo: Eventos Nacionales aparecen en el landing público sin necesidad de iniciar sesión.</li>
+        </ul>
+      </div>
+
+      <div class="card">
+        <h2>4) Inscribirse en un torneo</h2>
+        <ol>
+          <li>Desde la lista de torneos, haz clic en <strong>"Inscribirse"</strong>.</li>
+          <li>Verifica tus datos (ya están prellenados).</li>
+          <li>Para parejas/equipos: completa datos de compañeros.</li>
+          <li>Si hay costo, verás instrucciones de pago.</li>
+          <li>Confirma la inscripción.</li>
+          <li>Estado: "Pendiente" hasta que el organizador confirme.</li>
+        </ol>
+      </div>
+    </section>
+
+    <section class="grid">
+      <div class="card">
+        <h2>5) Inscripción en Eventos Nacionales</h2>
+        <div class="new-feature">Funcionalidad nueva: Inscripción pública desde móvil</div>
+        <ul>
+          <li>Accede al <strong>landing público</strong> (no necesitas iniciar sesión).</li>
+          <li>Sección <strong>"Eventos Nacionales"</strong>.</li>
+          <li>Haz clic en <strong>"Inscribirme Ahora"</strong>.</li>
+          <li>Ingresa tu cédula: el sistema busca automáticamente tus datos.</li>
+          <li>Completa el formulario (nombre, email, teléfono, sexo, entidad).</li>
+          <li>Si no estás registrado, el sistema crea tu cuenta automáticamente.</li>
+          <li>Después de inscribirte: botones para <strong>"Reportar Pago"</strong> y <strong>"Ver Recibo"</strong>.</li>
+        </ul>
+      </div>
+
+      <div class="card">
+        <h2>6) Mis inscripciones</h2>
+        <ul>
+          <li>Menú <strong>Mis Inscripciones</strong>.</li>
+          <li>Ver todos tus torneos inscritos con estado (Pendiente, Confirmado, Cancelado).</li>
+          <li>Estado de pago: Pendiente, Parcial, Completo.</li>
+          <li>Ver detalles de cada inscripción.</li>
+          <li>Reportar pago desde aquí o desde el formulario de inscripción.</li>
+        </ul>
+      </div>
+    </section>
+
+    <section class="grid">
+      <div class="card">
+        <h2>7) Reportar pago</h2>
+        <div class="new-feature">Funcionalidad mejorada: Reporte de pagos para eventos masivos</div>
+        <ul>
+          <li>Desde <strong>Mis Inscripciones</strong> o desde el formulario de inscripción.</li>
+          <li>Para eventos masivos: botón <strong>"Reportar Pago"</strong> después de inscribirte.</li>
+          <li>Completa: fecha, hora, tipo de pago (transferencia, pago móvil, efectivo), banco, monto, referencia, comentarios.</li>
+          <li>Indica si pagas por más de una persona.</li>
+          <li>Ver historial de pagos reportados para ese torneo.</li>
+          <li>El organizador revisará y confirmará tu pago.</li>
+        </ul>
+      </div>
+
+      <div class="card">
+        <h2>8) Ver recibo de pago</h2>
+        <div class="new-feature">Funcionalidad nueva: Consulta de estado de pagos</div>
+        <ul>
+          <li>Desde el formulario de inscripción o desde <strong>Mis Inscripciones</strong>.</li>
+          <li>Botón <strong>"Ver Recibo"</strong> o <strong>"Ver Datos de Pago"</strong>.</li>
+          <li>Ver todos los pagos reportados para ese torneo.</li>
+          <li>Estado: Pendiente, Confirmado, Rechazado.</li>
+          <li>Detalles: monto, referencia, fecha, tipo de pago.</li>
+        </ul>
+      </div>
+    </section>
+
+    <section class="grid">
+      <div class="card">
+        <h2>9) Ver resultados</h2>
+        <ul>
+          <li>Menú <strong>Resultados</strong>.</li>
+          <li>Lista de torneos finalizados.</li>
+          <li>Ver tabla de posiciones, resultados por ronda, estadísticas.</li>
+          <li>Buscar tus resultados por nombre o cédula.</li>
+          <li class="new-feature">Nuevo: Los resultados muestran "ID Usuario" en lugar de cédula.</li>
+          <li>Para torneos de equipos: ver podios con fotos y estadísticas de cada jugador.</li>
+        </ul>
+      </div>
+
+      <div class="card">
+        <h2>10) Ranking y perfil</h2>
+        <ul>
+          <li><strong>Ranking</strong>: Ver clasificación de jugadores por participaciones y puntos.</li>
+          <li>Filtrar por club, modalidad, período.</li>
+          <li><strong>Mi Perfil</strong>: Ver y editar información personal, cambiar contraseña, subir foto.</li>
+          <li>Algunos datos (nombre, cédula) requieren contacto con administrador para cambios.</li>
+        </ul>
+      </div>
+    </section>
+
+    <section class="grid">
+      <div class="card">
+        <h2>11) Buenas prácticas</h2>
+        <ul>
+          <li>Mantén actualizados email y teléfono en tu perfil.</li>
+          <li>Revisa regularmente "Mis Inscripciones" y reporta pagos a tiempo.</li>
+          <li>Usa contraseña segura y cierra sesión al terminar.</li>
+          <li>Para eventos masivos, reporta el pago inmediatamente después de realizarlo.</li>
+        </ul>
+      </div>
+
+      <div class="card">
+        <h2>12) FAQ usuario común</h2>
+        <ul>
+          <li><strong>¿Cómo me registro?</strong> Desde login o usando link de invitación de club/torneo.</li>
+          <li><strong>¿Puedo inscribirme en varios torneos?</strong> Sí, sin límite.</li>
+          <li><strong>¿Qué hago si olvidé mi contraseña?</strong> Usa "¿Olvidaste tu contraseña?" o "Recuperar usuario".</li>
+          <li><strong>¿Cómo reporto un pago?</strong> Desde "Mis Inscripciones" o desde el formulario de inscripción.</li>
+          <li><strong>¿Puedo cancelar mi inscripción?</strong> Sí, desde "Mis Inscripciones".</li>
+          <li><strong>Eventos masivos:</strong> No necesitas cuenta previa, puedes inscribirte desde el landing público.</li>
+        </ul>
+      </div>
+    </section>
+  </section>
+
+  <div class="footer">
+    Última actualización: Enero 2026 · Para PDF usa "Imprimir → Guardar como PDF".<br>
+    <strong>Nuevas funcionalidades:</strong> Eventos Nacionales Masivos, Cuentas Bancarias, Cronómetro de Ronda, Podios de Equipos, Reportes de Pago Mejorados.
+  </div>
+</body>
+</html>

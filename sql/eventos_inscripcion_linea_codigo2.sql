@@ -1,0 +1,37 @@
+-- Documentación: Eventos Masivos con Inscripción en Línea (Código 2)
+-- 
+-- CAMBIO DE FUNCIONALIDAD:
+-- Se implementó el código 2 en es_evento_masivo para identificar eventos
+-- donde administradores de club invitan a inscribirse directamente al torneo
+-- desde la página pública (landing.php).
+--
+-- VALORES DE es_evento_masivo:
+--   0 = Torneo normal (sin inscripción pública masiva)
+--   1 = Evento masivo con inscripción pública general
+--   2 = Evento con inscripción en línea (administradores de club invitando directamente)
+--
+-- RESTRICCIONES PARA INSCRIPCIÓN EN LÍNEA (código 2):
+-- 1. El usuario debe haber cancelado el costo del torneo antes de inscribirse
+--    (si el torneo tiene costo > 0)
+-- 2. Si un usuario se inscribe dos veces sin pagar y no se presenta al evento,
+--    no podrá inscribirse en línea en futuros eventos (debe hacerlo presencialmente)
+--
+-- LÓGICA DE VALIDACIÓN:
+-- - Se verifica el historial de inscripciones previas en eventos con código 2
+-- - Se cuenta cuántas veces el usuario se inscribió sin pagar y sin asistir
+-- - Si tiene 2 o más incumplimientos, se bloquea la inscripción en línea
+--
+-- TABLAS INVOLUCRADAS:
+-- - tournaments.es_evento_masivo: Campo que almacena el código (0, 1, o 2)
+-- - inscritos.estatus: Indica si pagó (2 = solvente) o no (3 = no_solvente)
+-- - inscritos.ganados, inscritos.perdidos: Indica si asistió al evento
+--
+-- NOTA: No se requiere ejecutar ningún ALTER TABLE ya que el campo es_evento_masivo
+-- ya existe y solo estamos usando un nuevo valor (2) del mismo.
+
+-- Consulta de ejemplo para ver eventos con código 2:
+-- SELECT t.*, c.nombre as club_nombre 
+-- FROM tournaments t
+-- LEFT JOIN clubes c ON t.club_responsable = c.id
+-- WHERE t.es_evento_masivo = 2 AND t.estatus = 1 AND t.fechator >= CURDATE()
+-- ORDER BY t.fechator ASC;

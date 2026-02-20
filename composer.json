@@ -1,0 +1,80 @@
+{
+    "name": "mistorneos/core",
+    "description": "Sistema de gestión de torneos deportivos - Mistorneos",
+    "type": "project",
+    "keywords": ["php", "framework", "mvc", "enterprise", "sports", "management"],
+    "license": "proprietary",
+    "authors": [
+        {
+            "name": "Mistorneos Team",
+            "email": "dev@mistorneos.com"
+        }
+    ],
+    "require": {
+        "php": ">=8.0",
+        "ext-pdo": "*",
+        "ext-mbstring": "*",
+        "ext-json": "*",
+        "ext-openssl": "*",
+        "phpmailer/phpmailer": "^6.8",
+        "psr/log": "^3.0",
+        "dompdf/dompdf": "^2.0"
+    },
+    "require-dev": {
+        "phpunit/phpunit": "^10.0",
+        "phpstan/phpstan": "^1.10",
+        "friendsofphp/php-cs-fixer": "^3.0"
+    },
+    "autoload": {
+        "psr-4": {
+            "Core\\": "core/",
+            "Lib\\": "lib/",
+            "Modules\\": "modules/"
+        },
+        "files": [
+            "lib/I18n/Translator.php"
+        ]
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Tests\\": "tests/"
+        }
+    },
+    "scripts": {
+        "test": "phpunit",
+        "test:unit": "phpunit --testsuite=Unit",
+        "test:integration": "phpunit --testsuite=Integration",
+        "test:coverage": "phpunit --coverage-html coverage",
+        "phpstan": "phpstan analyse --level=5 core lib",
+        "cs-check": "php-cs-fixer fix --dry-run --diff",
+        "cs-fix": "php-cs-fixer fix",
+        "build": "php cli/build-assets.php",
+        "deploy:staging": "php cli/deploy.php staging",
+        "deploy:production": "php cli/deploy.php production",
+        "post-install-cmd": [
+            "@php -r \"file_exists('.env') || copy('.env.example', '.env');\""
+        ]
+    },
+    "scripts-descriptions": {
+        "test": "Run all tests",
+        "test:unit": "Run unit tests only",
+        "test:integration": "Run integration tests only",
+        "test:coverage": "Generate code coverage report",
+        "phpstan": "Run static analysis",
+        "cs-check": "Check code style",
+        "cs-fix": "Fix code style issues",
+        "build": "Build and compile assets",
+        "deploy:staging": "Deploy to staging environment",
+        "deploy:production": "Deploy to production environment"
+    },
+    "config": {
+        "optimize-autoloader": true,
+        "preferred-install": "dist",
+        "sort-packages": true,
+        "allow-plugins": {
+            "php-http/discovery": true
+        }
+    },
+    "minimum-stability": "stable",
+    "prefer-stable": true
+}

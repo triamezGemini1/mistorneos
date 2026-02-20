@@ -1,0 +1,28 @@
+<?php
+/**
+ * Action: Dashboard Home para Admin General
+ * Solo tarjetas de estadísticas. Datos vía OrganizacionesData (Entidades, Orgs, Clubes, Usuarios por género).
+ */
+
+require_once __DIR__ . '/../../../config/admin_general_auth.php';
+requireAdminGeneral();
+
+require_once __DIR__ . '/../../../lib/OrganizacionesData.php';
+require_once __DIR__ . '/../../../lib/ActasPendientesHelper.php';
+
+$current_user = Auth::user();
+$stats = OrganizacionesData::loadStatsGlobales();
+$actas_pendientes = ActasPendientesHelper::contar();
+$actas_ultimo_envio = ActasPendientesHelper::ultimoEnvio();
+
+extract([
+    'stats' => $stats,
+    'actas_pendientes' => $actas_pendientes,
+    'actas_ultimo_envio' => $actas_ultimo_envio,
+    'success_message' => $_GET['success'] ?? null,
+    'error_message' => $_GET['error'] ?? null,
+    'user_role' => 'admin_general',
+    'current_user' => $current_user,
+]);
+
+include __DIR__ . '/../views/home.php';

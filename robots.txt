@@ -1,0 +1,44 @@
+# robots.txt para La Estación del Dominó
+# Permite la indexación de todo el sitio por motores de búsqueda
+
+User-agent: *
+Allow: /
+
+# Permitir acceso a recursos estáticos
+Allow: /public/assets/
+Allow: /upload/
+Allow: /lib/Assets/
+
+# Bloquear acceso a archivos sensibles
+Disallow: /config/
+Disallow: /storage/
+Disallow: /vendor/
+Disallow: /tests/
+Disallow: /cli/
+Disallow: /database/
+Disallow: /sql/
+Disallow: /docs/
+Disallow: /modules/
+Disallow: /core/
+Disallow: /api/
+Disallow: /scripts/
+Disallow: /public/includes/
+Disallow: /public/api/
+
+# Bloquear archivos específicos
+Disallow: /*.php$
+Disallow: /*.sql$
+Disallow: /*.env$
+Disallow: /*.log$
+
+# Permitir archivos públicos específicos
+Allow: /public/landing.php
+Allow: /public/torneo_detalle.php
+Allow: /public/torneo_info.php
+Allow: /public/resultados.php
+Allow: /public/resultados_detalle.php
+
+# Sitemap dinámico
+Sitemap: https://laestaciondeldominohoy.com/mistorneos/public/sitemap.php
+
+

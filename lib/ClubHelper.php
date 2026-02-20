@@ -1,0 +1,199 @@
+<?php
+/**
+ * Helper para gestión de clubes
+ * Relación: clubes.admin_club_id = usuarios.id (admin_club)
+ */
+
+if (!defined('APP_BOOTSTRAPPED')) { 
+    require_once __DIR__ . '/../config/bootstrap.php'; 
+}
+require_once __DIR__ . '/../config/db.php';
+
+class ClubHelper {
+    
+    /**
+     * Obtiene los clubes de una organización (esquema admin organización: clubes son de la org)
+     *
+     * @param int $organizacion_id ID de la organización
+     * @return array Lista de IDs de clubes
+     */
+    public static function getClubesByOrganizacionId(int $organizacion_id): array {
+        try {
+            $stmt = DB::pdo()->prepare("SELECT id FROM clubes WHERE organizacion_id = ? AND estatus = 1");
+            $stmt->execute([$organizacion_id]);
+            $ids = $stmt->fetchAll(PDO::FETCH_COLUMN);
+            return array_values(array_map('intval', $ids ?: []));
+        } catch (Exception $e) {
+            error_log("ClubHelper::getClubesByOrganizacionId error: " . $e->getMessage());
+            return [];
+        }
+    }
+
+    /**
+     * Obtiene los clubes gestionados por un admin_club (admin organización)
+     * Por organización: clubes donde organizacion_id = org del admin (organizaciones.admin_user_id).
+     * Fallback legacy: clubes.admin_club_id = user (por si no tienen org aún).
+     *
+     * @param int $admin_club_user_id ID del usuario admin_club (usuarios.id)
+     * @return array Lista de IDs de clubes
+     */
+    public static function getClubesByAdminClubId(int $admin_club_user_id): array {
+        try {
+            $pdo = DB::pdo();
+            $stmt = $pdo->prepare("SELECT id FROM organizaciones WHERE admin_user_id = ? AND estatus = 1 LIMIT 1");
+            $stmt->execute([$admin_club_user_id]);
+            $org_id = $stmt->fetchColumn();
+            if ($org_id) {
+                return self::getClubesByOrganizacionId((int)$org_id);
+            }
+            // Legacy: sin organización, por admin_club_id directo en clubes
+            $stmt = $pdo->prepare("SELECT id FROM clubes WHERE admin_club_id = ? AND estatus = 1");
+            $stmt->execute([$admin_club_user_id]);
+            $ids = $stmt->fetchAll(PDO::FETCH_COLUMN);
+            return array_values(array_map('intval', $ids ?: []));
+        } catch (Exception $e) {
+            error_log("ClubHelper::getClubesByAdminClubId error: " . $e->getMessage());
+            return [];
+        }
+    }
+    
+    /**
+     * Obtiene todos los clubes que gestiona un admin_club (por organización o admin_club_id)
+     * La tabla clubes_asociados ya no se usa; se usa organizacion_id en clubes.
+     *
+     * @param int $club_id Club asignado al admin (usuarios.club_id) - para compatibilidad
+     * @return array Lista de IDs de clubes
+     */
+    public static function getClubesSupervised(int $club_id): array {
+        try {
+            $pdo = DB::pdo();
+            $admin_user_id = null;
+            $stmt = $pdo->prepare("SELECT admin_club_id FROM clubes WHERE id = ?");
+            $stmt->execute([$club_id]);
+            $row = $stmt->fetch(PDO::FETCH_ASSOC);
+            if ($row && !empty($row['admin_club_id'])) {
+                $admin_user_id = (int)$row['admin_club_id'];
+            } else {
+                $stmt = $pdo->prepare("SELECT id FROM usuarios WHERE club_id = ? AND role = 'admin_club' LIMIT 1");
+                $stmt->execute([$club_id]);
+                $admin_user_id = (int)$stmt->fetchColumn();
+            }
+            if ($admin_user_id > 0) {
+                return self::getClubesByAdminClubId($admin_user_id);
+            }
+            return [$club_id];
+        } catch (Exception $e) {
+            error_log("ClubHelper::getClubesSupervised error: " . $e->getMessage());
+            return [];
+        }
+    }
+    
+    /**
+     * Obtiene los clubes con sus datos completos
+     * 
+     * @param int $club_id Club principal
+     * @return array Lista de clubes con datos
+     */
+    public static function getClubesSupervisedWithData(int $club_id): array {
+        $club_ids = self::getClubesSupervised($club_id);
+        
+        if (empty($club_ids)) {
+            return [];
+        }
+        
+        $placeholders = implode(',', array_fill(0, count($club_ids), '?'));
+        
+        try {
+            $stmt = DB::pdo()->prepare("
+                SELECT id, nombre, delegado, telefono, estatus,
+                       CASE WHEN id = ? THEN 1 ELSE 0 END as es_principal
+                FROM clubes 
+                WHERE id IN ($placeholders) AND estatus = 1
+                ORDER BY es_principal DESC, nombre ASC
+            ");
+            $params = array_merge([$club_id], $club_ids);
+            $stmt->execute($params);
+            return $stmt->fetchAll(PDO::FETCH_ASSOC);
+        } catch (Exception $e) {
+            error_log("ClubHelper::getClubesSupervisedWithData error: " . $e->getMessage());
+            return [];
+        }
+    }
+    
+    /**
+     * Verifica si un club es gestionado por un admin_club (admin organización)
+     * Por organización: club.organizacion_id = org del admin; o por legacy club.admin_club_id.
+     *
+     * @param int $admin_club_user_id ID del usuario admin_club
+     * @param int $club_id Club a verificar
+     * @return bool
+     */
+    public static function isClubManagedByAdmin(int $admin_club_user_id, int $club_id): bool {
+        try {
+            $pdo = DB::pdo();
+            $stmt = $pdo->prepare("SELECT organizacion_id FROM clubes WHERE id = ? LIMIT 1");
+            $stmt->execute([$club_id]);
+            $club_org_id = $stmt->fetchColumn();
+            if ($club_org_id) {
+                $stmt = $pdo->prepare("SELECT 1 FROM organizaciones WHERE id = ? AND admin_user_id = ? AND estatus = 1");
+                $stmt->execute([$club_org_id, $admin_club_user_id]);
+                if ($stmt->fetch()) return true;
+            }
+            $stmt = $pdo->prepare("SELECT 1 FROM clubes WHERE id = ? AND admin_club_id = ?");
+            $stmt->execute([$club_id, $admin_club_user_id]);
+            return (bool)$stmt->fetch();
+        } catch (Exception $e) {
+            return false;
+        }
+    }
+    
+    /**
+     * Verifica si un club está bajo supervisión (compatibilidad)
+     * 
+     * @param int $club_principal_id Club del admin (usuarios.club_id)
+     * @param int $club_id Club a verificar
+     * @return bool
+     */
+    public static function isClubSupervised(int $club_principal_id, int $club_id): bool {
+        $clubes = self::getClubesSupervised($club_principal_id);
+        return in_array($club_id, $clubes);
+    }
+    
+    /**
+     * Asociar club ya no se usa (tabla clubes_asociados eliminada).
+     * Los clubes se agrupan por organizacion_id en clubes.
+     */
+    public static function asociarClub(int $club_principal_id, int $club_asociado_id): bool {
+        return false;
+    }
+
+    /**
+     * Desasociar club ya no se usa (tabla clubes_asociados eliminada).
+     */
+    public static function desasociarClub(int $club_principal_id, int $club_asociado_id): bool {
+        return false;
+    }
+
+    /**
+     * Clubes de la misma organización (excluyendo el dado).
+     * Sustituye la antigua "disponibles para asociar" sin usar clubes_asociados.
+     */
+    public static function getClubesDisponibles(int $club_principal_id): array {
+        try {
+            $stmt = DB::pdo()->prepare("
+                SELECT c.id, c.nombre, c.delegado
+                FROM clubes c
+                INNER JOIN clubes c2 ON c.organizacion_id = c2.organizacion_id AND c2.id = ?
+                WHERE c.id != ? AND c.estatus = 1 AND c.organizacion_id IS NOT NULL
+                ORDER BY c.nombre ASC
+            ");
+            $stmt->execute([$club_principal_id, $club_principal_id]);
+            return $stmt->fetchAll(PDO::FETCH_ASSOC);
+        } catch (Exception $e) {
+            error_log("ClubHelper::getClubesDisponibles error: " . $e->getMessage());
+            return [];
+        }
+    }
+}
+
+

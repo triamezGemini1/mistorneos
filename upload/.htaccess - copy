@@ -1,0 +1,40 @@
+# Apache 2.4 compatible rules for /upload
+
+# Bloquear ejecución de PHP en /upload
+<FilesMatch "\.(php|php[0-9])$">
+  Require all denied
+</FilesMatch>
+
+# Permitir lectura de archivos estáticos (PDFs, imágenes, etc.)
+<FilesMatch "\.(pdf|jpg|jpeg|png|gif|webp|svg|css|js|txt|zip)$">
+  Require all granted
+</FilesMatch>
+
+# Evitar listado de directorios
+Options -Indexes
+
+# Permitir acceso a archivos de upload
+Options +Indexes
+Options +FollowSymLinks
+
+# Permitir acceso a archivos de imágenes
+<FilesMatch "\.(jpg|jpeg|png|gif|pdf|doc|docx)$">
+    Order Allow,Deny
+    Allow from all
+</FilesMatch>
+
+# Configurar tipos MIME
+AddType image/jpeg .jpg .jpeg
+AddType image/png .png
+AddType image/gif .gif
+AddType application/pdf .pdf
+AddType application/msword .doc
+AddType application/vnd.openxmlformats-officedocument.wordprocessingml.document .docx
+
+# Permitir acceso directo a archivos
+<Directory "upload">
+    Options +Indexes
+    AllowOverride All
+    Order Allow,Deny
+    Allow from all
+</Directory>

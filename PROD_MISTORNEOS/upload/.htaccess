@@ -1,0 +1,17 @@
+# Bloquear ejecución de archivos PHP
+<FilesMatch "\.(php|phtml|php3|php4|php5|php7|phps)$">
+    Require all denied
+</FilesMatch>
+
+# Permitir acceso a archivos estáticos (imágenes, PDFs, documentos)
+<FilesMatch "\.(pdf|jpg|jpeg|png|gif|webp|svg|doc|docx|xls|xlsx|txt|zip)$">
+    Require all granted
+</FilesMatch>
+
+# Desactivar listado de directorios
+Options -Indexes
+
+# Configurar tipos MIME para PDFs
+AddType application/pdf .pdf
+AddType image/jpeg .jpg .jpeg
+AddType image/png .png

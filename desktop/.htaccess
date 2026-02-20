@@ -1,0 +1,8 @@
+# Si el archivo .php no existe aquí, enviar a router para servirlo desde public/desktop/
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    RewriteBase /mistorneos/desktop/
+    RewriteCond %{REQUEST_FILENAME} !-f
+    RewriteCond %{REQUEST_FILENAME} !-d
+    RewriteRule ^([a-z0-9_\-]+\.php)(\?.*)?$ router.php?d=$1 [L,QSA]
+</IfModule>

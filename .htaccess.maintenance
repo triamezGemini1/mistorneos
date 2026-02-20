@@ -1,0 +1,49 @@
+# ============================================
+# LA ESTACIÓN DEL DOMINÓ - MODO MANTENIMIENTO
+# ============================================
+# INSTRUCCIONES:
+# Para ACTIVAR mantenimiento:
+#   1. Renombrar .htaccess actual a .htaccess.normal
+#   2. Renombrar este archivo a .htaccess
+#
+# Para DESACTIVAR mantenimiento:
+#   1. Renombrar .htaccess a .htaccess.maintenance  
+#   2. Renombrar .htaccess.normal a .htaccess
+# ============================================
+
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    RewriteBase /mistorneos/
+    
+    # ============================================
+    # MODO MANTENIMIENTO ACTIVO
+    # ============================================
+    
+    # Permitir acceso a archivos estáticos (CSS, JS, imágenes)
+    RewriteCond %{REQUEST_URI} !\.(css|js|png|jpg|jpeg|gif|ico|svg|woff|woff2|ttf)$ [NC]
+    
+    # Permitir acceso a la página de mantenimiento
+    RewriteCond %{REQUEST_URI} !maintenance\.php$ [NC]
+    
+    # Permitir acceso a recursos de CDN (no aplica, son externos)
+    
+    # Redirigir todo lo demás a mantenimiento
+    RewriteRule ^(.*)$ public/maintenance.php [L,R=307]
+</IfModule>
+
+# Prevenir listado de directorios
+Options -Indexes
+
+# Página de error personalizada
+ErrorDocument 503 /mistorneos/public/maintenance.php
+
+
+
+
+
+
+
+
+
+
+

@@ -1,0 +1,48 @@
+# Permitir acceso directo a archivos de torneos
+# Este archivo va en: public_html/seviclubesled/upload/tournaments/
+
+<IfModule mod_authz_core.c>
+    # Apache 2.4+
+    Require all granted
+</IfModule>
+
+<IfModule !mod_authz_core.c>
+    # Apache 2.2
+    Order allow,deny
+    Allow from all
+</IfModule>
+
+# Permitir acceso a todos los archivos
+<FilesMatch "\.(jpg|jpeg|png|gif|pdf|doc|docx)$">
+    <IfModule mod_authz_core.c>
+        Require all granted
+    </IfModule>
+    <IfModule !mod_authz_core.c>
+        Order allow,deny
+        Allow from all
+    </IfModule>
+</FilesMatch>
+
+# Tipos MIME correctos
+<IfModule mod_mime.c>
+    AddType image/jpeg .jpg .jpeg
+    AddType image/png .png
+    AddType image/gif .gif
+    AddType application/pdf .pdf
+    AddType application/msword .doc
+    AddType application/vnd.openxmlformats-officedocument.wordprocessingml.document .docx
+</IfModule>
+
+# Headers de cache
+<IfModule mod_headers.c>
+    <FilesMatch "\.(jpg|jpeg|png|gif|pdf|doc|docx)$">
+        Header set Cache-Control "max-age=2592000, public"
+        Header set Access-Control-Allow-Origin "*"
+    </FilesMatch>
+</IfModule>
+
+# Deshabilitar listado de directorios por seguridad
+Options -Indexes
+
+# Habilitar seguimiento de enlaces simbólicos
+Options +FollowSymLinks
