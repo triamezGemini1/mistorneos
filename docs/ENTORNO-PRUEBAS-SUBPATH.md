@@ -15,6 +15,7 @@ Configuración para que la aplicación funcione en un servidor cPanel bajo una r
 Copia el contenido de **docs/htaccess-public_html-pruebas.txt** al archivo `public_html/.htaccess` (raíz del sitio). Ese .htaccess redirige internamente:
 
 - `dominio.com/pruebas` → `mistorneos_beta/public/`
+- `dominio.com/pruebas/public/assets/...` (CSS/JS) → `mistorneos_beta/public/assets/...` (regla específica para que no se duplique `public/` y el archivo se sirva con MIME correcto)
 - `dominio.com/pruebas/auth/login` → `mistorneos_beta/public/` (el front controller de `public/.htaccess` envía a `index.php`)
 
 ### 2. APP_URL en .env (carpeta beta)

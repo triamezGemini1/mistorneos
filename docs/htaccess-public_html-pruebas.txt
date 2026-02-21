@@ -11,12 +11,13 @@
     RewriteEngine On
     RewriteBase /
 
-    # Redirigir /pruebas y /pruebas/ a la app beta (sin cambiar la URL en el navegador)
-    # /pruebas        -> mistorneos_beta/public/
-    # /pruebas/       -> mistorneos_beta/public/
-    # /pruebas/auth/login -> mistorneos_beta/public/ (front controller en public/.htaccess envía a index.php)
-    # /pruebas/assets/*.css|js -> se sirven como archivos reales (sin 404, MIME correcto)
+    # IMPORTANTE: /pruebas/public/xxx debe ir primero (assets: CSS/JS con MIME correcto)
+    # Si no, /pruebas/public/assets/... se reescribiría a .../public/public/assets/... y devolvería HTML (index.php)
+    RewriteRule ^pruebas/public/(.*)$ mistorneos_beta/public/$1 [L]
+
+    # /pruebas y /pruebas/ -> mistorneos_beta/public/
     RewriteRule ^pruebas/?$ mistorneos_beta/public/ [L]
+    # /pruebas/auth/login, /pruebas/api/... -> mistorneos_beta/public/... (front controller en public/.htaccess)
     RewriteRule ^pruebas/(.*)$ mistorneos_beta/public/$1 [L]
 </IfModule>
 

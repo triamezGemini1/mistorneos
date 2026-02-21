@@ -51,14 +51,35 @@ class AppHelpers {
                 } else {
                     self::$base_url = rtrim($cfg, '/');
                 }
-            } else {
-                // Auto-detección: localhost/127.0.0.1 → /mistorneos; producción → raíz o APP_URL en .env
+            }
+            // Si la petición es bajo /pruebas o /beta, forzar la base a ese subpath (evita estructura rota cuando APP_URL no está en .env beta)
+            if (isset($_SERVER['REQUEST_URI'])) {
+                $uriPath = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
+                if ($uriPath && $uriPath !== '/' && preg_match('#^/(pruebas|beta)(/|$)#', $uriPath, $m)) {
+                    $subpath = '/' . $m[1];
+                    $protocol = isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? 'https' : 'http';
+                    $host = $_SERVER['HTTP_HOST'] ?? 'localhost';
+                    $correctBase = $protocol . '://' . $host . $subpath;
+                    if (strpos(self::$base_url ?? '', $subpath) === false) {
+                        self::$base_url = $correctBase;
+                    }
+                }
+            }
+            if (self::$base_url === null) {
+                // Auto-detección: localhost → /mistorneos; subpath /pruebas o /beta → usar ese path; resto → raíz
                 $protocol = isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? 'https' : 'http';
                 $host = $_SERVER['HTTP_HOST'] ?? 'localhost';
                 $hostLower = strtolower($host);
                 $isLocalhost = ($hostLower === 'localhost' || $hostLower === '127.0.0.1'
                     || strpos($hostLower, 'localhost:') === 0 || strpos($hostLower, '127.0.0.1:') === 0);
                 $path = $isLocalhost ? '/mistorneos' : '';
+                // Entorno de pruebas bajo subpath: si la petición viene de /pruebas (o /beta), usar ese path para assets y enlaces
+                if ($path === '' && isset($_SERVER['REQUEST_URI'])) {
+                    $uriPath = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
+                    if ($uriPath && $uriPath !== '/' && preg_match('#^/(pruebas|beta)(/|$)#', $uriPath, $m)) {
+                        $path = '/' . $m[1];
+                    }
+                }
                 self::$base_url = $protocol . '://' . $host . $path;
             }
             if (str_ends_with(self::$base_url, '/public')) {

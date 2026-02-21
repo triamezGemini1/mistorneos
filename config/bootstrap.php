@@ -77,6 +77,13 @@ if (session_status() === PHP_SESSION_NONE) {
             $cookie_path = $path . '/'; // ej: /mistorneos/
         }
     }
+    // Entorno bajo subpath /pruebas o /beta: cookie debe ser para ese path
+    if ($cookie_path === '/' && isset($_SERVER['REQUEST_URI'])) {
+        $uri_path = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
+        if ($uri_path && preg_match('#^/(pruebas|beta)(/|$)#', $uri_path, $m)) {
+            $cookie_path = '/' . $m[1] . '/';
+        }
+    }
     session_set_cookie_params([
         'lifetime' => 0, // Sesión expira al cerrar el navegador
         'path' => $cookie_path,
