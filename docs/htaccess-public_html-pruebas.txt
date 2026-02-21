@@ -1,0 +1,31 @@
+# =============================================================================
+# .htaccess para PUBLIC_HTML (raíz del sitio en cPanel)
+# Objetivo: que dominio.com/pruebas sirva la app en mistorneos_beta/public/
+#
+# Ubicación en servidor: public_html/.htaccess
+# (copia este contenido al .htaccess que está en la raíz de tu dominio, junto
+#  a la carpeta mistorneos_beta)
+# =============================================================================
+
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    RewriteBase /
+
+    # Redirigir /pruebas y /pruebas/ a la app beta (sin cambiar la URL en el navegador)
+    # /pruebas        -> mistorneos_beta/public/
+    # /pruebas/       -> mistorneos_beta/public/
+    # /pruebas/auth/login -> mistorneos_beta/public/ (front controller en public/.htaccess envía a index.php)
+    # /pruebas/assets/*.css|js -> se sirven como archivos reales (sin 404, MIME correcto)
+    RewriteRule ^pruebas/?$ mistorneos_beta/public/ [L]
+    RewriteRule ^pruebas/(.*)$ mistorneos_beta/public/$1 [L]
+</IfModule>
+
+# =============================================================================
+# Entorno beta: .env dentro de mistorneos_beta
+# =============================================================================
+# En la carpeta mistorneos_beta debe existir .env con:
+#
+#   APP_URL=https://laestaciondeldominohoy.com/pruebas
+#
+# Sin barra final. Así los assets (CSS/JS) y enlaces se generan con la ruta
+# correcta y no dan 404 ni error de MIME type.

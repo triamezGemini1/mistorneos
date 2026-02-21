@@ -26,6 +26,23 @@ if (!defined('APP_ROOT')) {
     define('APP_ROOT', dirname(__DIR__));
 }
 
+// Normalizar REQUEST_URI cuando la app está bajo un subpath (ej. /pruebas en beta)
+// Así el Router y las rutas modernas reciben /auth/login en vez de /pruebas/auth/login
+$appBaseUrl = $GLOBALS['APP_CONFIG']['app']['base_url'] ?? '';
+if ($appBaseUrl === '' && class_exists('Env')) {
+    $appBaseUrl = (string) Env::get('APP_URL', '');
+}
+$basePath = $appBaseUrl !== '' ? parse_url($appBaseUrl, PHP_URL_PATH) : '';
+$basePath = ($basePath !== null && $basePath !== '' && $basePath !== '/') ? rtrim($basePath, '/') : '';
+if ($basePath !== '') {
+    $currentUri = $_SERVER['REQUEST_URI'] ?? '/';
+    if (strpos($currentUri, $basePath) === 0) {
+        $normalized = substr($currentUri, strlen($basePath)) ?: '/';
+        $queryString = (($pos = strpos($currentUri, '?')) !== false) ? substr($currentUri, $pos) : '';
+        $_SERVER['REQUEST_URI'] = $normalized . $queryString;
+    }
+}
+
 // =================================================================
 // MODO 1: RUTAS MODERNAS (Router)
 // =================================================================

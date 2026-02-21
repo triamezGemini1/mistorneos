@@ -1,8 +1,16 @@
 # Forzar HTTPS en producción; en localhost (desarrollo) permitir HTTP.
+# Front controller: rutas que no son archivos/directorios existentes van a index.php (ej. /auth/login, /api/...).
 <IfModule mod_rewrite.c>
     RewriteEngine On
+
+    # Redirección HTTPS (producción)
     RewriteCond %{HTTPS} off
     RewriteCond %{HTTP_HOST} !^localhost(:\d+)?$ [NC]
     RewriteCond %{HTTP_HOST} !^127\.0\.0\.1(:\d+)?$ [NC]
     RewriteRule ^(.*)$ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
+
+    # Front controller: para rutas modernas (/auth/, /api/, /dashboard, etc.) y subpath (ej. /pruebas/auth/login)
+    RewriteCond %{REQUEST_FILENAME} !-f
+    RewriteCond %{REQUEST_FILENAME} !-d
+    RewriteRule ^(.*)$ index.php [L,QSA]
 </IfModule>
