@@ -484,20 +484,23 @@ try {
     }
     
     // Redirigir con �xito
-    $base = function_exists('app_base_url') ? rtrim(app_base_url(), '/') : '';
-    if ($base === '') {
-        $base = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? 'https' : 'http') . '://' . ($_SERVER['HTTP_HOST'] ?? 'localhost');
-    }
-    header('Location: ' . $base . '/public/index.php?page=tournaments&success=' . urlencode('Torneo creado exitosamente'));
+    // Redirigir a Gestión de Torneos (index) con URL absoluta para que el navegador no se quede en tournament_save.php
+    $_SESSION['success'] = 'Torneo creado exitosamente';
+    $path = dirname($_SERVER['SCRIPT_NAME'] ?? '') . '/index.php';
+    $query = 'page=torneo_gestion&action=index';
+    $host = $_SERVER['HTTP_HOST'] ?? 'localhost';
+    $scheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
+    header('Location: ' . $scheme . '://' . $host . $path . '?' . $query);
     exit;
 
 } catch (Exception $e) {
-    // Redirigir con error
-    $base = function_exists('app_base_url') ? rtrim(app_base_url(), '/') : '';
-    if ($base === '') {
-        $base = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? 'https' : 'http') . '://' . ($_SERVER['HTTP_HOST'] ?? 'localhost');
-    }
-    header('Location: ' . $base . '/public/index.php?page=tournaments&action=new&error=' . urlencode($e->getMessage()));
+    // Redirigir a Gestión de Torneos con mensaje de error
+    $_SESSION['error'] = $e->getMessage();
+    $path = dirname($_SERVER['SCRIPT_NAME'] ?? '') . '/index.php';
+    $query = 'page=torneo_gestion&action=index';
+    $host = $_SERVER['HTTP_HOST'] ?? 'localhost';
+    $scheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
+    header('Location: ' . $scheme . '://' . $host . $path . '?' . $query);
     exit;
 }
 
