@@ -1,25 +1,27 @@
-name: Despliegue Automático FTP
+name: Despliegue Automático
 on:
   push:
     branches:
-      - main  # Se activa cada vez que envías cambios a la rama principal
-
+      - main
 jobs:
-  web-deploy:
-    name: Subiendo archivos al servidor
+  FTP-Deploy-Action:
+    name: FTP-Deploy-Action
     runs-on: ubuntu-latest
     steps:
-    - name: 🚚 Obteniendo código de GitHub
-      uses: actions/checkout@v3
-
-    - name: 🚀 Sincronizando vía FTP
+    - uses: actions/checkout@v3
+      with:
+        fetch-depth: 0
+    - name: 🚀 Subiendo archivos
       uses: SamKirkland/FTP-Deploy-Action@v4.3.5
       with:
         server: ${{ secrets.FTP_SERVER }}
         username: ${{ secrets.FTP_USERNAME }}
         password: ${{ secrets.FTP_PASSWORD }}
-        local-dir: ./
         server-dir: public_html/mistorneos/
+        # Esto evita que el robot se rinda por errores de certificado
+        security: loose
+        # Nos aseguramos de usar el modo pasivo que es el estándar
+        passive: true
         exclude: |
           **/.git*
           **/.github*
