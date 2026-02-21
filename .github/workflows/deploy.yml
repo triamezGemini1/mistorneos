@@ -1,4 +1,4 @@
-name: Despliegue Automático
+name: Despliegue Automatico
 on:
   push:
     branches:
@@ -11,6 +11,7 @@ jobs:
     - uses: actions/checkout@v3
       with:
         fetch-depth: 0
+
     - name: 🚀 Subiendo archivos
       uses: SamKirkland/FTP-Deploy-Action@v4.3.5
       with:
@@ -18,11 +19,15 @@ jobs:
         username: ${{ secrets.FTP_USERNAME }}
         password: ${{ secrets.FTP_PASSWORD }}
         server-dir: public_html/mistorneos/
-        # Esto evita que el robot se rinda por errores de certificado
+        # Mantenemos esto para evitar errores de certificado en cPanel
         security: loose
-        # Nos aseguramos de usar el modo pasivo que es el estándar
-        passive: true
+        # No borramos nada que ya exista y no esté en GitHub
+        dangerous-clean-slate: false
         exclude: |
           **/.git*
           **/.github*
+          **/node_modules/**
           .env
+          **/upload/**
+          **/uploads/**
+          **/.vscode/**
