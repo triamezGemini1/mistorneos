@@ -1,68 +1,67 @@
 <?php
 /**
- * Endpoint para verificar si una c�dula ya existe en la tabla registrants
+ * Endpoint para verificar si una cédula ya está inscrita en el torneo (tabla inscritos + usuarios).
  */
 
 require_once __DIR__ . '/../../config/bootstrap.php';
 require_once __DIR__ . '/../../config/db.php';
 
-header('Content-Type: application/json');
+header('Content-Type: application/json; charset=utf-8');
 
-// Verificar que se haya enviado una c�dula
-if (!isset($_GET['cedula']) || empty($_GET['cedula'])) {
+if (!isset($_GET['cedula']) || trim($_GET['cedula']) === '') {
     http_response_code(400);
-    echo json_encode(['error' => 'C�dula requerida']);
+    echo json_encode(['error' => 'Cédula requerida']);
     exit;
 }
 
-$cedula = $_GET['cedula'];
-$torneo_id = $_GET['torneo'] ?? '';
+$cedula = preg_replace('/\D/', '', trim($_GET['cedula']));
+$torneo_id = isset($_GET['torneo']) ? (int)$_GET['torneo'] : 0;
 
 try {
-    // Buscar en la tabla registrants por c�dula
-    $query = "SELECT id, cedula, nombre FROM inscripciones WHERE cedula = ?";
+    $query = "
+        SELECT i.id, u.cedula, u.nombre
+        FROM inscritos i
+        JOIN usuarios u ON i.id_usuario = u.id
+        WHERE u.cedula = ?
+    ";
     $params = [$cedula];
-    
-    if ($torneo_id) {
-        $query .= " AND torneo_id = ?";
+    if ($torneo_id > 0) {
+        $query .= " AND i.torneo_id = ?";
         $params[] = $torneo_id;
     }
-    
     $query .= " LIMIT 1";
-    
+
     $stmt = DB::pdo()->prepare($query);
     $stmt->execute($params);
-    
     $registrant = $stmt->fetch(PDO::FETCH_ASSOC);
-    
+
     if ($registrant) {
         echo json_encode([
             'success' => true,
             'exists' => true,
             'data' => [
-                'id' => $registrant['id'],
+                'id' => (int)$registrant['id'],
                 'cedula' => $registrant['cedula'],
                 'nombre' => $registrant['nombre']
             ],
-            'message' => $torneo_id ? 
-                'Esta c�dula ya est� inscrita en este torneo' : 
-                'Esta c�dula ya est� registrada en el sistema'
+            'message' => $torneo_id > 0
+                ? 'Esta cédula ya está inscrita en este torneo'
+                : 'Esta cédula ya está registrada en el sistema'
         ]);
     } else {
         echo json_encode([
             'success' => true,
             'exists' => false,
-            'message' => 'C�dula disponible'
+            'message' => 'Cédula disponible'
         ]);
     }
-    
 } catch (Exception $e) {
     http_response_code(500);
     echo json_encode([
+        'success' => false,
         'error' => 'Error interno del servidor: ' . $e->getMessage()
     ]);
 }
-?>
 
 
 

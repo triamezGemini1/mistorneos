@@ -57,7 +57,7 @@ try {
         
         // Verificar duplicado
         if (empty($errors)) {
-            $stmt = $pdo->prepare("SELECT id FROM invitations WHERE torneo_id = ? AND club_id = ?");
+            $stmt = $pdo->prepare("SELECT id FROM " . TABLE_INVITATIONS . " WHERE torneo_id = ? AND club_id = ?");
             $stmt->execute([$torneo_id, $club_id]);
             if ($stmt->fetch()) {
                 $errors[] = "Ya existe una invitaci�n para este torneo y club";
@@ -75,8 +75,8 @@ try {
             } else {
                 try {
                     $stmt = $pdo->prepare("
-                        INSERT INTO invitations 
-                        (torneo_id, club_id, acceso1, acceso2, usuario, token, estado) 
+                        INSERT INTO " . TABLE_INVITATIONS . "
+                        (torneo_id, club_id, acceso1, acceso2, usuario, token, estado)
                         VALUES (?, ?, ?, ?, ?, ?, ?)
                     ");
                     

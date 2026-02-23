@@ -11,7 +11,7 @@ try {
         SELECT i.*, t.nombre as tournament_name, t.fechator, t.club_responsable,
                c.nombre as club_name, c.email as club_email,
                oc.nombre as organizer_name
-        FROM invitations i 
+        FROM " . TABLE_INVITATIONS . " i
         LEFT JOIN tournaments t ON i.torneo_id = t.id 
         LEFT JOIN clubes c ON i.club_id = c.id 
         LEFT JOIN clubes oc ON t.club_responsable = oc.id

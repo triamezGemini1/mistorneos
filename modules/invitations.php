@@ -4,6 +4,7 @@ require_once __DIR__ . '/../config/auth.php';
 require_once __DIR__ . '/../config/db.php';
 require_once __DIR__ . '/../config/csrf.php';
 require_once __DIR__ . '/../lib/Pagination.php';
+require_once __DIR__ . '/../lib/app_helpers.php';
 
 // Verificar permisos
 Auth::requireRole(['admin_general', 'admin_torneo']);
@@ -34,7 +35,7 @@ if ($action === 'delete' && $id) {
         // Obtener datos de la invitaci�n antes de eliminarla
         $stmt = DB::pdo()->prepare("
             SELECT i.*, t.nombre as torneo_nombre, t.club_responsable, c.nombre as club_nombre
-            FROM invitations i
+            FROM " . TABLE_INVITATIONS . " i
             INNER JOIN tournaments t ON i.torneo_id = t.id
             INNER JOIN clubes c ON i.club_id = c.id
             WHERE i.id = ?
@@ -52,7 +53,7 @@ if ($action === 'delete' && $id) {
         }
         
         // Eliminar la invitaci�n
-        $stmt = DB::pdo()->prepare("DELETE FROM invitations WHERE id = ?");
+        $stmt = DB::pdo()->prepare("DELETE FROM " . TABLE_INVITATIONS . " WHERE id = ?");
         $result = $stmt->execute([$invitation_id]);
         
         if ($result && $stmt->rowCount() > 0) {
@@ -74,7 +75,7 @@ if ($action === 'edit' && $id) {
     try {
         $stmt = DB::pdo()->prepare("
             SELECT i.*, t.nombre as torneo_nombre, t.club_responsable, c.nombre as club_nombre
-            FROM invitations i
+            FROM " . TABLE_INVITATIONS . " i
             INNER JOIN tournaments t ON i.torneo_id = t.id
             INNER JOIN clubes c ON i.club_id = c.id
             WHERE i.id = ?
@@ -95,6 +96,12 @@ if ($action === 'edit' && $id) {
     } catch (Exception $e) {
         $error_message = "Error al cargar la invitaci�n: " . $e->getMessage();
         $action = 'list';
+    }
+}
+if ($action === 'edit' && !$invitation) {
+    $action = 'list';
+    if (empty($error_message)) {
+        $error_message = "Debe indicar la invitacin a editar (parmetro id).";
     }
 }
 
@@ -176,7 +183,7 @@ if ($action === 'list' && !empty($filter_torneo)) {
         $params = [(int)$filter_torneo];
         
         // Contar total de registros con filtro
-        $stmt = DB::pdo()->prepare("SELECT COUNT(*) FROM invitations i $where");
+        $stmt = DB::pdo()->prepare("SELECT COUNT(*) FROM " . TABLE_INVITATIONS . " i $where");
         $stmt->execute($params);
         $total_records = (int)$stmt->fetchColumn();
         
@@ -184,17 +191,26 @@ if ($action === 'list' && !empty($filter_torneo)) {
         $pagination = new Pagination($total_records, $current_page, $per_page);
         
         // Obtener registros de la p�gina actual
+        $cols_t = DB::pdo()->query("SHOW COLUMNS FROM tournaments")->fetchAll(PDO::FETCH_COLUMN);
+        $cols_inv = DB::pdo()->query("SHOW COLUMNS FROM " . TABLE_INVITATIONS)->fetchAll(PDO::FETCH_COLUMN);
+        $has_id_usuario_vinculado = in_array('id_usuario_vinculado', $cols_inv);
+        $sel_hora = in_array('hora_torneo', $cols_t) ? 't.hora_torneo as torneo_hora' : (in_array('hora', $cols_t) ? 't.hora as torneo_hora' : 'NULL as torneo_hora');
+        $join_usuario = $has_id_usuario_vinculado ? "LEFT JOIN usuarios u ON u.id = i.id_usuario_vinculado" : "";
+        $sel_usuario = $has_id_usuario_vinculado ? ", u.nombre as usuario_vinculado_nombre" : "";
         $stmt = DB::pdo()->prepare("
             SELECT 
                 i.*,
                 t.nombre as torneo_nombre,
                 t.fechator as torneo_fecha,
+                $sel_hora,
                 c.nombre as club_nombre,
                 c.delegado as club_delegado,
                 c.telefono as club_telefono
-            FROM invitations i
+                $sel_usuario
+            FROM " . TABLE_INVITATIONS . " i
             INNER JOIN tournaments t ON i.torneo_id = t.id
             INNER JOIN clubes c ON i.club_id = c.id
+            $join_usuario
             $where
             ORDER BY i.fecha_creacion DESC
             LIMIT {$pagination->getLimit()} OFFSET {$pagination->getOffset()}
@@ -209,7 +225,7 @@ if ($action === 'list' && !empty($filter_torneo)) {
                 SUM(CASE WHEN estado = 'activa' THEN 1 ELSE 0 END) as activas,
                 SUM(CASE WHEN estado = 'expirada' THEN 1 ELSE 0 END) as expiradas,
                 SUM(CASE WHEN estado = 'cancelada' THEN 1 ELSE 0 END) as canceladas
-            FROM invitations i
+            FROM " . TABLE_INVITATIONS . " i
             $where
         ");
         $stmt->execute($params);
@@ -367,6 +383,7 @@ if ($action === 'list' && !empty($filter_torneo)) {
                                 <th>Vigencia</th>
                                 <th>Token</th>
                                 <th>Estado</th>
+                                <?php if (!empty($has_id_usuario_vinculado)): ?><th>Vinculación</th><?php endif; ?>
                                 <th class="text-center">Acciones</th>
                             </tr>
                         </thead>
@@ -416,8 +433,41 @@ if ($action === 'list' && !empty($filter_torneo)) {
                                             <?= htmlspecialchars(ucfirst($item['estado'])) ?>
                                         </span>
                                     </td>
+                                    <?php if (!empty($has_id_usuario_vinculado)): ?>
+                                    <td>
+                                        <?php
+                                        $id_vinculado = isset($item['id_usuario_vinculado']) ? (int)$item['id_usuario_vinculado'] : 0;
+                                        if ($id_vinculado > 0 && !empty($item['usuario_vinculado_nombre'])): ?>
+                                            <span class="badge bg-success" title="Vinculado a usuario ID <?= $id_vinculado ?>">Vinculado a: <?= htmlspecialchars($item['usuario_vinculado_nombre']) ?></span>
+                                        <?php else: ?>
+                                            <span class="badge bg-secondary">Sin vincular</span>
+                                        <?php endif; ?>
+                                    </td>
+                                    <?php endif; ?>
                                     <td class="text-center">
+                                        <?php
+                                        $delegado_nombre = !empty($item['club_delegado']) ? $item['club_delegado'] : 'Delegado';
+                                        $fecha_txt = date('d/m/Y', strtotime($item['torneo_fecha']));
+                                        $hora_txt = isset($item['torneo_hora']) && $item['torneo_hora'] !== '' && $item['torneo_hora'] !== null ? $item['torneo_hora'] : 'Por confirmar';
+                                        if (is_string($hora_txt) && preg_match('/^\d{2}:\d{2}/', $hora_txt)) { $hora_txt = substr($hora_txt, 0, 5); }
+                                        $url_tarjeta = rtrim(AppHelpers::getPublicUrl(), '/') . '/invitation/digital?token=' . urlencode($item['token']);
+                                        $url_inscripciones = rtrim(AppHelpers::getPublicUrl(), '/') . '/invitation/register?token=' . urlencode($item['token']);
+                                        $msg_invitacion = "Estimado delegado de " . $item['club_nombre'] . ", le invitamos formalmente a nuestro evento " . $item['torneo_nombre'] . ". Vea todos los detalles, afiche y normas aquí: " . $url_tarjeta . " — Es necesario estar registrado en el sistema para acceder.";
+                                        $url_wa = 'https://api.whatsapp.com/send?text=' . rawurlencode($msg_invitacion);
+                                        $url_telegram = 'https://t.me/share/url?url=' . rawurlencode($url_tarjeta) . '&text=' . rawurlencode($msg_invitacion);
+                                        ?>
                                         <div class="btn-group" role="group">
+                                            <a href="<?= htmlspecialchars($url_inscripciones) ?>" class="btn btn-sm btn-primary" target="_blank" rel="noopener noreferrer" title="Abrir formulario de inscripciones (enlace para el club)">
+                                                <i class="fas fa-user-plus"></i>
+                                            </a>
+                                            <button type="button" class="btn btn-sm btn-outline-primary btn-copy-inscription-link" title="Copiar enlace de inscripciones" data-url="<?= htmlspecialchars($url_inscripciones) ?>">
+                                                <i class="fas fa-link"></i>
+                                            </button>
+                                            <a href="<?= htmlspecialchars($url_wa) ?>" class="btn btn-sm btn-success" target="_blank" rel="noopener noreferrer" title="Enviar por WhatsApp"><i class="fab fa-whatsapp"></i></a>
+                                            <a href="<?= htmlspecialchars($url_telegram) ?>" class="btn btn-sm btn-info" target="_blank" rel="noopener noreferrer" title="Enviar por Telegram"><i class="fab fa-telegram"></i></a>
+                                            <a href="<?= htmlspecialchars($url_tarjeta) ?>" class="btn btn-sm btn-outline-secondary" target="_blank" rel="noopener noreferrer" title="Ver tarjeta digital">
+                                                <i class="fas fa-id-card"></i>
+                                            </a>
                                             <a href="../modules/invitations/inscripciones/login.php?token=<?= htmlspecialchars($item['token']) ?>" 
                                                class="btn btn-sm btn-outline-success" title="Acceder como invitado">
                                                 <i class="fas fa-sign-in-alt"></i>
@@ -453,7 +503,7 @@ if ($action === 'list' && !empty($filter_torneo)) {
     </div>
     <?php endif; // Fin del if filter_torneo ?>
 
-<?php elseif ($action === 'new' || $action === 'edit'): ?>
+<?php elseif ($action === 'new' || ($action === 'edit' && $invitation)): ?>
     <!-- Formulario -->
     <div class="card">
         <div class="card-header bg-<?= $action === 'edit' ? 'warning' : 'success' ?> text-white">
@@ -467,6 +517,13 @@ if ($action === 'list' && !empty($filter_torneo)) {
                 <?= CSRF::input(); ?>
                 <?php if ($action === 'edit'): ?>
                     <input type="hidden" name="id" value="<?= (int)$invitation['id'] ?>">
+                    <?php if (!empty($_GET['filter_torneo'])): ?>
+                    <input type="hidden" name="filter_torneo" value="<?= (int)$_GET['filter_torneo'] ?>">
+                    <?php endif; ?>
+                    <?php if (!empty($_GET['return_to']) && $_GET['return_to'] === 'invitacion_clubes' && !empty($_GET['torneo_id'])): ?>
+                    <input type="hidden" name="return_to" value="invitacion_clubes">
+                    <input type="hidden" name="torneo_id" value="<?= (int)$_GET['torneo_id'] ?>">
+                    <?php endif; ?>
                 <?php endif; ?>
                 
                 <div class="row">
@@ -530,6 +587,20 @@ if ($action === 'list' && !empty($filter_torneo)) {
                                 <option value="cancelada"<?= ($action === 'edit' && $invitation['estado'] === 'cancelada') ? ' selected' : '' ?>>Cancelada</option>
                             </select>
                         </div>
+                        <?php if ($action === 'edit'): ?>
+                        <div class="mb-3">
+                            <label for="invitado_delegado" class="form-label">Delegado / Contacto invitado</label>
+                            <input type="text" class="form-control" id="invitado_delegado" name="invitado_delegado" 
+                                   value="<?= htmlspecialchars($invitation['invitado_delegado'] ?? '') ?>" 
+                                   placeholder="Nombre del delegado o contacto">
+                            <small class="text-muted">Se mantiene el token; actualice si cambió el responsable en el club.</small>
+                        </div>
+                        <div class="mb-3">
+                            <label for="invitado_email" class="form-label">Email del invitado</label>
+                            <input type="email" class="form-control" id="invitado_email" name="invitado_email" 
+                                   value="<?= htmlspecialchars($invitation['invitado_email'] ?? '') ?>" placeholder="email@ejemplo.com">
+                        </div>
+                        <?php endif; ?>
                     </div>
                 </div>
                 
@@ -540,13 +611,15 @@ if ($action === 'list' && !empty($filter_torneo)) {
                 </div>
                 
                 <div class="d-flex justify-content-between mt-4 pt-3 border-top">
-                    <?php 
+                    <?php
                     $back_url = 'index.php?page=invitations';
-                    if ($action === 'edit' && isset($_GET['filter_torneo'])) {
+                    if ($action === 'edit' && !empty($_GET['return_to']) && $_GET['return_to'] === 'invitacion_clubes' && !empty($_GET['torneo_id'])) {
+                        $back_url = 'index.php?page=invitacion_clubes&torneo_id=' . (int)$_GET['torneo_id'];
+                    } elseif ($action === 'edit' && isset($_GET['filter_torneo'])) {
                         $back_url .= '&filter_torneo=' . (int)$_GET['filter_torneo'];
                     }
                     ?>
-                    <a href="<?= $back_url ?>" class="btn btn-secondary">
+                    <a href="<?= htmlspecialchars($back_url) ?>" class="btn btn-secondary">
                         <i class="fas fa-times me-2"></i>Cancelar
                     </a>
                     <button type="submit" class="btn btn-<?= $action === 'edit' ? 'warning' : 'success' ?>">
@@ -564,6 +637,14 @@ function copyToken(token) {
         alert('Token copiado al portapapeles');
     });
 }
+document.querySelectorAll('.btn-copy-inscription-link').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+        var url = this.getAttribute('data-url');
+        if (url && navigator.clipboard) {
+            navigator.clipboard.writeText(url).then(function() { alert('Enlace de inscripciones copiado.'); });
+        }
+    });
+});
 
 // Auto-calcular fechas basado en el torneo seleccionado
 document.getElementById('torneo_id')?.addEventListener('change', function() {

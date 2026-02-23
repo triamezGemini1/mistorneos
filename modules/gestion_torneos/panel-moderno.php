@@ -622,6 +622,10 @@ tailwind.config = {
                         </h3>
                     </div>
                     <div class="p-5 space-y-4">
+                        <!-- Invitar Clubes (listado directorio + envío por WhatsApp/Telegram) -->
+                        <a href="index.php?page=invitacion_clubes&torneo_id=<?= (int)($torneo['id'] ?? 0) ?>" class="tw-btn bg-cyan-500 hover:bg-cyan-600 text-white w-full text-center">
+                            <i class="fas fa-paper-plane mr-2"></i> Invitar Clubes
+                        </a>
                         <!-- Inscripciones: un solo bloque (Gestionar + Inscribir en sitio) -->
                         <?php if ($isLocked || $torneo_bloqueado_inscripciones): ?>
                             <button type="button" disabled class="tw-btn bg-gray-400 text-white">

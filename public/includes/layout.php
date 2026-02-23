@@ -238,7 +238,7 @@ if (in_array($user['role'], ['admin_club', 'admin_general', 'admin_torneo'], tru
         <?php if ($user['role'] === 'admin_general'): ?>
         <?php
         $is_inicio_open = in_array($current_page, ['home', 'calendario']);
-        $is_estructura_open = in_array($current_page, ['entidades', 'organizaciones', 'clubs']);
+        $is_estructura_open = in_array($current_page, ['entidades', 'organizaciones', 'clubs', 'directorio_clubes']);
         $is_afiliaciones_open = in_array($current_page, ['admin_clubs', 'affiliate_requests']);
         $is_comunicacion_open = in_array($current_page, ['notificaciones_masivas', 'whatsapp_config', 'comments']);
         ?>
@@ -292,6 +292,12 @@ if (in_array($user['role'], ['admin_club', 'admin_general', 'admin_torneo'], tru
               <a href="<?= htmlspecialchars(AppHelpers::dashboard('clubs')) ?>" class="nav-link nav-sub-sub-link <?= $current_page === 'clubs' ? 'active' : '' ?>">
                 <i class="fas fa-building me-2"></i>
                 <span>Clubes</span>
+              </a>
+            </li>
+            <li class="nav-item mb-1">
+              <a href="<?= htmlspecialchars(AppHelpers::dashboard('directorio_clubes')) ?>" class="nav-link nav-sub-sub-link <?= $current_page === 'directorio_clubes' ? 'active' : '' ?>">
+                <i class="fas fa-address-book me-2"></i>
+                <span>Directorio de Clubes</span>
               </a>
             </li>
           </ul>
@@ -588,7 +594,7 @@ if (in_array($user['role'], ['admin_club', 'admin_general', 'admin_torneo'], tru
   <script>window.APP_BASE_URL = '<?= htmlspecialchars(rtrim(AppHelpers::getBaseUrl(), "/")) ?>'; window.notifAjaxUrl = '<?= htmlspecialchars($layout_asset_base . "/notificaciones_ajax.php") ?>';</script>
 
   <?php
-  $pages_needing_image_preview = ['mi_organizacion', 'admin_org', 'tournaments', 'tournament_admin', 'users', 'clubs', 'clubes_asociados', 'admin_clubs'];
+  $pages_needing_image_preview = ['mi_organizacion', 'admin_org', 'tournaments', 'tournament_admin', 'users', 'clubs', 'clubes_asociados', 'admin_clubs', 'directorio_clubes'];
   $action = $_GET['action'] ?? '';
   $needs_image_preview = in_array($current_page, $pages_needing_image_preview)
     || ($current_page === 'torneo_gestion' && in_array($action, ['galeria_fotos', 'index']));

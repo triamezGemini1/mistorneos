@@ -74,7 +74,25 @@ if ($useModernRouter) {
     if (file_exists($autoload)) {
         require_once $autoload;
     }
-    
+    // Si no hay vendor o el autoload no incluye Core, cargar clases a mano
+    if (!class_exists(\Core\Container\Container::class, false)) {
+        $coreRoot = __DIR__ . '/../core';
+        $libRoot = __DIR__ . '/../lib';
+        require_once $coreRoot . '/Container/Container.php';
+        require_once $coreRoot . '/Http/Request.php';
+        require_once $coreRoot . '/Http/Response.php';
+        require_once $libRoot . '/Security/RateLimiter.php';
+        require_once $coreRoot . '/Middleware/Middleware.php';
+        require_once $coreRoot . '/Middleware/AuthMiddleware.php';
+        require_once $coreRoot . '/Middleware/RateLimitMiddleware.php';
+        require_once $coreRoot . '/Routing/Router.php';
+    }
+
+    // Asegurar que Lib\Security\RateLimiter exista (usado por RateLimitMiddleware en rutas)
+    if (!class_exists(\Lib\Security\RateLimiter::class, false)) {
+        require_once __DIR__ . '/../lib/Security/RateLimiter.php';
+    }
+
     // Inicializar Container y Router
     $container = new \Core\Container\Container();
     $router = new \Core\Routing\Router($container);
@@ -185,6 +203,31 @@ if ($page === 'clubs' && (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST')) {
     }
     if ($club_action === 'save') {
         require_once __DIR__ . '/../modules/clubs/save.php';
+        exit;
+    }
+}
+
+// Directorio de clubes: exportación (solo GET, sin layout)
+if ($page === 'directorio_clubes') {
+    $dc_action = $_GET['action'] ?? '';
+    if ($dc_action === 'export_excel') {
+        require_once __DIR__ . '/../modules/directorio_clubes/export_excel.php';
+        exit;
+    }
+    if ($dc_action === 'report_pdf') {
+        require_once __DIR__ . '/../modules/directorio_clubes/report_pdf.php';
+        exit;
+    }
+}
+// POST directorio_clubes: guardar o actualizar registro en tabla directorio_clubes
+if ($page === 'directorio_clubes' && (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST')) {
+    $dc_action = $_GET['action'] ?? '';
+    if ($dc_action === 'update') {
+        require_once __DIR__ . '/../modules/directorio_clubes/update.php';
+        exit;
+    }
+    if ($dc_action === 'save') {
+        require_once __DIR__ . '/../modules/directorio_clubes/save.php';
         exit;
     }
 }

@@ -617,6 +617,11 @@ $page_title = $page_title ?? 'Administrador de Torneos';
                     <span>Generar Link Invitación</span>
                 </span>
                 <?php else: ?>
+                <a href="index.php?page=invitacion_clubes&torneo_id=<?php echo $torneo_id_safe; ?>" 
+                   class="nav-link-sidebar <?php echo ($_GET['page'] ?? '') === 'invitacion_clubes' ? 'active' : ''; ?>">
+                    <i class="fas fa-address-book"></i>
+                    <span>Invitación de clubes</span>
+                </a>
                 <a href="index.php?page=player_invitations&torneo_id=<?php echo $torneo_id_safe; ?>" 
                    class="nav-link-sidebar <?php echo ($_GET['page'] ?? '') === 'player_invitations' ? 'active' : ''; ?>">
                     <i class="fab fa-whatsapp"></i>
@@ -626,6 +631,11 @@ $page_title = $page_title ?? 'Administrador de Torneos';
                    class="nav-link-sidebar <?php echo ($_GET['page'] ?? '') === 'tournaments/invitation_link' ? 'active' : ''; ?>">
                     <i class="fas fa-link"></i>
                     <span>Generar Link Invitación</span>
+                </a>
+                <a href="index.php?page=invitations&filter_torneo=<?php echo $torneo_id_safe; ?>" 
+                   class="nav-link-sidebar <?php echo ($_GET['page'] ?? '') === 'invitations' ? 'active' : ''; ?>">
+                    <i class="fas fa-paper-plane"></i>
+                    <span>Despacho de Invitaciones</span>
                 </a>
                 <?php endif; ?>
                 <?php endif; ?>

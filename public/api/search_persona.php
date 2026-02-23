@@ -113,38 +113,7 @@ try {
     } else {
         error_log("search_persona.php - No existe persona_database.php");
     }
-    
-    // 3. Buscar en tabla inscripciones (usuarios ya buscado en paso 1)
-    error_log("search_persona.php - Paso 3: Buscando en inscripciones");
-    try {
-        $stmt = DB::pdo()->prepare("
-            SELECT nombre, sexo, fechnac, celular 
-            FROM inscripciones 
-            WHERE cedula = ? 
-            ORDER BY created_at DESC 
-            LIMIT 1
-        ");
-        $stmt->execute([$cedula]);
-        $persona = $stmt->fetch(PDO::FETCH_ASSOC);
-        
-        if ($persona) {
-            error_log("search_persona.php - Encontrado en inscripciones: " . $persona['nombre']);
-            echo json_encode([
-                'encontrado' => true,
-                'fuente' => 'inscripciones',
-                'persona' => [
-                    'nombre' => $persona['nombre'] ?? '',
-                    'sexo' => $persona['sexo'] ?? '',
-                    'fechnac' => $persona['fechnac'] ?? '',
-                    'celular' => $persona['celular'] ?? ''
-                ]
-            ]);
-            exit;
-        }
-    } catch (Exception $e) {
-        error_log("search_persona.php - Error buscando en inscripciones: " . $e->getMessage());
-    }
-    
+
     // 4. No se encontró en ninguna parte
     error_log("search_persona.php - No encontrado");
     echo json_encode([

@@ -166,3 +166,8 @@ class DB {
     return $results;
   }
 }
+
+// Nombre de la tabla de invitaciones (por defecto 'invitaciones'; en .env puede definirse TABLE_INVITATIONS=invitations)
+if (!defined('TABLE_INVITATIONS')) {
+  define('TABLE_INVITATIONS', (class_exists('Env') && Env::has('TABLE_INVITATIONS')) ? (string) Env::get('TABLE_INVITATIONS') : 'invitaciones');
+}

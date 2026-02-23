@@ -4,8 +4,9 @@ require_once __DIR__ . '/../../config/bootstrap.php';
 require_once __DIR__ . '/../../config/db.php';
 require_once __DIR__ . '/../../config/csrf.php';
 require_once __DIR__ . '/../../config/auth.php';
+require_once __DIR__ . '/../../config/admin_general_auth.php';
 
-Auth::requireRole(['admin_general','admin_torneo']);
+requireAdminGeneral();
 CSRF::validate();
 
 try {
@@ -15,29 +16,13 @@ try {
     }
 
     $current_user = Auth::user();
-    $user_role = $current_user['role'];
-    $user_club_id = (int)($current_user['club_id'] ?? 0);
 
-    // Organización y entidad obligatorias: todo club debe estar bajo una organización (y por tanto una entidad)
-    $organizacion_id = null;
-    $entidad = 0;
-    if ($user_role === 'admin_general') {
-        $organizacion_id = !empty($_POST['organizacion_id']) ? (int)$_POST['organizacion_id'] : null;
-        if (!$organizacion_id) {
-            throw new Exception('Debe seleccionar una organización. Todo club debe pertenecer a una organización con entidad definida.');
-        }
-    } else {
-        // admin_torneo: obtener organización del club del usuario
-        if (!$user_club_id) {
-            throw new Exception('Su usuario no tiene un club asignado. No puede crear clubes.');
-        }
-        $stmt = DB::pdo()->prepare("SELECT organizacion_id FROM clubes WHERE id = ?");
-        $stmt->execute([$user_club_id]);
-        $organizacion_id = $stmt->fetchColumn() ? (int)$stmt->fetchColumn() : null;
-        if (!$organizacion_id) {
-            throw new Exception('Su club no tiene organización asignada. Contacte al administrador.');
-        }
+    // Organización y entidad obligatorias (solo admin_general puede crear clubes)
+    $organizacion_id = !empty($_POST['organizacion_id']) ? (int)$_POST['organizacion_id'] : null;
+    if (!$organizacion_id) {
+        throw new Exception('Debe seleccionar una organización. Todo club debe pertenecer a una organización con entidad definida.');
     }
+    $entidad = 0;
 
     if ($organizacion_id) {
         $stmt = DB::pdo()->prepare("SELECT entidad FROM organizaciones WHERE id = ? AND estatus = 1");

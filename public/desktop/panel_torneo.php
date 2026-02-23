@@ -169,6 +169,7 @@ require_once __DIR__ . '/desktop_layout.php';
                     <h3 class="h6 mb-0"><i class="fas fa-table me-2"></i>Gestión de Mesas</h3>
                 </div>
                 <div class="card-body">
+                    <a href="../index.php?page=invitacion_clubes&torneo_id=<?= $torneo_id ?>" class="btn btn-info panel-torneo-btn"><i class="fas fa-paper-plane me-1"></i>Invitar Clubes</a>
                     <?php if ($inscripciones_bloqueado): ?>
                     <button type="button" disabled class="btn btn-secondary panel-torneo-btn"><i class="fas fa-lock me-1"></i>Inscripciones (Cerrado)</button>
                     <?php else: ?>

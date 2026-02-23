@@ -52,6 +52,7 @@ if (isset($_SESSION['user'])) {
 
 $error = '';
 $success = '';
+$from_invitation = !empty($_GET['from_invitation']) || !empty($_POST['from_invitation']);
 $entidad = isset($_POST['entidad']) ? (int)($_POST['entidad']) : 0;
 $entidades_options = getEntidadesOptions();
 
@@ -145,7 +146,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             
             if ($result['success']) {
                 RateLimiter::recordSubmit('user_register');
-                $success = '¡Registro exitoso! Ya puedes iniciar sesión.';
+                $success = '¡Registro exitoso! Ya puedes iniciar sesión.' . ($from_invitation ? ' Inicia sesión para acceder al formulario de inscripción de tu invitación.' : '');
                 // Limpiar todos los campos del formulario después de registro exitoso
                 $_POST = [];
                 $cedula = '';
@@ -253,8 +254,15 @@ $base_url = app_base_url();
                                 </div>
                             </div>
                         <?php else: ?>
+                            <?php if ($from_invitation): ?>
+                            <div class="alert alert-info">
+                                <i class="fas fa-envelope-open-text me-2"></i>
+                                Has accedido mediante una invitación. Regístrate para poder inscribir a tus atletas; después inicia sesión y serás llevado al formulario de inscripción.
+                            </div>
+                            <?php endif; ?>
                             <form method="POST" id="registerForm">
                                 <input type="hidden" name="csrf_token" value="<?= CSRF::token() ?>">
+                                <?php if ($from_invitation): ?><input type="hidden" name="from_invitation" value="1"><?php endif; ?>
                                 <input type="hidden" name="fechnac" id="fechnac" value="">
                                 
                                 <div class="row">

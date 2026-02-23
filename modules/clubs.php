@@ -2,6 +2,7 @@
 require_once __DIR__ . '/../config/auth.php';
 require_once __DIR__ . '/../config/db.php';
 require_once __DIR__ . '/../config/csrf.php';
+require_once __DIR__ . '/../config/admin_general_auth.php';
 require_once __DIR__ . '/../public/simple_image_config.php';
 require_once __DIR__ . '/../lib/Pagination.php';
 
@@ -11,6 +12,12 @@ require_once __DIR__ . '/../lib/ClubHelper.php';
 
 // Obtener datos para la vista
 $action = $_GET['action'] ?? 'list';
+
+// create, store, edit, update, destroy solo para admin_general
+$crud_actions = ['new', 'save', 'edit', 'update', 'delete'];
+if (in_array($action, $crud_actions, true)) {
+    requireAdminGeneral();
+}
 
 // Si es admin_club y está intentando ver detalles o editar, verificar permisos después
 // Si es admin_club y está en list u otra acción, redirigir

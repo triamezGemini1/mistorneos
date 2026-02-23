@@ -38,8 +38,20 @@ if (isset($_SESSION['user'])) {
     exit;
 }
 
+// Captura del token de invitación desde cookie (para vincular tras registro o sesión expirada)
+if (empty($_SESSION['invitation_token']) && !empty($_COOKIE['invitation_token']) && strlen(trim($_COOKIE['invitation_token'])) >= 32) {
+    require_once __DIR__ . '/../lib/app_helpers.php';
+    $_SESSION['invitation_token'] = trim($_COOKIE['invitation_token']);
+    $_SESSION['url_retorno'] = rtrim(AppHelpers::getPublicUrl(), '/') . '/invitation/register?token=' . urlencode($_SESSION['invitation_token']);
+    $_SESSION['invitation_club_name'] = 'Club';
+}
+
 $error = null;
 $success = !empty($_GET['registered']) ? 'Registro exitoso. Ya puedes iniciar sesión.' : null;
+$invitation_message = null;
+if (!empty($_SESSION['invitation_club_name'])) {
+    $invitation_message = 'Has accedido mediante una invitación. Por favor, inicia sesión o regístrate para vincular tu cuenta al Club ' . htmlspecialchars($_SESSION['invitation_club_name']) . '.';
+}
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $username = trim($_POST['username'] ?? '');
@@ -50,6 +62,55 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (Auth::login($username, $password)) {
         require_once __DIR__ . '/../lib/app_helpers.php';
         ob_end_clean();
+
+        // Reclamación de token de invitación: vincular usuario y redirigir al formulario
+        if (!empty($_SESSION['invitation_token'])) {
+            require_once __DIR__ . '/../config/db.php';
+            $tb_inv = defined('TABLE_INVITATIONS') ? TABLE_INVITATIONS : 'invitaciones';
+            $token = $_SESSION['invitation_token'];
+            $return_url = $_SESSION['url_retorno'] ?? '';
+            $user_id = (int) (Auth::user()['id'] ?? 0);
+            try {
+                $stmt = DB::pdo()->prepare("SELECT id, id_usuario_vinculado, club_id FROM {$tb_inv} WHERE token = ? LIMIT 1");
+                $stmt->execute([$token]);
+                $inv = $stmt->fetch(PDO::FETCH_ASSOC);
+                if ($inv) {
+                    $id_vinculado = isset($inv['id_usuario_vinculado']) ? (int) $inv['id_usuario_vinculado'] : 0;
+                    if ($id_vinculado > 0 && $id_vinculado !== $user_id) {
+                        $_SESSION['login_error'] = 'Esta invitación ya está siendo gestionada por otro delegado.';
+                        $return_url = '';
+                    } else {
+                        $up = DB::pdo()->prepare("UPDATE {$tb_inv} SET id_usuario_vinculado = ?, estado = 'activa' WHERE token = ?");
+                        $up->execute([$user_id, $token]);
+                        $club_id_inv = (int)($inv['club_id'] ?? 0);
+                        if ($club_id_inv > 0) {
+                            $upClub = DB::pdo()->prepare("UPDATE clubes SET delegado_user_id = ? WHERE id = ?");
+                            $upClub->execute([$user_id, $club_id_inv]);
+                            $stmtNom = DB::pdo()->prepare("SELECT nombre FROM clubes WHERE id = ?");
+                            $stmtNom->execute([$club_id_inv]);
+                            $nom = $stmtNom->fetchColumn();
+                            if ($nom !== false && trim((string)$nom) !== '') {
+                                $cols = DB::pdo()->query("SHOW COLUMNS FROM directorio_clubes LIKE 'id_usuario'")->fetch();
+                                if ($cols) {
+                                    $upDir = DB::pdo()->prepare("UPDATE directorio_clubes SET id_usuario = ? WHERE nombre = ?");
+                                    $upDir->execute([$user_id, $nom]);
+                                }
+                            }
+                        }
+                    }
+                }
+            } catch (Exception $e) {
+                // Columna id_usuario_vinculado puede no existir aún
+            }
+            unset($_SESSION['invitation_token'], $_SESSION['invitation_club_name']);
+            if ($return_url !== '' && !headers_sent()) {
+                header('Location: ' . $return_url, true, 302);
+                unset($_SESSION['url_retorno']);
+                exit;
+            }
+            unset($_SESSION['url_retorno']);
+        }
+
         $redirect = !empty($_POST['return_url']) ? trim($_POST['return_url']) : ($return_url ?: '');
         if ($redirect && preg_match('#^[a-zA-Z0-9_\-/\.\?=&]+$#', $redirect) && !preg_match('#^(https?|javascript|data):#i', $redirect)) {
             if (strpos($redirect, '?') !== false || strpos($redirect, '.php') !== false) {
@@ -168,10 +229,16 @@ ob_end_clean();
                 <i class="fas fa-check-circle me-2"></i><?= htmlspecialchars($success) ?>
               </div>
             <?php endif; ?>
-            <?php if ($error): ?>
-              <div class="alert alert-danger">
-                <i class="fas fa-exclamation-circle me-2"></i><?= htmlspecialchars($error) ?>
+            <?php if (!empty($_SESSION['invitation_club_name']) && $invitation_message): ?>
+              <div class="alert alert-info">
+                <i class="fas fa-envelope-open-text me-2"></i><?= $invitation_message ?>
               </div>
+            <?php endif; ?>
+            <?php if ($error || !empty($_SESSION['login_error'])): ?>
+              <div class="alert alert-danger">
+                <i class="fas fa-exclamation-circle me-2"></i><?= htmlspecialchars($error ?: $_SESSION['login_error']) ?>
+              </div>
+              <?php unset($_SESSION['login_error']); ?>
             <?php endif; ?>
             <form method="POST">
               <?php if ($return_url): ?>

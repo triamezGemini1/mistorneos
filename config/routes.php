@@ -70,6 +70,18 @@ return function (Router $router) {
             include __DIR__ . '/../modules/invitation_register_select.php';
             return '';
         });
+
+        // Tarjeta de invitación digital (pública por token)
+        $router->get('/digital', function() {
+            include __DIR__ . '/../modules/invitacion_digital.php';
+            return '';
+        });
+
+        // Descarga PDF de la invitación digital (pública por token)
+        $router->get('/digital/pdf', function() {
+            include __DIR__ . '/../modules/invitacion_digital_pdf.php';
+            return '';
+        });
     });
     
     // =================================================================
