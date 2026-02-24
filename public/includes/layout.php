@@ -589,10 +589,9 @@ if (in_array($user['role'], ['admin_club', 'admin_general', 'admin_torneo'], tru
       </div>
       <?php endif; ?>
 
-      <!-- Contenido din�mico -->
+      <!-- Contenido dinámico (CSS/head ya cargados arriba; el módulo se incluye dentro del body con formato) -->
       <main class="container-fluid py-4">
         <?php 
-        // Soportar sub-rutas con / (ej: invitations/enviar_masivo)
         $content = __DIR__ . "/../../modules/$current_page.php";
         if (file_exists($content)) {
           include $content;

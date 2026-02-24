@@ -244,7 +244,8 @@ if ($page === 'directorio_clubes' && (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 
     }
 }
 
-// Manejar POST y acciones que requieren redirección
+// POST / acciones que redirigen: se incluye solo el módulo (sin layout). El módulo DEBE hacer header(Location) y exit
+// para que el usuario no vea salida sin formato. Tras el redirect, el GET cae más abajo e incluye layout (con CSS) + módulo.
 if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST' || in_array($action, $actions_requiring_redirect, true)) {
     $module = __DIR__ . "/../modules/{$page}.php";
     if (file_exists($module)) {

@@ -105,17 +105,10 @@ if ($torneo && $_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) 
     // Evitar que cualquier salida accidental rompa el redirect (regla de oro: no echo/print_r antes de Location)
     ob_start();
 
-    // Redirección siempre a esta misma página; nunca variable vacía (evita ir a phpMyAdmin u otra raíz)
+    // Redirección RELATIVA para que en producción (proxy/rewrite) vuelva al mismo entry point y se cargue el layout con CSS
     $build_redirect = function (array $params) {
-        $path = isset($_SERVER['SCRIPT_NAME']) ? $_SERVER['SCRIPT_NAME'] : '/index.php';
-        $path = ($path !== '' && $path !== '/') ? $path : '/index.php';
-        $scheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
-        $host = $_SERVER['HTTP_HOST'] ?? 'localhost';
-        $url = $scheme . '://' . $host . $path . '?' . http_build_query($params);
-        if ($url === '' || strpos($url, 'index.php') === false) {
-            $url = $scheme . '://' . $host . '/index.php?' . http_build_query($params);
-        }
-        return $url;
+        $q = http_build_query($params);
+        return 'index.php?' . $q;
     };
 
     try {
@@ -336,20 +329,12 @@ $fechator_fmt = $torneo && !empty($torneo['fechator']) ? date('d/m/Y', strtotime
             <?php endif; ?>
 
             <?php if ($torneo && !empty($clubs_list)): ?>
-                <?php
-                // SCRIPT_NAME = path real del script (/mistorneos/public/index.php). REQUEST_URI está normalizado por index.php y pierde el subpath → http://localhost/index.php iría a la raíz (phpMyAdmin en WAMP)
-                $form_path = isset($_SERVER['SCRIPT_NAME']) ? $_SERVER['SCRIPT_NAME'] : '/index.php';
-                $form_path = ($form_path !== '' && $form_path !== '/') ? $form_path : '/index.php';
-                $form_scheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
-                $form_host = $_SERVER['HTTP_HOST'] ?? 'localhost';
-                $form_action_url = $form_scheme . '://' . $form_host . $form_path . '?page=invitacion_clubes&torneo_id=' . (int)$torneo_id;
-                ?>
                 <div class="card">
                     <div class="card-header bg-light d-flex justify-content-between align-items-center flex-wrap gap-2">
                         <span><i class="fas fa-address-book me-2"></i>Clubes del directorio — marque los que desea invitar; en los ya invitados marque el cuadro para <strong>quitar</strong> la invitación</span>
                         <span class="badge bg-secondary"><?= count($ya_invitados) ?> ya invitados a este torneo</span>
                     </div>
-                    <form method="post" action="<?= htmlspecialchars($form_action_url) ?>" id="formInvitar">
+                    <form method="post" action="index.php?page=invitacion_clubes&torneo_id=<?= (int)$torneo_id ?>" id="formInvitar">
                         <?= CSRF::input() ?>
                         <input type="hidden" name="action" value="invitar_seleccionados">
                         <input type="hidden" name="acceso1" value="<?= htmlspecialchars(date('Y-m-d', strtotime(($torneo['fechator'] ?? 'today') . ' -30 days'))) ?>">

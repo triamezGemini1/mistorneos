@@ -60,10 +60,16 @@ Comparar salidas: mismas columnas, mismos tipos y mismos NULL/NOT NULL/DEFAULT.
 
 ---
 
-## 3. Cambios aplicados en el código (reparación del flujo)
+## 3. Formulario y redirección (evitar “sin formato” en producción)
+
+- **Formulario:** `<form method="post" action="index.php?page=invitacion_clubes&torneo_id=<?= $torneo_id ?>">`. La acción es **relativa** para que el POST vaya siempre al mismo entry point que la página actual (también en producción con subcarpeta o proxy).
+- **Redirect:** Tras guardar o error se usa redirección **relativa**: `header('Location: index.php?' . http_build_query($params))`. Así el navegador vuelve al mismo `index.php` (con layout y CSS) y no a otra ruta que pueda servirse sin formato.
+- **Inclusión del módulo:** En **GET**, `index.php` incluye `layout.php` y el layout incluye el módulo **dentro de `<main>`**, es decir, después de cargar `<head>` y CSS. Por eso la página se ve con formato. En **POST**, `index.php` incluye solo el módulo (sin layout); el módulo no debe imprimir nada y debe hacer siempre redirect.
+
+## 4. Cambios aplicados en el código (reparación del flujo)
 
 - **Transacción:** la creación de invitaciones (inserciones en `clubes` e `invitaciones`) se ejecuta dentro de `beginTransaction()` / `commit()`. Si algo falla, se hace `rollBack()` y no se dejan datos a medias.
-- **Redirect siempre:** tanto en éxito como en error se hace `header('Location: ...')` y `exit`. En error ya no se sigue al HTML, por lo que no se rompe el formato de la app.
+- **Redirect siempre:** tanto en éxito como en error se hace `header('Location: index.php?...')` (relativo) y `exit`. En error ya no se sigue al HTML, por lo que no se rompe el formato de la app.
 - **Buffer de salida:** al entrar al POST se hace `ob_start()` y antes de cada `header('Location')` se llama a `ob_end_clean()`, para que ningún `echo`/salida accidental impida el redirect.
 - **Error en log:** en el `catch` se hace `error_log('Invitacion_clubes: ' . $e->getMessage() ...)` para que el error exacto quede en el log del servidor (Apache/PHP).
 
@@ -71,7 +77,7 @@ La redirección tras éxito o error vuelve a la misma pantalla de invitación de
 
 ---
 
-## 4. Regla de oro
+## 5. Regla de oro
 
 No debe haber `echo`, `print_r`, `var_dump` ni ninguna salida antes de `header('Location')` en el flujo de invitaciones. El uso de `ob_start()` y `ob_end_clean()` mitiga salidas accidentales de dependencias.
 
