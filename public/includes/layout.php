@@ -22,6 +22,12 @@ if ($layout_asset_base === '') {
     $layout_asset_base = ((!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http') . '://' . ($_SERVER['HTTP_HOST'] ?? 'localhost');
 }
 
+// URLs relativas al entry point (index.php) para que el menú no envíe al landing por APP_URL incorrecto en producción
+$dashboard_href = function ($page, array $params = []) {
+    $params['page'] = $page;
+    return 'index.php?' . http_build_query($params);
+};
+
 // Logo y nombre para el identificador del dashboard (organización cuando no es admin_general)
 $dashboard_org = Auth::getDashboardOrganizacion();
 
@@ -130,13 +136,13 @@ if (in_array($user['role'], ['admin_club', 'admin_general', 'admin_torneo'], tru
         <?php if ($user['role'] !== 'admin_general'): ?>
         <!-- Inicio y Calendario: links directos para admin_club y admin_torneo -->
         <li class="mb-2">
-          <a href="<?= htmlspecialchars(AppHelpers::dashboard()) ?>" class="nav-link <?= $current_page === 'home' ? 'active' : '' ?>">
+          <a href="<?= htmlspecialchars($dashboard_href('home')) ?>" class="nav-link <?= $current_page === 'home' ? 'active' : '' ?>">
             <i class="fas fa-home me-3"></i>
             <span class="nav-text">Inicio</span>
           </a>
         </li>
         <li class="mb-2">
-          <a href="<?= htmlspecialchars(AppHelpers::dashboard('calendario')) ?>" class="nav-link <?= $current_page === 'calendario' ? 'active' : '' ?>">
+          <a href="<?= htmlspecialchars($dashboard_href('calendario')) ?>" class="nav-link <?= $current_page === 'calendario' ? 'active' : '' ?>">
             <i class="fas fa-calendar-alt me-3"></i>
             <span class="nav-text">Calendario</span>
           </a>
@@ -170,7 +176,7 @@ if (in_array($user['role'], ['admin_club', 'admin_general', 'admin_torneo'], tru
         <!-- Mi Organización: acceso directo a vista de estructura (organizaciones&id=X) -->
         <?php if ($admin_club_org_id): ?>
         <li class="mb-2">
-          <a href="<?= htmlspecialchars(AppHelpers::dashboard('organizaciones', ['id' => $admin_club_org_id])) ?>" class="nav-link <?= ($current_page === 'organizaciones' && (int)($_GET['id'] ?? 0) === $admin_club_org_id) ? 'active' : '' ?>">
+          <a href="<?= htmlspecialchars($dashboard_href('organizaciones', ['id' => $admin_club_org_id])) ?>" class="nav-link <?= ($current_page === 'organizaciones' && (int)($_GET['id'] ?? 0) === $admin_club_org_id) ? 'active' : '' ?>">
             <i class="fas fa-building me-3"></i>
             <span class="nav-text">Mi Organización</span>
           </a>
@@ -184,25 +190,25 @@ if (in_array($user['role'], ['admin_club', 'admin_general', 'admin_torneo'], tru
           </a>
         </li>
         <li class="mb-2">
-          <a href="<?= htmlspecialchars(AppHelpers::dashboard('clubes_asociados')) ?>" class="nav-link <?= $current_page === 'clubes_asociados' ? 'active' : '' ?>">
+          <a href="<?= htmlspecialchars($dashboard_href('clubes_asociados')) ?>" class="nav-link <?= $current_page === 'clubes_asociados' ? 'active' : '' ?>">
             <i class="fas fa-sitemap me-3"></i>
             <span class="nav-text">Clubes de la organización</span>
           </a>
         </li>
         <li class="mb-2">
-          <a href="<?= htmlspecialchars(AppHelpers::dashboard('admin_torneo_operadores')) ?>" class="nav-link <?= $current_page === 'admin_torneo_operadores' ? 'active' : '' ?>">
+          <a href="<?= htmlspecialchars($dashboard_href('admin_torneo_operadores')) ?>" class="nav-link <?= $current_page === 'admin_torneo_operadores' ? 'active' : '' ?>">
             <i class="fas fa-user-cog me-3"></i>
             <span class="nav-text">Admin Torneo y Operadores</span>
           </a>
         </li>
         <li class="mb-2">
-          <a href="<?= htmlspecialchars(AppHelpers::dashboard('cuentas_bancarias')) ?>" class="nav-link <?= $current_page === 'cuentas_bancarias' ? 'active' : '' ?>">
+          <a href="<?= htmlspecialchars($dashboard_href('cuentas_bancarias')) ?>" class="nav-link <?= $current_page === 'cuentas_bancarias' ? 'active' : '' ?>">
             <i class="fas fa-university me-3"></i>
             <span class="nav-text">Cuentas Bancarias</span>
           </a>
         </li>
         <li class="mb-2">
-          <a href="<?= htmlspecialchars(AppHelpers::dashboard('reportes_pago_usuarios')) ?>" class="nav-link <?= $current_page === 'reportes_pago_usuarios' ? 'active' : '' ?>">
+          <a href="<?= htmlspecialchars($dashboard_href('reportes_pago_usuarios')) ?>" class="nav-link <?= $current_page === 'reportes_pago_usuarios' ? 'active' : '' ?>">
             <i class="fas fa-money-bill-wave me-3"></i>
             <span class="nav-text">Reportes de Pago</span>
             <?php
@@ -227,14 +233,14 @@ if (in_array($user['role'], ['admin_club', 'admin_general', 'admin_torneo'], tru
         
         <!-- Comentarios -->
         <li class="mb-2">
-          <a href="<?= htmlspecialchars(AppHelpers::dashboard('comments_public')) ?>" class="nav-link <?= $current_page === 'comments_public' ? 'active' : '' ?>">
+          <a href="<?= htmlspecialchars($dashboard_href('comments_public')) ?>" class="nav-link <?= $current_page === 'comments_public' ? 'active' : '' ?>">
             <i class="fas fa-comment-dots me-3"></i>
             <span class="nav-text">Comentarios</span>
           </a>
         </li>
         <!-- 1. Portal Público -->
         <li class="mb-2">
-          <a href="<?= htmlspecialchars(AppHelpers::url('landing-spa.php')) ?>" class="nav-link">
+          <a href="<?= htmlspecialchars('landing-spa.php') ?>" class="nav-link">
             <i class="fas fa-id-card me-3"></i>
             <span class="nav-text">Portal Público</span>
             <i class="fas fa-external-link-alt ms-auto" style="font-size: 0.75rem;"></i>
@@ -242,7 +248,7 @@ if (in_array($user['role'], ['admin_club', 'admin_general', 'admin_torneo'], tru
         </li>
         <!-- 1. Manual de Usuario -->
         <li class="mb-2">
-          <a href="<?= htmlspecialchars(rtrim(AppHelpers::getBaseUrl(), '/') . '/manuales_web/manual_usuario.php') ?>" class="nav-link">
+          <a href="<?= htmlspecialchars('manuales_web/manual_usuario.php') ?>" class="nav-link">
             <i class="fas fa-book me-3"></i>
             <span class="nav-text">Manual de Usuario</span>
             <i class="fas fa-external-link-alt ms-auto" style="font-size: 0.75rem;"></i>
@@ -268,13 +274,13 @@ if (in_array($user['role'], ['admin_club', 'admin_general', 'admin_torneo'], tru
           </a>
           <ul class="list-unstyled ps-4 mt-1 collapse-submenu <?= $is_inicio_open ? 'show' : '' ?>" id="inicio-submenu">
             <li class="mb-1">
-              <a href="<?= htmlspecialchars(AppHelpers::dashboard()) ?>" class="nav-link nav-sub-sub-link <?= $current_page === 'home' ? 'active' : '' ?>">
+              <a href="<?= htmlspecialchars($dashboard_href('home')) ?>" class="nav-link nav-sub-sub-link <?= $current_page === 'home' ? 'active' : '' ?>">
                 <i class="fas fa-chart-line me-2"></i>
                 <span>Dashboard</span>
               </a>
             </li>
             <li class="mb-1">
-              <a href="<?= htmlspecialchars(AppHelpers::dashboard('calendario')) ?>" class="nav-link nav-sub-sub-link <?= $current_page === 'calendario' ? 'active' : '' ?>">
+              <a href="<?= htmlspecialchars($dashboard_href('calendario')) ?>" class="nav-link nav-sub-sub-link <?= $current_page === 'calendario' ? 'active' : '' ?>">
                 <i class="fas fa-calendar-alt me-2"></i>
                 <span>Calendario</span>
               </a>
@@ -292,25 +298,25 @@ if (in_array($user['role'], ['admin_club', 'admin_general', 'admin_torneo'], tru
           </a>
           <ul class="list-unstyled ps-4 mt-1 collapse-submenu <?= $is_estructura_open ? 'show' : '' ?>" id="estructura-submenu">
             <li class="mb-1">
-              <a href="<?= htmlspecialchars(AppHelpers::dashboard('entidades')) ?>" class="nav-link nav-sub-sub-link <?= $current_page === 'entidades' ? 'active' : '' ?>">
+              <a href="<?= htmlspecialchars($dashboard_href('entidades')) ?>" class="nav-link nav-sub-sub-link <?= $current_page === 'entidades' ? 'active' : '' ?>">
                 <i class="fas fa-map-marked-alt me-2"></i>
                 <span>Entidades</span>
               </a>
             </li>
             <li class="mb-1">
-              <a href="<?= htmlspecialchars(AppHelpers::dashboard('organizaciones')) ?>" class="nav-link nav-sub-sub-link <?= $current_page === 'organizaciones' ? 'active' : '' ?>">
+              <a href="<?= htmlspecialchars($dashboard_href('organizaciones')) ?>" class="nav-link nav-sub-sub-link <?= $current_page === 'organizaciones' ? 'active' : '' ?>">
                 <i class="fas fa-building me-2"></i>
                 <span>Organizaciones</span>
               </a>
             </li>
             <li class="mb-1">
-              <a href="<?= htmlspecialchars(AppHelpers::dashboard('clubs')) ?>" class="nav-link nav-sub-sub-link <?= $current_page === 'clubs' ? 'active' : '' ?>">
+              <a href="<?= htmlspecialchars($dashboard_href('clubs')) ?>" class="nav-link nav-sub-sub-link <?= $current_page === 'clubs' ? 'active' : '' ?>">
                 <i class="fas fa-building me-2"></i>
                 <span>Clubes</span>
               </a>
             </li>
             <li class="nav-item mb-1">
-              <a href="<?= htmlspecialchars(AppHelpers::dashboard('directorio_clubes')) ?>" class="nav-link nav-sub-sub-link <?= $current_page === 'directorio_clubes' ? 'active' : '' ?>">
+              <a href="<?= htmlspecialchars($dashboard_href('directorio_clubes')) ?>" class="nav-link nav-sub-sub-link <?= $current_page === 'directorio_clubes' ? 'active' : '' ?>">
                 <i class="fas fa-address-book me-2"></i>
                 <span>Directorio de Clubes</span>
               </a>
@@ -328,13 +334,13 @@ if (in_array($user['role'], ['admin_club', 'admin_general', 'admin_torneo'], tru
           </a>
           <ul class="list-unstyled ps-4 mt-1 collapse-submenu <?= $is_afiliaciones_open ? 'show' : '' ?>" id="afiliaciones-submenu">
             <li class="mb-1">
-              <a href="<?= htmlspecialchars(AppHelpers::dashboard('admin_clubs', ['action' => 'invitar'])) ?>" class="nav-link nav-sub-sub-link <?= ($current_page === 'admin_clubs' && ($_GET['action'] ?? '') === 'invitar') ? 'active' : '' ?>">
+              <a href="<?= htmlspecialchars($dashboard_href('admin_clubs', ['action' => 'invitar'])) ?>" class="nav-link nav-sub-sub-link <?= ($current_page === 'admin_clubs' && ($_GET['action'] ?? '') === 'invitar') ? 'active' : '' ?>">
                 <i class="fas fa-user-plus me-2"></i>
                 <span>Invitar Afiliados</span>
               </a>
             </li>
             <li class="mb-1">
-              <a href="<?= htmlspecialchars(AppHelpers::dashboard('affiliate_requests')) ?>" class="nav-link nav-sub-sub-link <?= $current_page === 'affiliate_requests' ? 'active' : '' ?>">
+              <a href="<?= htmlspecialchars($dashboard_href('affiliate_requests')) ?>" class="nav-link nav-sub-sub-link <?= $current_page === 'affiliate_requests' ? 'active' : '' ?>">
                 <i class="fas fa-user-clock me-2"></i>
                 <span>Solicitudes de Afiliación</span>
                 <?php if ($solicitudes_pendientes > 0): ?>
@@ -353,7 +359,7 @@ if (in_array($user['role'], ['admin_club', 'admin_general', 'admin_torneo'], tru
         </li>
         <!-- Usuarios -->
         <li class="mb-2">
-          <a href="<?= htmlspecialchars(AppHelpers::dashboard('users')) ?>" class="nav-link <?= $current_page === 'users' ? 'active' : '' ?>">
+          <a href="<?= htmlspecialchars($dashboard_href('users')) ?>" class="nav-link <?= $current_page === 'users' ? 'active' : '' ?>">
             <i class="fas fa-user-cog me-3"></i>
             <span class="nav-text">Gestión de Usuarios y Roles</span>
           </a>
@@ -361,7 +367,7 @@ if (in_array($user['role'], ['admin_club', 'admin_general', 'admin_torneo'], tru
         <?php if (($user['role'] ?? '') === 'admin_general'): ?>
         <!-- Reporte de actividad (Auditoría) - Solo Super Admin -->
         <li class="mb-2">
-          <a href="<?= htmlspecialchars(AppHelpers::dashboard('auditoria')) ?>" class="nav-link <?= $current_page === 'auditoria' ? 'active' : '' ?>">
+          <a href="<?= htmlspecialchars($dashboard_href('auditoria')) ?>" class="nav-link <?= $current_page === 'auditoria' ? 'active' : '' ?>">
             <i class="fas fa-clipboard-list me-3"></i>
             <span class="nav-text">Reporte de actividad</span>
           </a>
@@ -378,19 +384,19 @@ if (in_array($user['role'], ['admin_club', 'admin_general', 'admin_torneo'], tru
           </a>
           <ul class="list-unstyled ps-4 mt-1 collapse-submenu <?= $is_comunicacion_open ? 'show' : '' ?>" id="comunicacion-submenu">
             <li class="mb-1">
-              <a href="<?= htmlspecialchars(AppHelpers::dashboard('notificaciones_masivas')) ?>" class="nav-link nav-sub-sub-link <?= $current_page === 'notificaciones_masivas' ? 'active' : '' ?>">
+              <a href="<?= htmlspecialchars($dashboard_href('notificaciones_masivas')) ?>" class="nav-link nav-sub-sub-link <?= $current_page === 'notificaciones_masivas' ? 'active' : '' ?>">
                 <i class="fas fa-bell me-2"></i>
                 <span>Notificaciones Masivas</span>
               </a>
             </li>
             <li class="mb-1">
-              <a href="<?= htmlspecialchars(AppHelpers::dashboard('whatsapp_config')) ?>" class="nav-link nav-sub-sub-link <?= $current_page === 'whatsapp_config' ? 'active' : '' ?>">
+              <a href="<?= htmlspecialchars($dashboard_href('whatsapp_config')) ?>" class="nav-link nav-sub-sub-link <?= $current_page === 'whatsapp_config' ? 'active' : '' ?>">
                 <i class="fab fa-whatsapp me-2"></i>
                 <span>Mensajes WhatsApp</span>
               </a>
             </li>
             <li class="mb-1">
-              <a href="<?= htmlspecialchars(AppHelpers::dashboard('comments')) ?>" class="nav-link nav-sub-sub-link <?= $current_page === 'comments' ? 'active' : '' ?>">
+              <a href="<?= htmlspecialchars($dashboard_href('comments')) ?>" class="nav-link nav-sub-sub-link <?= $current_page === 'comments' ? 'active' : '' ?>">
                 <i class="fas fa-comments me-2"></i>
                 <span>Comentarios (Aprobación)</span>
                 <?php
@@ -408,7 +414,7 @@ if (in_array($user['role'], ['admin_club', 'admin_general', 'admin_torneo'], tru
         </li>
         <!-- Herramientas -->
         <li class="mb-2">
-          <a href="<?= htmlspecialchars(AppHelpers::dashboard('control_admin')) ?>" class="nav-link <?= $current_page === 'control_admin' ? 'active' : '' ?>">
+          <a href="<?= htmlspecialchars($dashboard_href('control_admin')) ?>" class="nav-link <?= $current_page === 'control_admin' ? 'active' : '' ?>">
             <i class="fas fa-tools me-3"></i>
             <span class="nav-text">Control Especial</span>
             <span class="badge bg-danger ms-2" style="font-size: 0.65rem;">Admin</span>
@@ -416,14 +422,14 @@ if (in_array($user['role'], ['admin_club', 'admin_general', 'admin_torneo'], tru
         </li>
         <!-- Enlaces -->
         <li class="mb-2">
-          <a href="<?= htmlspecialchars(AppHelpers::url('landing-spa.php')) ?>" class="nav-link">
+          <a href="<?= htmlspecialchars('landing-spa.php') ?>" class="nav-link">
             <i class="fas fa-id-card me-3"></i>
             <span class="nav-text">Portal Público</span>
             <i class="fas fa-external-link-alt ms-auto" style="font-size: 0.75rem;"></i>
           </a>
         </li>
         <li class="mb-2">
-          <a href="<?= htmlspecialchars(rtrim(AppHelpers::getBaseUrl(), '/') . '/manuales_web/manual_usuario.php') ?>" class="nav-link">
+          <a href="<?= htmlspecialchars('manuales_web/manual_usuario.php') ?>" class="nav-link">
             <i class="fas fa-book me-3"></i>
             <span class="nav-text">Manual de Usuario</span>
             <i class="fas fa-external-link-alt ms-auto" style="font-size: 0.75rem;"></i>
@@ -439,19 +445,19 @@ if (in_array($user['role'], ['admin_club', 'admin_general', 'admin_torneo'], tru
           </a>
         </li>
         <li class="mb-2">
-          <a href="<?= htmlspecialchars(AppHelpers::dashboard('cuentas_bancarias')) ?>" class="nav-link <?= $current_page === 'cuentas_bancarias' ? 'active' : '' ?>">
+          <a href="<?= htmlspecialchars($dashboard_href('cuentas_bancarias')) ?>" class="nav-link <?= $current_page === 'cuentas_bancarias' ? 'active' : '' ?>">
             <i class="fas fa-university me-3"></i>
             <span class="nav-text">Cuentas Bancarias</span>
           </a>
         </li>
         <li class="mb-2">
-          <a href="<?= htmlspecialchars(AppHelpers::dashboard('notificaciones_masivas')) ?>" class="nav-link <?= $current_page === 'notificaciones_masivas' ? 'active' : '' ?>">
+          <a href="<?= htmlspecialchars($dashboard_href('notificaciones_masivas')) ?>" class="nav-link <?= $current_page === 'notificaciones_masivas' ? 'active' : '' ?>">
             <i class="fas fa-bell me-3"></i>
             <span class="nav-text">Notificaciones</span>
           </a>
         </li>
         <li class="mb-2">
-          <a href="<?= htmlspecialchars(AppHelpers::dashboard('reportes_pago_usuarios')) ?>" class="nav-link <?= $current_page === 'reportes_pago_usuarios' ? 'active' : '' ?>">
+          <a href="<?= htmlspecialchars($dashboard_href('reportes_pago_usuarios')) ?>" class="nav-link <?= $current_page === 'reportes_pago_usuarios' ? 'active' : '' ?>">
             <i class="fas fa-money-bill-wave me-3"></i>
             <span class="nav-text">Reportes de Pago</span>
             <?php
@@ -469,14 +475,14 @@ if (in_array($user['role'], ['admin_club', 'admin_general', 'admin_torneo'], tru
           </a>
         </li>
         <li class="mb-2">
-          <a href="<?= htmlspecialchars(AppHelpers::url('landing-spa.php')) ?>" class="nav-link">
+          <a href="<?= htmlspecialchars('landing-spa.php') ?>" class="nav-link">
             <i class="fas fa-id-card me-3"></i>
             <span class="nav-text">Portal Público</span>
             <i class="fas fa-external-link-alt ms-auto" style="font-size: 0.75rem;"></i>
           </a>
         </li>
         <li class="mb-2">
-          <a href="<?= htmlspecialchars(rtrim(AppHelpers::getBaseUrl(), '/') . '/manuales_web/manual_usuario.php') ?>" class="nav-link">
+          <a href="<?= htmlspecialchars('manuales_web/manual_usuario.php') ?>" class="nav-link">
             <i class="fas fa-book me-3"></i>
             <span class="nav-text">Manual de Usuario</span>
             <i class="fas fa-external-link-alt ms-auto" style="font-size: 0.75rem;"></i>
@@ -516,7 +522,7 @@ if (in_array($user['role'], ['admin_club', 'admin_general', 'admin_torneo'], tru
             <?php if ($user['role'] === 'admin_general' && $solicitudes_pendientes > 0): ?>
             <!-- Indicador de Solicitudes Pendientes -->
             <div class="me-3">
-              <a href="<?= htmlspecialchars(AppHelpers::dashboard('affiliate_requests')) ?>" class="btn btn-warning position-relative" title="Solicitudes de Afiliación Pendientes">
+              <a href="<?= htmlspecialchars($dashboard_href('affiliate_requests')) ?>" class="btn btn-warning position-relative" title="Solicitudes de Afiliación Pendientes">
                 <i class="fas fa-user-clock"></i>
                 <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">
                   <?= $solicitudes_pendientes ?>
@@ -542,14 +548,14 @@ if (in_array($user['role'], ['admin_club', 'admin_general', 'admin_torneo'], tru
             </button>
 
             <!-- Campanita: notificaciones web pendientes -->
-            <a href="<?= htmlspecialchars(AppHelpers::dashboard('user_notificaciones')) ?>" class="btn btn-outline-secondary position-relative me-2" id="campana-link" title="Notificaciones">
+            <a href="<?= htmlspecialchars($dashboard_href('user_notificaciones')) ?>" class="btn btn-outline-secondary position-relative me-2" id="campana-link" title="Notificaciones">
               <i class="fas fa-bell"></i>
               <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" id="campana-badge" style="display: none;">0</span>
             </a>
             
             <?php if ($user['role'] === 'admin_club'): ?>
             <!-- Perfil de la organización (solo admin_club) -->
-            <a href="<?= htmlspecialchars(AppHelpers::dashboard('mi_organizacion')) ?>" class="btn btn-outline-primary me-2" title="Editar datos de la organización">
+            <a href="<?= htmlspecialchars($dashboard_href('mi_organizacion')) ?>" class="btn btn-outline-primary me-2" title="Editar datos de la organización">
               <i class="fas fa-building me-1"></i>
               <span class="d-none d-md-inline">Perfil de la organización</span>
             </a>
@@ -564,12 +570,12 @@ if (in_array($user['role'], ['admin_club', 'admin_general', 'admin_torneo'], tru
               <ul class="dropdown-menu dropdown-menu-end">
                 <li><span class="dropdown-item-text text-muted">Rol: <?= htmlspecialchars($user['role']) ?></span></li>
                 <?php if ($user['role'] === 'admin_club'): ?>
-                <li><a class="dropdown-item" href="<?= htmlspecialchars(AppHelpers::dashboard('mi_organizacion')) ?>"><i class="fas fa-building me-2"></i>Perfil de la organización</a></li>
+                <li><a class="dropdown-item" href="<?= htmlspecialchars($dashboard_href('mi_organizacion')) ?>"><i class="fas fa-building me-2"></i>Perfil de la organización</a></li>
                 <?php endif; ?>
-                <li><a class="dropdown-item" href="<?= htmlspecialchars(AppHelpers::url('profile.php')) ?>"><i class="fas fa-id-card me-2"></i>Mi Perfil</a></li>
-                <li><a class="dropdown-item" href="<?= htmlspecialchars(AppHelpers::url('modules/users/change_password.php')) ?>"><i class="fas fa-key me-2"></i>Cambiar Contraseña</a></li>
+                <li><a class="dropdown-item" href="<?= htmlspecialchars('profile.php') ?>"><i class="fas fa-id-card me-2"></i>Mi Perfil</a></li>
+                <li><a class="dropdown-item" href="<?= htmlspecialchars('modules/users/change_password.php') ?>"><i class="fas fa-key me-2"></i>Cambiar Contraseña</a></li>
                 <li><hr class="dropdown-divider"></li>
-                <li><a class="dropdown-item text-danger" href="<?= htmlspecialchars(AppHelpers::logout()) ?>"><i class="fas fa-sign-out-alt me-2"></i>Cerrar sesión</a></li>
+                <li><a class="dropdown-item text-danger" href="<?= htmlspecialchars('logout.php') ?>"><i class="fas fa-sign-out-alt me-2"></i>Cerrar sesión</a></li>
               </ul>
             </div>
           </div>
@@ -605,7 +611,15 @@ if (in_array($user['role'], ['admin_club', 'admin_general', 'admin_torneo'], tru
 
   <!-- Bootstrap JS -->
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js" defer></script>
-  <script>window.APP_BASE_URL = '<?= htmlspecialchars(rtrim(AppHelpers::getBaseUrl(), "/")) ?>'; window.notifAjaxUrl = '<?= htmlspecialchars($layout_asset_base . "/notificaciones_ajax.php") ?>';</script>
+  <?php
+$app_base_for_js = $layout_asset_base;
+if (str_ends_with($app_base_for_js, '/public')) {
+    $app_base_for_js = rtrim(substr($app_base_for_js, 0, -7), '/');
+} else {
+    $app_base_for_js = rtrim($app_base_for_js, '/');
+}
+?>
+  <script>window.APP_BASE_URL = '<?= htmlspecialchars($app_base_for_js) ?>'; window.notifAjaxUrl = '<?= htmlspecialchars($layout_asset_base . "/notificaciones_ajax.php") ?>';</script>
 
   <?php
   $pages_needing_image_preview = ['mi_organizacion', 'admin_org', 'tournaments', 'tournament_admin', 'users', 'clubs', 'clubes_asociados', 'admin_clubs', 'directorio_clubes'];
