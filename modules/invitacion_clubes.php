@@ -148,10 +148,10 @@ if ($torneo && $_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) 
         if (!empty($messages)) {
             $params['success'] = implode(' ', $messages);
         }
-        $redirect_url = (function_exists('AppHelpers') && method_exists('AppHelpers', 'url'))
-            ? AppHelpers::url('index.php', $params)
-            : (rtrim(function_exists('app_base_url') ? app_base_url() : '', '/') . '/public/index.php?' . http_build_query($params));
-        header('Location: ' . $redirect_url);
+        // Misma ruta que la petición actual para que cargue el layout (GET a index.php)
+        $path = parse_url($_SERVER['REQUEST_URI'] ?? '/index.php', PHP_URL_PATH);
+        $path = ($path !== null && $path !== '' && $path !== '/') ? $path : '/index.php';
+        header('Location: ' . $path . '?' . http_build_query($params));
         exit;
     }
 
@@ -240,10 +240,10 @@ if ($torneo && $_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) 
         if (!empty($errores)) {
             $params['error'] = implode(' ', $errores);
         }
-        $redirect_url = (function_exists('AppHelpers') && method_exists('AppHelpers', 'url'))
-            ? AppHelpers::url('index.php', $params)
-            : (rtrim(function_exists('app_base_url') ? app_base_url() : '', '/') . '/public/index.php?' . http_build_query($params));
-        header('Location: ' . $redirect_url);
+        // Misma ruta que la petición actual para que cargue el layout (GET a index.php)
+        $path = parse_url($_SERVER['REQUEST_URI'] ?? '/index.php', PHP_URL_PATH);
+        $path = ($path !== null && $path !== '' && $path !== '/') ? $path : '/index.php';
+        header('Location: ' . $path . '?' . http_build_query($params));
         exit;
     } catch (Exception $e) {
         $error_message = 'Error al crear invitaciones: ' . $e->getMessage();
@@ -307,7 +307,7 @@ $fechator_fmt = $torneo && !empty($torneo['fechator']) ? date('d/m/Y', strtotime
                         <span><i class="fas fa-address-book me-2"></i>Clubes del directorio — marque los que desea invitar; en los ya invitados marque el cuadro para <strong>quitar</strong> la invitación</span>
                         <span class="badge bg-secondary"><?= count($ya_invitados) ?> ya invitados a este torneo</span>
                     </div>
-                    <form method="post" action="<?= htmlspecialchars((function_exists('AppHelpers') && method_exists('AppHelpers', 'url')) ? AppHelpers::url('index.php', ['page' => 'invitacion_clubes', 'torneo_id' => $torneo_id]) : ('index.php?page=invitacion_clubes&torneo_id=' . $torneo_id)) ?>" id="formInvitar">
+                    <form method="post" action="index.php?page=invitacion_clubes&torneo_id=<?= $torneo_id ?>" id="formInvitar">
                         <?= CSRF::input() ?>
                         <input type="hidden" name="action" value="invitar_seleccionados">
                         <input type="hidden" name="acceso1" value="<?= htmlspecialchars(date('Y-m-d', strtotime(($torneo['fechator'] ?? 'today') . ' -30 days'))) ?>">
