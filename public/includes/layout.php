@@ -22,10 +22,26 @@ if ($layout_asset_base === '') {
     $layout_asset_base = ((!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http') . '://' . ($_SERVER['HTTP_HOST'] ?? 'localhost');
 }
 
-// URLs relativas al entry point (index.php) para que el menú no envíe al landing por APP_URL incorrecto en producción
-$dashboard_href = function ($page, array $params = []) {
+// Base del menú desde la petición actual (SCRIPT_NAME) para que todos los subniveles no dependan de <base> y no envíen al landing
+$menu_base = '';
+if (!empty($_SERVER['SCRIPT_NAME'])) {
+    $menu_script_dir = dirname($_SERVER['SCRIPT_NAME']);
+    if ($menu_script_dir !== '.' && $menu_script_dir !== '') {
+        $menu_scheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
+        $menu_host = $_SERVER['HTTP_HOST'] ?? 'localhost';
+        $menu_base = $menu_scheme . '://' . $menu_host . str_replace('\\', '/', $menu_script_dir);
+    }
+}
+if ($menu_base === '') {
+    $menu_base = rtrim($layout_asset_base, '/');
+}
+$dashboard_href = function ($page, array $params = []) use ($menu_base) {
     $params['page'] = $page;
-    return 'index.php?' . http_build_query($params);
+    return $menu_base . '/index.php?' . http_build_query($params);
+};
+// Misma base para enlaces a profile, logout, landing-spa, manual (evita que <base> mal resuelto envíe al landing)
+$menu_url = function ($path) use ($menu_base) {
+    return $menu_base . '/' . ltrim($path, '/');
 };
 
 // Logo y nombre para el identificador del dashboard (organización cuando no es admin_general)
@@ -184,7 +200,7 @@ if (in_array($user['role'], ['admin_club', 'admin_general', 'admin_torneo'], tru
         <?php endif; ?>
         <!-- Menú al mismo nivel (sin agrupación Organizaciones) -->
         <li class="mb-2">
-          <a href="index.php?page=torneo_gestion&action=index" class="nav-link <?= ($current_page === 'torneo_gestion' && ($_GET['action'] ?? '') === 'index') ? 'active' : '' ?>">
+          <a href="<?= htmlspecialchars($dashboard_href('torneo_gestion', ['action' => 'index'])) ?>" class="nav-link <?= ($current_page === 'torneo_gestion' && ($_GET['action'] ?? '') === 'index') ? 'active' : '' ?>">
             <i class="fas fa-trophy me-3"></i>
             <span class="nav-text">Torneos</span>
           </a>
@@ -240,7 +256,7 @@ if (in_array($user['role'], ['admin_club', 'admin_general', 'admin_torneo'], tru
         </li>
         <!-- 1. Portal Público -->
         <li class="mb-2">
-          <a href="<?= htmlspecialchars('landing-spa.php') ?>" class="nav-link">
+          <a href="<?= htmlspecialchars($menu_url('landing-spa.php')) ?>" class="nav-link">
             <i class="fas fa-id-card me-3"></i>
             <span class="nav-text">Portal Público</span>
             <i class="fas fa-external-link-alt ms-auto" style="font-size: 0.75rem;"></i>
@@ -248,7 +264,7 @@ if (in_array($user['role'], ['admin_club', 'admin_general', 'admin_torneo'], tru
         </li>
         <!-- 1. Manual de Usuario -->
         <li class="mb-2">
-          <a href="<?= htmlspecialchars('manuales_web/manual_usuario.php') ?>" class="nav-link">
+          <a href="<?= htmlspecialchars($menu_url('manuales_web/manual_usuario.php')) ?>" class="nav-link">
             <i class="fas fa-book me-3"></i>
             <span class="nav-text">Manual de Usuario</span>
             <i class="fas fa-external-link-alt ms-auto" style="font-size: 0.75rem;"></i>
@@ -352,7 +368,7 @@ if (in_array($user['role'], ['admin_club', 'admin_general', 'admin_torneo'], tru
         </li>
         <!-- Torneos -->
         <li class="mb-2">
-          <a href="index.php?page=torneo_gestion&action=index" class="nav-link <?= ($current_page === 'torneo_gestion' && ($_GET['action'] ?? '') === 'index') ? 'active' : '' ?>">
+          <a href="<?= htmlspecialchars($dashboard_href('torneo_gestion', ['action' => 'index'])) ?>" class="nav-link <?= ($current_page === 'torneo_gestion' && ($_GET['action'] ?? '') === 'index') ? 'active' : '' ?>">
             <i class="fas fa-trophy me-3"></i>
             <span class="nav-text">Torneos</span>
           </a>
@@ -422,14 +438,14 @@ if (in_array($user['role'], ['admin_club', 'admin_general', 'admin_torneo'], tru
         </li>
         <!-- Enlaces -->
         <li class="mb-2">
-          <a href="<?= htmlspecialchars('landing-spa.php') ?>" class="nav-link">
+          <a href="<?= htmlspecialchars($menu_url('landing-spa.php')) ?>" class="nav-link">
             <i class="fas fa-id-card me-3"></i>
             <span class="nav-text">Portal Público</span>
             <i class="fas fa-external-link-alt ms-auto" style="font-size: 0.75rem;"></i>
           </a>
         </li>
         <li class="mb-2">
-          <a href="<?= htmlspecialchars('manuales_web/manual_usuario.php') ?>" class="nav-link">
+          <a href="<?= htmlspecialchars($menu_url('manuales_web/manual_usuario.php')) ?>" class="nav-link">
             <i class="fas fa-book me-3"></i>
             <span class="nav-text">Manual de Usuario</span>
             <i class="fas fa-external-link-alt ms-auto" style="font-size: 0.75rem;"></i>
@@ -439,7 +455,7 @@ if (in_array($user['role'], ['admin_club', 'admin_general', 'admin_torneo'], tru
         
         <?php if ($user['role'] === 'admin_torneo'): ?>
         <li class="mb-2">
-          <a href="index.php?page=torneo_gestion&action=index" class="nav-link <?= ($current_page === 'torneo_gestion' && ($_GET['action'] ?? '') === 'index') ? 'active' : '' ?>">
+          <a href="<?= htmlspecialchars($dashboard_href('torneo_gestion', ['action' => 'index'])) ?>" class="nav-link <?= ($current_page === 'torneo_gestion' && ($_GET['action'] ?? '') === 'index') ? 'active' : '' ?>">
             <i class="fas fa-trophy me-3"></i>
             <span class="nav-text">Torneos</span>
           </a>
@@ -475,14 +491,14 @@ if (in_array($user['role'], ['admin_club', 'admin_general', 'admin_torneo'], tru
           </a>
         </li>
         <li class="mb-2">
-          <a href="<?= htmlspecialchars('landing-spa.php') ?>" class="nav-link">
+          <a href="<?= htmlspecialchars($menu_url('landing-spa.php')) ?>" class="nav-link">
             <i class="fas fa-id-card me-3"></i>
             <span class="nav-text">Portal Público</span>
             <i class="fas fa-external-link-alt ms-auto" style="font-size: 0.75rem;"></i>
           </a>
         </li>
         <li class="mb-2">
-          <a href="<?= htmlspecialchars('manuales_web/manual_usuario.php') ?>" class="nav-link">
+          <a href="<?= htmlspecialchars($menu_url('manuales_web/manual_usuario.php')) ?>" class="nav-link">
             <i class="fas fa-book me-3"></i>
             <span class="nav-text">Manual de Usuario</span>
             <i class="fas fa-external-link-alt ms-auto" style="font-size: 0.75rem;"></i>
@@ -572,10 +588,10 @@ if (in_array($user['role'], ['admin_club', 'admin_general', 'admin_torneo'], tru
                 <?php if ($user['role'] === 'admin_club'): ?>
                 <li><a class="dropdown-item" href="<?= htmlspecialchars($dashboard_href('mi_organizacion')) ?>"><i class="fas fa-building me-2"></i>Perfil de la organización</a></li>
                 <?php endif; ?>
-                <li><a class="dropdown-item" href="<?= htmlspecialchars('profile.php') ?>"><i class="fas fa-id-card me-2"></i>Mi Perfil</a></li>
-                <li><a class="dropdown-item" href="<?= htmlspecialchars('modules/users/change_password.php') ?>"><i class="fas fa-key me-2"></i>Cambiar Contraseña</a></li>
+                <li><a class="dropdown-item" href="<?= htmlspecialchars($menu_url('profile.php')) ?>"><i class="fas fa-id-card me-2"></i>Mi Perfil</a></li>
+                <li><a class="dropdown-item" href="<?= htmlspecialchars($menu_url('modules/users/change_password.php')) ?>"><i class="fas fa-key me-2"></i>Cambiar Contraseña</a></li>
                 <li><hr class="dropdown-divider"></li>
-                <li><a class="dropdown-item text-danger" href="<?= htmlspecialchars('logout.php') ?>"><i class="fas fa-sign-out-alt me-2"></i>Cerrar sesión</a></li>
+                <li><a class="dropdown-item text-danger" href="<?= htmlspecialchars($menu_url('logout.php')) ?>"><i class="fas fa-sign-out-alt me-2"></i>Cerrar sesión</a></li>
               </ul>
             </div>
           </div>
@@ -587,7 +603,7 @@ if (in_array($user['role'], ['admin_club', 'admin_general', 'admin_torneo'], tru
       <div class="alert alert-warning alert-dismissible fade show rounded-0 mb-0 border-0 border-bottom border-warning" role="alert">
         <div class="container-fluid d-flex align-items-center justify-content-between flex-wrap gap-2">
           <span><i class="fas fa-exclamation-triangle me-2"></i><strong>Atención:</strong> Tienes actas de mesa esperando validación visual.</span>
-          <a href="index.php?page=torneo_gestion&action=verificar_actas_index" class="btn btn-warning btn-sm">
+          <a href="<?= htmlspecialchars($dashboard_href('torneo_gestion', ['action' => 'verificar_actas_index'])) ?>" class="btn btn-warning btn-sm">
             <i class="fas fa-qrcode me-1"></i>Abrir Verificador
           </a>
         </div>
