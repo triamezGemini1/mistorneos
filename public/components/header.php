@@ -3,7 +3,7 @@
  * Componente Header - Navbar + Menú flotante lateral
  * Variables globales: $user, app_base_url(), $SITE_NAME (desde config.php)
  */
-$logo_url = app_base_url() . '/lib/Assets/mislogos/logo4.png';
+$logo_url = class_exists('AppHelpers') ? AppHelpers::getAppLogo() : (rtrim(app_base_url(), '/') . '/public/view_image.php?path=' . rawurlencode('lib/Assets/mislogos/logo4.png'));
 ?>
     <!-- Navbar -->
     <nav class="bg-gradient-to-b from-primary-700 to-primary-600 shadow-lg sticky top-0 z-50 backdrop-blur-sm">
@@ -16,7 +16,6 @@ $logo_url = app_base_url() . '/lib/Assets/mislogos/logo4.png';
                 
                 <div class="hidden md:flex items-center space-x-1">
                     <a href="#eventos-masivos" class="px-4 py-2 text-white/90 hover:text-white hover:bg-white/10 rounded-lg transition-all duration-200 font-medium">Eventos Nacionales</a>
-                    <a href="#eventos-entidad" class="px-4 py-2 text-white/90 hover:text-white hover:bg-white/10 rounded-lg transition-all duration-200 font-medium">Eventos por Entidad</a>
                     <a href="#eventos" class="px-4 py-2 text-white/90 hover:text-white hover:bg-white/10 rounded-lg transition-all duration-200 font-medium">Eventos</a>
                     <a href="#calendario" class="px-4 py-2 text-white/90 hover:text-white hover:bg-white/10 rounded-lg transition-all duration-200 font-medium">Calendario</a>
                     <a href="#registro" class="px-4 py-2 text-white/90 hover:text-white hover:bg-white/10 rounded-lg transition-all duration-200 font-medium">Registro</a>
@@ -38,7 +37,6 @@ $logo_url = app_base_url() . '/lib/Assets/mislogos/logo4.png';
             <div id="mobile-menu" class="hidden md:hidden pb-4">
                 <div class="flex flex-col space-y-2">
                     <a href="#eventos-masivos" class="px-4 py-2 text-white/90 hover:text-white hover:bg-white/10 rounded-lg transition-all">Eventos Nacionales</a>
-                    <a href="#eventos-entidad" class="px-4 py-2 text-white/90 hover:text-white hover:bg-white/10 rounded-lg transition-all">Eventos por Entidad</a>
                     <a href="#eventos" class="px-4 py-2 text-white/90 hover:text-white hover:bg-white/10 rounded-lg transition-all">Eventos</a>
                     <a href="#calendario" class="px-4 py-2 text-white/90 hover:text-white hover:bg-white/10 rounded-lg transition-all">Calendario</a>
                     <a href="#registro" class="px-4 py-2 text-white/90 hover:text-white hover:bg-white/10 rounded-lg transition-all">Registro</a>

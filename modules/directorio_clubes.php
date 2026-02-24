@@ -288,10 +288,11 @@ if ($action === 'list') {
                                 </div>
                                 <div class="mb-3">
                                     <label for="logo" class="form-label">Logo</label>
-                                    <input type="file" class="form-control" id="logo" name="logo" accept="image/*">
+                                    <input type="file" class="form-control" id="logo" name="logo" accept="image/*" data-preview-target="logo-preview">
                                     <small class="text-muted">JPG, PNG, GIF (máx. 5MB)</small>
+                                    <div id="logo-preview" class="mt-2"></div>
                                     <?php if ($action === 'edit' && !empty($item['logo'])): ?>
-                                        <div class="mt-2"><?= displayClubLogoEdit($item) ?></div>
+                                        <div class="mt-2" id="logo-current"><?= displayClubLogoEdit($item) ?></div>
                                     <?php endif; ?>
                                 </div>
                                 <div class="mb-3">

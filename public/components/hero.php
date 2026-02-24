@@ -4,7 +4,7 @@
  * Dos columnas: texto y CTA a la izquierda, imagen/media a la derecha
  * Variables globales disponibles: $user, app_base_url()
  */
-$hero_logo_url = app_base_url() . '/lib/Assets/mislogos/logo4.png';
+$hero_logo_url = class_exists('AppHelpers') ? AppHelpers::getAppLogo() : (rtrim(app_base_url(), '/') . '/public/view_image.php?path=' . rawurlencode('lib/Assets/mislogos/logo4.png'));
 ?>
     <!-- Hero Section (compacto, dos columnas) -->
     <section class="relative bg-gradient-to-br from-primary-700 via-primary-600 to-primary-500 text-white overflow-hidden min-h-[100vh] flex items-center">

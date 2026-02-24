@@ -6,7 +6,6 @@
 $side_nav_sections = [
     ['id' => 'registro', 'icon' => 'fa-user-plus', 'label' => 'Registro'],
     ['id' => 'eventos-masivos', 'icon' => 'fa-flag', 'label' => 'Eventos Nacionales'],
-    ['id' => 'eventos-entidad', 'icon' => 'fa-map-marker-alt', 'label' => 'Por Entidad'],
     ['id' => 'eventos', 'icon' => 'fa-trophy', 'label' => 'Eventos'],
     ['id' => 'calendario', 'icon' => 'fa-calendar-alt', 'label' => 'Calendario'],
     ['id' => 'servicios', 'icon' => 'fa-cogs', 'label' => 'Servicios'],

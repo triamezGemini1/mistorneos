@@ -11,7 +11,7 @@
                 <div class="mb-4 md:mb-0">
                     <h5 class="text-xl font-bold mb-2 flex items-center">
                         <?php 
-                        $logo_url = app_base_url() . '/lib/Assets/mislogos/logo4.png';
+                        $logo_url = class_exists('AppHelpers') ? AppHelpers::getAppLogo() : (rtrim(app_base_url(), '/') . '/public/view_image.php?path=' . rawurlencode('lib/Assets/mislogos/logo4.png'));
                         ?>
                         <img src="<?= htmlspecialchars($logo_url) ?>" alt="La Estación del Dominó" class="h-6 mr-2">
                         La Estación del Dominó

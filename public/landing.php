@@ -285,57 +285,14 @@ foreach ($eventos_calendario as $ev) {
 
     <!-- Sección de Registro -->
     <section id="registro" class="py-16 md:py-24 bg-white">
-        <div class="container mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="container mx-auto px-4 sm:px-6 lg:px-8 flex flex-col items-center">
             <div class="text-center mb-12">
                 <h2 class="text-3xl md:text-4xl lg:text-5xl font-bold text-primary-700 mb-4">Únete a Nuestra Comunidad</h2>
                 <p class="text-lg text-gray-600 max-w-2xl mx-auto">Elige el tipo de registro que mejor se adapte a ti</p>
             </div>
             
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 lg:gap-8 max-w-5xl mx-auto">
-                <!-- Registro Usuario Normal -->
-                <div class="group relative">
-                    <div class="absolute inset-0 bg-gradient-to-br from-green-500 to-emerald-600 rounded-2xl blur opacity-75 group-hover:opacity-100 transition-opacity duration-300"></div>
-                    <div class="relative bg-gradient-to-br from-green-500 to-emerald-600 rounded-2xl p-8 text-white shadow-xl hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-2 h-full">
-                        <div class="text-center mb-6">
-                            <div class="inline-flex items-center justify-center w-16 h-16 bg-white/20 rounded-xl mb-4">
-                                <i class="fas fa-user text-3xl"></i>
-                            </div>
-                            <h3 class="text-2xl font-bold mb-3">Registro de Jugador</h3>
-                            <p class="text-white/90 mb-6">
-                                Para jugadores que desean participar en torneos de dominó en cualquier ubicación.
-                            </p>
-                        </div>
-                        
-                        <ul class="space-y-3 mb-6 text-left">
-                            <li class="flex items-center">
-                                <i class="fas fa-check-circle mr-3 text-white/90"></i>
-                                <span>Elige tu club favorito</span>
-                            </li>
-                            <li class="flex items-center">
-                                <i class="fas fa-check-circle mr-3 text-white/90"></i>
-                                <span>Participa en cualquier torneo</span>
-                            </li>
-                            <li class="flex items-center">
-                                <i class="fas fa-check-circle mr-3 text-white/90"></i>
-                                <span>Sin restricciones geográficas</span>
-                            </li>
-                            <li class="flex items-center">
-                                <i class="fas fa-check-circle mr-3 text-white/90"></i>
-                                <span>Credencial digital única</span>
-                            </li>
-                        </ul>
-                        
-                        <div class="space-y-2">
-                            <a href="register_by_club.php" class="block w-full px-6 py-3 bg-white text-emerald-600 font-semibold rounded-xl hover:bg-gray-100 transition-all duration-200 text-center shadow-lg">
-                                <i class="fas fa-building mr-2"></i>Seleccionar Club y Registrarme
-                            </a>
-                            <a href="user_register.php" class="block text-center text-white/80 hover:text-white text-sm transition-colors">
-                                <i class="fas fa-user-plus mr-1"></i>Registro sin club
-                            </a>
-                        </div>
-                    </div>
-                </div>
-                
+            <div class="w-full flex justify-center">
+                <div class="grid grid-cols-1 gap-6 lg:gap-8 max-w-md mx-auto">
                 <!-- Solicitud de Afiliación -->
                 <div class="group relative">
                     <div class="absolute inset-0 bg-gradient-to-br from-red-500 to-rose-600 rounded-2xl blur opacity-75 group-hover:opacity-100 transition-opacity duration-300"></div>
@@ -373,6 +330,7 @@ foreach ($eventos_calendario as $ev) {
                             <i class="fas fa-paper-plane mr-2"></i>Solicitar Afiliación
                         </a>
                     </div>
+                </div>
                 </div>
             </div>
             
@@ -626,259 +584,6 @@ foreach ($eventos_calendario as $ev) {
                     </div>
                 <?php endforeach; ?>
             </div>
-        </div>
-    </section>
-    <?php endif; ?>
-
-    <!-- Eventos por Entidad Section (Público) -->
-    <?php if (!empty($entidades_con_eventos)): ?>
-    <section id="eventos-entidad" class="py-16 md:py-24 bg-gradient-to-br from-blue-50 to-indigo-100">
-        <div class="container mx-auto px-4 sm:px-6 lg:px-8">
-            <div class="text-center mb-12">
-                <h2 class="text-3xl md:text-4xl font-bold text-primary-700 mb-4">
-                    <i class="fas fa-map-marker-alt mr-3 text-accent"></i>Eventos por Entidad
-                </h2>
-                <p class="text-lg text-gray-600 mb-6">Selecciona una entidad para ver sus eventos y clubes disponibles</p>
-            </div>
-            
-            <!-- Grid de Tarjetas de Entidades -->
-            <?php if ($entidad_seleccionada == 0): ?>
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 lg:gap-8 mb-12">
-                <?php foreach ($entidades_con_eventos as $ent): ?>
-                    <a href="landing.php?entidad=<?= $ent['id'] ?>#eventos-entidad" 
-                       class="group bg-white rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300 overflow-hidden border-2 border-blue-200 hover:border-primary-500 transform hover:-translate-y-2 cursor-pointer">
-                        <div class="p-6">
-                            <div class="flex items-center justify-center w-16 h-16 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl mb-4 mx-auto group-hover:scale-110 transition-transform duration-300">
-                                <i class="fas fa-map-marker-alt text-white text-2xl"></i>
-                            </div>
-                            <h3 class="text-xl font-bold text-gray-900 mb-3 text-center group-hover:text-primary-600 transition-colors">
-                                <?= htmlspecialchars($ent['nombre']) ?>
-                            </h3>
-                            <div class="space-y-2 mt-4">
-                                <div class="flex items-center justify-between p-2 bg-blue-50 rounded-lg">
-                                    <span class="text-sm text-gray-600 flex items-center">
-                                        <i class="fas fa-building mr-2 text-primary-500"></i>Clubes
-                                    </span>
-                                    <span class="font-bold text-primary-700"><?= number_format($ent['total_clubes']) ?></span>
-                                </div>
-                                <div class="flex items-center justify-between p-2 bg-green-50 rounded-lg">
-                                    <span class="text-sm text-gray-600 flex items-center">
-                                        <i class="fas fa-calendar-check mr-2 text-green-500"></i>Próximos
-                                    </span>
-                                    <span class="font-bold text-green-700"><?= number_format($ent['total_eventos_futuros']) ?></span>
-                                </div>
-                                <div class="flex items-center justify-between p-2 bg-gray-50 rounded-lg">
-                                    <span class="text-sm text-gray-600 flex items-center">
-                                        <i class="fas fa-trophy mr-2 text-yellow-500"></i>Total Eventos
-                                    </span>
-                                    <span class="font-bold text-gray-700"><?= number_format($ent['total_eventos_todos']) ?></span>
-                                </div>
-                            </div>
-                            <div class="mt-4 pt-4 border-t border-gray-200">
-                                <span class="text-primary-600 font-semibold text-sm flex items-center justify-center group-hover:text-primary-700">
-                                    Ver eventos <i class="fas fa-arrow-right ml-2 group-hover:translate-x-1 transition-transform"></i>
-                                </span>
-                            </div>
-                        </div>
-                    </a>
-                <?php endforeach; ?>
-            </div>
-            <?php endif; ?>
-            
-            <?php if ($entidad_seleccionada > 0): ?>
-                <div class="mb-8 text-center">
-                    <a href="landing.php#eventos-entidad" class="inline-flex items-center px-6 py-3 bg-gray-500 text-white font-semibold rounded-xl hover:bg-gray-600 transition-all shadow-lg hover:shadow-xl mb-6">
-                        <i class="fas fa-arrow-left mr-2"></i>Volver a todas las entidades
-                    </a>
-                    <p class="text-gray-700 text-lg font-semibold">
-                        <i class="fas fa-filter mr-2 text-primary-500"></i>
-                        Mostrando eventos <?= htmlspecialchars($filtro_aplicado_entidad) ?>
-                    </p>
-                </div>
-            <?php endif; ?>
-            
-            <?php if (!empty($eventos_mi_entidad)): ?>
-                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 lg:gap-8">
-                    <?php foreach ($eventos_mi_entidad as $evento): ?>
-                        <?php 
-                        $modalidad = is_numeric($evento['modalidad']) ? (int)$evento['modalidad'] : 1;
-                        $clase = is_numeric($evento['clase']) ? (int)$evento['clase'] : 1;
-                        
-                        // Obtener información del administrador y clubes afiliados
-                        $admin_info = null;
-                        $clubes_afiliados = [];
-                        if (!empty($evento['club_id'])) {
-                            try {
-                                // Obtener información del administrador
-                                if (!empty($evento['admin_id'])) {
-                                    $admin_info = [
-                                        'id' => $evento['admin_id'],
-                                        'nombre' => $evento['admin_nombre'] ?? '',
-                                        'email' => $evento['admin_email'] ?? '',
-                                        'celular' => $evento['admin_celular'] ?? ''
-                                    ];
-                                }
-                                
-                                // Obtener clubes afiliados del club principal
-                                $stmt_clubes = $pdo->prepare("
-                                    SELECT 
-                                        c.id,
-                                        c.nombre,
-                                        c.delegado,
-                                        c.telefono,
-                                        c.direccion
-                                    FROM clubes c
-                                    WHERE c.organizacion_id = (SELECT organizacion_id FROM clubes WHERE id = ? LIMIT 1)
-                                      AND c.id != ? AND c.estatus = 1
-                                    ORDER BY c.nombre ASC
-                                ");
-                                $stmt_clubes->execute([$evento['club_id'], $evento['club_id']]);
-                                $clubes_afiliados = $stmt_clubes->fetchAll(PDO::FETCH_ASSOC);
-                            } catch (Exception $e) {
-                                error_log("Error obteniendo información del club: " . $e->getMessage());
-                            }
-                        }
-                        ?>
-                        <div class="bg-white rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300 overflow-hidden border border-blue-200 hover:border-primary-500 transform hover:-translate-y-2 text-center">
-                            <div class="w-full h-48 bg-gray-100 flex flex-col items-center justify-center p-4">
-                                <?php $logo_org_url = getLogoOrganizacionUrl($evento); if ($logo_org_url): ?>
-                                    <img src="<?= htmlspecialchars($logo_org_url) ?>" alt="" class="landing-logo-org object-contain mb-2" loading="lazy" decoding="async">
-                                <?php endif; ?>
-                                <span class="text-gray-900 text-xl font-bold"><?= htmlspecialchars($evento['organizacion_nombre'] ?? 'Organizador') ?></span>
-                            </div>
-                            <div class="p-6 text-center">
-                                <div class="inline-flex items-center px-3 py-1 bg-blue-500 text-white rounded-full text-sm font-semibold mb-4">
-                                    <i class="fas fa-calendar mr-2"></i><?= date('d/m/Y', strtotime($evento['fechator'])) ?>
-                                </div>
-                                <h5 class="text-xl font-bold text-gray-900 mb-2"><?= htmlspecialchars($evento['nombre']) ?></h5>
-                                <p class="text-gray-600 text-sm mb-4 flex items-center justify-center">
-                                    <i class="fas fa-map-marker-alt mr-2 text-primary-500"></i>
-                                    <?= htmlspecialchars($evento['lugar'] ?? 'No especificado') ?>
-                                </p>
-                                <div class="flex flex-wrap gap-2 mb-4 justify-center">
-                                    <span class="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-xs font-semibold"><?= $clases[$clase] ?? 'Torneo' ?></span>
-                                    <span class="px-3 py-1 bg-cyan-100 text-cyan-700 rounded-full text-xs font-semibold"><?= $modalidades[$modalidad] ?? 'Individual' ?></span>
-                                    <?php if (isset($evento['costo']) && $evento['costo'] > 0): ?>
-                                        <span class="px-3 py-1 bg-green-100 text-green-700 rounded-full text-xs font-semibold">$<?= number_format($evento['costo'], 2) ?></span>
-                                    <?php endif; ?>
-                                    <span class="px-3 py-1 bg-yellow-100 text-yellow-700 rounded-full text-xs font-semibold">
-                                        <i class="fas fa-users mr-1"></i><?= number_format($evento['total_inscritos'] ?? 0) ?> inscritos
-                                    </span>
-                                </div>
-                                <div class="bg-gray-50 rounded-xl p-4 mb-4 text-left">
-                                    <?php if (isset($evento['entidad_nombre']) && !empty($evento['entidad_nombre'])): ?>
-                                        <p class="text-sm text-gray-700 mb-1">
-                                            <strong><i class="fas fa-map-marker-alt mr-2 text-primary-500"></i>Entidad:</strong> <?= htmlspecialchars($evento['entidad_nombre']) ?>
-                                        </p>
-                                    <?php endif; ?>
-                                    <?php if ($evento['club_delegado']): ?>
-                                        <p class="text-sm text-gray-700 mb-1">
-                                            <strong><i class="fas fa-user-tie mr-2 text-primary-500"></i>Delegado:</strong> <?= htmlspecialchars($evento['club_delegado']) ?>
-                                        </p>
-                                    <?php endif; ?>
-                                    <?php if ($evento['club_telefono']): ?>
-                                        <p class="text-sm text-gray-700 mb-1">
-                                            <strong><i class="fas fa-phone mr-2 text-primary-500"></i>Teléfono:</strong> <?= htmlspecialchars($evento['club_telefono']) ?>
-                                        </p>
-                                    <?php endif; ?>
-                                    
-                                    <?php if ($admin_info || !empty($clubes_afiliados)): ?>
-                                        <div class="mt-3 pt-3 border-t border-gray-200">
-                                            <button type="button" 
-                                                    onclick="toggleAdminInfo(<?= $evento['id'] ?>)" 
-                                                    class="w-full text-left text-sm font-semibold text-primary-600 hover:text-primary-800 flex items-center justify-between">
-                                                <span>
-                                                    <i class="fas fa-info-circle mr-2"></i>
-                                                    <?php if ($admin_info && !empty($clubes_afiliados)): ?>
-                                                        Ver Administrador y Clubes Afiliados
-                                                    <?php elseif ($admin_info): ?>
-                                                        Ver Información del Administrador
-                                                    <?php elseif (!empty($clubes_afiliados)): ?>
-                                                        Ver Clubes Afiliados
-                                                    <?php endif; ?>
-                                                </span>
-                                                <i class="fas fa-chevron-down transform transition-transform" id="icon-<?= $evento['id'] ?>"></i>
-                                            </button>
-                                            
-                                            <div id="admin-info-<?= $evento['id'] ?>" class="hidden mt-3 space-y-2">
-                                                <?php if ($admin_info): ?>
-                                                    <div class="bg-white rounded-lg p-3 border border-primary-200">
-                                                        <p class="text-xs font-bold text-gray-800 mb-2 flex items-center">
-                                                            <i class="fas fa-user-shield mr-2 text-primary-500"></i>Administrador del Club
-                                                        </p>
-                                                        <p class="text-xs text-gray-700 mb-1">
-                                                            <strong>Nombre:</strong> <?= htmlspecialchars($admin_info['nombre']) ?>
-                                                        </p>
-                                                        <?php if (!empty($admin_info['email'])): ?>
-                                                            <p class="text-xs text-gray-700 mb-1">
-                                                                <strong>Email:</strong> <a href="mailto:<?= htmlspecialchars($admin_info['email']) ?>" class="text-primary-600 hover:underline"><?= htmlspecialchars($admin_info['email']) ?></a>
-                                                            </p>
-                                                        <?php endif; ?>
-                                                        <?php if (!empty($admin_info['celular'])): ?>
-                                                            <p class="text-xs text-gray-700">
-                                                                <strong>Celular:</strong> <a href="tel:<?= htmlspecialchars($admin_info['celular']) ?>" class="text-primary-600 hover:underline"><?= htmlspecialchars($admin_info['celular']) ?></a>
-                                                            </p>
-                                                        <?php endif; ?>
-                                                    </div>
-                                                <?php endif; ?>
-                                                
-                                                <?php if (!empty($clubes_afiliados)): ?>
-                                                    <div class="bg-white rounded-lg p-3 border border-primary-200">
-                                                        <p class="text-xs font-bold text-gray-800 mb-2 flex items-center">
-                                                            <i class="fas fa-network-wired mr-2 text-primary-500"></i>Clubes Afiliados (<?= count($clubes_afiliados) ?>)
-                                                        </p>
-                                                        <div class="space-y-2 max-h-48 overflow-y-auto">
-                                                            <?php foreach ($clubes_afiliados as $club_afiliado): ?>
-                                                                <div class="border-l-2 border-primary-300 pl-2 py-1">
-                                                                    <p class="text-xs font-semibold text-gray-800"><?= htmlspecialchars($club_afiliado['nombre']) ?></p>
-                                                                    <?php if ($club_afiliado['delegado']): ?>
-                                                                        <p class="text-xs text-gray-600">Delegado: <?= htmlspecialchars($club_afiliado['delegado']) ?></p>
-                                                                    <?php endif; ?>
-                                                                    <?php if ($club_afiliado['telefono']): ?>
-                                                                        <p class="text-xs text-gray-600">Tel: <?= htmlspecialchars($club_afiliado['telefono']) ?></p>
-                                                                    <?php endif; ?>
-                                                                </div>
-                                                            <?php endforeach; ?>
-                                                        </div>
-                                                    </div>
-                                                    <?php endif; ?>
-                                            </div>
-                                        </div>
-                                    <?php endif; ?>
-                                </div>
-                                <a href="torneo_detalle.php?torneo_id=<?= (int)$evento['id'] ?>" class="block w-full px-4 py-2 bg-primary-500 text-white font-semibold rounded-lg hover:bg-primary-600 transition-all text-center mb-2">
-                                    <i class="fas fa-info-circle mr-2"></i>Ver información del torneo
-                                </a>
-                                <?php 
-                                $permite_online = (int)($evento['permite_inscripcion_linea'] ?? 1) === 1; 
-                                $tel_contacto = $evento['admin_celular'] ?? $evento['club_telefono'] ?? '';
-                                $es_hoy_ent = $evento['fechator'] && (date('Y-m-d', strtotime($evento['fechator'])) === date('Y-m-d'));
-                                ?>
-                                <?php if ($permite_online && !$es_hoy_ent): ?>
-                                <a href="inscribir_evento_masivo.php?torneo_id=<?= $evento['id'] ?>" class="block w-full px-4 py-2 bg-green-500 text-white font-semibold rounded-lg hover:bg-green-600 transition-all text-center mb-2">
-                                    <i class="fas fa-sign-in-alt mr-2"></i>Inscribirme
-                                </a>
-                                <?php elseif ($permite_online && $es_hoy_ent): ?>
-                                <p class="text-xs text-gray-500 text-center mb-2">Inscripción deshabilitada el día del torneo.</p>
-                                <?php elseif ($tel_contacto): ?>
-                                <a href="tel:<?= htmlspecialchars(preg_replace('/[^0-9+]/', '', $tel_contacto)) ?>" class="block w-full px-4 py-2 bg-green-500 text-white font-semibold rounded-lg hover:bg-green-600 transition-all text-center mb-2">
-                                    <i class="fas fa-phone mr-2"></i>Contactar administración
-                                </a>
-                                <?php endif; ?>
-                                <a href="consulta_credencial.php" class="block w-full px-4 py-2 bg-gray-500 text-white font-semibold rounded-lg hover:bg-gray-600 transition-all text-center">
-                                    <i class="fas fa-id-card mr-2"></i>Consulta credencial
-                                </a>
-                            </div>
-                        </div>
-                    <?php endforeach; ?>
-                </div>
-            <?php elseif ($entidad_seleccionada > 0): ?>
-                <div class="text-center py-12 bg-white rounded-2xl shadow-lg">
-                    <i class="fas fa-calendar-times text-6xl text-gray-300 mb-4"></i>
-                    <p class="text-gray-600 text-lg font-semibold mb-2">No hay eventos programados para esta entidad</p>
-                    <p class="text-gray-500 text-sm">Intenta seleccionar otra entidad o consulta los eventos generales más abajo</p>
-                </div>
-            <?php endif; ?>
         </div>
     </section>
     <?php endif; ?>
@@ -1347,6 +1052,8 @@ foreach ($eventos_calendario as $ev) {
     <?php include_once __DIR__ . '/components/services-grid.php'; ?>
 
     <?php include_once __DIR__ . '/components/trust-badges.php'; ?>
+
+    <?php include_once __DIR__ . '/components/logos-wall.php'; ?>
 
     <?php include_once __DIR__ . '/components/precios.php'; ?>
 
