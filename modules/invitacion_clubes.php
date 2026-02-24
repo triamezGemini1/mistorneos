@@ -9,6 +9,7 @@ require_once __DIR__ . '/../config/db.php';
 require_once __DIR__ . '/../config/csrf.php';
 require_once __DIR__ . '/../lib/app_helpers.php';
 require_once __DIR__ . '/../lib/Pagination.php';
+require_once __DIR__ . '/../lib/InvitationJoinResolver.php';
 require_once __DIR__ . '/../public/simple_image_config.php';
 
 Auth::requireRole(['admin_general', 'admin_torneo', 'admin_club']);
@@ -38,16 +39,45 @@ if ($torneo_id <= 0) {
                 $torneo = null;
             } else {
                 $tb_inv = defined('TABLE_INVITATIONS') ? TABLE_INVITATIONS : 'invitaciones';
+                $cols_inv = $pdo->query("SHOW COLUMNS FROM {$tb_inv}")->fetchAll(PDO::FETCH_COLUMN);
+                $sel_id_directorio = in_array('id_directorio_club', $cols_inv, true) ? ', i.id_directorio_club' : '';
                 $stmt = $pdo->prepare("
-                    SELECT i.id, i.club_id, i.token FROM {$tb_inv} i
+                    SELECT i.id, i.club_id, i.token{$sel_id_directorio} FROM {$tb_inv} i
                     INNER JOIN clubes c ON c.id = i.club_id
                     WHERE i.torneo_id = ?
                 ");
                 $stmt->execute([$torneo_id]);
                 $rows_inv = $stmt->fetchAll(PDO::FETCH_ASSOC);
                 $ya_invitados = array_map('intval', array_column($rows_inv, 'club_id'));
+                $cols_dc = @$pdo->query("SHOW COLUMNS FROM directorio_clubes LIKE 'id_usuario'")->fetchAll();
+                $has_id_usuario = !empty($cols_dc);
                 foreach ($rows_inv as $r) {
-                    $invitaciones_por_club[(int)$r['club_id']] = ['id' => (int)$r['id'], 'token' => $r['token']];
+                    $req_registro = true;
+                    $id_dc = isset($r['id_directorio_club']) ? (int)$r['id_directorio_club'] : 0;
+                    if ($id_dc <= 0 && !empty($r['club_id'])) {
+                        $st = $pdo->prepare("SELECT c.nombre FROM clubes c WHERE c.id = ?");
+                        $st->execute([$r['club_id']]);
+                        $cn = $st->fetch(PDO::FETCH_ASSOC);
+                        if ($cn) {
+                            $st2 = $pdo->prepare("SELECT id FROM directorio_clubes WHERE nombre = ? LIMIT 1");
+                            $st2->execute([$cn['nombre']]);
+                            $dr = $st2->fetch(PDO::FETCH_ASSOC);
+                            if ($dr) $id_dc = (int)$dr['id'];
+                        }
+                    }
+                    if ($id_dc > 0 && $has_id_usuario) {
+                        $st = $pdo->prepare("SELECT id_usuario FROM directorio_clubes WHERE id = ? LIMIT 1");
+                        $st->execute([$id_dc]);
+                        $ur = $st->fetch(PDO::FETCH_ASSOC);
+                        if ($ur && isset($ur['id_usuario']) && $ur['id_usuario'] !== null && (string)$ur['id_usuario'] !== '') {
+                            $req_registro = false;
+                        }
+                    }
+                    $invitaciones_por_club[(int)$r['club_id']] = [
+                        'id' => (int)$r['id'],
+                        'token' => $r['token'],
+                        'requiere_registro' => $req_registro
+                    ];
                 }
 
                 $total = (int) $pdo->query("SELECT COUNT(*) FROM directorio_clubes")->fetchColumn();
@@ -157,11 +187,39 @@ if ($torneo && $_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) 
                 continue;
             }
             $token = bin2hex(random_bytes(32));
-            $stmt = $pdo->prepare("
-                INSERT INTO {$tb_inv} (torneo_id, club_id, acceso1, acceso2, usuario, token, estado)
-                VALUES (?, ?, ?, ?, '', ?, 'activa')
-            ");
-            $stmt->execute([$torneo_id, $club_id, $acceso1, $acceso2, $token]);
+            $usuario_creador = (Auth::user() && isset(Auth::user()['id'])) ? (string) Auth::user()['id'] : '';
+            $inv_delegado = $dir['delegado'] ?? null;
+            $inv_email = $dir['email'] ?? null;
+            $club_tel = $dir['telefono'] ?? null;
+            // Usar solo columnas que existan en la tabla invitaciones (estructura real, sin inventar)
+            $cols_inv = $pdo->query("SHOW COLUMNS FROM {$tb_inv}")->fetchAll(PDO::FETCH_COLUMN);
+            $campos = [
+                'torneo_id' => $torneo_id,
+                'club_id' => $club_id,
+                'invitado_delegado' => $inv_delegado,
+                'invitado_email' => $inv_email,
+                'acceso1' => $acceso1,
+                'acceso2' => $acceso2,
+                'usuario' => $usuario_creador,
+                'club_email' => $inv_email,
+                'club_telefono' => $club_tel,
+                'club_delegado' => $inv_delegado,
+                'token' => $token,
+                'estado' => 'activa'
+            ];
+            if (in_array('id_directorio_club', $cols_inv, true)) {
+                $campos['id_directorio_club'] = $dir_id;
+            }
+            $cols = array_values(array_intersect($cols_inv, array_keys($campos)));
+            $vals = array_map(function ($c) use ($campos) { return $campos[$c]; }, $cols);
+            if (!empty($cols)) {
+                $placeholders = implode(', ', array_fill(0, count($cols), '?'));
+                $stmt = $pdo->prepare("INSERT INTO {$tb_inv} (" . implode(', ', $cols) . ") VALUES ({$placeholders})");
+                $stmt->execute($vals);
+            } else {
+                $stmt = $pdo->prepare("INSERT INTO {$tb_inv} (torneo_id, club_id, acceso1, acceso2, usuario, token, estado) VALUES (?, ?, ?, ?, ?, ?, 'activa')");
+                $stmt->execute([$torneo_id, $club_id, $acceso1, $acceso2, $usuario_creador, $token]);
+            }
             $creadas++;
         }
         $params = ['page' => 'invitacion_clubes', 'torneo_id' => $torneo_id];
@@ -208,7 +266,7 @@ $fechator_fmt = $torneo && !empty($torneo['fechator']) ? date('d/m/Y', strtotime
                 </div>
                 <div>
                     <?php if ($torneo): ?>
-                        <a href="<?= htmlspecialchars(AppHelpers::dashboard('invitations')) ?>&filter_torneo=<?= $torneo_id ?>" class="btn btn-outline-primary">
+                        <a href="<?= htmlspecialchars(AppHelpers::dashboard('invitations')) ?>&filter_torneo=<?= $torneo_id ?>&return_to=invitacion_clubes&torneo_id=<?= $torneo_id ?>" class="btn btn-outline-primary">
                             <i class="fas fa-list me-2"></i>Ver invitaciones del torneo
                         </a>
                         <?php
@@ -274,6 +332,7 @@ $fechator_fmt = $torneo && !empty($torneo['fechator']) ? date('d/m/Y', strtotime
                                                 $club_ids_by_name[$r['nombre']] = (int)$r['id'];
                                             }
                                         } catch (Exception $e) {}
+                                        $url_base_join = rtrim(AppHelpers::getPublicUrl(), '/') . '/join';
                                         $url_base_inv = rtrim(AppHelpers::getPublicUrl(), '/') . '/invitation/digital?token=';
                                         $torneo_nombre_inv = $torneo['nombre'] ?? '';
                                         foreach ($clubs_list as $row):
@@ -281,10 +340,17 @@ $fechator_fmt = $torneo && !empty($torneo['fechator']) ? date('d/m/Y', strtotime
                                             $ya_invitado = $club_id_linked && in_array($club_id_linked, $ya_invitados, true);
                                             $inv_data = $ya_invitado && $club_id_linked ? ($invitaciones_por_club[$club_id_linked] ?? null) : null;
                                             if ($inv_data) {
+                                                $url_join = InvitationJoinResolver::buildJoinUrl($inv_data['token']);
                                                 $url_tarjeta = $url_base_inv . urlencode($inv_data['token']);
-                                                $msg_wa = "Estimado delegado de " . ($row['nombre'] ?? '') . ", le invitamos formalmente a nuestro evento " . $torneo_nombre_inv . ". Vea todos los detalles, afiche y normas aquí: " . $url_tarjeta . " — Es necesario estar registrado en el sistema para acceder.";
+                                                $requiere_reg = !empty($inv_data['requiere_registro']);
+                                                $msg_wa = "Estimado delegado de " . ($row['nombre'] ?? '') . ", le invitamos a " . $torneo_nombre_inv . ". Use este enlace para acceder: " . $url_join;
+                                                if ($requiere_reg) {
+                                                    $msg_wa .= " — Si aún no está registrado, el primer paso es completar el registro en ese mismo enlace.";
+                                                } else {
+                                                    $msg_wa .= " — Acceso directo al formulario de inscripción.";
+                                                }
                                                 $url_wa = 'https://api.whatsapp.com/send?text=' . rawurlencode($msg_wa);
-                                                $url_tg = 'https://t.me/share/url?url=' . rawurlencode($url_tarjeta) . '&text=' . rawurlencode($msg_wa);
+                                                $url_tg = 'https://t.me/share/url?url=' . rawurlencode($url_join) . '&text=' . rawurlencode($msg_wa);
                                             }
                                         ?>
                                             <tr class="<?= $ya_invitado ? 'table-warning' : '' ?>">
@@ -314,9 +380,13 @@ $fechator_fmt = $torneo && !empty($torneo['fechator']) ? date('d/m/Y', strtotime
                                                     <?php if ($ya_invitado && $inv_data): ?>
                                                         <div class="btn-group btn-group-sm" role="group">
                                                             <a href="index.php?page=invitations&action=edit&id=<?= $inv_data['id'] ?>&filter_torneo=<?= $torneo_id ?>&return_to=invitacion_clubes&torneo_id=<?= $torneo_id ?>" class="btn btn-outline-warning" title="Editar Invitación"><i class="fas fa-edit"></i></a>
+                                                            <button type="button" class="btn btn-outline-primary btn-copy-join" data-url="<?= htmlspecialchars($url_join) ?>" title="Copiar enlace de acceso (registro o inscripción)"><i class="fas fa-link"></i></button>
                                                             <a href="<?= htmlspecialchars($url_wa) ?>" class="btn btn-success" target="_blank" rel="noopener noreferrer" title="Enviar por WhatsApp"><i class="fab fa-whatsapp"></i></a>
                                                             <a href="<?= htmlspecialchars($url_tg) ?>" class="btn btn-info" target="_blank" rel="noopener noreferrer" title="Enviar por Telegram"><i class="fab fa-telegram"></i></a>
                                                         </div>
+                                                        <?php if (!empty($inv_data['requiere_registro'])): ?>
+                                                            <br><small class="text-muted" title="El delegado debe registrarse primero">Requiere registro</small>
+                                                        <?php endif; ?>
                                                     <?php else: ?>
                                                         —
                                                     <?php endif; ?>
@@ -351,6 +421,16 @@ $fechator_fmt = $torneo && !empty($torneo['fechator']) ? date('d/m/Y', strtotime
                                                         return false;
                                                     }
                                                     document.getElementById('btnInvitar').disabled = true;
+                                                });
+                                                document.querySelectorAll('.btn-copy-join').forEach(function(btn) {
+                                                    btn.addEventListener('click', function() {
+                                                        var url = this.getAttribute('data-url');
+                                                        if (url && navigator.clipboard && navigator.clipboard.writeText) {
+                                                            navigator.clipboard.writeText(url).then(function() { alert('Enlace copiado.'); }).catch(function() { prompt('Copie el enlace:', url); });
+                                                        } else {
+                                                            prompt('Copie el enlace:', url);
+                                                        }
+                                                    });
                                                 });
                                                 </script>
             <?php elseif ($torneo && empty($clubs_list)): ?>

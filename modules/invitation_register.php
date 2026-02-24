@@ -1,4 +1,9 @@
 <?php
+/**
+ * Inscripción por invitación: los clubes invitados son los de la tabla directorio_clubes.
+ * La invitación (invitaciones) vincula torneo + club (clubes); el club invitado se obtiene
+ * desde directorio_clubes cuando coincide por nombre, para mostrar datos del directorio.
+ */
 require_once __DIR__ . '/../lib/image_helper.php';
 require_once __DIR__ . '/../public/simple_image_config.php';
 if (!class_exists('AppHelpers')) {
@@ -11,16 +16,19 @@ $club_id = $_GET['club'] ?? '';
 
 $error_message = '';
 $success_message = '';
+$error_acceso = false; // true = mostrar pantalla "Acceso denegado"; false = mostrar formulario y mensaje en alerta
 $invitation_data = null;
 $tournament_data = null;
 $club_data = null;
 $organizer_club_data = null;
 $inscripciones_abiertas = false;
+$is_admin_general = false;
+$is_admin_torneo = false;
 
 $tb_inv = defined('TABLE_INVITATIONS') ? TABLE_INVITATIONS : 'invitaciones';
 if (!empty($token) && strlen($token) >= 32 && (empty($torneo_id) || empty($club_id))) {
     try {
-        $stmt = DB::pdo()->prepare("SELECT torneo_id, club_id FROM {$tb_inv} WHERE token = ? AND (estado = 0 OR estado = 'activa' OR estado = 'vinculado') LIMIT 1");
+        $stmt = DB::pdo()->prepare("SELECT torneo_id, club_id FROM {$tb_inv} WHERE token = ? AND (estado = 0 OR estado = 1 OR estado = 'activa' OR estado = 'vinculado') LIMIT 1");
         $stmt->execute([$token]);
         $row = $stmt->fetch(PDO::FETCH_ASSOC);
         if ($row) {
@@ -33,9 +41,19 @@ if (!empty($token) && strlen($token) >= 32 && (empty($torneo_id) || empty($club_
     }
 }
 
+$sin_token_ni_ids = (empty($token) && empty($torneo_id) && empty($club_id));
+$token_invalido = (!empty($token) && (strlen($token) < 32 || (empty($torneo_id) && empty($club_id))));
+
 // Validar invitación
 if (empty($torneo_id) || empty($club_id)) {
-    $error_message = "Parámetros de acceso inválidos";
+    if ($sin_token_ni_ids) {
+        $error_message = "Debes acceder mediante el enlace de tu invitación (correo o mensaje del organizador del torneo).";
+    } elseif ($token_invalido) {
+        $error_message = "El enlace de invitación no es válido o ha expirado. Solicita uno nuevo al organizador.";
+    } else {
+        $error_message = "Parámetros de acceso inválidos. Usa el enlace completo de tu invitación.";
+    }
+    $error_acceso = true;
 } else {
     try {
         $stmt = DB::pdo()->prepare("
@@ -45,23 +63,45 @@ if (empty($torneo_id) || empty($club_id)) {
             FROM " . (defined('TABLE_INVITATIONS') ? TABLE_INVITATIONS : 'invitaciones') . " i
             LEFT JOIN tournaments t ON i.torneo_id = t.id 
             LEFT JOIN clubes c ON i.club_id = c.id 
-            WHERE i.torneo_id = ? AND i.club_id = ? AND (i.estado = 0 OR i.estado = 'activa' OR i.estado = 'vinculado')
+            WHERE i.torneo_id = ? AND i.club_id = ? AND (i.estado = 0 OR i.estado = 1 OR i.estado = 'activa' OR i.estado = 'vinculado')
         ");
         $stmt->execute([$torneo_id, $club_id]);
         $invitation_data = $stmt->fetch();
         
         if (!$invitation_data) {
             $error_message = "Invitación no válida";
+            $error_acceso = true;
         } else {
+            // Club invitado: la invitación es para un club del directorio. Obtener datos ESTRICTOS desde directorio_clubes.
+            $club_data_from_directorio = null;
+            $id_directorio_club_inv = isset($invitation_data['id_directorio_club']) ? (int)$invitation_data['id_directorio_club'] : 0;
+            $club_tiene_usuario = (int)($invitation_data['club_delegado_user_id'] ?? 0) > 0;
+            try {
+                $pdo = DB::pdo();
+                $has_id_usuario = (bool) @$pdo->query("SHOW COLUMNS FROM directorio_clubes LIKE 'id_usuario'")->fetch();
+                $sel_dc = $has_id_usuario ? "id, nombre, direccion, delegado, telefono, email, logo, id_usuario" : "id, nombre, direccion, delegado, telefono, email, logo";
+                if ($id_directorio_club_inv > 0) {
+                    $st_dc = $pdo->prepare("SELECT {$sel_dc} FROM directorio_clubes WHERE id = ? LIMIT 1");
+                    $st_dc->execute([$id_directorio_club_inv]);
+                    $club_data_from_directorio = $st_dc->fetch(PDO::FETCH_ASSOC);
+                }
+                if (!$club_data_from_directorio && ($invitation_data['club_name'] ?? '') !== '') {
+                    $st_dc = $pdo->prepare("SELECT {$sel_dc} FROM directorio_clubes WHERE TRIM(nombre) = TRIM(?) LIMIT 1");
+                    $st_dc->execute([$invitation_data['club_name']]);
+                    $club_data_from_directorio = $st_dc->fetch(PDO::FETCH_ASSOC);
+                }
+                if ($club_data_from_directorio && $has_id_usuario && !empty($club_data_from_directorio['id_usuario'])) {
+                    $club_tiene_usuario = (int)$club_data_from_directorio['id_usuario'] > 0;
+                }
+            } catch (Exception $e) { /* ignorar */ }
             $id_vinculado = isset($invitation_data['id_usuario_vinculado']) ? (int)$invitation_data['id_usuario_vinculado'] : 0;
             $current_user = Auth::user();
             $is_admin = $current_user && in_array($current_user['role'], ['admin_general', 'admin_torneo']);
             $stand_by = false;
 
             if (!$current_user) {
-                // Si el club tiene usuario asociado -> login (autenticarse y acceder directo). Si no -> registro.
+                // Si el club tiene usuario asociado (directorio_clubes.id_usuario o clubes.delegado_user_id) -> login. Si no -> registro.
                 $base = class_exists('AppHelpers') ? rtrim(AppHelpers::getPublicUrl(), '/') : (rtrim(($GLOBALS['APP_CONFIG']['app']['base_url'] ?? ''), '/') ?: '');
-                $club_tiene_usuario = (int)($invitation_data['club_delegado_user_id'] ?? 0) > 0;
                 if ($base !== '' && !empty($token)) {
                     $_SESSION['url_retorno'] = $base . '/invitation/register?token=' . urlencode($token);
                     $_SESSION['invitation_token'] = $token;
@@ -71,9 +111,9 @@ if (empty($torneo_id) || empty($club_id)) {
                         setcookie('invitation_token', $token, time() + ($cookie_days * 86400), '/', '', isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on', true);
                     }
                     if ($club_tiene_usuario) {
-                        header('Location: ' . $base . '/login.php');
+                        header('Location: ' . $base . '/auth/login');
                     } else {
-                        header('Location: ' . $base . '/user_register.php?from_invitation=1');
+                        header('Location: ' . $base . '/join?token=' . urlencode($token));
                     }
                     exit;
                 }
@@ -94,16 +134,17 @@ if (empty($torneo_id) || empty($club_id)) {
                 ];
                 $club_data = [
                     'id' => $invitation_data['club_id'],
-                    'nombre' => $invitation_data['club_name'],
-                    'direccion' => $invitation_data['direccion'],
-                    'delegado' => $invitation_data['delegado'],
-                    'telefono' => $invitation_data['telefono'],
-                    'email' => $invitation_data['email'],
-                    'logo' => $invitation_data['club_logo']
+                    'nombre' => $club_data_from_directorio['nombre'] ?? $invitation_data['club_name'] ?? 'Club invitado',
+                    'direccion' => $club_data_from_directorio['direccion'] ?? $invitation_data['direccion'] ?? '',
+                    'delegado' => $club_data_from_directorio['delegado'] ?? $invitation_data['invitado_delegado'] ?? $invitation_data['club_delegado'] ?? $invitation_data['delegado'] ?? '',
+                    'telefono' => $club_data_from_directorio['telefono'] ?? $invitation_data['club_telefono'] ?? $invitation_data['telefono'] ?? '',
+                    'email' => $club_data_from_directorio['email'] ?? $invitation_data['invitado_email'] ?? $invitation_data['club_email'] ?? $invitation_data['email'] ?? '',
+                    'logo' => $club_data_from_directorio['logo'] ?? $invitation_data['club_logo'] ?? null
                 ];
                 $inscripciones_abiertas = ($now >= $start_date && $now <= $end_date);
             } elseif (!$is_admin && $id_vinculado > 0 && (int)($current_user['id']) !== $id_vinculado) {
                 $error_message = "Esta invitación ya está siendo gestionada por otro delegado.";
+                $error_acceso = true;
                 $invitation_data = null;
             } else {
             $stand_by = false;
@@ -114,8 +155,10 @@ if (empty($torneo_id) || empty($club_id)) {
             
             if ($now < $start_date) {
                 $error_message = "El período de inscripción aún no ha comenzado";
+                $error_acceso = true;
             } elseif ($now > $end_date) {
                 $error_message = "El período de inscripción ha expirado";
+                $error_acceso = true;
             }
             // Siempre cargar datos del organizador y club (para cabecera con logos)
             $stmt_organizer = DB::pdo()->prepare("
@@ -134,14 +177,15 @@ if (empty($torneo_id) || empty($club_id)) {
                 'modalidad' => $invitation_data['modalidad']
             ];
             
+            // Club invitado: datos desde directorio_clubes (prioridad) o desde invitación/clubes. El formulario debe mostrar el club que fue invitado.
             $club_data = [
                 'id' => $invitation_data['club_id'],
-                'nombre' => $invitation_data['club_name'],
-                'direccion' => $invitation_data['direccion'],
-                'delegado' => $invitation_data['delegado'],
-                'telefono' => $invitation_data['telefono'],
-                'email' => $invitation_data['email'],
-                'logo' => $invitation_data['club_logo']
+                'nombre' => $club_data_from_directorio['nombre'] ?? $invitation_data['club_name'] ?? 'Club invitado',
+                'direccion' => $club_data_from_directorio['direccion'] ?? $invitation_data['direccion'] ?? '',
+                'delegado' => $club_data_from_directorio['delegado'] ?? $invitation_data['invitado_delegado'] ?? $invitation_data['club_delegado'] ?? $invitation_data['delegado'] ?? '',
+                'telefono' => $club_data_from_directorio['telefono'] ?? $invitation_data['club_telefono'] ?? $invitation_data['telefono'] ?? '',
+                'email' => $club_data_from_directorio['email'] ?? $invitation_data['invitado_email'] ?? $invitation_data['club_email'] ?? $invitation_data['email'] ?? '',
+                'logo' => $club_data_from_directorio['logo'] ?? $invitation_data['club_logo'] ?? null
             ];
             
             $inscripciones_abiertas = ($now >= $start_date && $now <= $end_date);
@@ -152,15 +196,18 @@ if (empty($torneo_id) || empty($club_id)) {
         }
     } catch (Exception $e) {
         $error_message = "Error al validar invitación: " . $e->getMessage();
+        $error_acceso = true;
     }
 }
 
 
-// Procesar formulario de inscripción de jugador
+// Procesar retiro: eliminación física en inscritos para liberar cupo
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'retirar') {
     $cur = Auth::user();
     $can = $cur && in_array($cur['role'], ['admin_general', 'admin_torneo', 'admin_club']);
     $id_r = (int)($_POST['id_inscripcion'] ?? 0);
+    $tid = (int)($_POST['torneo_id'] ?? $torneo_id);
+    $cid = (int)($_POST['club_id'] ?? $club_id);
     if ($can && $id_r > 0 && $invitation_data) {
         $now = new DateTime();
         $st = new DateTime($invitation_data['acceso1']);
@@ -168,7 +215,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
         if ($now >= $st && $now <= $ed) {
             try {
                 $stmt = DB::pdo()->prepare("DELETE FROM inscritos WHERE id = ? AND torneo_id = ? AND id_club = ?");
-                $stmt->execute([$id_r, $torneo_id, $club_id]);
+                $stmt->execute([$id_r, $tid, $cid]);
                 if ($stmt->rowCount() > 0) $success_message = "Inscripción retirada correctamente";
             } catch (Exception $e) { $error_message = "Error al retirar: " . $e->getMessage(); }
         }
@@ -312,11 +359,50 @@ $is_admin_club = $current_user && $current_user['role'] === 'admin_club';
 // Determinar si el formulario debe estar habilitado (admin o usuario vinculado a esta invitación)
 $id_vinculado_inv = $invitation_data ? (int)($invitation_data['id_usuario_vinculado'] ?? 0) : 0;
 $es_usuario_vinculado = $current_user && $id_vinculado_inv > 0 && (int)$current_user['id'] === $id_vinculado_inv;
+
+// Si el usuario es delegado del club por directorio_clubes.id_usuario, habilitar formulario y persistir vinculación para futuros eventos
+if ($current_user && $invitation_data && !$es_usuario_vinculado) {
+    $id_directorio_club = 0;
+    if (!empty($invitation_data['id_directorio_club'])) {
+        $id_directorio_club = (int)$invitation_data['id_directorio_club'];
+    }
+    if ($id_directorio_club <= 0 && !empty($club_data_from_directorio) && !empty($club_data_from_directorio['id'])) {
+        $id_directorio_club = (int)$club_data_from_directorio['id'];
+    }
+    if ($id_directorio_club > 0) {
+        try {
+            $pdo = DB::pdo();
+            $cols = @$pdo->query("SHOW COLUMNS FROM directorio_clubes LIKE 'id_usuario'")->fetch();
+            if (!empty($cols)) {
+                $st = $pdo->prepare("SELECT id_usuario FROM directorio_clubes WHERE id = ? LIMIT 1");
+                $st->execute([$id_directorio_club]);
+                $row = $st->fetch(PDO::FETCH_ASSOC);
+                if ($row && isset($row['id_usuario']) && (int)$row['id_usuario'] === (int)$current_user['id']) {
+                    $es_usuario_vinculado = true;
+                    if ($id_vinculado_inv <= 0) {
+                        $tb_inv = defined('TABLE_INVITATIONS') ? TABLE_INVITATIONS : 'invitaciones';
+                        $has_col = @$pdo->query("SHOW COLUMNS FROM {$tb_inv} LIKE 'id_usuario_vinculado'")->fetch();
+                        if ($has_col) {
+                            $up_inv = $pdo->prepare("UPDATE {$tb_inv} SET id_usuario_vinculado = ? WHERE torneo_id = ? AND club_id = ?");
+                            $up_inv->execute([$current_user['id'], $torneo_id, $club_id]);
+                            $invitation_data['id_usuario_vinculado'] = $current_user['id'];
+                        }
+                        $up_dc = $pdo->prepare("UPDATE directorio_clubes SET id_usuario = ? WHERE id = ?");
+                        $up_dc->execute([$current_user['id'], $id_directorio_club]);
+                    }
+                }
+            }
+        } catch (Exception $e) {
+            error_log("invitation_register: vinculación directorio " . $e->getMessage());
+        }
+    }
+}
+
 $form_enabled = $is_admin_general || $is_admin_torneo || $is_admin_club || $es_usuario_vinculado;
 
 // Obtener inscripciones existentes del club para este torneo (inscritos + usuarios)
 $existing_registrations = [];
-if ($invitation_data && !$error_message) {
+if ($invitation_data && (!$error_message || !$error_acceso)) {
     try {
         $stmt = DB::pdo()->prepare("
             SELECT i.id, i.id_usuario, i.fecha_inscripcion as created_at,
@@ -337,6 +423,12 @@ if ($invitation_data && !$error_message) {
 if (!isset($base) || $base === '') {
     $base = rtrim(class_exists('AppHelpers') ? AppHelpers::getPublicUrl() : ($GLOBALS['APP_CONFIG']['app']['base_url'] ?? ''), '/');
 }
+$url_invitations = ($base !== '') ? rtrim($base, '/') . '/index.php?page=invitations' : 'index.php?page=invitations';
+$url_landing = ($base !== '') ? rtrim($base, '/') . '/' : '/';
+// Retorno: administradores van a listado de invitaciones; resto (incl. delegado/club) al landing
+$es_admin_para_retorno = $is_admin_general || $is_admin_torneo;
+$url_retorno = $es_admin_para_retorno ? $url_invitations : $url_landing;
+$texto_retorno = $es_admin_para_retorno ? 'Volver a Invitaciones' : 'Volver al inicio';
 ?>
 <!DOCTYPE html>
 <html lang="es">
@@ -359,13 +451,33 @@ if (!isset($base) || $base === '') {
         .invitation-page-header {
             background: linear-gradient(135deg, #1a365d 0%, #2d3748 100%);
             color: white;
-            padding: 1.5rem;
+            padding: 1rem 1.5rem;
             border-radius: 16px 16px 0 0;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 1rem;
+            flex-wrap: wrap;
+        }
+        .invitation-page-header .header-logo-app img {
+            height: 80px;
+            width: auto;
+        }
+        .invitation-page-header .header-logo-club img {
+            max-height: 80px !important;
+            max-width: 140px !important;
+            width: auto;
+            object-fit: contain;
+        }
+        .invitation-page-header .header-tournament-data {
+            flex: 1;
+            min-width: 200px;
             text-align: center;
         }
-        .invitation-page-header img {
-            height: 56px;
-            margin-bottom: 0.75rem;
+        .invitation-page-header .header-text { text-align: center; }
+        .invitation-page-header .header-logo img {
+            height: 112px;
+            width: auto;
         }
         .invitation-page-header h4 { font-weight: 600; margin-bottom: 0.25rem; }
         .invitation-page-header .sub { opacity: 0.9; font-size: 0.95rem; }
@@ -400,6 +512,36 @@ if (!isset($base) || $base === '') {
         .form-compact-invitation .inv-field { display: inline-flex; flex-direction: column; margin-bottom: 0; }
         .form-compact-invitation .inv-label { font-size: 0.7rem; margin-bottom: 0.15rem; white-space: nowrap; }
         .form-compact-invitation .form-control-sm, .form-compact-invitation .form-select-sm { font-size: 0.8rem; }
+        .form-compact-invitation .inv-input { box-sizing: border-box; }
+        .form-compact-invitation select.inv-input { width: auto; min-width: 3.5rem; }
+        .form-compact-invitation .inv-input-cedula { width: 5.5rem; min-width: 5.5rem; }
+        .form-compact-invitation .inv-field-nombre { flex: 1; min-width: 6rem; }
+        .form-compact-invitation .inv-field-nombre .inv-input { width: 100%; min-width: 6rem; }
+        .form-compact-invitation .inv-input-date { width: 8rem; min-width: 8rem; }
+        .form-compact-invitation .inv-input-tel { width: 8rem; min-width: 8rem; }
+        .form-compact-invitation .inv-field-email { flex: 1; min-width: 8rem; }
+        .form-compact-invitation .inv-field-email .inv-input { width: 100%; min-width: 8rem; }
+        .invitation-club-logo-wrap img { max-width: 240px !important; max-height: 240px !important; width: auto; height: auto; object-fit: contain; }
+        .invitation-club-logo-wrap .img-thumbnail { padding: 0.25rem; background: #f8f9fa; border-radius: 8px; }
+        .invitation-inner-logos .logo-box img { max-width: 120px; max-height: 120px; object-fit: contain; }
+        #invitation-toast-container {
+            position: fixed; top: 1rem; right: 1rem; z-index: 9999; display: flex; flex-direction: column; gap: 0.5rem;
+            pointer-events: none; max-width: 90vw;
+        }
+        .invitation-toast {
+            padding: 0.75rem 1rem; border-radius: 8px; font-size: 0.9rem; box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            animation: invitation-toast-in 0.3s ease;
+        }
+        .invitation-toast--out { opacity: 0; transform: translateX(1rem); transition: opacity 0.3s, transform 0.3s; }
+        .invitation-toast--info { background: #0dcaf0; color: #000; }
+        .invitation-toast--success { background: #198754; color: #fff; }
+        .invitation-toast--warning { background: #ffc107; color: #000; }
+        .invitation-toast--danger { background: #dc3545; color: #fff; }
+        @keyframes invitation-toast-in {
+            from { opacity: 0; transform: translateX(1rem); }
+            to { opacity: 1; transform: translateX(0); }
+        }
+        .invitation-loading { margin-bottom: 0.5rem; }
         @media (max-width: 768px) {
             .col-md-6 { margin-bottom: 1rem; }
         }
@@ -409,33 +551,44 @@ if (!isset($base) || $base === '') {
 <div class="container">
     <div class="main-card-wrap">
         <div class="invitation-page-header">
-            <?php $logo_url = AppHelpers::getAppLogo(); ?>
-            <img src="<?= htmlspecialchars($logo_url) ?>" alt="La Estación del Dominó">
-            <h4 class="mb-0">La Estación del Dominó</h4>
-            <p class="sub mb-0">Inscripción por invitación</p>
+            <?php if (!empty($organizer_club_data) && !empty($tournament_data)): ?>
+                <!-- Izquierda: logo del club responsable -->
+                <div class="header-logo-club d-flex align-items-center">
+                    <div class="invitation-inner-logos logo-box" style="height: 80px; min-width: 100px; background: rgba(255,255,255,0.1); border-radius: 10px; padding: 0.25rem; display: flex; align-items: center; justify-content: center;">
+                        <?= displayClubLogoInvitation($organizer_club_data, 'organizador') ?>
+                    </div>
+                </div>
+                <!-- Centro: nombre del club responsable (primera línea) y datos del torneo -->
+                <div class="header-tournament-data">
+                    <h4 class="mb-1 text-white"><?= htmlspecialchars($organizer_club_data['nombre'] ?? '') ?></h4>
+                    <p class="sub mb-0 opacity-90">
+                        <strong><?= htmlspecialchars($tournament_data['nombre']) ?></strong>
+                        <span class="opacity-90 small ms-1"><i class="fas fa-calendar-alt me-1"></i><?= date('d/m/Y', strtotime($tournament_data['fechator'])) ?></span>
+                    </p>
+                    <?php if (!empty($tournament_data['clase']) || !empty($tournament_data['modalidad'])): ?>
+                        <p class="mb-0 opacity-75 small"><?= htmlspecialchars(trim(($tournament_data['clase'] ?? '') . ' ' . ($tournament_data['modalidad'] ?? ''))) ?></p>
+                    <?php endif; ?>
+                </div>
+                <!-- Derecha: logo de la aplicación - La Estación del Dominó -->
+                <div class="header-logo-app">
+                    <?php $logo_url = AppHelpers::getAppLogo(); ?>
+                    <img src="<?= htmlspecialchars($logo_url) ?>" alt="La Estación del Dominó">
+                </div>
+            <?php else: ?>
+                <div class="header-logo">
+                    <?php $logo_url = AppHelpers::getAppLogo(); ?>
+                    <img src="<?= htmlspecialchars($logo_url) ?>" alt="La Estación del Dominó">
+                </div>
+                <div class="header-text">
+                    <h4 class="mb-0">La Estación del Dominó</h4>
+                    <p class="sub mb-0">Inscripción por invitación</p>
+                </div>
+            <?php endif; ?>
         </div>
         <div class="card-body">
 <div class="fade-in">
-    <!-- Header -->
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <div>
-            <h1 class="h3 mb-1">
-                <i class="fas fa-user-plus me-2"></i>
-                Registro de Jugadores
-            </h1>
-            <p class="text-muted mb-0">Sistema de inscripción para clubes invitados</p>
-        </div>
-        <?php if ($is_admin_general): ?>
-        <div>
-            <a href="index.php?page=invitations" class="btn btn-outline-secondary">
-                <i class="fas fa-arrow-left me-2"></i>Volver a Invitaciones
-            </a>
-        </div>
-        <?php endif; ?>
-    </div>
-
-    <?php if ($error_message): ?>
-        <!-- Error -->
+    <?php if ($error_acceso && $error_message): ?>
+        <!-- Error de acceso: pantalla bloqueante -->
         <div class="card">
             <div class="card-header bg-danger text-white">
                 <h5 class="mb-0">
@@ -447,101 +600,51 @@ if (!isset($base) || $base === '') {
                 <i class="fas fa-lock text-danger fs-1 mb-3"></i>
                 <h5 class="text-danger"><?= htmlspecialchars($error_message) ?></h5>
                 <p class="text-muted">Por favor, verifica que tienes acceso válido a esta página.</p>
-                <?php if ($is_admin_general): ?>
-                <a href="index.php?page=invitations" class="btn btn-outline-secondary">
-                    <i class="fas fa-arrow-left me-2"></i>Volver a Invitaciones
+                <a href="<?= htmlspecialchars($url_retorno) ?>" class="btn btn-outline-secondary">
+                    <i class="fas fa-arrow-left me-2"></i><?= htmlspecialchars($texto_retorno) ?>
                 </a>
-                <?php endif; ?>
             </div>
         </div>
     <?php else: ?>
-        <!-- Header con Logos y Título -->
+        <!-- Card: logo club invitado (izq) + nombre del club + bloque Bienvenido (der, solo si club autenticado) -->
         <div class="card mb-4">
             <div class="card-body text-center py-4">
                 <div class="row align-items-center">
-                    <!-- Logo del club responsable (izquierda) -->
+                    <!-- Logo del club invitado (izquierda) -->
                     <div class="col-md-3">
-                        <div class="d-flex align-items-center justify-content-center" style="height: 120px; background: #f8f9fa; border-radius: 10px; border: 2px dashed #dee2e6;">
-                           <?= displayClubLogoInvitation($organizer_club_data, 'organizador') ?>
-                        </div>
-                    </div>
-                    
-                    <!-- Información central -->
-                    <div class="col-md-6 text-center">
-                        <h2 class="h3 text-primary mb-2">
-                            <?= htmlspecialchars($organizer_club_data['nombre'] ?? 'Club Organizador') ?>
-                        </h2>
-                        
-                        <p class="text-muted mb-3" style="font-style: italic;">
-                            Le invitamos a compartir con nosotros este magno evento:
-                        </p>
-                        
-                        <h1 class="display-6 text-success mb-3">
-                            <?= htmlspecialchars($tournament_data['nombre']) ?>
-                        </h1>
-                        
-                        <div class="mt-3">
-                            <span class="badge bg-info fs-6">
-                                <i class="fas fa-calendar-alt me-2"></i>
-                                <?= date('d/m/Y', strtotime($tournament_data['fechator'])) ?>
-                            </span>
-                        </div>
-                    </div>
-                    
-                    <!-- Logo del club invitado (derecha) -->
-                    <div class="col-md-3">
-                        <div class="d-flex align-items-center justify-content-center" style="height: 120px; background: #f8f9fa; border-radius: 10px; border: 2px dashed #dee2e6;">
+                        <div class="invitation-inner-logos logo-box d-flex align-items-center justify-content-center" style="height: 120px; background: #f8f9fa; border-radius: 10px; border: 2px dashed #dee2e6;">
                            <?= displayClubLogoInvitation($club_data, 'invitado') ?>
                         </div>
                     </div>
-                </div>
-                
-                <!-- Período de inscripción -->
-                <div class="row mt-4">
-                    <div class="col-12">
-                        <div class="alert alert-info text-center">
-                            <i class="fas fa-clock me-2"></i>
-                            <strong>Período de Inscripción:</strong> 
-                            Desde <?= date('d/m/Y H:i', strtotime($invitation_data['acceso1'])) ?> 
-                            hasta <?= date('d/m/Y H:i', strtotime($invitation_data['acceso2'])) ?>
-                        </div>
+                    <!-- Nombre del club (centro) -->
+                    <div class="col-md-<?= ($is_admin_club) ? '5' : '9' ?> text-center text-md-start">
+                        <h1 class="display-6 text-success mb-0">
+                            <?= htmlspecialchars($club_data['nombre']) ?>
+                        </h1>
                     </div>
+                    <?php if ($is_admin_club): ?>
+                    <!-- Bloque Bienvenido a la derecha del nombre -->
+                    <div class="col-md-4 text-start">
+                        <div class="small text-muted mb-1">
+                            <strong class="text-dark">Bienvenido:</strong> <?= htmlspecialchars($club_data['nombre']) ?><br>
+                            <strong>Usuario:</strong> <?= htmlspecialchars($current_user['username']) ?><br>
+                            <strong>Delegado:</strong> <?= htmlspecialchars($club_data['delegado']) ?><br>
+                            <strong>Teléfono:</strong> <?= htmlspecialchars($club_data['telefono']) ?>
+                        </div>
+                        <form method="POST" class="d-inline">
+                            <input type="hidden" name="action" value="user_logout">
+                            <button type="submit" class="btn btn-outline-secondary btn-sm"><i class="fas fa-sign-out-alt me-1"></i>Cerrar sesión</button>
+                        </form>
+                    </div>
+                    <?php endif; ?>
                 </div>
             </div>
         </div>
 
-        <!-- Panel administrador: dos líneas, sin título -->
+        <!-- Panel administrador: una línea (solo admin general / admin torneo) -->
         <?php if ($is_admin_general || $is_admin_torneo): ?>
-        <div class="alert alert-primary py-2 mb-3">
-            <div><strong>Usuario:</strong> <?= htmlspecialchars($current_user['username']) ?> &nbsp; <strong>Rol:</strong> <?= htmlspecialchars($current_user['role']) ?></div>
-            <div class="small">Puede inscribir jugadores directamente sin autenticación del club.</div>
-        </div>
-        <?php elseif ($is_admin_club): ?>
-        <!-- Panel de Control del Club Autenticado -->
-        <div class="card mb-4">
-            <div class="card-header bg-success text-white">
-                <div class="d-flex justify-content-between align-items-center">
-                    <h5 class="mb-0">
-                        <i class="fas fa-check-circle me-2"></i>
-                        Club Autenticado
-                    </h5>
-                    <form method="POST" style="display: inline;">
-                        <input type="hidden" name="action" value="user_logout">
-                        <button type="submit" class="btn btn-outline-light btn-sm">
-                            <i class="fas fa-sign-out-alt me-1"></i>Cerrar Sesión
-                        </button>
-                    </form>
-                </div>
-            </div>
-            <div class="card-body">
-                <div class="alert alert-success">
-                    <i class="fas fa-user-check me-2"></i>
-                    <strong>Bienvenido:</strong> <?= htmlspecialchars($club_data['nombre']) ?><br>
-                    <strong>Usuario:</strong> <?= htmlspecialchars($current_user['username']) ?><br>
-                    <strong>Delegado:</strong> <?= htmlspecialchars($club_data['delegado']) ?><br>
-                    <strong>Teléfono:</strong> <?= htmlspecialchars($club_data['telefono']) ?>
-                </div>
-            </div>
+        <div class="alert alert-primary py-1 px-2 mb-2 small">
+            <strong>Usuario:</strong> <?= htmlspecialchars($current_user['username']) ?> &nbsp; <strong>Rol:</strong> <?= htmlspecialchars($current_user['role']) ?> &nbsp; Puede inscribir jugadores directamente sin autenticación del club.
         </div>
         <?php endif; ?>
 
@@ -558,10 +661,10 @@ if (!isset($base) || $base === '') {
                     if ($base_inv !== ''):
                     ?>
                     <div class="d-flex flex-wrap gap-2">
-                        <a href="<?= htmlspecialchars($base_inv) ?>/login.php?<?= http_build_query(['return_url' => 'invitation/register?token=' . urlencode($token)]) ?>" class="btn btn-primary">
+                        <a href="<?= htmlspecialchars($base_inv) ?>/auth/login?<?= http_build_query(['return_url' => 'invitation/register?token=' . urlencode($token)]) ?>" class="btn btn-primary">
                             <i class="fas fa-sign-in-alt me-2"></i>Iniciar Sesión
                         </a>
-                        <a href="<?= htmlspecialchars($base_inv) ?>/user_register.php" class="btn btn-success">
+                        <a href="<?= htmlspecialchars($base_inv) ?>/join?token=<?= urlencode($token) ?>" class="btn btn-success">
                             <i class="fas fa-user-plus me-2"></i>Registrarse
                         </a>
                     </div>
@@ -581,22 +684,14 @@ if (!isset($base) || $base === '') {
         <?php endif; ?>
         <div class="row">
             <?php if ($inscripciones_abiertas && empty($stand_by)): ?>
-            <!-- Formulario compacto: una fila, sin título -->
+            <!-- Formulario compacto: encabezado con retorno, una fila de campos -->
             <div class="col-12">
                 <div class="card mb-3">
                     <div class="card-body py-2 px-3">
-                        <?php if ($success_message): ?>
-                            <div class="alert alert-success alert-dismissible fade show py-2 mb-2" role="alert">
-                                <i class="fas fa-check-circle me-2"></i><?= htmlspecialchars($success_message) ?>
-                                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-                            </div>
-                        <?php endif; ?>
-                        <?php if ($error_message): ?>
-                            <div class="alert alert-danger alert-dismissible fade show py-2 mb-2" role="alert">
-                                <i class="fas fa-exclamation-circle me-2"></i><?= htmlspecialchars($error_message) ?>
-                                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-                            </div>
-                        <?php endif; ?>
+                        <div class="d-flex justify-content-end mb-2">
+                            <a href="<?= htmlspecialchars($url_retorno) ?>" class="btn btn-outline-secondary btn-sm"><i class="fas fa-arrow-left me-1"></i><?= htmlspecialchars($texto_retorno) ?></a>
+                        </div>
+                        <?php /* Mensajes efímeros vía toasts (invitation-register.js); no alertas bloqueantes */ ?>
                         <?php if (!$form_enabled): ?>
                             <div class="alert alert-info py-2 mb-2 small">Para inscribir debe autenticarse primero.</div>
                         <?php endif; ?>
@@ -605,26 +700,28 @@ if (!isset($base) || $base === '') {
                             <input type="hidden" name="action" value="register_player">
                             <input type="hidden" name="torneo_id" value="<?= htmlspecialchars($torneo_id) ?>">
                             <input type="hidden" name="club_id" value="<?= htmlspecialchars($club_id) ?>">
-                            <div class="d-flex flex-wrap align-items-end gap-2 gx-2">
+                            <div class="d-flex flex-wrap align-items-end gap-2 gx-2 inv-form-row">
                                 <div class="inv-field">
                                     <label for="nacionalidad" class="form-label inv-label">Nac. <span class="text-danger">*</span></label>
-                                    <select class="form-select form-select-sm" id="nacionalidad" name="nacionalidad" style="width:4.2rem" <?= !$form_enabled ? 'disabled' : '' ?> required title="Nacionalidad">
+                                    <select class="form-select form-select-sm inv-input" id="nacionalidad" name="nacionalidad" <?= !$form_enabled ? 'disabled' : '' ?> required title="Nacionalidad">
                                         <option value="">...</option>
                                         <option value="V" <?= ($_POST['nacionalidad'] ?? '') == 'V' ? 'selected' : '' ?>>V</option>
                                         <option value="E" <?= ($_POST['nacionalidad'] ?? '') == 'E' ? 'selected' : '' ?>>E</option>
+                                        <option value="J" <?= ($_POST['nacionalidad'] ?? '') == 'J' ? 'selected' : '' ?>>J</option>
+                                        <option value="P" <?= ($_POST['nacionalidad'] ?? '') == 'P' ? 'selected' : '' ?>>P</option>
                                     </select>
                                 </div>
                                 <div class="inv-field">
                                     <label for="cedula" class="form-label inv-label">Cédula <span class="text-danger">*</span></label>
-                                    <input type="text" class="form-control form-control-sm" id="cedula" name="cedula" style="width:5.5rem" value="<?= htmlspecialchars($_POST['cedula'] ?? '') ?>" placeholder="12345678" maxlength="8" <?= !$form_enabled ? 'readonly' : '' ?> onblur="searchPersona()" required title="Al salir se buscan datos">
+                                    <input type="text" class="form-control form-control-sm inv-input inv-input-cedula" id="cedula" name="cedula" value="<?= htmlspecialchars($_POST['cedula'] ?? '') ?>" placeholder="12345678" maxlength="8" <?= !$form_enabled ? 'readonly' : '' ?> onblur="if(typeof searchPersona==='function')searchPersona();" required title="Al salir se buscan datos automáticamente (inscritos, usuarios, base externa)">
                                 </div>
-                                <div class="inv-field">
+                                <div class="inv-field inv-field-nombre">
                                     <label for="nombre" class="form-label inv-label">Nombre <span class="text-danger">*</span></label>
-                                    <input type="text" class="form-control form-control-sm" id="nombre" name="nombre" style="width:9rem" value="<?= htmlspecialchars($_POST['nombre'] ?? '') ?>" <?= !$form_enabled ? 'readonly' : '' ?> required>
+                                    <input type="text" class="form-control form-control-sm inv-input" id="nombre" name="nombre" value="<?= htmlspecialchars($_POST['nombre'] ?? '') ?>" <?= !$form_enabled ? 'readonly' : '' ?> required>
                                 </div>
                                 <div class="inv-field">
                                     <label for="sexo" class="form-label inv-label">Sexo <span class="text-danger">*</span></label>
-                                    <select class="form-select form-select-sm" id="sexo" name="sexo" style="width:3.5rem" <?= !$form_enabled ? 'disabled' : '' ?> required>
+                                    <select class="form-select form-select-sm inv-input" id="sexo" name="sexo" <?= !$form_enabled ? 'disabled' : '' ?> required>
                                         <option value="">...</option>
                                         <option value="M" <?= ($_POST['sexo'] ?? '') == 'M' ? 'selected' : '' ?>>M</option>
                                         <option value="F" <?= ($_POST['sexo'] ?? '') == 'F' ? 'selected' : '' ?>>F</option>
@@ -632,22 +729,22 @@ if (!isset($base) || $base === '') {
                                 </div>
                                 <div class="inv-field">
                                     <label for="fechnac" class="form-label inv-label">F. Nac.</label>
-                                    <input type="date" class="form-control form-control-sm" id="fechnac" name="fechnac" style="width:7rem" value="<?= htmlspecialchars($_POST['fechnac'] ?? '') ?>" <?= !$form_enabled ? 'readonly' : '' ?>>
+                                    <input type="date" class="form-control form-control-sm inv-input inv-input-date" id="fechnac" name="fechnac" value="<?= htmlspecialchars($_POST['fechnac'] ?? '') ?>" <?= !$form_enabled ? 'readonly' : '' ?>>
                                 </div>
                                 <div class="inv-field">
                                     <label for="telefono" class="form-label inv-label">Tel. <span class="text-danger">*</span></label>
-                                    <input type="tel" class="form-control form-control-sm" id="telefono" name="telefono" style="width:7.5rem" value="<?= htmlspecialchars($_POST['telefono'] ?? '') ?>" placeholder="0424-1234567" <?= !$form_enabled ? 'readonly' : '' ?> required>
+                                    <input type="tel" class="form-control form-control-sm inv-input inv-input-tel" id="telefono" name="telefono" value="<?= htmlspecialchars($_POST['telefono'] ?? '') ?>" placeholder="0424-1234567" <?= !$form_enabled ? 'readonly' : '' ?> required>
                                 </div>
-                                <div class="inv-field">
+                                <div class="inv-field inv-field-email">
                                     <label for="email" class="form-label inv-label">Email</label>
-                                    <input type="email" class="form-control form-control-sm" id="email" name="email" style="width:10rem" value="<?= htmlspecialchars($_POST['email'] ?? '') ?>" placeholder="usuario@gmail.com" <?= !$form_enabled ? 'readonly' : '' ?>>
+                                    <input type="email" class="form-control form-control-sm inv-input" id="email" name="email" value="<?= htmlspecialchars($_POST['email'] ?? '') ?>" placeholder="usuario@gmail.com" <?= !$form_enabled ? 'readonly' : '' ?>>
                                 </div>
                                 <div class="inv-field ms-1">
                                     <?php if ($form_enabled): ?>
                                         <button type="submit" class="btn btn-primary btn-sm"><i class="fas fa-save me-1"></i>Inscribir</button>
                                         <button type="button" class="btn btn-outline-secondary btn-sm" onclick="clearForm()"><i class="fas fa-eraser me-1"></i>Limpiar</button>
                                     <?php else: ?>
-                                        <button type="button" class="btn btn-secondary btn-sm" disabled><i class="fas fa-lock me-1"></i>Autenticarse</button>
+                                        <a href="<?= htmlspecialchars(isset($base) && $base !== '' ? $base . '/' : '/') ?>auth/login?<?= http_build_query(['return_url' => 'invitation/register?token=' . urlencode($token)]) ?>" class="btn btn-primary btn-sm"><i class="fas fa-sign-in-alt me-1"></i>Iniciar sesión</a>
                                     <?php endif; ?>
                                 </div>
                             </div>
@@ -704,6 +801,8 @@ if (!isset($base) || $base === '') {
                                                     <form method="post" class="d-inline" onsubmit="return confirm('¿Retirar a este jugador del torneo?');">
                                                         <input type="hidden" name="action" value="retirar">
                                                         <input type="hidden" name="id_inscripcion" value="<?= (int)$registration['id'] ?>">
+                                                        <input type="hidden" name="torneo_id" value="<?= (int)$torneo_id ?>">
+                                                        <input type="hidden" name="club_id" value="<?= (int)$club_id ?>">
                                                         <button type="submit" class="btn btn-outline-danger btn-sm"><i class="fas fa-user-minus me-1"></i>Retirar</button>
                                                     </form>
                                                 </td>
@@ -729,158 +828,40 @@ if (!isset($base) || $base === '') {
 </style>
 
 <script>
-    var API_BASE = '<?= (isset($base) && $base !== "") ? rtrim($base, "/") . "/api" : "" ?>';
-    if (!API_BASE) API_BASE = (window.location.pathname.replace(/\/invitation\/register.*$/, "") || "/") + "api";
-    
+    window.INVITATION_REGISTER_CONFIG = {
+        apiBase: <?= json_encode((isset($base) && $base !== '') ? rtrim($base, '/') . '/api' : '') ?>,
+        torneoId: <?= (int)($torneo_id ?? 0) ?>
+    };
+</script>
+<script src="<?= htmlspecialchars(isset($base) && $base !== '' ? rtrim($base, '/') . '/js/invitation-register.js' : 'js/invitation-register.js') ?>"></script>
+<script>
     function togglePasswordVisibility() {
-        const passwordInput = document.getElementById('password');
-        const toggleIcon = document.getElementById('passwordToggleIcon');
-        
-        if (passwordInput.type === 'password') {
-            passwordInput.type = 'text';
-            toggleIcon.className = 'fas fa-eye-slash';
-        } else {
-            passwordInput.type = 'password';
-            toggleIcon.className = 'fas fa-eye';
-        }
-    }
-    
-    function clearForm() {
-        if (confirm('¿Estás seguro de que deseas limpiar todos los campos del formulario?')) {
-            document.getElementById('registrationForm').reset();
-        }
-    }
-    
-    // Función para mostrar mensaje cuando se intenta enviar sin autenticación
-    function showAuthRequiredMessage() {
-        alert('Debe autenticarse primero para poder inscribir jugadores.');
-    }
-    
-    // Validar solo números en cédula
-    document.getElementById('cedula').addEventListener('input', function() {
-        this.value = this.value.replace(/[^0-9]/g, '');
-    });
-    
-    // Validar formato de teléfono
-    document.getElementById('telefono').addEventListener('input', function() {
-        let value = this.value.replace(/[^0-9-]/g, '');
-        // Formato: 0424-1234567
-        if (value.length > 4 && value.indexOf('-') === -1) {
-            value = value.substring(0, 4) + '-' + value.substring(4);
-        }
-        this.value = value;
-    });
-    
-    // Función para buscar persona por cédula
-    async function searchPersona() {
-        const cedula = document.getElementById('cedula').value.trim();
-        const nacionalidad = document.getElementById('nacionalidad').value;
-        
-        if (!cedula || !nacionalidad) {
-            return;
-        }
-        
-        // Construir ID de usuario (nacionalidad + cédula)
-        const idusuario = nacionalidad + cedula;
-        
-        try {
-            // Mostrar indicador de carga
-            showLoadingIndicator();
-            
-            // Buscar en la base de datos externa
-            const response = await fetch(`${API_BASE}/search_persona.php?cedula=${encodeURIComponent(cedula)}&nacionalidad=${encodeURIComponent(nacionalidad)}`);
-            const result = await response.json();
-            
-            if ((result.encontrado || result.success) && (result.persona || result.data)) {
-                // Llenar campos automáticamente
-                var persona = result.persona || result.data;
-                document.getElementById('nombre').value = (persona && persona.nombre) || '';
-                document.getElementById('sexo').value = (persona && (String(persona.sexo || '').substring(0, 1).toUpperCase())) || '';
-                document.getElementById('fechnac').value = (persona && persona.fechnac) || '';
-                document.getElementById('telefono').value = (persona && (persona.celular || persona.telefono)) || '';
-                var emailEl = document.getElementById('email');
-                if (emailEl) emailEl.value = (persona && persona.email) || '';
-                
-                // Verificar si ya existe en el sistema
-                await checkExistingCedula(cedula);
-                
+        var passwordInput = document.getElementById('password');
+        var toggleIcon = document.getElementById('passwordToggleIcon');
+        if (passwordInput && toggleIcon) {
+            if (passwordInput.type === 'password') {
+                passwordInput.type = 'text';
+                toggleIcon.className = 'fas fa-eye-slash';
             } else {
-                showMessage('No se encontraron datos para esta cédula', 'info');
+                passwordInput.type = 'password';
+                toggleIcon.className = 'fas fa-eye';
             }
-            
-        } catch (error) {
-            console.error('Error en la búsqueda:', error);
-            showMessage('Error al buscar datos de la cédula', 'danger');
-        } finally {
-            hideLoadingIndicator();
         }
     }
-    
-    // Funciones auxiliares para mostrar/ocultar indicadores y mensajes
-    function showLoadingIndicator() {
-        // Crear o mostrar indicador de carga
-        let indicator = document.getElementById('loadingIndicator');
-        if (!indicator) {
-            indicator = document.createElement('div');
-            indicator.id = 'loadingIndicator';
-            indicator.className = 'alert alert-info';
-            indicator.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Buscando datos...';
-            document.querySelector('.container').insertBefore(indicator, document.querySelector('.container').firstChild);
-        }
-        indicator.style.display = 'block';
+    function showAuthRequiredMessage() {
+        if (typeof showToastInvitation !== 'undefined') showToastInvitation('Debe autenticarse primero para poder inscribir jugadores.', 'warning');
+        else alert('Debe autenticarse primero para poder inscribir jugadores.');
     }
-    
-    function hideLoadingIndicator() {
-        const indicator = document.getElementById('loadingIndicator');
-        if (indicator) {
-            indicator.style.display = 'none';
-        }
-    }
-    
-    function showMessage(message, type) {
-        // Crear o actualizar mensaje
-        let messageDiv = document.getElementById('messageDiv');
-        if (!messageDiv) {
-            messageDiv = document.createElement('div');
-            messageDiv.id = 'messageDiv';
-            messageDiv.className = 'alert';
-            document.querySelector('.container').insertBefore(messageDiv, document.querySelector('.container').firstChild);
-        }
-        messageDiv.className = `alert alert-${type}`;
-        messageDiv.textContent = message;
-        messageDiv.style.display = 'block';
-        
-        // Ocultar mensaje después de 5 segundos
-        setTimeout(() => {
-            messageDiv.style.display = 'none';
-        }, 5000);
-    }
-    
-    // Función para verificar si la cédula ya existe
-    async function checkExistingCedula(cedula) {
-        try {
-            const response = await fetch(`${API_BASE}/check_cedula.php?cedula=${encodeURIComponent(cedula)}&torneo=<?= $torneo_id ?>`);
-            const result = await response.json();
-            
-            if (result.success && result.exists) {
-                showMessage(`Esta cédula ya está inscrita en este torneo (${result.data.nombre})`, 'warning');
-                
-                // Limpiar campos para permitir nueva búsqueda
-                clearFormFields();
-            }
-        } catch (error) {
-            console.error('Error verificando cédula:', error);
-        }
-    }
-    
-    // Función para limpiar campos del formulario
-    function clearFormFields() {
-        document.getElementById('cedula').value = '';
-        document.getElementById('nombre').value = '';
-        document.getElementById('sexo').value = '';
-        document.getElementById('fechnac').value = '';
-        document.getElementById('cedula').focus();
-    }
+    <?php if (!empty($success_message)): ?>
+    document.addEventListener('DOMContentLoaded', function() {
+        if (typeof showToastInvitation === 'function') showToastInvitation(<?= json_encode($success_message) ?>, 'success');
+    });
+    <?php endif; ?>
+    <?php if (!empty($error_message) && !$error_acceso): ?>
+    document.addEventListener('DOMContentLoaded', function() {
+        if (typeof showToastInvitation === 'function') showToastInvitation(<?= json_encode($error_message) ?>, 'danger');
+    });
+    <?php endif; ?>
 </script>
 </body>
 </html>

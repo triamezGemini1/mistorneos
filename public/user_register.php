@@ -53,6 +53,7 @@ if (isset($_SESSION['user'])) {
 $error = '';
 $success = '';
 $from_invitation = !empty($_GET['from_invitation']) || !empty($_POST['from_invitation']);
+$invitation_token = trim($_GET['token'] ?? $_POST['token'] ?? $_SESSION['invitation_token'] ?? '');
 $entidad = isset($_POST['entidad']) ? (int)($_POST['entidad']) : 0;
 $entidades_options = getEntidadesOptions();
 
@@ -74,9 +75,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $password = trim((string)($_POST['password'] ?? ''));
     $password_confirm = trim((string)($_POST['password_confirm'] ?? ''));
     
-    // Validaciones
-    if ($cedula === '' || empty($nombre) || empty($username) || empty($password) || $entidad <= 0) {
+    // Validaciones (por invitación no se exige entidad)
+    if ($cedula === '' || empty($nombre) || empty($username) || empty($password)) {
         $error = 'Todos los campos marcados con * son requeridos (cédula solo números)';
+    } elseif (!$from_invitation && $entidad <= 0) {
+        $error = 'Debe seleccionar una entidad.';
     } elseif (strlen($password) < 6) {
         $error = 'La contraseña debe tener al menos 6 caracteres';
     } elseif ($password !== $password_confirm) {
@@ -146,6 +149,40 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             
             if ($result['success']) {
                 RateLimiter::recordSubmit('user_register');
+                $new_user_id = isset($result['user_id']) ? (int) $result['user_id'] : 0;
+                // Hook post-registro invitación: vincular delegado en directorio_clubes
+                if ($from_invitation && $new_user_id > 0) {
+                    require_once __DIR__ . '/../lib/InvitationJoinResolver.php';
+                    $id_directorio_club = null;
+                    if (!empty($_SESSION['invitation_id_directorio_club'])) {
+                        $id_directorio_club = (int) $_SESSION['invitation_id_directorio_club'];
+                    } elseif ($invitation_token !== '') {
+                        $resolved = InvitationJoinResolver::resolve($invitation_token);
+                        if ($resolved !== null && !empty($resolved['id_directorio_club'])) {
+                            $id_directorio_club = (int) $resolved['id_directorio_club'];
+                        }
+                    }
+                    if ($id_directorio_club > 0) {
+                        try {
+                            $pdo = DB::pdo();
+                            $cols = $pdo->query("SHOW COLUMNS FROM directorio_clubes LIKE 'id_usuario'")->fetchAll();
+                            if (!empty($cols)) {
+                                $stmt = $pdo->prepare("UPDATE directorio_clubes SET id_usuario = ? WHERE id = ?");
+                                $stmt->execute([$new_user_id, $id_directorio_club]);
+                            }
+                        } catch (Exception $e) {
+                            error_log("user_register: error al vincular id_usuario en directorio_clubes: " . $e->getMessage());
+                        }
+                    }
+                    if ($invitation_token !== '') {
+                        $base = class_exists('AppHelpers') ? rtrim(AppHelpers::getPublicUrl(), '/') : rtrim($GLOBALS['APP_CONFIG']['app']['base_url'] ?? '', '/');
+                        $_SESSION['invitation_token'] = $invitation_token;
+                        $_SESSION['url_retorno'] = $base . '/invitation/register?token=' . urlencode($invitation_token);
+                        unset($_SESSION['invitation_id_directorio_club'], $_SESSION['invitation_join_requires_register']);
+                        header('Location: ' . $base . '/auth/login');
+                        exit;
+                    }
+                }
                 $success = '¡Registro exitoso! Ya puedes iniciar sesión.' . ($from_invitation ? ' Inicia sesión para acceder al formulario de inscripción de tu invitación.' : '');
                 // Limpiar todos los campos del formulario después de registro exitoso
                 $_POST = [];
@@ -250,7 +287,7 @@ $base_url = app_base_url();
                             <div class="alert alert-success">
                                 <i class="fas fa-check-circle me-2"></i><?= htmlspecialchars($success) ?>
                                 <div class="mt-2">
-                                    <a href="login.php" class="btn btn-success btn-sm">Ir a Iniciar Sesión</a>
+                                    <a href="<?= htmlspecialchars(($base_url ?? '') . '/auth/login') ?>" class="btn btn-success btn-sm">Ir a Iniciar Sesión</a>
                                 </div>
                             </div>
                         <?php else: ?>
@@ -262,7 +299,10 @@ $base_url = app_base_url();
                             <?php endif; ?>
                             <form method="POST" id="registerForm">
                                 <input type="hidden" name="csrf_token" value="<?= CSRF::token() ?>">
-                                <?php if ($from_invitation): ?><input type="hidden" name="from_invitation" value="1"><?php endif; ?>
+                                <?php if ($from_invitation): ?>
+                                    <input type="hidden" name="from_invitation" value="1">
+                                    <?php if ($invitation_token !== ''): ?><input type="hidden" name="token" value="<?= htmlspecialchars($invitation_token) ?>"><?php endif; ?>
+                                <?php endif; ?>
                                 <input type="hidden" name="fechnac" id="fechnac" value="">
                                 
                                 <div class="row">
@@ -319,9 +359,9 @@ $base_url = app_base_url();
                                 </div>
 
                                 <div class="mb-3">
-                                    <label class="form-label">Entidad (Ubicación) *</label>
-                                    <select name="entidad" id="entidad" class="form-select" required>
-                                        <option value="">-- Seleccione --</option>
+                                    <label class="form-label">Entidad (Ubicación)<?= $from_invitation ? '' : ' *' ?></label>
+                                    <select name="entidad" id="entidad" class="form-select"<?= $from_invitation ? '' : ' required' ?>>
+                                        <option value="">-- Seleccione<?= $from_invitation ? ' (opcional)' : '' ?> --</option>
                                         <?php if (!empty($entidades_options)): ?>
                                             <?php foreach ($entidades_options as $ent): ?>
                                                 <option value="<?= htmlspecialchars($ent['codigo']) ?>" <?= ($entidad == $ent['codigo']) ? 'selected' : '' ?>>
@@ -367,10 +407,10 @@ $base_url = app_base_url();
                         
                         <div class="text-center mt-4">
                             <p class="text-muted mb-2">¿Ya tienes cuenta?</p>
-                            <a href="login.php" class="btn btn-outline-secondary btn-sm">
+                            <a href="<?= htmlspecialchars(($base_url ?? '') . '/auth/login') ?>" class="btn btn-outline-secondary btn-sm">
                                 <i class="fas fa-sign-in-alt me-1"></i>Iniciar Sesión
                             </a>
-                            <a href="landing.php" class="btn btn-outline-secondary btn-sm ms-2">
+                            <a href="<?= htmlspecialchars(($base_url ?? '') . '/') ?>" class="btn btn-outline-secondary btn-sm ms-2">
                                 <i class="fas fa-home me-1"></i>Volver al Inicio
                             </a>
                         </div>

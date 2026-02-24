@@ -26,14 +26,21 @@ if (!defined('APP_ROOT')) {
     define('APP_ROOT', dirname(__DIR__));
 }
 
-// Normalizar REQUEST_URI cuando la app está bajo un subpath (ej. /pruebas en beta)
-// Así el Router y las rutas modernas reciben /auth/login en vez de /pruebas/auth/login
+// Normalizar REQUEST_URI cuando la app está bajo un subpath (ej. /mistorneos/public o /pruebas en beta)
+// Así el Router y las rutas modernas reciben /join o /auth/login en vez de /mistorneos/public/join
 $appBaseUrl = $GLOBALS['APP_CONFIG']['app']['base_url'] ?? '';
 if ($appBaseUrl === '' && class_exists('Env')) {
     $appBaseUrl = (string) Env::get('APP_URL', '');
 }
 $basePath = $appBaseUrl !== '' ? parse_url($appBaseUrl, PHP_URL_PATH) : '';
 $basePath = ($basePath !== null && $basePath !== '' && $basePath !== '/') ? rtrim($basePath, '/') : '';
+if ($basePath === '') {
+    $scriptDir = isset($_SERVER['SCRIPT_NAME']) ? dirname($_SERVER['SCRIPT_NAME']) : '';
+    $scriptDir = $scriptDir === '.' || $scriptDir === '' ? '' : rtrim(str_replace('\\', '/', $scriptDir), '/');
+    if ($scriptDir !== '' && $scriptDir !== '/') {
+        $basePath = $scriptDir;
+    }
+}
 if ($basePath !== '') {
     $currentUri = $_SERVER['REQUEST_URI'] ?? '/';
     if (strpos($currentUri, $basePath) === 0) {
@@ -54,6 +61,7 @@ $uriPath = parse_url($uri, PHP_URL_PATH);
 $modernRoutes = [
     '/auth/',
     '/invitation/',
+    '/join',
     '/actions/',
     '/dashboard',
     '/api/',
@@ -62,6 +70,10 @@ $modernRoutes = [
 
 $useModernRouter = false;
 foreach ($modernRoutes as $prefix) {
+    if ($prefix === '/join' && ($uriPath === '/join' || $uriPath === '/join/' || substr($uriPath, -5) === '/join' || substr($uriPath, -6) === '/join/')) {
+        $useModernRouter = true;
+        break;
+    }
     if (strpos($uriPath, $prefix) === 0) {
         $useModernRouter = true;
         break;

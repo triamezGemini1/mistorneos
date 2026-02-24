@@ -6,6 +6,7 @@
 require_once __DIR__ . '/../config/bootstrap.php';
 require_once __DIR__ . '/../config/db.php';
 require_once __DIR__ . '/../lib/app_helpers.php';
+require_once __DIR__ . '/../lib/InvitationJoinResolver.php';
 
 $token = trim($_GET['token'] ?? '');
 if ($token === '') {
@@ -89,6 +90,7 @@ if (!empty($organizador['logo'])) {
 
 $titulo_torneo = $torneo['nombre'] ?? '';
 $org_nombre = $organizador['nombre'] ?? '';
+$url_acceso = InvitationJoinResolver::buildJoinUrl($token);
 
 $html = '<!DOCTYPE html>
 <html lang="es">
@@ -128,6 +130,9 @@ body { font-family: DejaVu Sans, Arial, sans-serif; font-size: 11pt; color: #333
       <p><strong>Hora:</strong> ' . htmlspecialchars($hora) . '</p>
       <p><strong>Lugar:</strong> ' . htmlspecialchars($lugar) . '</p>
     </div>
+    <p><strong>Enlace de acceso (registro e inscripción de jugadores):</strong></p>
+    <p style="word-break: break-all; background: #e8f4fd; padding: 10px; border-radius: 6px; border: 1px solid #0d6efd;"><a href="' . htmlspecialchars($url_acceso) . '">' . htmlspecialchars($url_acceso) . '</a></p>
+    <p style="font-size: 10pt; color: #555;">Use este enlace para registrarse como delegado o, si ya está registrado, para acceder al formulario de inscripción de jugadores. El sistema le dirigirá al paso que corresponda.</p>
     <p><strong>Contacto:</strong></p>
     <p>' . htmlspecialchars($responsable) . ($tel_org ? ' &ndash; ' . htmlspecialchars($tel_org) : '') . ($email_org ? ' &ndash; ' . htmlspecialchars($email_org) : '') . '</p>
   </div>

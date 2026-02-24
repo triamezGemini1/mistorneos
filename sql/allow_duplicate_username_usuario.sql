@@ -1,0 +1,5 @@
+-- NO USAR con el esquema actual: los atletas usan username único (user00+numfvd o user00+id).
+-- Este script solo aplicaría si se quisiera permitir varios usuarios con username "usuario";
+-- desde el punto de vista de seguridad es preferible mantener UNIQUE en username.
+--
+-- Para referencia: ALTER TABLE usuarios DROP INDEX username;

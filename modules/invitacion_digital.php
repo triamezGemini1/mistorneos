@@ -6,6 +6,7 @@
 require_once __DIR__ . '/../config/bootstrap.php';
 require_once __DIR__ . '/../config/db.php';
 require_once __DIR__ . '/../lib/app_helpers.php';
+require_once __DIR__ . '/../lib/InvitationJoinResolver.php';
 
 $token = trim($_GET['token'] ?? '');
 $error = '';
@@ -24,7 +25,7 @@ if ($token === '') {
         $stmt = $pdo->prepare("
             SELECT i.id, i.torneo_id, i.club_id, i.token, i.acceso1, i.acceso2, i.estado
             FROM {$tb} i
-            WHERE i.token = ? AND (i.estado = 'activa' OR i.estado = 1)
+            WHERE i.token = ? AND (i.estado = 'activa' OR i.estado = 1 OR i.estado = 'vinculado' OR i.estado = 0)
         ");
         $stmt->execute([$token]);
         $inv = $stmt->fetch(PDO::FETCH_ASSOC);
@@ -65,33 +66,39 @@ if ($token === '') {
     }
 }
 
-$page_title = $inv ? 'Invitación - ' . htmlspecialchars($torneo['nombre'] ?? '') : 'Invitación';
-$delegado_nombre = $club_invitado['delegado'] ?? ('Club ' . ($club_invitado['nombre'] ?? ''));
-$club_invitado_nombre = $club_invitado['nombre'] ?? 'Su club';
-$fecha_torneo = $torneo ? date('d/m/Y', strtotime($torneo['fechator'])) : '';
-$lugar = $torneo['lugar'] ?? 'Por confirmar';
-$hora = isset($torneo['hora_torneo']) && $torneo['hora_torneo'] !== '' && $torneo['hora_torneo'] !== null
-    ? $torneo['hora_torneo'] : (isset($torneo['hora']) ? $torneo['hora'] : 'Por confirmar');
-if (is_string($hora) && preg_match('/^\d{2}:\d{2}/', $hora)) {
-    $hora = substr($hora, 0, 5);
+$page_title = $inv && $torneo ? 'Invitación - ' . htmlspecialchars($torneo['nombre'] ?? '') : 'Invitación';
+$club_invitado = $club_invitado ?? null;
+$torneo = $torneo ?? null;
+$organizador = $organizador ?? null;
+$delegado_nombre = $club_invitado ? ($club_invitado['delegado'] ?? ('Club ' . ($club_invitado['nombre'] ?? ''))) : 'Delegado';
+$club_invitado_nombre = $club_invitado ? ($club_invitado['nombre'] ?? 'Su club') : 'Su club';
+$fecha_torneo = $torneo && !empty($torneo['fechator']) ? date('d/m/Y', strtotime($torneo['fechator'])) : '';
+$lugar = $torneo ? ($torneo['lugar'] ?? 'Por confirmar') : 'Por confirmar';
+$hora = 'Por confirmar';
+if ($torneo && (isset($torneo['hora_torneo']) || isset($torneo['hora']))) {
+    $hora = isset($torneo['hora_torneo']) && $torneo['hora_torneo'] !== '' && $torneo['hora_torneo'] !== null
+        ? $torneo['hora_torneo'] : (isset($torneo['hora']) ? $torneo['hora'] : 'Por confirmar');
+    if (is_string($hora) && preg_match('/^\d{2}:\d{2}/', $hora)) {
+        $hora = substr($hora, 0, 5);
+    }
 }
 $logo_org_url = '';
-if (!empty($organizador['logo'])) {
+if ($organizador && !empty($organizador['logo'])) {
     $path = $organizador['logo'];
     $logo_org_url = (strpos($path, 'http') === 0) ? $path : (AppHelpers::getPublicUrl() . '/view_image.php?path=' . rawurlencode($path));
 }
-$responsable = $organizador['responsable'] ?? '';
-$tel_org = $organizador['telefono'] ?? '';
-$email_org = $organizador['email'] ?? '';
-$tel_wa = preg_replace('/\D/', '', $tel_org);
+$responsable = $organizador ? ($organizador['responsable'] ?? '') : '';
+$tel_org = $organizador ? ($organizador['telefono'] ?? '') : '';
+$email_org = $organizador ? ($organizador['email'] ?? '') : '';
+$tel_wa = preg_replace('/\D/', '', (string) $tel_org);
 if (strlen($tel_wa) > 0 && substr($tel_wa, 0, 1) !== '0') {
     $tel_wa = '58' . ltrim($tel_wa, '0');
 }
-$wa_confirmar = 'https://wa.me/' . $tel_wa . '?text=' . rawurlencode('Hola, confirmo asistencia al torneo ' . ($torneo['nombre'] ?? '') . ' el ' . $fecha_torneo . '.');
+$wa_confirmar = 'https://wa.me/' . $tel_wa . '?text=' . rawurlencode('Hola, confirmo asistencia al torneo ' . ($torneo ? ($torneo['nombre'] ?? '') : '') . ' el ' . $fecha_torneo . '.');
 
-$afiche_url = !empty($torneo['afiche']) ? AppHelpers::tournamentFile($torneo['afiche']) : '';
-$normas_url = !empty($torneo['normas']) ? AppHelpers::tournamentFile($torneo['normas']) : '';
-$invitacion_url = !empty($torneo['invitacion']) ? AppHelpers::tournamentFile($torneo['invitacion']) : '';
+$afiche_url = ($torneo && !empty($torneo['afiche'])) ? AppHelpers::tournamentFile($torneo['afiche']) : '';
+$normas_url = ($torneo && !empty($torneo['normas'])) ? AppHelpers::tournamentFile($torneo['normas']) : '';
+$invitacion_url = ($torneo && !empty($torneo['invitacion'])) ? AppHelpers::tournamentFile($torneo['invitacion']) : '';
 ?>
 <!DOCTYPE html>
 <html lang="es">
@@ -199,7 +206,7 @@ $invitacion_url = !empty($torneo['invitacion']) ? AppHelpers::tournamentFile($to
                     <i class="fas fa-trophy fa-3x text-secondary"></i>
                 <?php endif; ?>
             </div>
-            <h2 class="org-name"><?= htmlspecialchars($organizador['nombre'] ?? '') ?></h2>
+            <h2 class="org-name"><?= htmlspecialchars($organizador ? ($organizador['nombre'] ?? '') : '') ?></h2>
         </div>
         <div class="card-body">
             <p class="lead">
@@ -211,6 +218,14 @@ $invitacion_url = !empty($torneo['invitacion']) ? AppHelpers::tournamentFile($to
                 <p><i class="fas fa-calendar-alt me-2 text-primary"></i><strong>Fecha:</strong> <?= htmlspecialchars($fecha_torneo) ?></p>
                 <p><i class="fas fa-clock me-2 text-secondary"></i><strong>Hora:</strong> <?= htmlspecialchars($hora) ?></p>
                 <p><i class="fas fa-map-marker-alt me-2 text-danger"></i><strong>Lugar:</strong> <?= htmlspecialchars($lugar) ?></p>
+            </div>
+            <?php $url_acceso = InvitationJoinResolver::buildJoinUrl($token); ?>
+            <div class="mb-3 p-3 rounded" style="background: #e8f4fd; border: 1px solid #0d6efd;">
+                <p class="mb-2"><strong><i class="fas fa-link me-1"></i>Enlace de acceso (registro e inscripción de jugadores):</strong></p>
+                <a href="<?= htmlspecialchars($url_acceso) ?>" class="btn btn-primary d-inline-flex align-items-center gap-2" style="word-break: break-all;">
+                    <i class="fas fa-sign-in-alt"></i> Ir al formulario de acceso
+                </a>
+                <p class="small text-muted mt-2 mb-0">Use este enlace para registrarse como delegado o, si ya está registrado, para acceder al formulario de inscripción de jugadores. El sistema le dirigirá al paso que corresponda.</p>
             </div>
             <p class="mb-2"><strong>Documentos:</strong></p>
             <div class="d-flex flex-wrap">

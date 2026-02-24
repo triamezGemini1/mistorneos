@@ -5,16 +5,18 @@ require_once __DIR__ . '/../config/db.php';
 require_once __DIR__ . '/../config/csrf.php';
 require_once __DIR__ . '/../lib/Pagination.php';
 require_once __DIR__ . '/../lib/app_helpers.php';
+require_once __DIR__ . '/../lib/InvitationJoinResolver.php';
 
-// Verificar permisos
-Auth::requireRole(['admin_general', 'admin_torneo']);
+// Verificar permisos: admin_general, admin_torneo y admin_club (organización responsable del torneo)
+Auth::requireRole(['admin_general', 'admin_torneo', 'admin_club']);
 
-// Obtener informaci�n del usuario actual
+// Obtener información del usuario actual
 $current_user = Auth::user();
 $user_role = $current_user['role'] ?? '';
 $user_club_id = Auth::getUserClubId();
 $is_admin_general = Auth::isAdminGeneral();
 $is_admin_torneo = Auth::isAdminTorneo();
+$is_admin_club = Auth::isAdminClub();
 
 // Validar que admin_torneo tenga club asignado
 if ($is_admin_torneo && !$user_club_id) {
@@ -240,14 +242,27 @@ if ($action === 'list' && !empty($filter_torneo)) {
 <div class="container-fluid">
     <div class="row">
         <div class="col-12">
-            <div class="d-flex justify-content-between align-items-center mb-4">
+            <?php
+            $url_retorno_origen = '';
+            if (!empty($_GET['return_to']) && $_GET['return_to'] === 'invitacion_clubes' && !empty($_GET['torneo_id'])) {
+                $url_retorno_origen = 'index.php?page=invitacion_clubes&torneo_id=' . (int)$_GET['torneo_id'];
+            } elseif (!empty($filter_torneo)) {
+                $url_retorno_origen = 'index.php?page=invitacion_clubes&torneo_id=' . (int)$filter_torneo;
+            } else {
+                $url_retorno_origen = class_exists('AppHelpers') ? AppHelpers::dashboard('home') : 'index.php?page=home';
+            }
+            ?>
+            <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
                 <div>
                     <h1 class="h3 mb-0">
                         <i class="fas fa-envelope me-2"></i>Invitaciones
                     </h1>
                     <p class="text-muted mb-0">Gesti�n de invitaciones a torneos</p>
                 </div>
-                <div>
+                <div class="d-flex gap-2 align-items-center">
+                    <a href="<?= htmlspecialchars($url_retorno_origen) ?>" class="btn btn-outline-secondary">
+                        <i class="fas fa-arrow-left me-2"></i>Retorno al origen
+                    </a>
                     <?php if ($action === 'list'): ?>
                         <a href="index.php?page=invitations&action=new" class="btn btn-primary">
                             <i class="fas fa-plus me-2"></i>Nueva Invitaci�n
@@ -275,6 +290,12 @@ if ($action === 'list' && !empty($filter_torneo)) {
                 <div class="alert alert-info alert-dismissible fade show" role="alert">
                     <i class="fas fa-info-circle me-2"></i>
                     <strong>Modo Administrador de Torneo:</strong> Solo puede gestionar invitaciones de torneos asignados a su club (ID: <?= $user_club_id ?>).
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+            <?php elseif ($is_admin_club): ?>
+                <div class="alert alert-info alert-dismissible fade show" role="alert">
+                    <i class="fas fa-info-circle me-2"></i>
+                    <strong>Modo Administrador de Organización:</strong> Solo puede ver y gestionar invitaciones de torneos de su organización.
                     <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
                 </div>
             <?php endif; ?>
@@ -451,10 +472,11 @@ if ($action === 'list' && !empty($filter_torneo)) {
                                         $hora_txt = isset($item['torneo_hora']) && $item['torneo_hora'] !== '' && $item['torneo_hora'] !== null ? $item['torneo_hora'] : 'Por confirmar';
                                         if (is_string($hora_txt) && preg_match('/^\d{2}:\d{2}/', $hora_txt)) { $hora_txt = substr($hora_txt, 0, 5); }
                                         $url_tarjeta = rtrim(AppHelpers::getPublicUrl(), '/') . '/invitation/digital?token=' . urlencode($item['token']);
-                                        $url_inscripciones = rtrim(AppHelpers::getPublicUrl(), '/') . '/invitation/register?token=' . urlencode($item['token']);
-                                        $msg_invitacion = "Estimado delegado de " . $item['club_nombre'] . ", le invitamos formalmente a nuestro evento " . $item['torneo_nombre'] . ". Vea todos los detalles, afiche y normas aquí: " . $url_tarjeta . " — Es necesario estar registrado en el sistema para acceder.";
+                                        $url_acceso = InvitationJoinResolver::buildJoinUrl($item['token']);
+                                        $url_inscripciones = $url_acceso;
+                                        $msg_invitacion = "Estimado delegado de " . $item['club_nombre'] . ", le invitamos formalmente a nuestro evento " . $item['torneo_nombre'] . ". Enlace de acceso (registro e inscripción de jugadores): " . $url_acceso . " — Ver detalles de la invitación: " . $url_tarjeta;
                                         $url_wa = 'https://api.whatsapp.com/send?text=' . rawurlencode($msg_invitacion);
-                                        $url_telegram = 'https://t.me/share/url?url=' . rawurlencode($url_tarjeta) . '&text=' . rawurlencode($msg_invitacion);
+                                        $url_telegram = 'https://t.me/share/url?url=' . rawurlencode($url_acceso) . '&text=' . rawurlencode($msg_invitacion);
                                         ?>
                                         <div class="btn-group" role="group">
                                             <a href="<?= htmlspecialchars($url_inscripciones) ?>" class="btn btn-sm btn-primary" target="_blank" rel="noopener noreferrer" title="Abrir formulario de inscripciones (enlace para el club)">

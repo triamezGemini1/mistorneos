@@ -27,13 +27,15 @@ final class Security
     public static function authenticateUser(string $username, string $password): ?array
     {
         try {
-            // Primero buscar el usuario sin filtrar por status para diagnosticar
-            $stmt = DB::pdo()->prepare("
+            $pdo = DB::pdo();
+            $usernameTrim = trim($username);
+
+            $stmt = $pdo->prepare("
                 SELECT id, username, password_hash, email, role, status, club_id, entidad, uuid, photo_path
-                FROM usuarios 
+                FROM usuarios
                 WHERE username = ? OR email = ?
             ");
-            $stmt->execute([$username, $username]);
+            $stmt->execute([$usernameTrim, $usernameTrim]);
             $user = $stmt->fetch(PDO::FETCH_ASSOC);
 
             // Si no existe el usuario
@@ -233,6 +235,7 @@ final class Security
             $pdo = DB::pdo();
             
             // Verificar si el username ya existe
+            $username = trim($data['username']);
             $stmt = $pdo->prepare("SELECT id FROM usuarios WHERE username = ?");
             $stmt->execute([$username]);
             if ($stmt->fetch()) {
@@ -285,6 +288,30 @@ final class Security
                     $values[] = $data[$key];
                     $placeholders[] = '?';
                 }
+            }
+
+            // Columnas NOT NULL sin valor: rellenar con valor por defecto (ej. registro Fast-Track)
+            try {
+                $cols = $pdo->query("SHOW COLUMNS FROM usuarios")->fetchAll(PDO::FETCH_ASSOC);
+                $existing = array_flip($fields);
+                foreach ($cols as $col) {
+                    $name = $col['Field'];
+                    if (isset($existing[$name])) {
+                        continue;
+                    }
+                    $null = strtoupper((string) ($col['Null'] ?? 'YES'));
+                    $default = $col['Default'] ?? null;
+                    $keyDefault = $col['Key'] ?? '';
+                    if ($null === 'NO' && ($default === null || $default === '') && $keyDefault !== 'PRI' && $name !== 'id' && $name !== 'created_at') {
+                        $type = strtoupper((string) ($col['Type'] ?? ''));
+                        $defaultVal = (strpos($type, 'INT') !== false || strpos($type, 'DECIMAL') !== false) ? 0 : 'N/A';
+                        $fields[] = $name;
+                        $values[] = $defaultVal;
+                        $placeholders[] = '?';
+                    }
+                }
+            } catch (Throwable $e) {
+                // Ignorar si la tabla no existe o no hay permiso
             }
             
             // Agregar created_at

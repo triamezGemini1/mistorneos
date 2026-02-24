@@ -71,7 +71,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $return_url = $_SESSION['url_retorno'] ?? '';
             $user_id = (int) (Auth::user()['id'] ?? 0);
             try {
-                $stmt = DB::pdo()->prepare("SELECT id, id_usuario_vinculado, club_id FROM {$tb_inv} WHERE token = ? LIMIT 1");
+                $stmt = DB::pdo()->prepare("SELECT * FROM {$tb_inv} WHERE token = ? LIMIT 1");
                 $stmt->execute([$token]);
                 $inv = $stmt->fetch(PDO::FETCH_ASSOC);
                 if ($inv) {
@@ -86,12 +86,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         if ($club_id_inv > 0) {
                             $upClub = DB::pdo()->prepare("UPDATE clubes SET delegado_user_id = ? WHERE id = ?");
                             $upClub->execute([$user_id, $club_id_inv]);
-                            $stmtNom = DB::pdo()->prepare("SELECT nombre FROM clubes WHERE id = ?");
-                            $stmtNom->execute([$club_id_inv]);
-                            $nom = $stmtNom->fetchColumn();
-                            if ($nom !== false && trim((string)$nom) !== '') {
-                                $cols = DB::pdo()->query("SHOW COLUMNS FROM directorio_clubes LIKE 'id_usuario'")->fetch();
-                                if ($cols) {
+                        }
+                        $id_dir = (int)($inv['id_directorio_club'] ?? 0);
+                        $cols = @DB::pdo()->query("SHOW COLUMNS FROM directorio_clubes LIKE 'id_usuario'")->fetch();
+                        if ($cols) {
+                            if ($id_dir > 0) {
+                                $upDir = DB::pdo()->prepare("UPDATE directorio_clubes SET id_usuario = ? WHERE id = ?");
+                                $upDir->execute([$user_id, $id_dir]);
+                            } else {
+                                $stmtNom = DB::pdo()->prepare("SELECT nombre FROM clubes WHERE id = ?");
+                                $stmtNom->execute([$club_id_inv]);
+                                $nom = $stmtNom->fetchColumn();
+                                if ($nom !== false && trim((string)$nom) !== '') {
                                     $upDir = DB::pdo()->prepare("UPDATE directorio_clubes SET id_usuario = ? WHERE nombre = ?");
                                     $upDir->execute([$user_id, $nom]);
                                 }

@@ -1,7 +1,12 @@
 <?php
 /**
- * Endpoint para buscar persona por nacionalidad + cédula
- * Para inscripción en línea: busca PRIMERO en usuarios, luego BD externa, luego tablas locales
+ * Endpoint para buscar persona por nacionalidad + cédula.
+ * Usado por el formulario de inscripción por invitación.
+ *
+ * Orden de búsqueda (el cliente debe validar inscritos antes de llamar a este endpoint):
+ * 1. [Cliente] Validar en `inscritos` (check_cedula.php) → si existe, abortar con "Jugador ya registrado".
+ * 2. Buscar en tabla `usuarios` → si existe, retornar: sexo, fecha_nacimiento, telefono, email, nacionalidad.
+ * 3. Si no en usuarios: consulta externa (API/Legacy) como último recurso.
  */
 
 require_once __DIR__ . '/../../config/bootstrap.php';
@@ -39,20 +44,27 @@ try {
     foreach (array_unique($cedula_variantes) as $c) {
         if (empty($c)) continue;
         try {
-            $stmt = DB::pdo()->prepare("SELECT nombre, sexo, fechnac, celular, email FROM usuarios WHERE cedula = ? LIMIT 1");
+            $stmt = DB::pdo()->prepare("SELECT nacionalidad, nombre, sexo, fechnac, celular, email FROM usuarios WHERE cedula = ? LIMIT 1");
             $stmt->execute([$c]);
             $persona = $stmt->fetch(PDO::FETCH_ASSOC);
             if ($persona) {
                 error_log("search_persona.php - Encontrado en usuarios: " . $persona['nombre']);
+                $fechnac = $persona['fechnac'] ?? '';
+                if ($fechnac && preg_match('/^\d{4}-\d{2}-\d{2}/', $fechnac) === false && (strtotime($fechnac) !== false)) {
+                    $fechnac = date('Y-m-d', strtotime($fechnac));
+                }
+                $celular = $persona['celular'] ?? '';
                 echo json_encode([
                     'encontrado' => true,
                     'fuente' => 'usuarios',
                     'usuario_registrado' => true,
                     'persona' => [
+                        'nacionalidad' => $persona['nacionalidad'] ?? 'V',
                         'nombre' => $persona['nombre'] ?? '',
                         'sexo' => $persona['sexo'] ?? '',
-                        'fechnac' => $persona['fechnac'] ?? '',
-                        'celular' => $persona['celular'] ?? '',
+                        'fechnac' => $fechnac,
+                        'celular' => $celular,
+                        'telefono' => $celular,
                         'email' => $persona['email'] ?? ''
                     ]
                 ]);
@@ -79,30 +91,42 @@ try {
             
             // Verificar diferentes formatos de respuesta
             if (isset($result['encontrado']) && $result['encontrado'] && isset($result['persona'])) {
-                // Formato: ['encontrado' => true, 'persona' => [...]]
-                error_log("search_persona.php - Encontrado en base externa (formato 1): " . ($result['persona']['nombre'] ?? 'N/A'));
+                $cel = $result['persona']['celular'] ?? $result['persona']['telefono'] ?? '';
+                $fechnac = $result['persona']['fechnac'] ?? '';
+                if ($fechnac && preg_match('/^\d{4}-\d{2}-\d{2}/', $fechnac) === false && strtotime($fechnac) !== false) {
+                    $fechnac = date('Y-m-d', strtotime($fechnac));
+                }
                 echo json_encode([
                     'encontrado' => true,
                     'fuente' => 'externa',
                     'persona' => [
+                        'nacionalidad' => $result['persona']['nacionalidad'] ?? $nacionalidad,
                         'nombre' => $result['persona']['nombre'] ?? '',
                         'sexo' => $result['persona']['sexo'] ?? '',
-                        'fechnac' => $result['persona']['fechnac'] ?? '',
-                        'celular' => $result['persona']['celular'] ?? $result['persona']['telefono'] ?? ''
+                        'fechnac' => $fechnac,
+                        'celular' => $cel,
+                        'telefono' => $cel,
+                        'email' => $result['persona']['email'] ?? ''
                     ]
                 ]);
                 exit;
             } elseif (isset($result['success']) && $result['success'] && isset($result['data'])) {
-                // Formato: ['success' => true, 'data' => [...]]
-                error_log("search_persona.php - Encontrado en base externa (formato 2): " . ($result['data']['nombre'] ?? 'N/A'));
+                $cel = $result['data']['telefono'] ?? $result['data']['celular'] ?? '';
+                $fechnac = $result['data']['fechnac'] ?? '';
+                if ($fechnac && preg_match('/^\d{4}-\d{2}-\d{2}/', $fechnac) === false && strtotime($fechnac) !== false) {
+                    $fechnac = date('Y-m-d', strtotime($fechnac));
+                }
                 echo json_encode([
                     'encontrado' => true,
                     'fuente' => 'externa',
                     'persona' => [
+                        'nacionalidad' => $result['data']['nacionalidad'] ?? $nacionalidad,
                         'nombre' => $result['data']['nombre'] ?? '',
                         'sexo' => $result['data']['sexo'] ?? '',
-                        'fechnac' => $result['data']['fechnac'] ?? '',
-                        'celular' => $result['data']['telefono'] ?? $result['data']['celular'] ?? ''
+                        'fechnac' => $fechnac,
+                        'celular' => $cel,
+                        'telefono' => $cel,
+                        'email' => $result['data']['email'] ?? ''
                     ]
                 ]);
                 exit;
