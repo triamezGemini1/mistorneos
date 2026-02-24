@@ -602,6 +602,9 @@ if (in_array($user['role'], ['admin_club', 'admin_general', 'admin_torneo'], tru
         if (file_exists($content)) {
           include $content;
         } else {
+          if (function_exists('error_log')) {
+            error_log("index.php: Página no reconocida page=" . ($current_page ?: '(vacío)') . ", se muestra 404.");
+          }
           include __DIR__ . "/../../modules/404.php";
         }
         ?>

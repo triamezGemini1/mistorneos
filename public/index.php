@@ -123,12 +123,12 @@ if ($useModernRouter) {
 // =================================================================
 // MODO 2: RUTAS LEGACY (?page=xxx) - Compatibilidad
 // =================================================================
+// La sesión se inicia en config/bootstrap.php (requerido arriba). No redirigir a landing si el usuario está autenticado.
 
-// Verificar autenticación (con manejo de errores)
+// Verificar autenticación: solo mostrar landing cuando NO hay sesión válida
 try {
     $user = Auth::user();
     if (!$user) {
-        // Landing: SPA si API disponible, sino legacy (evita "Error al cargar los datos")
         include __DIR__ . '/landing.php';
         exit;
     }

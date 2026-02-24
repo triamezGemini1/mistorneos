@@ -71,7 +71,8 @@ if (Auth::login($username, $password)) {
     }
 
     unset($_SESSION['invitation_token'], $_SESSION['invitation_club_name']);
-    if ($return_url !== '' && !headers_sent()) {
+    // No usar url_retorno si apunta al landing (evita "expulsión" tras login)
+    if ($return_url !== '' && stripos($return_url, 'landing') === false && !headers_sent()) {
       header('Location: ' . $return_url);
       unset($_SESSION['url_retorno']);
       exit;

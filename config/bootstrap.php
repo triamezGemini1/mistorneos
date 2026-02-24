@@ -84,6 +84,13 @@ if (session_status() === PHP_SESSION_NONE) {
             $cookie_path = '/' . $m[1] . '/';
         }
     }
+    // Si la app está en subcarpeta y no tenemos base_url, usar SCRIPT_NAME para que la cookie se envíe en ese path (evita "expulsión" al landing)
+    if ($cookie_path === '/' && !empty($_SERVER['SCRIPT_NAME'])) {
+        $script_dir = dirname($_SERVER['SCRIPT_NAME']);
+        if ($script_dir !== '.' && $script_dir !== '' && $script_dir !== '/') {
+            $cookie_path = rtrim(str_replace('\\', '/', $script_dir), '/') . '/';
+        }
+    }
     session_set_cookie_params([
         'lifetime' => 0, // Sesión expira al cerrar el navegador
         'path' => $cookie_path,
