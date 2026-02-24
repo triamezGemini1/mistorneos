@@ -178,6 +178,37 @@ if ($torneo && $_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) 
     $omitidas = 0;
     $errores = [];
     $pdo = DB::pdo();
+
+    // Resolver admin_club_id (obligatorio en producción si la tabla tiene la columna sin default)
+    $admin_club_id = 0;
+    $u = Auth::user();
+    if ($u && ($u['role'] ?? '') === 'admin_club') {
+        $admin_club_id = Auth::id();
+    } else {
+        $stmt_org = $pdo->prepare("SELECT club_responsable FROM tournaments WHERE id = ? LIMIT 1");
+        $stmt_org->execute([$torneo_id]);
+        $row_t = $stmt_org->fetch(PDO::FETCH_ASSOC);
+        if ($row_t && !empty($row_t['club_responsable'])) {
+            $org_id = (int) $row_t['club_responsable'];
+            $stmt_admin = $pdo->prepare("SELECT admin_user_id FROM organizaciones WHERE id = ? LIMIT 1");
+            $stmt_admin->execute([$org_id]);
+            $admin_user_id = $stmt_admin->fetchColumn();
+            if ($admin_user_id !== false && $admin_user_id !== null && (int)$admin_user_id > 0) {
+                $admin_club_id = (int) $admin_user_id;
+            }
+        }
+        if ($admin_club_id <= 0) {
+            $admin_club_id = Auth::id();
+        }
+    }
+    if ($admin_club_id <= 0) {
+        $cols_tb = $pdo->query("SHOW COLUMNS FROM {$tb_inv}")->fetchAll(PDO::FETCH_COLUMN);
+        if (in_array('admin_club_id', $cols_tb, true)) {
+            $fallback = $pdo->query("SELECT id FROM usuarios WHERE role = 'admin_club' AND status = 0 LIMIT 1")->fetchColumn();
+            $admin_club_id = $fallback !== false && $fallback !== null ? (int)$fallback : 0;
+        }
+    }
+
     try {
         $pdo->beginTransaction();
         foreach ($ids_directorio as $dir_id) {
@@ -231,6 +262,9 @@ if ($torneo && $_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) 
             ];
             if (in_array('id_directorio_club', $cols_inv, true)) {
                 $campos['id_directorio_club'] = $dir_id;
+            }
+            if (in_array('admin_club_id', $cols_inv, true)) {
+                $campos['admin_club_id'] = $admin_club_id > 0 ? $admin_club_id : Auth::id();
             }
             $cols = array_values(array_intersect($cols_inv, array_keys($campos)));
             $vals = array_map(function ($c) use ($campos) { return $campos[$c]; }, $cols);
