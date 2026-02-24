@@ -5,7 +5,22 @@ $user = $_SESSION['user'];
 $current_page = $_GET['page'] ?? 'home';
 
 // Base URL para CSS/JS (carpeta public/) — evita doble public/public
-$layout_asset_base = AppHelpers::getPublicUrl();
+// Priorizar SCRIPT_NAME para que la base coincida con la petición real y no se carguen assets desde otra app (ej. phpMyAdmin)
+$layout_asset_base = null;
+if (!empty($_SERVER['SCRIPT_NAME'])) {
+    $scriptDir = dirname($_SERVER['SCRIPT_NAME']);
+    if ($scriptDir !== '.' && $scriptDir !== '' && $scriptDir !== '/') {
+        $scheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
+        $host = $_SERVER['HTTP_HOST'] ?? 'localhost';
+        $layout_asset_base = $scheme . '://' . $host . $scriptDir;
+    }
+}
+if ($layout_asset_base === null || $layout_asset_base === '') {
+    $layout_asset_base = class_exists('AppHelpers') ? AppHelpers::getPublicUrl() : '';
+}
+if ($layout_asset_base === '') {
+    $layout_asset_base = ((!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http') . '://' . ($_SERVER['HTTP_HOST'] ?? 'localhost');
+}
 
 // Logo y nombre para el identificador del dashboard (organización cuando no es admin_general)
 $dashboard_org = Auth::getDashboardOrganizacion();

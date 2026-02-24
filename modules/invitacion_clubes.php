@@ -15,7 +15,7 @@ require_once __DIR__ . '/../public/simple_image_config.php';
 Auth::requireRole(['admin_general', 'admin_torneo', 'admin_club']);
 
 $torneo_id = isset($_GET['torneo_id']) ? (int)$_GET['torneo_id'] : 0;
-$success_message = $_GET['success'] ?? null;
+$success_message = (isset($_GET['success']) && $_GET['success'] === '1') ? ($_GET['msg'] ?? 'Operación correcta.') : ($_GET['success'] ?? null);
 $error_message = $_GET['error'] ?? null;
 $torneo = null;
 $clubs_list = [];
@@ -102,7 +102,33 @@ if ($torneo_id <= 0) {
 
 // POST: quitar invitaciones y/o crear invitaciones para los clubes seleccionados
 if ($torneo && $_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'invitar_seleccionados') {
-    CSRF::validate();
+    // Evitar que cualquier salida accidental rompa el redirect (regla de oro: no echo/print_r antes de Location)
+    ob_start();
+
+    // Redirección siempre a esta misma página; nunca variable vacía (evita ir a phpMyAdmin u otra raíz)
+    $build_redirect = function (array $params) {
+        $path = isset($_SERVER['SCRIPT_NAME']) ? $_SERVER['SCRIPT_NAME'] : '/index.php';
+        $path = ($path !== '' && $path !== '/') ? $path : '/index.php';
+        $scheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
+        $host = $_SERVER['HTTP_HOST'] ?? 'localhost';
+        $url = $scheme . '://' . $host . $path . '?' . http_build_query($params);
+        if ($url === '' || strpos($url, 'index.php') === false) {
+            $url = $scheme . '://' . $host . '/index.php?' . http_build_query($params);
+        }
+        return $url;
+    };
+
+    try {
+        CSRF::validate();
+    } catch (Throwable $e) {
+        if (function_exists('error_log')) {
+            error_log('Invitacion_clubes CSRF: ' . $e->getMessage());
+        }
+        @ob_end_clean();
+        header('Location: ' . $build_redirect(['page' => 'invitacion_clubes', 'torneo_id' => $torneo_id, 'error' => 'Sesión inválida o token expirado. Vuelva a intentar.']));
+        exit;
+    }
+
     $messages = [];
     $params = ['page' => 'invitacion_clubes', 'torneo_id' => $torneo_id];
 
@@ -145,13 +171,12 @@ if ($torneo && $_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) 
 
     // Si solo se quitaron invitaciones (sin agregar nuevas), redirigir ya
     if (empty($ids_directorio)) {
+        $params['success'] = '1';
         if (!empty($messages)) {
-            $params['success'] = implode(' ', $messages);
+            $params['msg'] = implode(' ', $messages);
         }
-        // Misma ruta que la petición actual para que cargue el layout (GET a index.php)
-        $path = parse_url($_SERVER['REQUEST_URI'] ?? '/index.php', PHP_URL_PATH);
-        $path = ($path !== null && $path !== '' && $path !== '/') ? $path : '/index.php';
-        header('Location: ' . $path . '?' . http_build_query($params));
+        @ob_end_clean();
+        header('Location: ' . $build_redirect($params));
         exit;
     }
 
@@ -159,8 +184,9 @@ if ($torneo && $_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) 
     $creadas = 0;
     $omitidas = 0;
     $errores = [];
+    $pdo = DB::pdo();
     try {
-        $pdo = DB::pdo();
+        $pdo->beginTransaction();
         foreach ($ids_directorio as $dir_id) {
             $stmt = $pdo->prepare("SELECT id, nombre, direccion, delegado, telefono, email FROM directorio_clubes WHERE id = ?");
             $stmt->execute([$dir_id]);
@@ -225,28 +251,36 @@ if ($torneo && $_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) 
             }
             $creadas++;
         }
-        $params = ['page' => 'invitacion_clubes', 'torneo_id' => $torneo_id];
-        if (!empty($messages)) {
-            $params['success'] = implode(' ', $messages);
-        }
+        $pdo->commit();
+
+        $params = ['page' => 'invitacion_clubes', 'torneo_id' => $torneo_id, 'success' => '1'];
+        $msg_parts = $messages;
         if ($creadas > 0) {
-            $params['success'] = ($params['success'] ?? '') . ($params['success'] ? ' ' : '') . ($creadas === 1
-                ? 'Se creó 1 invitación.'
-                : "Se crearon {$creadas} invitaciones.");
+            $msg_parts[] = $creadas === 1 ? 'Se creó 1 invitación.' : "Se crearon {$creadas} invitaciones.";
         }
         if ($omitidas > 0) {
-            $params['success'] = ($params['success'] ?? '') . ($params['success'] ? ' ' : '') . "{$omitidas} ya estaban invitados.";
+            $msg_parts[] = "{$omitidas} ya estaban invitados.";
+        }
+        if (!empty($msg_parts)) {
+            $params['msg'] = implode(' ', $msg_parts);
         }
         if (!empty($errores)) {
             $params['error'] = implode(' ', $errores);
         }
-        // Misma ruta que la petición actual para que cargue el layout (GET a index.php)
-        $path = parse_url($_SERVER['REQUEST_URI'] ?? '/index.php', PHP_URL_PATH);
-        $path = ($path !== null && $path !== '' && $path !== '/') ? $path : '/index.php';
-        header('Location: ' . $path . '?' . http_build_query($params));
+        @ob_end_clean();
+        header('Location: ' . $build_redirect($params));
         exit;
     } catch (Exception $e) {
-        $error_message = 'Error al crear invitaciones: ' . $e->getMessage();
+        if (isset($pdo) && $pdo->inTransaction()) {
+            $pdo->rollBack();
+        }
+        if (function_exists('error_log')) {
+            error_log('Invitacion_clubes: ' . $e->getMessage() . ' [' . $e->getFile() . ':' . $e->getLine() . ']');
+        }
+        @ob_end_clean();
+        $params = ['page' => 'invitacion_clubes', 'torneo_id' => $torneo_id, 'error' => 'Error al crear invitaciones. Revise logs. ' . $e->getMessage()];
+        header('Location: ' . $build_redirect($params));
+        exit;
     }
 }
 
@@ -302,12 +336,20 @@ $fechator_fmt = $torneo && !empty($torneo['fechator']) ? date('d/m/Y', strtotime
             <?php endif; ?>
 
             <?php if ($torneo && !empty($clubs_list)): ?>
+                <?php
+                // SCRIPT_NAME = path real del script (/mistorneos/public/index.php). REQUEST_URI está normalizado por index.php y pierde el subpath → http://localhost/index.php iría a la raíz (phpMyAdmin en WAMP)
+                $form_path = isset($_SERVER['SCRIPT_NAME']) ? $_SERVER['SCRIPT_NAME'] : '/index.php';
+                $form_path = ($form_path !== '' && $form_path !== '/') ? $form_path : '/index.php';
+                $form_scheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
+                $form_host = $_SERVER['HTTP_HOST'] ?? 'localhost';
+                $form_action_url = $form_scheme . '://' . $form_host . $form_path . '?page=invitacion_clubes&torneo_id=' . (int)$torneo_id;
+                ?>
                 <div class="card">
                     <div class="card-header bg-light d-flex justify-content-between align-items-center flex-wrap gap-2">
                         <span><i class="fas fa-address-book me-2"></i>Clubes del directorio — marque los que desea invitar; en los ya invitados marque el cuadro para <strong>quitar</strong> la invitación</span>
                         <span class="badge bg-secondary"><?= count($ya_invitados) ?> ya invitados a este torneo</span>
                     </div>
-                    <form method="post" action="index.php?page=invitacion_clubes&torneo_id=<?= $torneo_id ?>" id="formInvitar">
+                    <form method="post" action="<?= htmlspecialchars($form_action_url) ?>" id="formInvitar">
                         <?= CSRF::input() ?>
                         <input type="hidden" name="action" value="invitar_seleccionados">
                         <input type="hidden" name="acceso1" value="<?= htmlspecialchars(date('Y-m-d', strtotime(($torneo['fechator'] ?? 'today') . ' -30 days'))) ?>">
