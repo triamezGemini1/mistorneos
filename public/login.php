@@ -22,18 +22,19 @@ if (!empty($_GET['return_url'])) {
     }
 }
 
-// Si ya hay sesión activa, redirigir al dashboard o return_url (302 para no cachear como 301)
+// Si ya hay sesión activa, redirigir al dashboard o return_url (302). Usar base de la petición para no ir a raíz del dominio.
 if (isset($_SESSION['user'])) {
     require __DIR__ . '/../modules/auth/after_login_check.php';
     require_once __DIR__ . '/../lib/app_helpers.php';
     ob_end_clean();
+    $entry_base = AppHelpers::getRequestEntryUrl();
     if ($return_url && (strpos($return_url, '?') !== false || strpos($return_url, '.php') !== false)) {
         $target = (strpos($return_url, 'http') === 0 || strpos($return_url, '/') === 0)
             ? $return_url
-            : rtrim(AppHelpers::getPublicUrl(), '/') . '/' . ltrim($return_url, '/');
+            : $entry_base . '/' . ltrim($return_url, '/');
         header("Location: " . $target, true, 302);
     } else {
-        header("Location: " . AppHelpers::url('index.php'), true, 302);
+        header("Location: " . $entry_base . "/index.php", true, 302);
     }
     exit;
 }
@@ -118,17 +119,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
 
         $redirect = !empty($_POST['return_url']) ? trim($_POST['return_url']) : ($return_url ?: '');
+        $entry_base = AppHelpers::getRequestEntryUrl();
         if ($redirect && preg_match('#^[a-zA-Z0-9_\-/\.\?=&]+$#', $redirect) && !preg_match('#^(https?|javascript|data):#i', $redirect)) {
             if (strpos($redirect, '?') !== false || strpos($redirect, '.php') !== false) {
                 $target = (strpos($redirect, 'http') === 0 || strpos($redirect, '/') === 0)
                     ? $redirect
-                    : rtrim(AppHelpers::getPublicUrl(), '/') . '/' . ltrim($redirect, '/');
+                    : $entry_base . '/' . ltrim($redirect, '/');
                 header("Location: " . $target, true, 302);
             } else {
-                header("Location: " . AppHelpers::url('index.php'), true, 302);
+                header("Location: " . $entry_base . "/index.php", true, 302);
             }
         } else {
-            header("Location: " . AppHelpers::url('index.php'), true, 302);
+            header("Location: " . $entry_base . "/index.php", true, 302);
         }
         exit;
     } else {

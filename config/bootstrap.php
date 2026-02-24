@@ -63,36 +63,34 @@ if ($is_web_request && $is_localhost && $is_https && !$is_production && !headers
 }
 
 // =================================================================
-// CONFIGURACIÓN DE SESIONES SEGURAS
+// URL_BASE: ruta de la aplicación (subcarpeta en producción)
 // =================================================================
-// path: debe coincidir con la URL real de la petición (ej. /mistorneos_beta/public/) para que la cookie se envíe.
-// Si APP_URL apunta a otra ruta (ej. /pruebas), la cookie no se enviaría y el usuario vería landing. Priorizar SCRIPT_NAME.
+// En producción bajo /pruebas/public/ definir BASE_PATH=/pruebas/public/ en .env
+// Todas las redirecciones y enlaces deben usar: header("Location: " . URL_BASE . "index.php?page=...");
+if (!defined('URL_BASE')) {
+    $url_base_path = '';
+    if (class_exists('Env') && (string) Env::get('BASE_PATH', '') !== '') {
+        $url_base_path = trim((string) Env::get('BASE_PATH'), '/');
+        $url_base_path = ($url_base_path === '') ? '' : '/' . $url_base_path . '/';
+    }
+    if ($url_base_path === '' && !empty($_SERVER['SCRIPT_NAME'])) {
+        $dir = dirname($_SERVER['SCRIPT_NAME']);
+        if ($dir !== '.' && $dir !== '' && $dir !== '/') {
+            $url_base_path = '/' . trim(str_replace('\\', '/', $dir), '/') . '/';
+        }
+    }
+    if ($url_base_path === '') {
+        $url_base_path = '/pruebas/public/';
+    }
+    define('URL_BASE', $url_base_path);
+}
+
+// =================================================================
+// CONFIGURACIÓN DE SESIONES SEGURAS (anclaje a URL_BASE)
+// =================================================================
+// path: debe coincidir con la URL real (ej. /pruebas/public/) para que la cookie no se pierda.
 if (session_status() === PHP_SESSION_NONE) {
-    $cookie_path = '/';
-    if (!empty($_SERVER['SCRIPT_NAME'])) {
-        $script_dir = dirname($_SERVER['SCRIPT_NAME']);
-        if ($script_dir !== '.' && $script_dir !== '' && $script_dir !== '/') {
-            $cookie_path = rtrim(str_replace('\\', '/', $script_dir), '/') . '/';
-        }
-    }
-    if ($cookie_path === '/' && isset($_SERVER['REQUEST_URI'])) {
-        $uri_path = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
-        if ($uri_path && preg_match('#^/(pruebas|beta|mistorneos_beta)(/|$)#', $uri_path, $m)) {
-            $cookie_path = '/' . $m[1] . '/';
-        }
-    }
-    if ($cookie_path === '/') {
-        $base_url = $GLOBALS['APP_CONFIG']['app']['base_url'] ?? '';
-        if ($base_url === '' && class_exists('Env')) {
-            $base_url = (string) Env::get('APP_URL', '');
-        }
-        if (!empty($base_url) && preg_match('#^https?://[^/]+(/.+)$#', $base_url, $m)) {
-            $path = rtrim($m[1], '/');
-            if ($path !== '' && $path !== '/') {
-                $cookie_path = $path . '/';
-            }
-        }
-    }
+    $cookie_path = (URL_BASE !== '' && URL_BASE !== '/') ? URL_BASE : '/';
     session_set_cookie_params([
         'lifetime' => 0, // Sesión expira al cerrar el navegador
         'path' => $cookie_path,

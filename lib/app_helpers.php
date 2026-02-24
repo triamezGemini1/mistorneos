@@ -91,9 +91,32 @@ class AppHelpers {
 
     /**
      * URL de la carpeta public/ (assets, index.php, etc.)
+     * Si está definida URL_BASE (ej. /pruebas/public/), se usa para anclar a la subcarpeta.
      */
     public static function getPublicUrl(): string {
+        if (defined('URL_BASE') && URL_BASE !== '' && URL_BASE !== '/') {
+            $scheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
+            $host = $_SERVER['HTTP_HOST'] ?? 'localhost';
+            return $scheme . '://' . $host . rtrim(URL_BASE, '/');
+        }
         return rtrim(self::getBaseUrl(), '/') . '/public';
+    }
+
+    /**
+     * Base URL del entry point actual (SCRIPT_NAME), para que redirects no se vayan a la raíz del dominio.
+     * Uso: header('Location: ' . AppHelpers::getRequestEntryUrl() . '/index.php');
+     * En /pruebas/public/ o /mistorneos_beta/public/ devuelve la URL de esa carpeta.
+     */
+    public static function getRequestEntryUrl(): string {
+        if (!empty($_SERVER['SCRIPT_NAME'])) {
+            $dir = dirname($_SERVER['SCRIPT_NAME']);
+            if ($dir !== '.' && $dir !== '' && $dir !== '/') {
+                $scheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
+                $host = $_SERVER['HTTP_HOST'] ?? 'localhost';
+                return rtrim($scheme . '://' . $host . str_replace('\\', '/', $dir), '/');
+            }
+        }
+        return rtrim(self::getPublicUrl(), '/');
     }
     
     /**

@@ -125,11 +125,18 @@ if ($useModernRouter) {
 // =================================================================
 // La sesión se inicia en config/bootstrap.php (requerido arriba). No redirigir a landing si el usuario está autenticado.
 
-// Verificar autenticación: solo mostrar landing cuando NO hay sesión válida
+// Verificar autenticación: sesión inválida → redirigir a URL_BASE . login.php (subcarpeta)
 try {
     $user = Auth::user();
     if (!$user) {
-        include __DIR__ . '/landing.php';
+        $login_url = (defined('URL_BASE') ? URL_BASE : '') . 'login.php';
+        if ($login_url === 'login.php') {
+            $login_url = (dirname($_SERVER['SCRIPT_NAME'] ?? '') !== '.' ? rtrim(dirname($_SERVER['SCRIPT_NAME']), '/') . '/' : '') . 'login.php';
+            if ($login_url !== '' && $login_url[0] !== '/') {
+                $login_url = '/' . $login_url;
+            }
+        }
+        header('Location: ' . $login_url, true, 302);
         exit;
     }
 } catch (Throwable $e) {
@@ -144,7 +151,8 @@ try {
 $allowed_roles = ['admin_general', 'admin_torneo', 'admin_club', 'usuario', 'operador'];
 if (!in_array($user['role'] ?? '', $allowed_roles, true)) {
     Auth::logout();
-    header("Location: " . AppHelpers::url('login.php', ['error' => 'requiere_autenticacion']));
+    $redirect_login = defined('URL_BASE') ? (URL_BASE . 'login.php?error=requiere_autenticacion') : AppHelpers::url('login.php', ['error' => 'requiere_autenticacion']);
+    header('Location: ' . $redirect_login, true, 302);
     exit;
 }
 
@@ -159,7 +167,8 @@ if ($user['role'] === 'usuario') {
         $allow_view = ($inscrito_id > 0 && $inscrito_id === Auth::id());
     }
     if (!$allow_view) {
-        header("Location: " . AppHelpers::url('user_portal.php'));
+        $redirect_portal = defined('URL_BASE') ? (URL_BASE . 'user_portal.php') : AppHelpers::url('user_portal.php');
+        header('Location: ' . $redirect_portal, true, 302);
         exit;
     }
 }

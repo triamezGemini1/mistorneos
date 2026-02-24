@@ -22,27 +22,37 @@ if ($layout_asset_base === '') {
     $layout_asset_base = ((!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http') . '://' . ($_SERVER['HTTP_HOST'] ?? 'localhost');
 }
 
-// Base del menú desde la petición actual (SCRIPT_NAME) para que todos los subniveles no dependan de <base> y no envíen al landing
-$menu_base = '';
-if (!empty($_SERVER['SCRIPT_NAME'])) {
-    $menu_script_dir = dirname($_SERVER['SCRIPT_NAME']);
-    if ($menu_script_dir !== '.' && $menu_script_dir !== '') {
-        $menu_scheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
-        $menu_host = $_SERVER['HTTP_HOST'] ?? 'localhost';
-        $menu_base = $menu_scheme . '://' . $menu_host . str_replace('\\', '/', $menu_script_dir);
+// Base del menú: usar URL_BASE (path) para que enlaces no apunten a la raíz del dominio y la sesión persista en subcarpeta
+if (defined('URL_BASE') && URL_BASE !== '' && URL_BASE !== '/') {
+    // Enlaces con path absoluto desde raíz del servidor: /pruebas/public/index.php?page=...
+    $dashboard_href = function ($page, array $params = []) {
+        $params['page'] = $page;
+        return URL_BASE . 'index.php?' . http_build_query($params);
+    };
+    $menu_url = function ($path) {
+        return URL_BASE . ltrim($path, '/');
+    };
+} else {
+    $menu_base = '';
+    if (!empty($_SERVER['SCRIPT_NAME'])) {
+        $menu_script_dir = dirname($_SERVER['SCRIPT_NAME']);
+        if ($menu_script_dir !== '.' && $menu_script_dir !== '') {
+            $menu_scheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
+            $menu_host = $_SERVER['HTTP_HOST'] ?? 'localhost';
+            $menu_base = $menu_scheme . '://' . $menu_host . str_replace('\\', '/', $menu_script_dir);
+        }
     }
+    if ($menu_base === '') {
+        $menu_base = rtrim($layout_asset_base, '/');
+    }
+    $dashboard_href = function ($page, array $params = []) use ($menu_base) {
+        $params['page'] = $page;
+        return $menu_base . '/index.php?' . http_build_query($params);
+    };
+    $menu_url = function ($path) use ($menu_base) {
+        return $menu_base . '/' . ltrim($path, '/');
+    };
 }
-if ($menu_base === '') {
-    $menu_base = rtrim($layout_asset_base, '/');
-}
-$dashboard_href = function ($page, array $params = []) use ($menu_base) {
-    $params['page'] = $page;
-    return $menu_base . '/index.php?' . http_build_query($params);
-};
-// Misma base para enlaces a profile, logout, landing-spa, manual (evita que <base> mal resuelto envíe al landing)
-$menu_url = function ($path) use ($menu_base) {
-    return $menu_base . '/' . ltrim($path, '/');
-};
 
 // Logo y nombre para el identificador del dashboard (organización cuando no es admin_general)
 $dashboard_org = Auth::getDashboardOrganizacion();

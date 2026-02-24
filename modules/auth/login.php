@@ -3,6 +3,10 @@
 require_once __DIR__ . '/../../config/bootstrap.php';
 require_once __DIR__ . '/../../config/csrf.php';
 require_once __DIR__ . '/../../config/auth.php';
+require_once __DIR__ . '/../../lib/app_helpers.php';
+
+// Redirect al dashboard: misma subcarpeta que la petición (ej. /pruebas/public/, /mistorneos_beta/public/)
+$login_redirect_base = class_exists('AppHelpers') ? AppHelpers::getRequestEntryUrl() : '';
 
 CSRF::validate();
 
@@ -10,7 +14,7 @@ $username = trim($_POST['username'] ?? '');
 $password = $_POST['password'] ?? '';
 
 if (!$username || !$password) {
-  header('Location: ../../public/index.php');
+  header('Location: ' . ($login_redirect_base !== '' ? $login_redirect_base . '/index.php' : '../../public/index.php'));
   exit;
 }
 
@@ -19,7 +23,7 @@ if (Auth::login($username, $password)) {
   if (Auth::isUsingDefaultCredentials($username, $password)) {
     $_SESSION['force_password_change'] = true;
     $_SESSION['password_change_reason'] = 'Estás usando las credenciales por defecto. Por seguridad, debes cambiar tu contraseña.';
-    header('Location: ../../public/index.php?page=users/change_password&force=1');
+    header('Location: ' . ($login_redirect_base !== '' ? $login_redirect_base . '/index.php?page=users/change_password&force=1' : '../../public/index.php?page=users/change_password&force=1'));
     exit;
   }
 
@@ -80,9 +84,9 @@ if (Auth::login($username, $password)) {
     unset($_SESSION['url_retorno']);
   }
 
-  header('Location: ../../public/index.php');
+  header('Location: ' . ($login_redirect_base !== '' ? $login_redirect_base . '/index.php' : '../../public/index.php'));
   exit;
 }
 $_SESSION['login_error'] = 'Credenciales inválidas';
-header('Location: ../../public/index.php');
+header('Location: ' . ($login_redirect_base !== '' ? $login_redirect_base . '/index.php' : '../../public/index.php'));
 
