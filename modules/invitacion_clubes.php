@@ -179,46 +179,8 @@ if ($torneo && $_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) 
     $errores = [];
     $pdo = DB::pdo();
 
-    // Resolver admin_club_id (obligatorio en producción si la tabla tiene la columna sin default)
-    $admin_club_id = 0;
-    $u = Auth::user();
-    if ($u && ($u['role'] ?? '') === 'admin_club') {
-        $admin_club_id = Auth::id();
-    } else {
-        $stmt_org = $pdo->prepare("SELECT club_responsable FROM tournaments WHERE id = ? LIMIT 1");
-        $stmt_org->execute([$torneo_id]);
-        $row_t = $stmt_org->fetch(PDO::FETCH_ASSOC);
-        if ($row_t && !empty($row_t['club_responsable'])) {
-            $org_id = (int) $row_t['club_responsable'];
-            $stmt_admin = $pdo->prepare("SELECT admin_user_id FROM organizaciones WHERE id = ? LIMIT 1");
-            $stmt_admin->execute([$org_id]);
-            $admin_user_id = $stmt_admin->fetchColumn();
-            if ($admin_user_id !== false && $admin_user_id !== null && (int)$admin_user_id > 0) {
-                $admin_club_id = (int) $admin_user_id;
-            }
-        }
-        if ($admin_club_id <= 0) {
-            $admin_club_id = Auth::id();
-        }
-    }
-    if ($admin_club_id <= 0) {
-        $cols_tb = $pdo->query("SHOW COLUMNS FROM {$tb_inv}")->fetchAll(PDO::FETCH_COLUMN);
-        $has_admin_col = in_array('admin_club_id', $cols_tb, true)
-            || in_array('admin_club_id', array_map('strtolower', $cols_tb), true);
-        if ($has_admin_col) {
-            $fallback = $pdo->query("SELECT id FROM usuarios WHERE role = 'admin_club' AND status = 0 LIMIT 1")->fetchColumn();
-            if ($fallback === false || $fallback === null || (int)$fallback <= 0) {
-                $fallback = @$pdo->query("SELECT id FROM usuarios WHERE role = 'admin_club' AND estatus = 0 LIMIT 1")->fetchColumn();
-            }
-            $admin_club_id = ($fallback !== false && $fallback !== null && (int)$fallback > 0) ? (int)$fallback : 0;
-        }
-    }
-    // Si la tabla exige admin_club_id y seguimos en 0, usar el usuario actual para no fallar el INSERT
-    $cols_inv_check = $pdo->query("SHOW COLUMNS FROM {$tb_inv}")->fetchAll(PDO::FETCH_COLUMN);
-    $need_admin_club_id = in_array('admin_club_id', $cols_inv_check, true);
-    if ($need_admin_club_id && $admin_club_id <= 0) {
-        $admin_club_id = Auth::id();
-    }
+    // admin_club_id = ID del usuario logueado que está creando las invitaciones (administrador de club)
+    $admin_club_id = Auth::id();
 
     try {
         $pdo->beginTransaction();
@@ -274,9 +236,10 @@ if ($torneo && $_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) 
             if (in_array('id_directorio_club', $cols_inv, true)) {
                 $campos['id_directorio_club'] = $dir_id;
             }
+            // admin_club_id = usuario logueado que crea la invitación (nombre de columna puede variar en mayúsculas)
             foreach ($cols_inv as $col_name) {
                 if (strtolower((string)$col_name) === 'admin_club_id') {
-                    $campos[$col_name] = $admin_club_id > 0 ? $admin_club_id : Auth::id();
+                    $campos[$col_name] = $admin_club_id;
                     break;
                 }
             }
