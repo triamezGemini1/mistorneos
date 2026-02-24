@@ -279,5 +279,5 @@ if ($page === 'torneo_gestion') {
     }
 }
 
-// Incluir layout principal (para GET normal y páginas de visualización)
+// Incluir layout principal (para GET normal y páginas de visualización). $page ya está definida y saneada; el layout la usa para incluir el módulo correcto.
 include __DIR__ . "/includes/layout.php";

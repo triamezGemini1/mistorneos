@@ -1,8 +1,8 @@
 <?php
 // layout.php
-// La autenticación ya se verificó en index.php
+// La autenticación ya se verificó en index.php. Usar $page pasado por index.php para no perder la página en entornos donde $_GET se pierde (proxy/beta).
 $user = $_SESSION['user'];
-$current_page = $_GET['page'] ?? 'home';
+$current_page = (isset($page) && $page !== '') ? $page : ($_GET['page'] ?? 'home');
 
 // Base URL para CSS/JS (carpeta public/) — evita doble public/public
 // Priorizar SCRIPT_NAME para que la base coincida con la petición real y no se carguen assets desde otra app (ej. phpMyAdmin)

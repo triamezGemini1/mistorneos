@@ -65,30 +65,32 @@ if ($is_web_request && $is_localhost && $is_https && !$is_production && !headers
 // =================================================================
 // CONFIGURACIÓN DE SESIONES SEGURAS
 // =================================================================
-// Configurar parámetros de cookies de sesión ANTES de iniciar la sesión
-// Esto es crítico para seguridad: HttpOnly previene XSS, Secure solo permite HTTPS
-// path: en subdirectorio (/mistorneos/) la cookie debe incluir ese path para que se envíe correctamente
+// path: debe coincidir con la URL real de la petición (ej. /mistorneos_beta/public/) para que la cookie se envíe.
+// Si APP_URL apunta a otra ruta (ej. /pruebas), la cookie no se enviaría y el usuario vería landing. Priorizar SCRIPT_NAME.
 if (session_status() === PHP_SESSION_NONE) {
     $cookie_path = '/';
-    $base_url = $GLOBALS['APP_CONFIG']['app']['base_url'] ?? '';
-    if (!empty($base_url) && preg_match('#^https?://[^/]+(/.+)$#', $base_url, $m)) {
-        $path = rtrim($m[1], '/');
-        if ($path !== '' && $path !== '/') {
-            $cookie_path = $path . '/'; // ej: /mistorneos/
-        }
-    }
-    // Entorno bajo subpath /pruebas o /beta: cookie debe ser para ese path
-    if ($cookie_path === '/' && isset($_SERVER['REQUEST_URI'])) {
-        $uri_path = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
-        if ($uri_path && preg_match('#^/(pruebas|beta)(/|$)#', $uri_path, $m)) {
-            $cookie_path = '/' . $m[1] . '/';
-        }
-    }
-    // Si la app está en subcarpeta y no tenemos base_url, usar SCRIPT_NAME para que la cookie se envíe en ese path (evita "expulsión" al landing)
-    if ($cookie_path === '/' && !empty($_SERVER['SCRIPT_NAME'])) {
+    if (!empty($_SERVER['SCRIPT_NAME'])) {
         $script_dir = dirname($_SERVER['SCRIPT_NAME']);
         if ($script_dir !== '.' && $script_dir !== '' && $script_dir !== '/') {
             $cookie_path = rtrim(str_replace('\\', '/', $script_dir), '/') . '/';
+        }
+    }
+    if ($cookie_path === '/' && isset($_SERVER['REQUEST_URI'])) {
+        $uri_path = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
+        if ($uri_path && preg_match('#^/(pruebas|beta|mistorneos_beta)(/|$)#', $uri_path, $m)) {
+            $cookie_path = '/' . $m[1] . '/';
+        }
+    }
+    if ($cookie_path === '/') {
+        $base_url = $GLOBALS['APP_CONFIG']['app']['base_url'] ?? '';
+        if ($base_url === '' && class_exists('Env')) {
+            $base_url = (string) Env::get('APP_URL', '');
+        }
+        if (!empty($base_url) && preg_match('#^https?://[^/]+(/.+)$#', $base_url, $m)) {
+            $path = rtrim($m[1], '/');
+            if ($path !== '' && $path !== '/') {
+                $cookie_path = $path . '/';
+            }
         }
     }
     session_set_cookie_params([
