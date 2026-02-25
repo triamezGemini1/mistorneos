@@ -26,28 +26,31 @@ if (!defined('APP_ROOT')) {
     define('APP_ROOT', dirname(__DIR__));
 }
 
-// Normalizar REQUEST_URI cuando la app está bajo un subpath (ej. /mistorneos/public o /pruebas en beta)
-// Así el Router y las rutas modernas reciben /join o /auth/login en vez de /mistorneos/public/join
-$appBaseUrl = $GLOBALS['APP_CONFIG']['app']['base_url'] ?? '';
-if ($appBaseUrl === '' && class_exists('Env')) {
-    $appBaseUrl = (string) Env::get('APP_URL', '');
+// Normalizar REQUEST_URI cuando la app está bajo un subpath (ej. /mistorneos_beta/public o /pruebas/public)
+// Así el Router recibe /join o /auth/login y no "Ruta no encontrada" (path con subcarpeta no coincide con rutas registradas)
+$currentUri = $_SERVER['REQUEST_URI'] ?? '/';
+$basePath = '';
+$scriptDir = isset($_SERVER['SCRIPT_NAME']) ? dirname($_SERVER['SCRIPT_NAME']) : '';
+$scriptDir = ($scriptDir === '.' || $scriptDir === '') ? '' : rtrim(str_replace('\\', '/', $scriptDir), '/');
+if ($scriptDir !== '' && $scriptDir !== '/') {
+    $basePath = $scriptDir;
 }
-$basePath = $appBaseUrl !== '' ? parse_url($appBaseUrl, PHP_URL_PATH) : '';
-$basePath = ($basePath !== null && $basePath !== '' && $basePath !== '/') ? rtrim($basePath, '/') : '';
 if ($basePath === '') {
-    $scriptDir = isset($_SERVER['SCRIPT_NAME']) ? dirname($_SERVER['SCRIPT_NAME']) : '';
-    $scriptDir = $scriptDir === '.' || $scriptDir === '' ? '' : rtrim(str_replace('\\', '/', $scriptDir), '/');
-    if ($scriptDir !== '' && $scriptDir !== '/') {
-        $basePath = $scriptDir;
+    $appBaseUrl = $GLOBALS['APP_CONFIG']['app']['base_url'] ?? '';
+    if ($appBaseUrl === '' && class_exists('Env')) {
+        $appBaseUrl = (string) Env::get('APP_URL', '');
     }
+    $pathFromUrl = $appBaseUrl !== '' ? parse_url($appBaseUrl, PHP_URL_PATH) : '';
+    $basePath = ($pathFromUrl !== null && $pathFromUrl !== '' && $pathFromUrl !== '/') ? rtrim($pathFromUrl, '/') : '';
 }
-if ($basePath !== '') {
-    $currentUri = $_SERVER['REQUEST_URI'] ?? '/';
-    if (strpos($currentUri, $basePath) === 0) {
-        $normalized = substr($currentUri, strlen($basePath)) ?: '/';
-        $queryString = (($pos = strpos($currentUri, '?')) !== false) ? substr($currentUri, $pos) : '';
-        $_SERVER['REQUEST_URI'] = $normalized . $queryString;
+if ($basePath !== '' && strpos($currentUri, $basePath) === 0) {
+    $afterBase = substr($currentUri, strlen($basePath)) ?: '/';
+    $pathOnly = (($q = strpos($afterBase, '?')) !== false) ? substr($afterBase, 0, $q) : $afterBase;
+    if ($pathOnly === '') {
+        $pathOnly = '/';
     }
+    $queryString = (($pos = strpos($currentUri, '?')) !== false) ? substr($currentUri, $pos) : '';
+    $_SERVER['REQUEST_URI'] = $pathOnly . $queryString;
 }
 
 // =================================================================
