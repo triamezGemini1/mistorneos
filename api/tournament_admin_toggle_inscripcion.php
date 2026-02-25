@@ -8,6 +8,7 @@ require_once __DIR__ . '/../config/db.php';
 require_once __DIR__ . '/../config/csrf.php';
 require_once __DIR__ . '/../config/auth.php';
 require_once __DIR__ . '/../lib/InscritosHelper.php';
+require_once __DIR__ . '/../lib/security.php';
 
 header('Content-Type: application/json; charset=utf-8');
 
@@ -27,13 +28,108 @@ if (!$csrf_token || !$session_token || !hash_equals($session_token, $csrf_token)
 }
 
 try {
-    $action = $_POST['action'] ?? ''; // 'inscribir' o 'desinscribir'
+    $action = $_POST['action'] ?? ''; // 'inscribir', 'desinscribir', 'registrar_inscribir'
     $torneo_id = (int)($_POST['torneo_id'] ?? 0);
     $id_usuario = (int)($_POST['id_usuario'] ?? 0);
     $id_club = !empty($_POST['id_club']) ? (int)$_POST['id_club'] : null;
-    // Inscripción (en sitio o por esta API): siempre confirmado
     $estatus = 1; // confirmado
-    
+
+    // Registrar nuevo usuario e inscribir (flujo: no encontrado / persona externa)
+    if ($action === 'registrar_inscribir') {
+        if ($torneo_id <= 0) {
+            echo json_encode(['success' => false, 'error' => 'Torneo inválido']);
+            exit;
+        }
+        if (!Auth::canAccessTournament($torneo_id)) {
+            echo json_encode(['success' => false, 'error' => 'Sin permiso para este torneo']);
+            exit;
+        }
+        $nacionalidad = strtoupper(trim($_POST['nacionalidad'] ?? 'V'));
+        if (!in_array($nacionalidad, ['V', 'E', 'J', 'P'], true)) {
+            $nacionalidad = 'V';
+        }
+        $cedula = preg_replace('/\D/', '', trim($_POST['cedula'] ?? ''));
+        $nombre = trim($_POST['nombre'] ?? '');
+        $fechnac = trim($_POST['fechnac'] ?? '');
+        $sexo = strtoupper(trim($_POST['sexo'] ?? 'M'));
+        if (!in_array($sexo, ['M', 'F', 'O'], true)) {
+            $sexo = 'M';
+        }
+        $telefono = trim($_POST['telefono'] ?? $_POST['celular'] ?? '');
+        $email = trim($_POST['email'] ?? '');
+        $id_club = !empty($_POST['id_club']) ? (int)$_POST['id_club'] : null;
+        $current_user = Auth::user();
+        $user_club_id = $current_user['club_id'] ?? null;
+        if ($id_club <= 0) {
+            $id_club = $user_club_id;
+        }
+        if (strlen($cedula) < 4) {
+            echo json_encode(['success' => false, 'error' => 'Cédula inválida']);
+            exit;
+        }
+        if (strlen($nombre) < 2) {
+            echo json_encode(['success' => false, 'error' => 'Nombre requerido']);
+            exit;
+        }
+        if (empty($email)) {
+            $email = 'user' . $cedula . '@inscrito.local';
+        }
+        $pdo = DB::pdo();
+        $username = 'user00' . $cedula;
+        $sufijo = '';
+        $idx = 0;
+        while (true) {
+            $stmt = $pdo->prepare("SELECT id FROM usuarios WHERE username = ?");
+            $stmt->execute([$username . $sufijo]);
+            if (!$stmt->fetch()) {
+                break;
+            }
+            $idx++;
+            $sufijo = '_' . $idx;
+        }
+        $username = $username . $sufijo;
+        $password = strlen($cedula) >= 6 ? $cedula : str_pad($cedula, 6, '0', STR_PAD_LEFT);
+        $create = Security::createUser([
+            'username' => $username,
+            'password' => $password,
+            'role' => 'usuario',
+            'nombre' => $nombre,
+            'cedula' => $cedula,
+            'nacionalidad' => $nacionalidad,
+            'sexo' => $sexo,
+            'fechnac' => $fechnac ?: null,
+            'email' => $email,
+            'celular' => $telefono,
+            'club_id' => $id_club,
+            '_allow_club_for_usuario' => true
+        ]);
+        if (!empty($create['errors'])) {
+            echo json_encode(['success' => false, 'error' => implode(', ', $create['errors'])]);
+            exit;
+        }
+        $id_usuario = (int)($create['user_id'] ?? 0);
+        if ($id_usuario <= 0) {
+            echo json_encode(['success' => false, 'error' => 'No se pudo crear el usuario']);
+            exit;
+        }
+        $stmt = $pdo->prepare("SELECT id FROM inscritos WHERE id_usuario = ? AND torneo_id = ?");
+        $stmt->execute([$id_usuario, $torneo_id]);
+        if ($stmt->fetch()) {
+            echo json_encode(['success' => false, 'error' => 'El usuario ya está inscrito en este torneo']);
+            exit;
+        }
+        $id_inscrito = InscritosHelper::insertarInscrito($pdo, [
+            'id_usuario' => $id_usuario,
+            'torneo_id' => $torneo_id,
+            'id_club' => $id_club,
+            'estatus' => $estatus,
+            'inscrito_por' => Auth::id(),
+            'numero' => 0
+        ]);
+        echo json_encode(['success' => true, 'message' => 'Usuario registrado e inscrito correctamente', 'id' => $id_inscrito, 'id_usuario' => $id_usuario]);
+        exit;
+    }
+
     if ($torneo_id <= 0 || $id_usuario <= 0) {
         echo json_encode(['success' => false, 'error' => 'Parámetros inválidos']);
         exit;
