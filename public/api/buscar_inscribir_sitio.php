@@ -74,7 +74,8 @@ $stmt->execute([$cedula, $cedula_nac]);
 $usuario = $stmt->fetch(PDO::FETCH_ASSOC);
 
 if ($usuario) {
-    // No está inscrito (ya comprobado en NIVEL 1): devolver datos para autocompletar y habilitar inscripción
+    // No está inscrito (ya comprobado en NIVEL 1): devolver todos los campos desde usuarios (telefono/email pueden estar vacíos)
+    $user_id = (int)$usuario['id'];
     $fechnac = $usuario['fechnac'] ?? '';
     if ($fechnac && !preg_match('/^\d{4}-\d{2}-\d{2}/', $fechnac) && strtotime($fechnac) !== false) {
         $fechnac = date('Y-m-d', strtotime($fechnac));
@@ -84,14 +85,14 @@ if ($usuario) {
         'resultado' => 'usuario',
         'usuario' => [
             'id' => $user_id,
-            'username' => $usuario['username'],
-            'nombre' => $usuario['nombre'],
-            'cedula' => $usuario['cedula'],
+            'username' => $usuario['username'] ?? '',
+            'nombre' => $usuario['nombre'] ?? '',
+            'cedula' => $usuario['cedula'] ?? $cedula,
             'email' => $usuario['email'] ?? '',
             'celular' => $usuario['celular'] ?? '',
             'telefono' => $usuario['celular'] ?? '',
             'fechnac' => $fechnac,
-            'sexo' => $usuario['sexo'] ?? '',
+            'sexo' => $usuario['sexo'] ?? 'M',
             'nacionalidad' => $usuario['nacionalidad'] ?? $nacionalidad,
             'club_id' => (int)($usuario['club_id'] ?? 0)
         ]
@@ -99,7 +100,7 @@ if ($usuario) {
     exit;
 }
 
-// ─── NIVEL 2: No existe en usuarios → Base de datos externa ───
+// ─── NIVEL 3: No existe en usuarios → Base de datos externa ───
 if (file_exists(__DIR__ . '/../../config/persona_database.php')) {
     require_once __DIR__ . '/../../config/persona_database.php';
     try {

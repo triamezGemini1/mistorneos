@@ -328,6 +328,24 @@ final class Security
             
             return ['success' => true, 'user_id' => $user_id, 'errors' => []];
             
+        } catch (PDOException $e) {
+            $msg = $e->getMessage();
+            $code = $e->getCode();
+            // Duplicate entry: 1062 (MySQL) o mensaje "Duplicate entry"
+            if ($code == 23000 || $code == 1062 || stripos($msg, 'Duplicate entry') !== false) {
+                if (stripos($msg, 'cedula') !== false) {
+                    return ['success' => false, 'user_id' => null, 'errors' => ['Ya existe un usuario con esta cédula.']];
+                }
+                if (stripos($msg, 'username') !== false) {
+                    return ['success' => false, 'user_id' => null, 'errors' => ['El nombre de usuario ya existe.']];
+                }
+                if (stripos($msg, 'email') !== false) {
+                    return ['success' => false, 'user_id' => null, 'errors' => ['Ya existe un usuario con este correo electrónico.']];
+                }
+                return ['success' => false, 'user_id' => null, 'errors' => ['El registro ya existe (clave duplicada).']];
+            }
+            error_log("Error al crear usuario: " . $msg);
+            return ['success' => false, 'user_id' => null, 'errors' => ['Error al crear el usuario: ' . $msg]];
         } catch (Exception $e) {
             error_log("Error al crear usuario: " . $e->getMessage());
             return ['success' => false, 'user_id' => null, 'errors' => ['Error al crear el usuario: ' . $e->getMessage()]];

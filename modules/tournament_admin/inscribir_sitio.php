@@ -637,7 +637,7 @@ document.addEventListener('DOMContentLoaded', function() {
         if (typeof Swal !== 'undefined') {
             Swal.fire({ title: 'Buscando...', allowOutsideClick: false, didOpen: function() { Swal.showLoading(); } });
         } else {
-            mostrarMensajeForm('<i class="fas fa-spinner fa-spin me-2"></i>Buscando (usuario → inscripción → base externa)...', 'info');
+            mostrarMensajeForm('<i class="fas fa-spinner fa-spin me-2"></i>Buscando (inscritos → usuarios → base externa)...', 'info');
         }
 
         fetch(url)
@@ -676,7 +676,8 @@ document.addEventListener('DOMContentLoaded', function() {
                     }
                     return;
                 }
-                // NIVEL 2 y 3: Usuario local o base externa — SweetAlert éxito, luego autocompletar y foco al siguiente vacío
+                // NIVEL 2: Usuario local — todos los campos desde usuarios (telefono/email pueden vacíos); foco al primer vacío
+                // NIVEL 3: Persona externa — datos traídos; foco en Teléfono para completar la ficha
                 if (data.resultado === 'usuario' || data.resultado === 'persona_externa') {
                     var esExterno = data.resultado === 'persona_externa';
                     var p = esExterno ? (data.persona || {}) : data.usuario;
@@ -703,19 +704,18 @@ document.addEventListener('DOMContentLoaded', function() {
                         }).then(function() {
                             var tel = document.getElementById('form_telefono');
                             var eml = document.getElementById('form_email');
-                            if (tel && !tel.value.trim() && eml) {
-                                tel.focus();
-                            } else if (eml && !eml.value.trim()) {
-                                eml.focus();
-                            } else if (tel) {
-                                tel.focus();
+                            if (esExterno) {
+                                if (tel) { tel.focus(); }
+                            } else {
+                                if (tel && !tel.value.trim()) { tel.focus(); }
+                                else if (eml && !eml.value.trim()) { eml.focus(); }
+                                else if (tel) { tel.focus(); }
                             }
                         });
                     } else {
                         var tel = document.getElementById('form_telefono');
-                        var eml = document.getElementById('form_email');
-                        if (tel) { setTimeout(function() { tel.focus(); }, 100); }
-                        if (eml) { setTimeout(function() { eml.focus(); }, 500); }
+                        if (esExterno && tel) { setTimeout(function() { tel.focus(); }, 100); }
+                        else if (tel) { setTimeout(function() { tel.focus(); }, 100); }
                     }
                     return;
                 }

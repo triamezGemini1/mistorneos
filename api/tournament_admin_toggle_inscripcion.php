@@ -80,6 +80,14 @@ try {
 
         $pdo = DB::pdo();
 
+        // Validación de cédula: evitar "Duplicate entry for key usuarios.cedula" (UNIQUE en tabla usuarios)
+        $stmt = $pdo->prepare("SELECT id FROM usuarios WHERE cedula = ? LIMIT 1");
+        $stmt->execute([$cedula]);
+        if ($stmt->fetch()) {
+            echo json_encode(['success' => false, 'error' => 'Ya existe un usuario con esta cédula. Use la pestaña "Buscar por cédula" para inscribirlo.']);
+            exit;
+        }
+
         // Validación de email: evitar "Duplicate entry" si el correo ya existe en otro usuario
         if ($email !== $email_placeholder && $email !== '') {
             $stmt = $pdo->prepare("SELECT id FROM usuarios WHERE LOWER(TRIM(email)) = LOWER(TRIM(?)) LIMIT 1");
