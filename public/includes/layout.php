@@ -640,6 +640,8 @@ if (in_array($user['role'], ['admin_club', 'admin_general', 'admin_torneo'], tru
 
   <!-- Bootstrap JS -->
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js" defer></script>
+  <!-- SweetAlert2: mensajes modales (inscripción, confirmaciones, etc.) -->
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11" defer></script>
   <?php
 $app_base_for_js = $layout_asset_base;
 if (str_ends_with($app_base_for_js, '/public')) {

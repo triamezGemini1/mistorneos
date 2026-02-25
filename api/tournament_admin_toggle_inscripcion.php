@@ -32,7 +32,8 @@ try {
     $torneo_id = (int)($_POST['torneo_id'] ?? 0);
     $id_usuario = (int)($_POST['id_usuario'] ?? 0);
     $id_club = !empty($_POST['id_club']) ? (int)$_POST['id_club'] : null;
-    $estatus = 1; // confirmado
+    // estatus en BD es INT: 1 = confirmado (nunca string como "activo")
+    $estatus = 1;
 
     // Registrar nuevo usuario e inscribir (NIVEL 4 / persona externa).
     // Orden obligatorio: 1) INSERT en usuarios (crear cuenta), 2) INSERT en inscritos (inscribir en torneo).
