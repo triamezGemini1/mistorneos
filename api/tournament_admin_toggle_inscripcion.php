@@ -34,7 +34,8 @@ try {
     $id_club = !empty($_POST['id_club']) ? (int)$_POST['id_club'] : null;
     $estatus = 1; // confirmado
 
-    // Registrar nuevo usuario e inscribir (flujo: no encontrado / persona externa)
+    // Registrar nuevo usuario e inscribir (NIVEL 4 / persona externa).
+    // Orden obligatorio: 1) INSERT en usuarios (crear cuenta), 2) INSERT en inscritos (inscribir en torneo).
     if ($action === 'registrar_inscribir') {
         if ($torneo_id <= 0) {
             echo json_encode(['success' => false, 'error' => 'Torneo inválido']);
@@ -75,7 +76,8 @@ try {
             $email = 'user' . $cedula . '@inscrito.local';
         }
         $pdo = DB::pdo();
-        $username = 'user00' . $cedula;
+        // Regla de negocio: username = Nacionalidad + Cédula (ej. V12345678); si existe, sufijo _2, _3...
+        $username = $nacionalidad . $cedula;
         $sufijo = '';
         $idx = 0;
         while (true) {
@@ -88,6 +90,7 @@ try {
             $sufijo = '_' . $idx;
         }
         $username = $username . $sufijo;
+        // Password según criterio estándar: cédula (mín. 6 caracteres)
         $password = strlen($cedula) >= 6 ? $cedula : str_pad($cedula, 6, '0', STR_PAD_LEFT);
         $create = Security::createUser([
             'username' => $username,

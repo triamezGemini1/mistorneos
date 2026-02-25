@@ -1,7 +1,10 @@
 <?php
 /**
- * API: Búsqueda expedita para inscripción en sitio.
- * Orden: 1) inscritos (ya inscrito) → 2) usuarios → 3) base externa → 4) no encontrado.
+ * API: Búsqueda en cascada para inscripción en sitio (una sola petición, secuencia obligatoria).
+ * NIVEL 1: inscritos → si existe → ya_inscrito (abortar).
+ * NIVEL 2: usuarios → si existe → usuario + datos (abortar).
+ * NIVEL 3: base externa → si existe → persona_externa (abortar).
+ * NIVEL 4: no encontrado → permitir registro manual.
  * Parámetros: torneo_id, nacionalidad, cedula (solo número).
  */
 require_once __DIR__ . '/../../config/bootstrap.php';

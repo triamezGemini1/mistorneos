@@ -569,16 +569,37 @@ document.addEventListener('DOMContentLoaded', function() {
     const wrapBtnInscribir = document.getElementById('wrap_btn_inscribir_cedula');
     const btnInscribirCedula = document.getElementById('btn_inscribir_cedula');
     const formNuevo = document.getElementById('form_nuevo_usuario_inscribir');
+    const btnRegistrarInscribir = document.getElementById('btn_registrar_inscribir');
     let usuarioEncontrado = null;
+    let mensajeAutoHideTimer = null;
 
     function mostrarMensajeForm(html, tipo) {
+        if (mensajeAutoHideTimer) {
+            clearTimeout(mensajeAutoHideTimer);
+            mensajeAutoHideTimer = null;
+        }
         mensajeForm.innerHTML = html;
         mensajeForm.className = 'mb-3 alert alert-' + (tipo || 'info');
         mensajeForm.classList.remove('d-none');
+        // Mensajes informativos (éxito/info/aviso): ocultar a los 4 s
+        if (tipo === 'success' || tipo === 'info' || tipo === 'warning') {
+            mensajeAutoHideTimer = setTimeout(function() {
+                mensajeForm.innerHTML = '';
+                mensajeForm.classList.add('d-none');
+                mensajeAutoHideTimer = null;
+            }, 4000);
+        }
     }
 
     function limpiarBusquedaCedula() {
+        if (mensajeAutoHideTimer) {
+            clearTimeout(mensajeAutoHideTimer);
+            mensajeAutoHideTimer = null;
+        }
         inputCedula.value = '';
+        if (selectNacionalidad) {
+            selectNacionalidad.value = 'V';
+        }
         resultadoBusqueda.classList.add('d-none');
         wrapAcciones.classList.add('d-none');
         wrapEstatus.classList.add('d-none');
@@ -592,20 +613,35 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
+    function rellenarFormularioDatos(nac, num, p) {
+        p = p || {};
+        document.getElementById('form_nac').value = p.nacionalidad || nac;
+        document.getElementById('form_cedula').value = p.cedula || num;
+        document.getElementById('form_nombre').value = p.nombre || '';
+        document.getElementById('form_fechnac').value = p.fechnac || '';
+        document.getElementById('form_sexo').value = (p.sexo || 'M').toUpperCase();
+        document.getElementById('form_telefono').value = p.telefono || p.celular || '';
+        document.getElementById('form_email').value = p.email || '';
+    }
+
     function buscarOnBlur() {
         const nac = (selectNacionalidad && selectNacionalidad.value) ? selectNacionalidad.value : 'V';
         const num = (inputCedula.value || '').replace(/\D/g, '');
         if (num.length < 4) {
             return;
         }
-        mostrarMensajeForm('<i class="fas fa-spinner fa-spin me-2"></i>Buscando en inscritos, usuarios y base externa...', 'info');
+        if (mensajeAutoHideTimer) {
+            clearTimeout(mensajeAutoHideTimer);
+            mensajeAutoHideTimer = null;
+        }
+        mostrarMensajeForm('<i class="fas fa-spinner fa-spin me-2"></i>Buscando (inscritos → usuarios → base externa)...', 'info');
         resultadoBusqueda.classList.add('d-none');
         wrapAcciones.classList.add('d-none');
         wrapBtnInscribir.classList.add('d-none');
         formNuevo.classList.add('d-none');
         usuarioEncontrado = null;
 
-        const url = BUSCAR_INScribir_API + '?torneo_id=' + TORNEOS_ID + '&nacionalidad=' + encodeURIComponent(nac) + '&cedula=' + encodeURIComponent(num);
+        var url = BUSCAR_INScribir_API + '?torneo_id=' + TORNEOS_ID + '&nacionalidad=' + encodeURIComponent(nac) + '&cedula=' + encodeURIComponent(num);
         fetch(url)
             .then(function(r) { return r.json(); })
             .then(function(data) {
@@ -613,36 +649,66 @@ document.addEventListener('DOMContentLoaded', function() {
                     mostrarMensajeForm('<strong>Error:</strong> ' + (data.mensaje || 'No se pudo realizar la búsqueda.'), 'danger');
                     return;
                 }
+                // NIVEL 1: Ya inscrito → mensaje, limpiar Nacionalidad y Cédula, foco en Nacionalidad, abortar
                 if (data.resultado === 'ya_inscrito') {
-                    mostrarMensajeForm('<i class="fas fa-info-circle me-2"></i>' + (data.mensaje || 'Ya inscrito.'), 'warning');
+                    mostrarMensajeForm('<i class="fas fa-info-circle me-2"></i>Jugador ya inscrito en este torneo.', 'warning');
                     inputCedula.value = '';
-                    selectNacionalidad.focus();
+                    if (selectNacionalidad) {
+                        selectNacionalidad.value = 'V';
+                        selectNacionalidad.focus();
+                    }
                     return;
                 }
+                // NIVEL 2: Usuario local → autocompletar TODO el formulario, habilitar Inscribir, abortar
                 if (data.resultado === 'usuario') {
                     usuarioEncontrado = data.usuario;
-                    infoUsuario.innerHTML = '<div class="alert alert-success mb-0"><strong><i class="fas fa-check-circle me-2"></i>Usuario encontrado</strong><br>ID: ' + usuarioEncontrado.id + ' &middot; ' + (usuarioEncontrado.nombre || usuarioEncontrado.username || '') + '</div>';
+                    rellenarFormularioDatos(nac, num, data.usuario);
+                    if (btnRegistrarInscribir) {
+                        btnRegistrarInscribir.classList.add('d-none');
+                    }
                     resultadoBusqueda.classList.remove('d-none');
+                    infoUsuario.innerHTML = '<div class="alert alert-success mb-0"><strong><i class="fas fa-check-circle me-2"></i>Usuario encontrado</strong><br>ID: ' + usuarioEncontrado.id + ' &middot; ' + (usuarioEncontrado.nombre || usuarioEncontrado.username || '') + '</div>';
                     wrapAcciones.classList.remove('d-none');
                     wrapEstatus.classList.remove('d-none');
                     wrapBtnInscribir.classList.remove('d-none');
-                    mostrarMensajeForm('<i class="fas fa-check me-2"></i>Puede inscribir al jugador.', 'success');
+                    formNuevo.classList.remove('d-none');
+                    mostrarMensajeForm('<i class="fas fa-check me-2"></i>Datos cargados. Pulse Inscribir.', 'success');
                     return;
                 }
-                if (data.resultado === 'persona_externa' || data.resultado === 'no_encontrado') {
+                // NIVEL 3: Base externa → traer datos, foco en Teléfono luego Email, habilitar Registrar e inscribir
+                if (data.resultado === 'persona_externa') {
                     var p = data.persona || {};
-                    document.getElementById('form_nac').value = p.nacionalidad || nac;
-                    document.getElementById('form_cedula').value = p.cedula || num;
-                    document.getElementById('form_nombre').value = p.nombre || '';
-                    document.getElementById('form_fechnac').value = p.fechnac || '';
-                    document.getElementById('form_sexo').value = (p.sexo || 'M').toUpperCase();
-                    document.getElementById('form_telefono').value = p.telefono || p.celular || '';
-                    document.getElementById('form_email').value = p.email || '';
+                    rellenarFormularioDatos(nac, num, p);
                     formNuevo.classList.remove('d-none');
-                    if (data.resultado === 'persona_externa') {
-                        mostrarMensajeForm('<i class="fas fa-database me-2"></i>Datos encontrados en base externa. Complete teléfono/email si faltan y pulse Registrar e inscribir.', 'info');
-                    } else {
-                        mostrarMensajeForm('<i class="fas fa-user-plus me-2"></i>' + (data.mensaje || 'Complete el formulario para registrar e inscribir.'), 'warning');
+                    if (btnRegistrarInscribir) {
+                        btnRegistrarInscribir.classList.remove('d-none');
+                    }
+                    mostrarMensajeForm('<i class="fas fa-database me-2"></i>Datos de base externa. Complete Teléfono y Email si faltan.', 'info');
+                    var tel = document.getElementById('form_telefono');
+                    var eml = document.getElementById('form_email');
+                    setTimeout(function() {
+                        if (tel) {
+                            tel.focus();
+                        }
+                    }, 100);
+                    setTimeout(function() {
+                        if (eml) {
+                            eml.focus();
+                        }
+                    }, 400);
+                    return;
+                }
+                // NIVEL 4: No encontrado → formulario manual, Registrar e inscribir
+                if (data.resultado === 'no_encontrado') {
+                    rellenarFormularioDatos(nac, num, {});
+                    formNuevo.classList.remove('d-none');
+                    if (btnRegistrarInscribir) {
+                        btnRegistrarInscribir.classList.remove('d-none');
+                    }
+                    mostrarMensajeForm('<i class="fas fa-user-plus me-2"></i>No encontrado. Complete todos los campos y pulse Registrar e inscribir.', 'warning');
+                    var nom = document.getElementById('form_nombre');
+                    if (nom) {
+                        setTimeout(function() { nom.focus(); }, 100);
                     }
                     return;
                 }
