@@ -263,8 +263,8 @@ if ($is_admin_general) {
                     <div class="col-md-10">
                         <div class="card">
                             <div class="card-body">
-                                <!-- Mensaje siempre visible en el formulario -->
-                                <div id="mensaje_formulario_cedula" class="mb-3" role="alert" aria-live="polite"></div>
+                                <!-- Mensaje de búsqueda (SweetAlert2 o este div si Swal no está disponible) -->
+                                <div id="mensaje_formulario_cedula" class="mb-3 d-none" role="alert" aria-live="polite" style="min-height: 0;"></div>
 
                                 <div class="row mb-3">
                                     <div class="col-md-2">
@@ -374,7 +374,11 @@ if ($is_admin_general) {
 }
 </style>
 
+<!-- SweetAlert2: carga en esta vista; ?v= obliga a no usar caché (cambiar v al actualizar) -->
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11?v=2"></script>
+
 <script>
+console.log('Script de inscripción en sitio cargado (versión nueva)');
 const TORNEOS_ID = <?= $torneo_id ?>;
 const CSRF_TOKEN = '<?= htmlspecialchars(CSRF::token(), ENT_QUOTES) ?>';
 const ESTATUS_DEFAULT = '1';
@@ -577,6 +581,7 @@ document.addEventListener('DOMContentLoaded', function() {
         mensajeForm.innerHTML = html;
         mensajeForm.className = 'mb-3 alert alert-' + (tipo || 'info');
         mensajeForm.classList.remove('d-none');
+        mensajeForm.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
     }
 
     function limpiarMensajeForm() {

@@ -32,8 +32,8 @@ try {
     $torneo_id = (int)($_POST['torneo_id'] ?? 0);
     $id_usuario = (int)($_POST['id_usuario'] ?? 0);
     $id_club = !empty($_POST['id_club']) ? (int)$_POST['id_club'] : null;
-    // estatus en BD es INT: 1 = confirmado (nunca string como "activo")
-    $estatus = 1;
+    // estatus en BD es INT/TINYINT: valor numérico 1 = confirmado (nunca string "activo" ni con comillas)
+    $estatus = (int) 1;
 
     // Registrar nuevo usuario e inscribir (NIVEL 4 / persona externa).
     // Orden obligatorio: 1) INSERT en usuarios (crear cuenta), 2) INSERT en inscritos (inscribir en torneo).
@@ -122,15 +122,20 @@ try {
             echo json_encode(['success' => false, 'error' => 'El usuario ya está inscrito en este torneo']);
             exit;
         }
-        $id_inscrito = InscritosHelper::insertarInscrito($pdo, [
-            'id_usuario' => $id_usuario,
-            'torneo_id' => $torneo_id,
-            'id_club' => $id_club,
-            'estatus' => $estatus,
-            'inscrito_por' => Auth::id(),
-            'numero' => 0
-        ]);
-        echo json_encode(['success' => true, 'message' => 'Usuario registrado e inscrito correctamente', 'id' => $id_inscrito, 'id_usuario' => $id_usuario]);
+        try {
+            $id_inscrito = InscritosHelper::insertarInscrito($pdo, [
+                'id_usuario' => $id_usuario,
+                'torneo_id' => $torneo_id,
+                'id_club' => $id_club,
+                'estatus' => $estatus,
+                'inscrito_por' => Auth::id(),
+                'numero' => 0
+            ]);
+            echo json_encode(['success' => true, 'message' => 'Usuario registrado e inscrito correctamente', 'id' => $id_inscrito, 'id_usuario' => $id_usuario]);
+        } catch (Exception $e) {
+            error_log('registrar_inscribir INSERT inscritos: ' . $e->getMessage());
+            echo json_encode(['success' => false, 'error' => $e->getMessage(), 'sql_error' => $e->getMessage()]);
+        }
         exit;
     }
 

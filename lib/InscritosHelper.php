@@ -274,8 +274,10 @@ class InscritosHelper {
             )
         ");
         
-        // Persistir estatus como entero (compatible con columna INT en producción)
-        $estatus_for_db = self::getEstatusNumero($estatus);
+        // Persistir estatus como ENTERO (columna INT/TINYINT: valor 0, 1 o 4; nunca string ni comillas)
+        $estatus_for_db = is_numeric($estatus) && isset(self::ESTATUS_MAP[(int)$estatus])
+            ? (int)$estatus
+            : (int) self::getEstatusNumero(is_string($estatus) ? $estatus : 'confirmado');
         $params = [$id_usuario, $torneo_id, $id_club, $estatus_for_db, $inscrito_por, $numero, $clasiequi];
         if ($codigo_equipo !== null) {
             $params[] = $codigo_equipo;
@@ -285,7 +287,8 @@ class InscritosHelper {
         
         if (!$resultado) {
             $error_info = $stmt->errorInfo();
-            throw new Exception('Error al insertar la inscripción: ' . ($error_info[2] ?? 'Error desconocido'));
+            $driverMsg = $error_info[2] ?? 'Error desconocido';
+            throw new Exception('Error al insertar la inscripción. Columna estatus: valor enviado=' . var_export($estatus_for_db, true) . ' (tipo ' . gettype($estatus_for_db) . '). SQL: ' . $driverMsg);
         }
         
         return (int)$pdo->lastInsertId();
