@@ -1,10 +1,12 @@
 <?php
 /**
- * API: Búsqueda en cascada para inscripción en sitio (una sola petición, secuencia obligatoria).
- * NIVEL 1: inscritos → si existe → ya_inscrito (abortar).
- * NIVEL 2: usuarios → si existe → usuario + datos (abortar).
- * NIVEL 3: base externa → si existe → persona_externa (abortar).
- * NIVEL 4: no encontrado → permitir registro manual.
+ * API: Búsqueda definitiva para inscripción en sitio (una sola petición).
+ *
+ * NIVEL 1: Validación en tabla inscritos (nacionalidad + cedula + torneo_id). Si existe → ya_inscrito (abortar).
+ * NIVEL 2: Búsqueda en usuarios. Si existe → autocompletar y permitir inscripción.
+ * NIVEL 3: Base de datos externa. Si existe → completar y foco Teléfono.
+ * NIVEL 4: No encontrado → registro manual.
+ *
  * Parámetros: torneo_id, nacionalidad, cedula (solo número).
  */
 require_once __DIR__ . '/../../config/bootstrap.php';
@@ -37,24 +39,31 @@ if (!Auth::canAccessTournament($torneo_id)) {
 $pdo = DB::pdo();
 $cedula_nac = $nacionalidad . $cedula;
 
-// 1) ¿Ya inscrito en este torneo?
-$stmt = $pdo->prepare("
-    SELECT i.id FROM inscritos i
-    INNER JOIN usuarios u ON i.id_usuario = u.id
-    WHERE i.torneo_id = ? AND (u.cedula = ? OR u.cedula = ?)
-    LIMIT 1
-");
-$stmt->execute([$torneo_id, $cedula, $cedula_nac]);
-if ($stmt->fetch()) {
-    echo json_encode([
-        'success' => true,
-        'resultado' => 'ya_inscrito',
-        'mensaje' => 'El jugador con cédula ' . $nacionalidad . $cedula . ' ya está inscrito en este torneo.'
-    ]);
-    exit;
+// ─── NIVEL 1: Validación en inscritos (coincidencia exacta: torneo_id + nacionalidad + cedula) ───
+try {
+    $stmtInscrito = $pdo->prepare("
+        SELECT id FROM inscritos
+        WHERE torneo_id = ? AND nacionalidad = ? AND cedula = ?
+        LIMIT 1
+    ");
+    $stmtInscrito->execute([$torneo_id, $nacionalidad, $cedula]);
+    if ($stmtInscrito->fetch()) {
+        echo json_encode([
+            'success' => true,
+            'resultado' => 'ya_inscrito',
+            'mensaje' => 'Esta cédula ya está registrada en este torneo.'
+        ]);
+        exit;
+    }
+} catch (Throwable $e) {
+    // Si la tabla no tiene nacionalidad/cedula, ejecutar: php scripts/add_nacionalidad_cedula_inscritos.php
+    if (strpos($e->getMessage(), 'nacionalidad') !== false || strpos($e->getMessage(), 'cedula') !== false) {
+        error_log('buscar_inscribir_sitio: tabla inscritos sin nacionalidad/cedula. Ejecute: php scripts/add_nacionalidad_cedula_inscritos.php');
+    }
+    // Continuar con NIVEL 2 (búsqueda en usuarios)
 }
 
-// 2) Buscar en usuarios
+// ─── NIVEL 2: Búsqueda en tabla usuarios (local) ───
 $stmt = $pdo->prepare("
     SELECT id, username, nombre, cedula, email, celular, fechnac, sexo, nacionalidad, club_id
     FROM usuarios
@@ -63,7 +72,9 @@ $stmt = $pdo->prepare("
 ");
 $stmt->execute([$cedula, $cedula_nac]);
 $usuario = $stmt->fetch(PDO::FETCH_ASSOC);
+
 if ($usuario) {
+    // No está inscrito (ya comprobado en NIVEL 1): devolver datos para autocompletar y habilitar inscripción
     $fechnac = $usuario['fechnac'] ?? '';
     if ($fechnac && !preg_match('/^\d{4}-\d{2}-\d{2}/', $fechnac) && strtotime($fechnac) !== false) {
         $fechnac = date('Y-m-d', strtotime($fechnac));
@@ -72,7 +83,7 @@ if ($usuario) {
         'success' => true,
         'resultado' => 'usuario',
         'usuario' => [
-            'id' => (int)$usuario['id'],
+            'id' => $user_id,
             'username' => $usuario['username'],
             'nombre' => $usuario['nombre'],
             'cedula' => $usuario['cedula'],
@@ -88,7 +99,7 @@ if ($usuario) {
     exit;
 }
 
-// 3) Base de datos externa
+// ─── NIVEL 2: No existe en usuarios → Base de datos externa ───
 if (file_exists(__DIR__ . '/../../config/persona_database.php')) {
     require_once __DIR__ . '/../../config/persona_database.php';
     try {
@@ -116,9 +127,9 @@ if (file_exists(__DIR__ . '/../../config/persona_database.php')) {
     }
 }
 
-// 4) No encontrado: permitir registro desde formulario
+// No encontrado: registro manual
 echo json_encode([
     'success' => true,
     'resultado' => 'no_encontrado',
-    'mensaje' => 'No encontrado en inscritos ni en usuarios. Complete el formulario para registrar e inscribir.'
+    'mensaje' => 'No encontrado. Complete los datos para registrar e inscribir.'
 ]);

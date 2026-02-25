@@ -35,8 +35,8 @@ try {
     // estatus en BD es INT/TINYINT: valor numérico 1 = confirmado (nunca string "activo" ni con comillas)
     $estatus = (int) 1;
 
-    // Registrar nuevo usuario e inscribir (NIVEL 4 / persona externa).
-    // Orden obligatorio: 1) INSERT en usuarios (crear cuenta), 2) INSERT en inscritos (inscribir en torneo).
+    // Registrar nuevo usuario e inscribir (registro manual / persona externa).
+    // Transacción: INSERT usuarios + INSERT inscritos atómicos (o rollback). estatus siempre numérico (1).
     if ($action === 'registrar_inscribir') {
         if ($torneo_id <= 0) {
             echo json_encode(['success' => false, 'error' => 'Torneo inválido']);
@@ -73,10 +73,23 @@ try {
             echo json_encode(['success' => false, 'error' => 'Nombre requerido']);
             exit;
         }
+        $email_placeholder = 'user' . $cedula . '@inscrito.local';
         if (empty($email)) {
-            $email = 'user' . $cedula . '@inscrito.local';
+            $email = $email_placeholder;
         }
+
         $pdo = DB::pdo();
+
+        // Validación de email: evitar "Duplicate entry" si el correo ya existe en otro usuario
+        if ($email !== $email_placeholder && $email !== '') {
+            $stmt = $pdo->prepare("SELECT id FROM usuarios WHERE LOWER(TRIM(email)) = LOWER(TRIM(?)) LIMIT 1");
+            $stmt->execute([$email]);
+            if ($stmt->fetch()) {
+                echo json_encode(['success' => false, 'error' => 'El correo electrónico ya está registrado por otro usuario. Use otro correo o déjelo en blanco.']);
+                exit;
+            }
+        }
+
         // Regla de negocio: username = Nacionalidad + Cédula (ej. V12345678); si existe, sufijo _2, _3...
         $username = $nacionalidad . $cedula;
         $sufijo = '';
@@ -91,50 +104,56 @@ try {
             $sufijo = '_' . $idx;
         }
         $username = $username . $sufijo;
-        // Password según criterio estándar: cédula (mín. 6 caracteres)
         $password = strlen($cedula) >= 6 ? $cedula : str_pad($cedula, 6, '0', STR_PAD_LEFT);
-        $create = Security::createUser([
-            'username' => $username,
-            'password' => $password,
-            'role' => 'usuario',
-            'nombre' => $nombre,
-            'cedula' => $cedula,
-            'nacionalidad' => $nacionalidad,
-            'sexo' => $sexo,
-            'fechnac' => $fechnac ?: null,
-            'email' => $email,
-            'celular' => $telefono,
-            'club_id' => $id_club,
-            '_allow_club_for_usuario' => true
-        ]);
-        if (!empty($create['errors'])) {
-            echo json_encode(['success' => false, 'error' => implode(', ', $create['errors'])]);
-            exit;
-        }
-        $id_usuario = (int)($create['user_id'] ?? 0);
-        if ($id_usuario <= 0) {
-            echo json_encode(['success' => false, 'error' => 'No se pudo crear el usuario']);
-            exit;
-        }
-        $stmt = $pdo->prepare("SELECT id FROM inscritos WHERE id_usuario = ? AND torneo_id = ?");
-        $stmt->execute([$id_usuario, $torneo_id]);
-        if ($stmt->fetch()) {
-            echo json_encode(['success' => false, 'error' => 'El usuario ya está inscrito en este torneo']);
-            exit;
-        }
+
+        // Transacción: usuario + inscrito atómicos (evitar "usuarios fantasma")
+        $pdo->beginTransaction();
         try {
+            $create = Security::createUser([
+                'username' => $username,
+                'password' => $password,
+                'role' => 'usuario',
+                'nombre' => $nombre,
+                'cedula' => $cedula,
+                'nacionalidad' => $nacionalidad,
+                'sexo' => $sexo,
+                'fechnac' => $fechnac ?: null,
+                'email' => $email,
+                'celular' => $telefono,
+                'club_id' => $id_club,
+                '_allow_club_for_usuario' => true
+            ]);
+            if (!empty($create['errors'])) {
+                $pdo->rollBack();
+                echo json_encode(['success' => false, 'error' => implode(', ', $create['errors'])]);
+                exit;
+            }
+            $id_usuario = (int)($create['user_id'] ?? 0);
+            if ($id_usuario <= 0) {
+                $pdo->rollBack();
+                echo json_encode(['success' => false, 'error' => 'No se pudo crear el usuario']);
+                exit;
+            }
             $id_inscrito = InscritosHelper::insertarInscrito($pdo, [
                 'id_usuario' => $id_usuario,
                 'torneo_id' => $torneo_id,
                 'id_club' => $id_club,
                 'estatus' => $estatus,
                 'inscrito_por' => Auth::id(),
-                'numero' => 0
+                'numero' => 0,
+                'nacionalidad' => $nacionalidad,
+                'cedula' => $cedula
             ]);
+            $pdo->commit();
             echo json_encode(['success' => true, 'message' => 'Usuario registrado e inscrito correctamente', 'id' => $id_inscrito, 'id_usuario' => $id_usuario]);
         } catch (Exception $e) {
-            error_log('registrar_inscribir INSERT inscritos: ' . $e->getMessage());
-            echo json_encode(['success' => false, 'error' => $e->getMessage(), 'sql_error' => $e->getMessage()]);
+            $pdo->rollBack();
+            error_log('registrar_inscribir: ' . $e->getMessage());
+            echo json_encode([
+                'success' => false,
+                'error' => $e->getMessage(),
+                'sql_error' => $e->getMessage()
+            ]);
         }
         exit;
     }
@@ -171,8 +190,8 @@ try {
             exit;
         }
         
-        // Validar que el usuario tenga todos los campos obligatorios completos
-        $stmt = $pdo->prepare("SELECT nombre, cedula, sexo, email, username, entidad FROM usuarios WHERE id = ?");
+        // Validar que el usuario tenga todos los campos obligatorios completos (y obtener nacionalidad/cedula para INSERT en inscritos)
+        $stmt = $pdo->prepare("SELECT nombre, cedula, sexo, email, username, entidad, nacionalidad FROM usuarios WHERE id = ?");
         $stmt->execute([$id_usuario]);
         $usuario_datos = $stmt->fetch(PDO::FETCH_ASSOC);
         
@@ -218,7 +237,10 @@ try {
             $id_club = null;
         }
         
-        // Insertar inscripción usando función centralizada
+        // Insertar inscripción (nacionalidad y cedula obligatorios para búsqueda NIVEL 1 en inscritos)
+        $nac_inscrito = isset($usuario_datos['nacionalidad']) && in_array(strtoupper(trim($usuario_datos['nacionalidad'])), ['V', 'E', 'J', 'P'], true)
+            ? strtoupper(trim($usuario_datos['nacionalidad'])) : 'V';
+        $ced_inscrito = isset($usuario_datos['cedula']) ? preg_replace('/\D/', '', (string)$usuario_datos['cedula']) : '';
         try {
             $id_inscrito = InscritosHelper::insertarInscrito($pdo, [
                 'id_usuario' => $id_usuario,
@@ -226,13 +248,14 @@ try {
                 'id_club' => $id_club,
                 'estatus' => $estatus,
                 'inscrito_por' => Auth::id(),
-                'numero' => 0 // Se asignará después si es necesario para equipos
+                'numero' => 0,
+                'nacionalidad' => $nac_inscrito,
+                'cedula' => $ced_inscrito
             ]);
-            
             echo json_encode(['success' => true, 'message' => 'Jugador inscrito exitosamente', 'id' => $id_inscrito]);
         } catch (Exception $e) {
             error_log("Error al inscribir jugador (API): " . $e->getMessage());
-            echo json_encode(['success' => false, 'error' => $e->getMessage()]);
+            echo json_encode(['success' => false, 'error' => $e->getMessage(), 'sql_error' => $e->getMessage()]);
             exit;
         }
         

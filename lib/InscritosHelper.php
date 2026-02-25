@@ -253,6 +253,12 @@ class InscritosHelper {
         // clasiequi: Clasificación de equipo (INT), valor por defecto 0
         $clasiequi = isset($datos['clasiequi']) && $datos['clasiequi'] !== null ? (int)$datos['clasiequi'] : 0;
         $codigo_equipo = !empty($datos['codigo_equipo']) ? trim($datos['codigo_equipo']) : null;
+        // nacionalidad y cedula en inscritos (obligatorios para búsqueda NIVEL 1)
+        $nacionalidad_inscrito = isset($datos['nacionalidad']) ? strtoupper(trim((string)$datos['nacionalidad'])) : 'V';
+        if (!in_array($nacionalidad_inscrito, ['V', 'E', 'J', 'P'], true)) {
+            $nacionalidad_inscrito = 'V';
+        }
+        $cedula_inscrito = isset($datos['cedula']) ? preg_replace('/\D/', '', (string)$datos['cedula']) : '';
         
         // Verificar que no esté ya inscrito (excluir retirados)
         $stmt = $pdo->prepare("SELECT id FROM inscritos WHERE id_usuario = ? AND torneo_id = ? AND " . self::SQL_WHERE_NO_RETIRADO);
@@ -261,24 +267,24 @@ class InscritosHelper {
             throw new Exception('Este usuario ya está inscrito en el torneo');
         }
         
-        // Insertar con TODOS los campos necesarios para evitar errores de constraint
-        // Incluir todos los campos posibles con valores por defecto seguros
-        $stmt = $pdo->prepare("
-            INSERT INTO inscritos (
-                id_usuario, torneo_id, id_club, estatus, inscrito_por, fecha_inscripcion,
-                posicion, ganados, perdidos, efectividad, puntos, ptosrnk, 
-                sancion, chancletas, zapatos, tarjeta, numero, clasiequi" . 
-                ($codigo_equipo !== null ? ", codigo_equipo" : "") . "
-            ) VALUES (?, ?, ?, ?, ?, NOW(), 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, ?, ?" .
-                ($codigo_equipo !== null ? ", ?" : "") . "
-            )
-        ");
-        
-        // Persistir estatus como ENTERO (columna INT/TINYINT: valor 0, 1 o 4; nunca string ni comillas)
+        // Insertar con todos los campos necesarios (incl. nacionalidad y cedula para búsqueda NIVEL 1)
+        // estatus siempre numérico (1 = confirmado); nunca string ni comillas
         $estatus_for_db = is_numeric($estatus) && isset(self::ESTATUS_MAP[(int)$estatus])
             ? (int)$estatus
             : (int) self::getEstatusNumero(is_string($estatus) ? $estatus : 'confirmado');
-        $params = [$id_usuario, $torneo_id, $id_club, $estatus_for_db, $inscrito_por, $numero, $clasiequi];
+        
+        $stmt = $pdo->prepare("
+            INSERT INTO inscritos (
+                id_usuario, torneo_id, id_club, estatus, inscrito_por, fecha_inscripcion,
+                nacionalidad, cedula,
+                posicion, ganados, perdidos, efectividad, puntos, ptosrnk, 
+                sancion, chancletas, zapatos, tarjeta, numero, clasiequi" . 
+                ($codigo_equipo !== null ? ", codigo_equipo" : "") . "
+            ) VALUES (?, ?, ?, ?, ?, NOW(), ?, ?, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, ?, ?" .
+                ($codigo_equipo !== null ? ", ?" : "") . "
+            )
+        ");
+        $params = [$id_usuario, $torneo_id, $id_club, $estatus_for_db, $inscrito_por, $nacionalidad_inscrito, $cedula_inscrito, $numero, $clasiequi];
         if ($codigo_equipo !== null) {
             $params[] = $codigo_equipo;
         }

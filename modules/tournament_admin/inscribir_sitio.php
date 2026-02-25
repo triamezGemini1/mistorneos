@@ -375,7 +375,7 @@ if ($is_admin_general) {
 </style>
 
 <!-- SweetAlert2: carga en esta vista; ?v= obliga a no usar caché (cambiar v al actualizar) -->
-<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11?v=2"></script>
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11?v=4.0"></script>
 
 <script>
 console.log('Script de inscripción en sitio cargado (versión nueva)');
@@ -637,7 +637,7 @@ document.addEventListener('DOMContentLoaded', function() {
         if (typeof Swal !== 'undefined') {
             Swal.fire({ title: 'Buscando...', allowOutsideClick: false, didOpen: function() { Swal.showLoading(); } });
         } else {
-            mostrarMensajeForm('<i class="fas fa-spinner fa-spin me-2"></i>Buscando (inscritos → usuarios → base externa)...', 'info');
+            mostrarMensajeForm('<i class="fas fa-spinner fa-spin me-2"></i>Buscando (usuario → inscripción → base externa)...', 'info');
         }
 
         fetch(url)
@@ -657,25 +657,22 @@ document.addEventListener('DOMContentLoaded', function() {
                     }
                     return;
                 }
-                // NIVEL 1: Ya inscrito (CRÍTICO) — SweetAlert bloqueante, limpieza solo al cerrar
+                // NIVEL 1: Ya inscrito (validación en tabla inscritos por nacionalidad+cedula+torneo_id)
                 if (data.resultado === 'ya_inscrito') {
                     if (typeof Swal !== 'undefined') {
                         Swal.fire({
-                            icon: 'info',
-                            title: 'Atención',
-                            text: 'El jugador ya se encuentra inscrito en este evento.'
-                        }).then(function(result) {
-                            inputCedula.value = '';
-                            if (selectNacionalidad) {
-                                selectNacionalidad.value = 'V';
-                                selectNacionalidad.focus();
-                            }
-                            limpiarMensajeForm();
+                            icon: 'warning',
+                            title: 'Jugador ya inscrito',
+                            text: 'Esta cédula ya está registrada en este torneo.'
+                        }).then(function() {
+                            limpiarBusquedaCedula();
+                            rellenarFormularioDatos('V', '', {});
+                            if (wrapBtnInscribir) { wrapBtnInscribir.classList.add('d-none'); }
+                            if (selectNacionalidad) { selectNacionalidad.focus(); }
                         });
                     } else {
-                        inputCedula.value = '';
-                        if (selectNacionalidad) { selectNacionalidad.value = 'V'; selectNacionalidad.focus(); }
-                        mostrarMensajeForm('Jugador ya inscrito en este torneo.', 'warning');
+                        limpiarBusquedaCedula();
+                        mostrarMensajeForm('Esta cédula ya está registrada en este torneo.', 'warning');
                     }
                     return;
                 }
