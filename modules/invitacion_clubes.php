@@ -100,6 +100,106 @@ if ($torneo_id <= 0) {
     }
 }
 
+// GET: invitar un solo club por línea (acción "Invitar" en cada fila)
+if ($torneo && $_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['action']) && $_GET['action'] === 'invitar_uno' && isset($_GET['directorio_id'])) {
+    $dir_id_one = (int)$_GET['directorio_id'];
+    if ($dir_id_one > 0 && Auth::canAccessTournament($torneo_id)) {
+        $build_redirect_one = function (array $params) use ($torneo_id) {
+            $base = ['page' => 'invitacion_clubes', 'torneo_id' => $torneo_id];
+            if (isset($_GET['p']) && (int)$_GET['p'] >= 1) {
+                $base['p'] = (int)$_GET['p'];
+            }
+            if (isset($_GET['per_page']) && (int)$_GET['per_page'] >= 10) {
+                $base['per_page'] = (int)$_GET['per_page'];
+            }
+            return 'index.php?' . http_build_query(array_merge($base, $params));
+        };
+        try {
+            $pdo = DB::pdo();
+            $tb_inv = defined('TABLE_INVITATIONS') ? TABLE_INVITATIONS : 'invitaciones';
+            $stmt = $pdo->prepare("SELECT id, nombre, direccion, delegado, telefono, email FROM directorio_clubes WHERE id = ?");
+            $stmt->execute([$dir_id_one]);
+            $dir = $stmt->fetch(PDO::FETCH_ASSOC);
+            if ($dir) {
+                $nombre = $dir['nombre'] ?? '';
+                $stmt = $pdo->prepare("SELECT id FROM clubes WHERE nombre = ? AND estatus = 1 LIMIT 1");
+                $stmt->execute([$nombre]);
+                $club_row = $stmt->fetch(PDO::FETCH_ASSOC);
+                if (!$club_row) {
+                    $stmt = $pdo->prepare("INSERT INTO clubes (nombre, direccion, delegado, telefono, email, estatus) VALUES (?, ?, ?, ?, ?, 1)");
+                    $stmt->execute([
+                        $nombre,
+                        $dir['direccion'] ?? null,
+                        $dir['delegado'] ?? null,
+                        $dir['telefono'] ?? null,
+                        $dir['email'] ?? null
+                    ]);
+                    $club_id = (int) $pdo->lastInsertId();
+                } else {
+                    $club_id = (int) $club_row['id'];
+                }
+                $stmt = $pdo->prepare("SELECT id FROM {$tb_inv} WHERE torneo_id = ? AND club_id = ?");
+                $stmt->execute([$torneo_id, $club_id]);
+                if ($stmt->fetch()) {
+                    header('Location: ' . $build_redirect_one(['msg' => 'Ya estaba invitado.']));
+                    exit;
+                }
+                $fechator = $torneo['fechator'] ?? date('Y-m-d');
+                $acceso1 = date('Y-m-d', strtotime($fechator . ' -30 days'));
+                $acceso2 = date('Y-m-d', strtotime($fechator . ' +7 days'));
+                $token = bin2hex(random_bytes(32));
+                $usuario_creador = (Auth::user() && isset(Auth::user()['id'])) ? (string) Auth::user()['id'] : '';
+                $inv_delegado = $dir['delegado'] ?? null;
+                $inv_email = $dir['email'] ?? null;
+                $club_tel = $dir['telefono'] ?? null;
+                $admin_club_id = Auth::id();
+                $cols_inv = $pdo->query("SHOW COLUMNS FROM {$tb_inv}")->fetchAll(PDO::FETCH_COLUMN);
+                $campos = [
+                    'torneo_id' => $torneo_id,
+                    'club_id' => $club_id,
+                    'invitado_delegado' => $inv_delegado,
+                    'invitado_email' => $inv_email,
+                    'acceso1' => $acceso1,
+                    'acceso2' => $acceso2,
+                    'usuario' => $usuario_creador,
+                    'club_email' => $inv_email,
+                    'club_telefono' => $club_tel,
+                    'club_delegado' => $inv_delegado,
+                    'token' => $token,
+                    'estado' => 'activa'
+                ];
+                if (in_array('id_directorio_club', $cols_inv, true)) {
+                    $campos['id_directorio_club'] = $dir_id_one;
+                }
+                foreach ($cols_inv as $col_name) {
+                    if (strtolower((string)$col_name) === 'admin_club_id') {
+                        $campos[$col_name] = $admin_club_id;
+                        break;
+                    }
+                }
+                $cols = array_values(array_intersect($cols_inv, array_keys($campos)));
+                $vals = array_map(function ($c) use ($campos) { return $campos[$c]; }, $cols);
+                if (!empty($cols)) {
+                    $placeholders = implode(', ', array_fill(0, count($cols), '?'));
+                    $stmt = $pdo->prepare("INSERT INTO {$tb_inv} (" . implode(', ', $cols) . ") VALUES ({$placeholders})");
+                    $stmt->execute($vals);
+                } else {
+                    $stmt = $pdo->prepare("INSERT INTO {$tb_inv} (torneo_id, club_id, acceso1, acceso2, usuario, token, estado) VALUES (?, ?, ?, ?, ?, ?, 'activa')");
+                    $stmt->execute([$torneo_id, $club_id, $acceso1, $acceso2, $usuario_creador, $token]);
+                }
+                header('Location: ' . $build_redirect_one(['success' => '1', 'msg' => 'Invitación creada.']));
+                exit;
+            }
+        } catch (Exception $e) {
+            if (function_exists('error_log')) {
+                error_log('Invitacion_clubes invitar_uno: ' . $e->getMessage());
+            }
+            header('Location: ' . $build_redirect_one(['error' => 'Error al crear la invitación.']));
+            exit;
+        }
+    }
+}
+
 // POST: quitar invitaciones y/o crear invitaciones para los clubes seleccionados
 if ($torneo && $_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'invitar_seleccionados') {
     // Evitar que cualquier salida accidental rompa el redirect (regla de oro: no echo/print_r antes de Location)
@@ -432,7 +532,16 @@ $fechator_fmt = $torneo && !empty($torneo['fechator']) ? date('d/m/Y', strtotime
                                                             <br><small class="text-muted" title="El delegado debe registrarse primero">Requiere registro</small>
                                                         <?php endif; ?>
                                                     <?php else: ?>
-                                                        —
+                                                        <?php
+                                                        $url_invitar_uno = 'index.php?page=invitacion_clubes&torneo_id=' . (int)$torneo_id . '&action=invitar_uno&directorio_id=' . (int)$row['id'];
+                                                        if (isset($_GET['p']) && (int)$_GET['p'] >= 1) {
+                                                            $url_invitar_uno .= '&p=' . (int)$_GET['p'];
+                                                        }
+                                                        if (isset($_GET['per_page']) && (int)$_GET['per_page'] >= 10) {
+                                                            $url_invitar_uno .= '&per_page=' . (int)$_GET['per_page'];
+                                                        }
+                                                        ?>
+                                                        <a href="<?= htmlspecialchars($url_invitar_uno) ?>" class="btn btn-sm btn-primary" title="Crear invitación para este club"><i class="fas fa-paper-plane me-1"></i>Invitar</a>
                                                     <?php endif; ?>
                                                 </td>
                                             </tr>

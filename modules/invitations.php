@@ -479,6 +479,9 @@ if ($action === 'list' && !empty($filter_torneo)) {
                                         $url_telegram = 'https://t.me/share/url?url=' . rawurlencode($url_acceso) . '&text=' . rawurlencode($msg_invitacion);
                                         ?>
                                         <div class="btn-group" role="group">
+                                            <a href="<?= htmlspecialchars($url_acceso) ?>" class="btn btn-sm btn-success" target="_blank" rel="noopener noreferrer" title="Abrir formulario de registro del delegado de club invitado (acceso permitido para admin de este torneo)">
+                                                <i class="fas fa-user-edit me-1"></i>Registro delegado
+                                            </a>
                                             <a href="<?= htmlspecialchars($url_inscripciones) ?>" class="btn btn-sm btn-primary" target="_blank" rel="noopener noreferrer" title="Abrir formulario de inscripciones (enlace para el club)">
                                                 <i class="fas fa-user-plus"></i>
                                             </a>

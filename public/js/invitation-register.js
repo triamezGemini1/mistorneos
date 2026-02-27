@@ -1,6 +1,9 @@
 /**
- * Inscripción por invitación: búsqueda jerárquica y UI no bloqueante.
- * Orden de búsqueda: 1) inscritos (abortar si ya registrado), 2) usuarios, 3) API externa.
+ * Inscripción por invitación: cuatro bloques de búsqueda, cada uno con una acción clara.
+ * BLOQUE 1 INSCRITO → accion ya_inscrito: mensaje, limpiar formulario, foco nacionalidad.
+ * BLOQUE 2 USUARIO → accion encontrado_usuario: rellenar formulario, permitir inscribir.
+ * BLOQUE 3 PERSONAS → accion encontrado_persona: rellenar formulario, permitir inscribir (al enviar se crea usuario).
+ * BLOQUE 4 NUEVO → accion nuevo: mantener nacionalidad y cédula, limpiar resto, foco nombre; al enviar se crea usuario e inscribe.
  * Uso: definir window.INVITATION_REGISTER_CONFIG = { apiBase, torneoId } antes de cargar este script.
  */
 (function () {
@@ -30,6 +33,8 @@
 
     var TOAST_DURATION_MS = 4500;
     var toastContainer = null;
+    /** Bloqueo para evitar peticiones duplicadas: si true, no disparar otra búsqueda hasta que termine. */
+    var isSearching = false;
 
     function getToastContainer() {
         if (!toastContainer) {
@@ -145,61 +150,109 @@
     }
 
     /**
-     * Búsqueda automática en orden estricto (siempre al salir del campo - onblur):
-     * 1. Inscritos → si ya está inscrito: mensaje y abortar.
-     * 2. Usuarios → si existe: llenar formulario.
-     * 3. Base externa → último recurso (search_persona hace 2 y 3 en una llamada).
+     * Búsqueda en cuatro bloques (backend devuelve accion: ya_inscrito | encontrado_usuario | encontrado_persona | nuevo | error).
+     * Cada acción ejecuta una sola respuesta: mensaje + limpiar/rellenar + foco.
      */
     async function searchPersona() {
+        if (isSearching) return;
         var cedulaEl = document.getElementById('cedula');
         var nacEl = document.getElementById('nacionalidad');
         var cedula = (cedulaEl && cedulaEl.value || '').trim().replace(/\D/g, '');
         var nacionalidad = (nacEl && nacEl.value) || '';
 
-        if (!cedula || !nacionalidad) return;
+        if (!nacionalidad) {
+            showToast('Seleccione la nacionalidad primero.', 'warning');
+            if (nacEl) nacEl.focus();
+            return;
+        }
+        if (!cedula) {
+            showToast('Ingrese el número de cédula.', 'warning');
+            if (cedulaEl) cedulaEl.focus();
+            return;
+        }
 
+        isSearching = true;
         try {
             showLoadingIndicator();
 
-            // Una sola llamada: search_persona con torneo_id hace PASO 1 (inscritos) + 2 (usuarios) + 3 (base personas)
             var torneoId = getTorneoId();
-            var searchUrl = API_BASE + '/search_persona.php?cedula=' + encodeURIComponent(cedula) + '&nacionalidad=' + encodeURIComponent(nacionalidad) + '&torneo_id=' + torneoId;
+            var searchUrl = (API_BASE ? API_BASE.replace(/\/$/, '') : '') + '/search_persona.php?cedula=' + encodeURIComponent(cedula) + '&nacionalidad=' + encodeURIComponent(nacionalidad) + '&torneo_id=' + torneoId;
             if (typeof console !== 'undefined' && console.log) {
                 console.log('search_persona: URL=', searchUrl, 'torneo_id=', torneoId);
             }
             var response = await fetch(searchUrl);
-            var result = await response.json();
-            var status = (result.status || '').toString().toLowerCase();
+            var result;
+            try {
+                result = await response.json();
+            } catch (parseErr) {
+                console.error('search_persona: respuesta no es JSON', parseErr);
+                showToast('Error en la respuesta del servidor. Revise la consola (F12).', 'danger');
+                hideLoadingIndicator();
+                isSearching = false;
+                return;
+            }
+            if (!response.ok) {
+                showToast((result.mensaje || result.error || 'Error ') + (response.status ? ' (' + response.status + ')' : ''), 'danger');
+                hideLoadingIndicator();
+                isSearching = false;
+                return;
+            }
 
-            // Siempre emitir mensaje resultante y, cuando aplique, limpiar formulario y foco en nacionalidad
+            var accion = (result.accion || result.status || '').toString().toLowerCase();
 
-            if (status === 'ya_inscrito') {
-                showToast(result.mensaje || 'El jugador ya está inscrito en este torneo', 'warning');
+            // ─── Acción ERROR ───
+            if (accion === 'error') {
+                showToast(result.mensaje || result.error || 'Error en la búsqueda', 'danger');
+                hideLoadingIndicator();
+                isSearching = false;
+                return;
+            }
+
+            // ─── Acción YA_INSCRITO (BLOQUE INSCRITO): mensaje, limpiar formulario, foco en nacionalidad ───
+            if (accion === 'ya_inscrito') {
+                showToast(result.mensaje || 'El jugador ya está en este torneo. Puede ingresar otra cédula.', 'info');
                 clearFormFields();
                 setTimeout(function () {
                     var el = document.getElementById('nacionalidad');
                     if (el) el.focus();
                 }, 0);
+                hideLoadingIndicator();
+                isSearching = false;
                 return;
             }
 
-            if (status === 'no_encontrado') {
-                showToast(result.mensaje || 'No encontrado. Complete nombre y el resto de datos para registrar e inscribir.', 'info');
+            // ─── Acción ENCONTRADO_USUARIO o ENCONTRADO_PERSONA (BLOQUES USUARIO / PERSONAS): rellenar formulario, permitir inscribir ───
+            if (accion === 'encontrado_usuario' || accion === 'encontrado_persona' || ((result.encontrado || result.success) && (result.persona || result.data))) {
+                var persona = result.persona || result.data;
+                if (persona) {
+                    fillFormFromPersona(persona);
+                    showToast(result.mensaje || 'Datos encontrados. Revise los datos y pulse Inscribir.', 'success');
+                    setTimeout(function () {
+                        var el = document.getElementById('nombre');
+                        if (el) el.focus();
+                    }, 0);
+                } else {
+                    showToast('No se recibieron datos de la persona.', 'warning');
+                }
+                hideLoadingIndicator();
+                isSearching = false;
+                return;
+            }
+
+            // ─── Acción NUEVO (BLOQUE NUEVO): mantener nacionalidad y cédula, limpiar resto, foco en nombre; al enviar se crea usuario e inscribe ───
+            if (accion === 'nuevo' || accion === 'no_encontrado') {
+                showToast(result.mensaje || 'No encontrado. Complete nombre y el resto de datos; al pulsar Inscribir se creará el usuario y se inscribirá en el torneo.', 'info');
                 clearFormFieldsExceptSearch();
                 setTimeout(function () {
                     var el = document.getElementById('nombre');
                     if (el) el.focus();
                 }, 0);
+                hideLoadingIndicator();
+                isSearching = false;
                 return;
             }
 
-            if ((result.encontrado || result.success) && (result.persona || result.data)) {
-                fillFormFromPersona(result.persona || result.data);
-                showToast('Datos encontrados. Revise los datos y pulse Inscribir.', 'success');
-                return;
-            }
-
-            showToast('No se encontraron datos para esta cédula', 'info');
+            showToast(result.mensaje || 'No se encontraron datos para esta cédula.', 'info');
             clearFormFields();
             setTimeout(function () {
                 var el = document.getElementById('nacionalidad');
@@ -214,6 +267,7 @@
                 if (el) el.focus();
             }, 0);
         } finally {
+            isSearching = false;
             hideLoadingIndicator();
         }
     }

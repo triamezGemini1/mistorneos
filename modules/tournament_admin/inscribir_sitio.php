@@ -380,7 +380,7 @@ if ($is_admin_general) {
 <script>
 window.INSCRIPCIONES_CONFIG = {
     API_URL: '<?= app_base_url() ?>/public/tournament_admin_toggle_inscripcion.php',
-    BUSCAR_API: '<?= app_base_url() ?>/public/api/buscar_inscribir_sitio.php',
+    BUSCAR_API: '<?= app_base_url() ?>/public/api/search_persona.php',
     TORNEOS_ID: <?= (int)$torneo_id ?>,
     CSRF_TOKEN: '<?= htmlspecialchars(CSRF::token(), ENT_QUOTES) ?>',
     showMessage: function(message, type) {

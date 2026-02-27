@@ -256,6 +256,15 @@ if ($page === 'directorio_clubes' && (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 
     }
 }
 
+// Invitación clubes: acción "Invitar" un solo club (GET) — ejecutar antes de enviar output para poder redirigir
+if ($page === 'invitacion_clubes' && ($_SERVER['REQUEST_METHOD'] ?? '') === 'GET' && isset($_GET['action']) && $_GET['action'] === 'invitar_uno' && isset($_GET['directorio_id']) && isset($_GET['torneo_id'])) {
+    $module = __DIR__ . '/../modules/invitacion_clubes.php';
+    if (file_exists($module)) {
+        include $module;
+        exit;
+    }
+}
+
 // POST / acciones que redirigen: se incluye solo el módulo (sin layout). El módulo DEBE hacer header(Location) y exit
 // para que el usuario no vea salida sin formato. Tras el redirect, el GET cae más abajo e incluye layout (con CSS) + módulo.
 if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST' || in_array($action, $actions_requiring_redirect, true)) {

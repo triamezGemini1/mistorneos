@@ -2,19 +2,25 @@
 
 ## Resumen
 
-Este documento describe **cada paso** del flujo desde que el usuario accede al formulario de invitación hasta que se guarda (o se rechaza) la inscripción. La búsqueda en backend se ejecuta **en este orden fijo**:
+La búsqueda está dividida en **cuatro bloques separados**. Cada bloque genera **una sola acción** en el frontend:
 
-- **PASO 1:** Buscar en tabla **inscritos** (solo si `torneo_id` > 0). Si existe → respuesta `ya_inscrito`, STOP.
-- **PASO 2:** Buscar en tabla **usuarios**. Si existe → devolver datos, STOP.
-- **PASO 3:** Buscar en **base personas** (externa). Si existe → devolver datos, STOP.
-- **PASO 4:** No encontrado → respuesta `no_encontrado` (registro manual).
+| Bloque | Dónde busca | Si encuentra | Acción en frontend |
+|--------|-------------|-------------|--------------------|
+| **1. INSCRITO** | Tabla `inscritos` (solo si `torneo_id` > 0) | Ya inscrito en el torneo | Mensaje, **limpiar formulario**, **foco en nacionalidad**. |
+| **2. USUARIO** | Tabla `usuarios` | Persona en la plataforma | **Rellenar formulario** (con `id_usuario`), permitir inscribir. |
+| **3. PERSONAS** | Base externa (personas) | Persona en base externa | **Rellenar formulario** (sin id); al pulsar Inscribir se crea usuario e inscribe. |
+| **4. NUEVO** | — | No encontrado en ninguno | Mantener nacionalidad y cédula, **limpiar resto**, **foco en nombre**; al pulsar Inscribir se **crea usuario** en `usuarios` y se **inscribe** en el torneo. |
 
-En el log del servidor verás líneas como:
+El backend (`search_persona.php`) devuelve en cada respuesta el campo **`accion`**: `ya_inscrito` | `encontrado_usuario` | `encontrado_persona` | `nuevo` | `error`.
+
+En el log del servidor verás:
 - `search_persona.php - ENTRADA: nacionalidad=..., cedula=..., torneo_id=...`
-- `search_persona.php - PASO 1: Buscando en INSCRITOS (...)` o `PASO 1 OMITIDO: torneo_id=0`
-- `search_persona.php - PASO 2: Buscando en USUARIOS` y resultado
-- `search_persona.php - PASO 3: Buscando en BASE PERSONAS` y resultado
-- `search_persona.php - PASO 4: NO_ENCONTRADO` si no se encontró en ninguno
+- `search_persona.php - BLOQUE INSCRITO: Buscando en inscritos (...)` o `BLOQUE INSCRITO omitido (torneo_id=0)`
+- `search_persona.php - BLOQUE USUARIO: Buscando en usuarios` y resultado
+- `search_persona.php - BLOQUE PERSONAS: Buscando en base externa` y resultado
+- `search_persona.php - BLOQUE NUEVO: no encontrado en inscritos, usuarios ni personas`
+
+**Antipeticiones duplicadas:** Tanto `invitation-register.js` como `inscripciones.js` usan una variable de bloqueo (`isSearching` / `busquedaEnCurso`). Si una búsqueda está en curso, no se dispara otra hasta que termine.
 
 ---
 
@@ -45,27 +51,30 @@ En el log del servidor verás líneas como:
 
 ---
 
-## 3. Backend: `public/api/search_persona.php` (secuencia por pasos)
+## 3. Backend: `public/api/search_persona.php` (cuatro bloques, una acción por bloque)
 
-El backend ejecuta **siempre** en este orden. Cada paso escribe una línea en el log para poder seguir la secuencia.
+El backend ejecuta **siempre** en este orden. Cada bloque devuelve **una sola acción** (`accion` en el JSON).
 
-| Paso | Qué hace | Log esperado | Qué se espera |
-|------|----------|--------------|----------------|
-| 3.0 | Lee **cedula**, **nacionalidad** y **torneo_id** de GET/POST. Normaliza cédula y nacionalidad. | `ENTRADA: nacionalidad=V, cedula=4978399, torneo_id=5` (si torneo_id=0 el PASO 1 se omite). | **torneo_id** debe ser > 0 para que se ejecute PASO 1. |
-| 3.1 | **PASO 1 – Inscritos:** Si **torneo_id > 0**, ejecuta `SELECT id FROM inscritos WHERE torneo_id=? AND nacionalidad=? AND cedula=?`. Si hay fila → responde y **termina**. | `PASO 1: Buscando en INSCRITOS (torneo_id=5, nac=V, cedula=4978399)` y luego `PASO 1 resultado: YA_INSCRITO` o `no encontrado en inscritos, continuar a PASO 2`. Si torneo_id=0: `PASO 1 OMITIDO: torneo_id=0`. | Si ya inscrito: `{ "status": "ya_inscrito", "mensaje": "..." }`. Front muestra mensaje y limpia formulario. |
-| 3.2 | **PASO 2 – Usuarios:** Busca en **tabla usuarios** por cédula (variantes). Si hay fila → responde y termina. | `PASO 2: Buscando en USUARIOS` y luego `PASO 2 resultado: ENCONTRADO en usuarios (Nombre)` o `no encontrado en usuarios, continuar a PASO 3`. | `{ "status": "encontrado", "existe_en_usuarios": true, "persona": { ... } }`. Front rellena formulario. |
-| 3.3 | **PASO 3 – Base personas:** Consulta **base externa** (PersonaDatabase). Si hay resultado → responde y termina. | `PASO 3: Buscando en BASE PERSONAS (externa)` y luego `PASO 3 resultado: ENCONTRADO en base externa` o `no encontrado en base externa`. | `{ "status": "encontrado", "fuente": "externa", "persona": { ... } }`. Front rellena formulario. |
-| 3.4 | **PASO 4 – No encontrado:** No se encontró en ninguno. | `PASO 4: NO_ENCONTRADO, devolver registro manual`. | `{ "status": "no_encontrado", "mensaje": "..." }`. Front habilita registro manual. |
+| Bloque | Qué hace | Log esperado | Respuesta (accion + datos) |
+|--------|----------|--------------|----------------------------|
+| 3.0 | Lee **cedula**, **nacionalidad** y **torneo_id** de GET/POST. Normaliza cédula y nacionalidad. | `ENTRADA: nacionalidad=V, cedula=..., torneo_id=5` | — |
+| **BLOQUE 1 – INSCRITO** | Si **torneo_id > 0**, busca en **inscritos**. Si hay fila → responde y **termina**. | `BLOQUE INSCRITO: Buscando en inscritos (...)` → `YA_INSCRITO` o `no encontrado, continuar a BLOQUE USUARIO`. | `accion: "ya_inscrito"`, mensaje. Front: mensaje, limpiar formulario, foco nacionalidad. |
+| **BLOQUE 2 – USUARIO** | Busca en **usuarios** por cédula (variantes). Si hay fila → responde y termina. | `BLOQUE USUARIO: Buscando en usuarios` → `ENCONTRADO` o `no encontrado, continuar a BLOQUE PERSONAS`. | `accion: "encontrado_usuario"`, persona (con id). Front: rellenar formulario, permitir inscribir. |
+| **BLOQUE 3 – PERSONAS** | Consulta **base externa** (PersonaDatabase). Si hay resultado → responde y termina. | `BLOQUE PERSONAS: Buscando en base externa` → resultado. | `accion: "encontrado_persona"`, persona (sin id). Front: rellenar; al enviar se crea usuario e inscribe. |
+| **BLOQUE 4 – NUEVO** | No encontrado en ninguno. | `BLOQUE NUEVO: no encontrado en inscritos, usuarios ni personas`. | `accion: "nuevo"`, mensaje. Front: mantener nac/cedula, limpiar resto, foco nombre; al enviar se crea usuario e inscribe. |
 
 ---
 
-## 4. Frontend tras la respuesta de búsqueda
+## 4. Frontend tras la respuesta de búsqueda (una acción por respuesta)
 
-| Paso | Qué hace | Qué se espera |
-|------|----------|----------------|
-| 4.1 | **Si `result.status === 'ya_inscrito'`:** Muestra toast con **result.mensaje**, limpia campos y pone foco en **nacionalidad**. | No se rellena el formulario; el usuario puede introducir otra cédula. |
-| 4.2 | **Si `result.status === 'no_encontrado'`:** Muestra toast con mensaje y foco en nacionalidad. | Formulario listo para completar manualmente. |
-| 4.3 | **Si `result.encontrado && result.persona`:** Llama a **fillFormFromPersona(result.persona)** y rellena nombre, sexo, fechnac, teléfono, email. | Campos listos para revisar y enviar. |
+El frontend usa **`result.accion`** (o `result.status` en respuestas antiguas) y ejecuta **solo la acción** correspondiente:
+
+| Acción | Qué hace el frontend | Resultado |
+|--------|----------------------|-----------|
+| **ya_inscrito** | Toast con **result.mensaje**, **clearFormFields()**, foco en **nacionalidad**. | Formulario limpio; usuario puede ingresar otra cédula. |
+| **encontrado_usuario** o **encontrado_persona** | **fillFormFromPersona(result.persona)**, toast con mensaje, foco en nombre. | Campos rellenados; permitir inscribir (con id_usuario si viene de usuarios). |
+| **nuevo** (o no_encontrado) | Toast con mensaje, **clearFormFieldsExceptSearch()** (mantiene nacionalidad y cédula), foco en **nombre**. | Formulario listo para completar; al pulsar Inscribir se crea usuario e inscribe. |
+| **error** | Toast con mensaje de error. | Sin cambio en formulario. |
 | 4.4 | Se oculta el indicador de carga. | UI actualizada. |
 
 ---
@@ -107,6 +116,7 @@ Posibles causas:
 - [ ] Tras "ya inscrito", el front muestra el mensaje y no rellena el formulario.
 - [ ] El formulario de invitación tiene **`<input id="torneo_id" name="torneo_id" value="...">`** y **INVITATION_REGISTER_CONFIG.torneoId** con valor numérico.
 - [ ] **getTorneoId()** en **invitation-register.js** usa config o el input **#torneo_id** y se usa en la URL de **search_persona.php**.
-- [ ] En el log del servidor aparecen **PASO 1 / PASO 2 / PASO 3 / PASO 4** según la secuencia real; si solo ves "PASO 2" sin "PASO 1", comprobar **torneo_id** en ENTRADA.
+- [ ] En el log del servidor aparecen **BLOQUE INSCRITO / BLOQUE USUARIO / BLOQUE PERSONAS / BLOQUE NUEVO** según la secuencia; si solo ves "BLOQUE USUARIO" sin "BLOQUE INSCRITO", comprobar **torneo_id** en ENTRADA.
+- [ ] Cada respuesta de búsqueda incluye **accion** (ya_inscrito | encontrado_usuario | encontrado_persona | nuevo | error) y el front ejecuta una sola acción por respuesta.
 
-Con esto, la secuencia queda unificada y el PASO 1 (inscritos) se ejecuta siempre que el front envíe **torneo_id**.
+Con esto, cada búsqueda genera una sola acción: inscrito → mensaje y limpiar; usuario/personas → rellenar y permitir inscribir; nuevo → formulario manual y al enviar se crea usuario e inscribe.

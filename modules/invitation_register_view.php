@@ -1,0 +1,439 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes">
+    <meta name="theme-color" content="#1a365d">
+    <title>Inscripción por invitación - La Estación del Dominó</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(135deg, #1a365d 0%, #2d3748 100%);
+            min-height: 100vh;
+            padding: 1.5rem 0;
+            color: #1f2937;
+        }
+        .invitation-page-header {
+            background: linear-gradient(135deg, #1a365d 0%, #2d3748 100%);
+            color: white;
+            padding: 1rem 1.5rem;
+            border-radius: 16px 16px 0 0;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 1rem;
+            flex-wrap: wrap;
+        }
+        .invitation-page-header .header-logo-app img {
+            height: 80px;
+            width: auto;
+        }
+        .invitation-page-header .header-logo-club img {
+            max-height: 80px !important;
+            max-width: 140px !important;
+            width: auto;
+            object-fit: contain;
+        }
+        .invitation-page-header .header-tournament-data {
+            flex: 1;
+            min-width: 200px;
+            text-align: center;
+        }
+        .invitation-page-header .header-text { text-align: center; }
+        .invitation-page-header .header-logo img {
+            height: 112px;
+            width: auto;
+        }
+        .invitation-page-header h4 { font-weight: 600; margin-bottom: 0.25rem; }
+        .invitation-page-header .sub { opacity: 0.9; font-size: 0.95rem; }
+        .main-card-wrap {
+            background: #fff;
+            border-radius: 16px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.25);
+            overflow: hidden;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        .main-card-wrap .card { border: none; border-radius: 0; }
+        .main-card-wrap .card-header { font-weight: 600; }
+        .btn-mistorneos {
+            background: linear-gradient(135deg, #48bb78 0%, #38a169 100%);
+            border: none;
+            color: #fff;
+            font-weight: 500;
+        }
+        .btn-mistorneos:hover {
+            background: linear-gradient(135deg, #38a169 0%, #2f855a 100%);
+            color: #fff;
+        }
+        .form-control:focus, .form-select:focus {
+            border-color: #48bb78;
+            box-shadow: 0 0 0 0.2rem rgba(72, 187, 120, 0.25);
+        }
+        .badge-sm { font-size: 0.7em; }
+        .table-sm th, .table-sm td { padding: 0.35rem 0.5rem; }
+        .form-control:readonly { background-color: #f8f9fa; opacity: 0.8; }
+        .form-select:disabled { background-color: #f8f9fa; opacity: 0.8; }
+        .form-compact-invitation .inv-field { display: inline-flex; flex-direction: column; margin-bottom: 0; }
+        .form-compact-invitation .inv-label { font-size: 0.7rem; margin-bottom: 0.15rem; white-space: nowrap; }
+        .form-compact-invitation .form-control-sm, .form-compact-invitation .form-select-sm { font-size: 0.8rem; }
+        .form-compact-invitation .inv-input { box-sizing: border-box; }
+        .form-compact-invitation select.inv-input { width: auto; min-width: 3.5rem; }
+        .form-compact-invitation .inv-input-cedula { width: 5.5rem; min-width: 5.5rem; }
+        .form-compact-invitation .inv-field-nombre { flex: 1; min-width: 6rem; }
+        .form-compact-invitation .inv-field-nombre .inv-input { width: 100%; min-width: 6rem; }
+        .form-compact-invitation .inv-input-date { width: 8rem; min-width: 8rem; }
+        .form-compact-invitation .inv-input-tel { width: 8rem; min-width: 8rem; }
+        .form-compact-invitation .inv-field-email { flex: 1; min-width: 8rem; }
+        .form-compact-invitation .inv-field-email .inv-input { width: 100%; min-width: 8rem; }
+        .invitation-club-logo-wrap img { max-width: 240px !important; max-height: 240px !important; width: auto; height: auto; object-fit: contain; }
+        .invitation-club-logo-wrap .img-thumbnail { padding: 0.25rem; background: #f8f9fa; border-radius: 8px; }
+        .invitation-inner-logos .logo-box img { max-width: 120px; max-height: 120px; object-fit: contain; }
+        #invitation-toast-container {
+            position: fixed; top: 1rem; right: 1rem; z-index: 9999; display: flex; flex-direction: column; gap: 0.5rem;
+            pointer-events: none; max-width: 90vw;
+        }
+        .invitation-toast {
+            padding: 0.75rem 1rem; border-radius: 8px; font-size: 0.9rem; box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            animation: invitation-toast-in 0.3s ease;
+        }
+        .invitation-toast--out { opacity: 0; transform: translateX(1rem); transition: opacity 0.3s, transform 0.3s; }
+        .invitation-toast--info { background: #0dcaf0; color: #000; }
+        .invitation-toast--success { background: #198754; color: #fff; }
+        .invitation-toast--warning { background: #ffc107; color: #000; }
+        .invitation-toast--danger { background: #dc3545; color: #fff; }
+        @keyframes invitation-toast-in {
+            from { opacity: 0; transform: translateX(1rem); }
+            to { opacity: 1; transform: translateX(0); }
+        }
+        .invitation-loading { margin-bottom: 0.5rem; }
+        @media (max-width: 768px) {
+            .col-md-6 { margin-bottom: 1rem; }
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <div class="main-card-wrap">
+        <div class="invitation-page-header">
+            <?php if (!empty($organizer_club_data) && !empty($tournament_data)): ?>
+                <!-- Izquierda: logo del club responsable -->
+                <div class="header-logo-club d-flex align-items-center">
+                    <div class="invitation-inner-logos logo-box" style="height: 80px; min-width: 100px; background: rgba(255,255,255,0.1); border-radius: 10px; padding: 0.25rem; display: flex; align-items: center; justify-content: center;">
+                        <?= displayClubLogoInvitation($organizer_club_data, 'organizador') ?>
+                    </div>
+                </div>
+                <!-- Centro: nombre del club responsable (primera línea) y datos del torneo -->
+                <div class="header-tournament-data">
+                    <h4 class="mb-1 text-white"><?= htmlspecialchars($organizer_club_data['nombre'] ?? '') ?></h4>
+                    <p class="sub mb-0 opacity-90">
+                        <strong><?= htmlspecialchars($tournament_data['nombre']) ?></strong>
+                        <span class="opacity-90 small ms-1"><i class="fas fa-calendar-alt me-1"></i><?= date('d/m/Y', strtotime($tournament_data['fechator'])) ?></span>
+                    </p>
+                    <?php if (!empty($tournament_data['clase']) || !empty($tournament_data['modalidad'])): ?>
+                        <p class="mb-0 opacity-75 small"><?= htmlspecialchars(trim(($tournament_data['clase'] ?? '') . ' ' . ($tournament_data['modalidad'] ?? ''))) ?></p>
+                    <?php endif; ?>
+                </div>
+                <!-- Derecha: logo de la aplicación - La Estación del Dominó -->
+                <div class="header-logo-app">
+                    <?php $logo_url = AppHelpers::getAppLogo(); ?>
+                    <img src="<?= htmlspecialchars($logo_url) ?>" alt="La Estación del Dominó">
+                </div>
+            <?php else: ?>
+                <div class="header-logo">
+                    <?php $logo_url = AppHelpers::getAppLogo(); ?>
+                    <img src="<?= htmlspecialchars($logo_url) ?>" alt="La Estación del Dominó">
+                </div>
+                <div class="header-text">
+                    <h4 class="mb-0">La Estación del Dominó</h4>
+                    <p class="sub mb-0">Inscripción por invitación</p>
+                </div>
+            <?php endif; ?>
+        </div>
+        <div class="card-body">
+<div class="fade-in">
+    <?php if ($error_acceso && $error_message): ?>
+        <!-- Error de acceso: pantalla bloqueante -->
+        <div class="card">
+            <div class="card-header bg-danger text-white">
+                <h5 class="mb-0">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    Acceso Denegado
+                </h5>
+            </div>
+            <div class="card-body text-center py-5">
+                <i class="fas fa-lock text-danger fs-1 mb-3"></i>
+                <h5 class="text-danger"><?= htmlspecialchars($error_message) ?></h5>
+                <p class="text-muted">Por favor, verifica que tienes acceso válido a esta página.</p>
+                <a href="<?= htmlspecialchars($url_retorno) ?>" class="btn btn-outline-secondary">
+                    <i class="fas fa-arrow-left me-2"></i><?= htmlspecialchars($texto_retorno) ?>
+                </a>
+            </div>
+        </div>
+    <?php else: ?>
+        <!-- Card: logo club invitado (izq) + nombre del club + bloque Bienvenido (der, solo si club autenticado) -->
+        <div class="card mb-4">
+            <div class="card-body text-center py-4">
+                <div class="row align-items-center">
+                    <!-- Logo del club invitado (izquierda) -->
+                    <div class="col-md-3">
+                        <div class="invitation-inner-logos logo-box d-flex align-items-center justify-content-center" style="height: 120px; background: #f8f9fa; border-radius: 10px; border: 2px dashed #dee2e6;">
+                           <?= displayClubLogoInvitation($club_data, 'invitado') ?>
+                        </div>
+                    </div>
+                    <!-- Nombre del club (centro) -->
+                    <div class="col-md-<?= ($is_admin_club) ? '5' : '9' ?> text-center text-md-start">
+                        <h1 class="display-6 text-success mb-0">
+                            <?= htmlspecialchars($club_data['nombre']) ?>
+                        </h1>
+                    </div>
+                    <?php if ($is_admin_club): ?>
+                    <!-- Bloque Bienvenido a la derecha del nombre -->
+                    <div class="col-md-4 text-start">
+                        <div class="small text-muted mb-1">
+                            <strong class="text-dark">Bienvenido:</strong> <?= htmlspecialchars($club_data['nombre']) ?><br>
+                            <strong>Usuario:</strong> <?= htmlspecialchars($current_user['username']) ?><br>
+                            <strong>Delegado:</strong> <?= htmlspecialchars($club_data['delegado']) ?><br>
+                            <strong>Teléfono:</strong> <?= htmlspecialchars($club_data['telefono']) ?>
+                        </div>
+                        <form method="POST" class="d-inline">
+                            <input type="hidden" name="action" value="user_logout">
+                            <button type="submit" class="btn btn-outline-secondary btn-sm"><i class="fas fa-sign-out-alt me-1"></i>Cerrar sesión</button>
+                        </form>
+                    </div>
+                    <?php endif; ?>
+                </div>
+            </div>
+        </div>
+
+        <!-- Panel administrador: una línea (solo admin general / admin torneo) -->
+        <?php if ($is_admin_general || $is_admin_torneo): ?>
+        <div class="alert alert-primary py-1 px-2 mb-2 small">
+            <strong>Usuario:</strong> <?= htmlspecialchars($current_user['username']) ?> &nbsp; <strong>Rol:</strong> <?= htmlspecialchars($current_user['role']) ?> &nbsp; Puede inscribir jugadores directamente sin autenticación del club.
+        </div>
+        <?php endif; ?>
+
+        <?php if (!empty($stand_by)): ?>
+        <!-- Invitación en Stand-by: banner y formulario bloqueado -->
+        <div class="alert alert-warning shadow-sm mb-4" role="alert">
+            <div class="d-flex align-items-start">
+                <i class="fas fa-hourglass-half fa-3x me-4 text-warning"></i>
+                <div class="flex-grow-1">
+                    <h4 class="alert-heading">Invitación en espera</h4>
+                    <p class="mb-4">Para inscribir a sus atletas y confirmar su participación, debe <strong>Iniciar Sesión</strong> o <strong>Registrarse</strong>.</p>
+                    <?php
+                    $base_inv = class_exists('AppHelpers') ? rtrim(AppHelpers::getPublicUrl(), '/') : '';
+                    if ($base_inv !== ''):
+                    ?>
+                    <div class="d-flex flex-wrap gap-2">
+                        <a href="<?= htmlspecialchars($base_inv) ?>/auth/login?<?= http_build_query(['return_url' => 'invitation/register?token=' . urlencode($token)]) ?>" class="btn btn-primary">
+                            <i class="fas fa-sign-in-alt me-2"></i>Iniciar Sesión
+                        </a>
+                        <a href="<?= htmlspecialchars($base_inv) ?>/join?token=<?= urlencode($token) ?>" class="btn btn-success">
+                            <i class="fas fa-user-plus me-2"></i>Registrarse
+                        </a>
+                    </div>
+                    <?php endif; ?>
+                </div>
+            </div>
+        </div>
+        <?php endif; ?>
+
+        <!-- Layout: formulario arriba (dos líneas), listado inscritos abajo (una columna) -->
+        <?php if (!$inscripciones_abiertas): ?>
+        <div class="alert alert-warning text-center py-4 mb-4">
+            <i class="fas fa-lock fa-3x mb-3"></i>
+            <h4 class="alert-heading">Inscripciones Cerradas</h4>
+            <p class="mb-0">El período de inscripción ha finalizado o aún no ha comenzado. Consulte el listado a continuación.</p>
+        </div>
+        <?php endif; ?>
+        <div class="row">
+            <?php if ($inscripciones_abiertas && empty($stand_by)): ?>
+            <!-- Formulario compacto: encabezado con retorno, una fila de campos -->
+            <div class="col-12">
+                <div class="card mb-3">
+                    <div class="card-body py-2 px-3">
+                        <div class="d-flex justify-content-end mb-2">
+                            <a href="<?= htmlspecialchars($url_retorno) ?>" class="btn btn-outline-secondary btn-sm"><i class="fas fa-arrow-left me-1"></i><?= htmlspecialchars($texto_retorno) ?></a>
+                        </div>
+                        <?php /* Mensajes efímeros vía toasts (invitation-register.js); no alertas bloqueantes */ ?>
+                        <?php if (!$form_enabled): ?>
+                            <div class="alert alert-info py-2 mb-2 small">Para inscribir debe autenticarse primero.</div>
+                        <?php endif; ?>
+
+                        <form method="POST" id="registrationForm" class="form-compact-invitation" <?= !$form_enabled ? 'onsubmit="return false;"' : '' ?>>
+                            <input type="hidden" name="action" value="register_player">
+                            <input type="hidden" id="torneo_id" name="torneo_id" value="<?= htmlspecialchars($torneo_id) ?>">
+                            <input type="hidden" name="club_id" value="<?= htmlspecialchars($club_id) ?>">
+                            <input type="hidden" id="id_usuario" name="id_usuario" value="">
+                            <div class="d-flex flex-wrap align-items-end gap-2 gx-2 inv-form-row">
+                                <div class="inv-field">
+                                    <label for="nacionalidad" class="form-label inv-label">Nac. <span class="text-danger">*</span></label>
+                                    <select class="form-select form-select-sm inv-input" id="nacionalidad" name="nacionalidad" <?= !$form_enabled ? 'disabled' : '' ?> required title="Nacionalidad">
+                                        <option value="">...</option>
+                                        <option value="V" <?= ($_POST['nacionalidad'] ?? '') == 'V' ? 'selected' : '' ?>>V</option>
+                                        <option value="E" <?= ($_POST['nacionalidad'] ?? '') == 'E' ? 'selected' : '' ?>>E</option>
+                                        <option value="J" <?= ($_POST['nacionalidad'] ?? '') == 'J' ? 'selected' : '' ?>>J</option>
+                                        <option value="P" <?= ($_POST['nacionalidad'] ?? '') == 'P' ? 'selected' : '' ?>>P</option>
+                                    </select>
+                                </div>
+                                <div class="inv-field">
+                                    <label for="cedula" class="form-label inv-label">Cédula <span class="text-danger">*</span></label>
+                                    <input type="text" class="form-control form-control-sm inv-input inv-input-cedula" id="cedula" name="cedula" value="<?= htmlspecialchars($_POST['cedula'] ?? '') ?>" placeholder="12345678" maxlength="8" <?= !$form_enabled ? 'readonly' : '' ?> onblur="if(typeof searchPersona==='function')searchPersona();" required title="Al salir se buscan datos automáticamente (inscritos, usuarios, base externa)">
+                                </div>
+                                <div class="inv-field inv-field-nombre">
+                                    <label for="nombre" class="form-label inv-label">Nombre <span class="text-danger">*</span></label>
+                                    <input type="text" class="form-control form-control-sm inv-input" id="nombre" name="nombre" value="<?= htmlspecialchars($_POST['nombre'] ?? '') ?>" <?= !$form_enabled ? 'readonly' : '' ?> required>
+                                </div>
+                                <div class="inv-field">
+                                    <label for="sexo" class="form-label inv-label">Sexo <span class="text-danger">*</span></label>
+                                    <select class="form-select form-select-sm inv-input" id="sexo" name="sexo" <?= !$form_enabled ? 'disabled' : '' ?> required>
+                                        <option value="">...</option>
+                                        <option value="M" <?= ($_POST['sexo'] ?? '') == 'M' ? 'selected' : '' ?>>M</option>
+                                        <option value="F" <?= ($_POST['sexo'] ?? '') == 'F' ? 'selected' : '' ?>>F</option>
+                                    </select>
+                                </div>
+                                <div class="inv-field">
+                                    <label for="fechnac" class="form-label inv-label">F. Nac.</label>
+                                    <input type="date" class="form-control form-control-sm inv-input inv-input-date" id="fechnac" name="fechnac" value="<?= htmlspecialchars($_POST['fechnac'] ?? '') ?>" <?= !$form_enabled ? 'readonly' : '' ?>>
+                                </div>
+                                <div class="inv-field">
+                                    <label for="telefono" class="form-label inv-label">Tel. <span class="text-danger">*</span></label>
+                                    <input type="tel" class="form-control form-control-sm inv-input inv-input-tel" id="telefono" name="telefono" value="<?= htmlspecialchars($_POST['telefono'] ?? '') ?>" placeholder="0424-1234567" <?= !$form_enabled ? 'readonly' : '' ?> required>
+                                </div>
+                                <div class="inv-field inv-field-email">
+                                    <label for="email" class="form-label inv-label">Email</label>
+                                    <input type="email" class="form-control form-control-sm inv-input" id="email" name="email" value="<?= htmlspecialchars($_POST['email'] ?? '') ?>" placeholder="usuario@gmail.com" <?= !$form_enabled ? 'readonly' : '' ?>>
+                                </div>
+                                <div class="inv-field ms-1">
+                                    <?php if ($form_enabled): ?>
+                                        <button type="submit" class="btn btn-primary btn-sm"><i class="fas fa-save me-1"></i>Inscribir</button>
+                                        <button type="button" class="btn btn-outline-secondary btn-sm" onclick="clearForm()"><i class="fas fa-eraser me-1"></i>Limpiar</button>
+                                    <?php else: ?>
+                                        <a href="<?= htmlspecialchars(isset($base) && $base !== '' ? $base . '/' : '/') ?>auth/login?<?= http_build_query(['return_url' => 'invitation/register?token=' . urlencode($token)]) ?>" class="btn btn-primary btn-sm"><i class="fas fa-sign-in-alt me-1"></i>Iniciar sesión</a>
+                                    <?php endif; ?>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+            <?php endif; ?>
+
+            <!-- Una columna: listado de inscritos -->
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header bg-success text-white">
+                        <h5 class="mb-0">
+                            <i class="fas fa-check-circle me-2"></i>
+                            Jugadores Inscritos
+                            <span class="badge bg-light text-dark ms-2"><?= count($existing_registrations) ?></span>
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <?php if (empty($existing_registrations)): ?>
+                            <div class="text-center py-4">
+                                <i class="fas fa-users text-muted fs-1 mb-3"></i>
+                                <h6 class="text-muted">No hay jugadores inscritos aún</h6>
+                                <p class="text-muted">Los jugadores inscritos aparecerán aquí</p>
+                            </div>
+                        <?php else: ?>
+                            <div class="table-responsive">
+                                <table class="table table-hover table-sm mb-0">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th>Id usuario</th>
+                                            <th>Cédula</th>
+                                            <th>Nombre</th>
+                                            <th>Sexo</th>
+                                            <th>Teléfono</th>
+                                            <th>Email</th>
+                                            <?php if ($inscripciones_abiertas): ?><th>Acciones</th><?php endif; ?>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <?php foreach ($existing_registrations as $registration):
+                                            $email_display = !empty(trim($registration['email'] ?? '')) ? $registration['email'] : ((string)($registration['username'] ?? '') . '@gmail.com');
+                                        ?>
+                                            <tr>
+                                                <td><small><?= (int)$registration['id_usuario'] ?></small></td>
+                                                <td><small><?= htmlspecialchars($registration['cedula']) ?></small></td>
+                                                <td><small><?= htmlspecialchars($registration['nombre']) ?></small></td>
+                                                <td><span class="badge bg-info badge-sm"><?= htmlspecialchars($registration['sexo']) ?></span></td>
+                                                <td><small><?= htmlspecialchars($registration['celular'] ?: '-') ?></small></td>
+                                                <td><small><?= htmlspecialchars($email_display) ?></small></td>
+                                                <?php if ($inscripciones_abiertas): ?>
+                                                <td>
+                                                    <form method="post" class="d-inline" onsubmit="return confirm('¿Retirar a este jugador del torneo?');">
+                                                        <input type="hidden" name="action" value="retirar">
+                                                        <input type="hidden" name="token" value="<?= htmlspecialchars($token) ?>">
+                                                        <input type="hidden" name="id_inscripcion" value="<?= (int)$registration['id'] ?>">
+                                                        <input type="hidden" name="torneo_id" value="<?= (int)$torneo_id ?>">
+                                                        <input type="hidden" name="club_id" value="<?= (int)$club_id ?>">
+                                                        <button type="submit" class="btn btn-outline-danger btn-sm"><i class="fas fa-user-minus me-1"></i>Retirar</button>
+                                                    </form>
+                                                </td>
+                                                <?php endif; ?>
+                                            </tr>
+                                        <?php endforeach; ?>
+                                    </tbody>
+                                </table>
+                            </div>
+                        <?php endif; ?>
+                    </div>
+                </div>
+            </div>
+        </div>
+    <?php endif; ?>
+</div>
+        </div>
+    </div>
+</div>
+
+<style>
+    /* Estilos adicionales solo si se necesitan (badge-sm, table-sm ya en head) */
+</style>
+
+<script>
+    window.INVITATION_REGISTER_CONFIG = {
+        apiBase: <?= json_encode((isset($base) && $base !== '') ? rtrim($base, '/') . '/api' : '') ?>,
+        torneoId: <?= (int)($torneo_id ?? 0) ?>
+    };
+</script>
+<script src="<?= htmlspecialchars(isset($base) && $base !== '' ? rtrim($base, '/') . '/js/invitation-register.js' : 'js/invitation-register.js') ?>"></script>
+<script>
+    function togglePasswordVisibility() {
+        var passwordInput = document.getElementById('password');
+        var toggleIcon = document.getElementById('passwordToggleIcon');
+        if (passwordInput && toggleIcon) {
+            if (passwordInput.type === 'password') {
+                passwordInput.type = 'text';
+                toggleIcon.className = 'fas fa-eye-slash';
+            } else {
+                passwordInput.type = 'password';
+                toggleIcon.className = 'fas fa-eye';
+            }
+        }
+    }
+    function showAuthRequiredMessage() {
+        if (typeof showToastInvitation !== 'undefined') showToastInvitation('Debe autenticarse primero para poder inscribir jugadores.', 'warning');
+        else alert('Debe autenticarse primero para poder inscribir jugadores.');
+    }
+    <?php if (!empty($success_message)): ?>
+    document.addEventListener('DOMContentLoaded', function() {
+        if (typeof showToastInvitation === 'function') showToastInvitation(<?= json_encode($success_message) ?>, 'success');
+        var nac = document.getElementById('nacionalidad');
+        if (nac) { nac.focus(); }
+    });
+    <?php endif; ?>
+    <?php if (!empty($error_message) && !$error_acceso): ?>
+    document.addEventListener('DOMContentLoaded', function() {
+        if (typeof showToastInvitation === 'function') showToastInvitation(<?= json_encode($error_message) ?>, 'danger');
+    });
+    <?php endif; ?>
+</script>
+</body>
+</html>

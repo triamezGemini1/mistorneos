@@ -12,8 +12,9 @@
     var TORNEOS_ID = config.TORNEOS_ID || 0;
     var CSRF_TOKEN = config.CSRF_TOKEN || '';
 
-    /** Bloqueo de peticiones: si true, no disparar fetch hasta que termine la búsqueda anterior. */
-    var busquedaEnCurso = false;
+    /** Bloqueo para evitar peticiones duplicadas: si true, no disparar otra búsqueda hasta que termine. */
+    var isSearching = false;
+    var busquedaEnCurso = false; /* alias para compatibilidad */
 
     // --- Selectores unificados (Inscripción en Sitio: select_club_cedula, form_club; otros: club_id, select_club) ---
     function getCedulaField() {
@@ -113,10 +114,54 @@
     }
 
     /**
-     * Búsqueda única (Niveles 1-4): solo lectura. Siempre envía torneo_id. Bloqueada con isSearching para evitar duplicados.
+     * Normaliza respuesta de search_persona.php (accion/status + persona) al formato esperado (success, resultado, usuario, persona).
+     * Backend devuelve accion: ya_inscrito | encontrado_usuario | encontrado_persona | nuevo | error.
+     */
+    function normalizeSearchPersonaResponse(data) {
+        if (!data || data.resultado !== undefined) return data;
+        var accion = (data.accion || data.status || '').toString().toLowerCase();
+        if (accion === 'ya_inscrito') {
+            return { success: true, resultado: 'ya_inscrito', mensaje: data.mensaje || 'El jugador ya está en este torneo.' };
+        }
+        if (accion === 'nuevo' || accion === 'no_encontrado') {
+            return { success: true, resultado: 'no_encontrado', mensaje: data.mensaje || 'No encontrado. Complete los datos para registrar e inscribir.' };
+        }
+        if (accion === 'error') {
+            return { success: false, resultado: 'error', mensaje: data.mensaje || data.error || 'Error en la búsqueda.' };
+        }
+        if ((accion === 'encontrado_usuario' || accion === 'encontrado_persona' || data.status === 'encontrado') && data.persona) {
+            var p = data.persona;
+            if ((data.existe_en_usuarios || accion === 'encontrado_usuario') && (p.id !== undefined && p.id > 0)) {
+                return {
+                    success: true,
+                    resultado: 'usuario',
+                    usuario: {
+                        id: p.id,
+                        username: p.username || '',
+                        nombre: p.nombre || '',
+                        cedula: p.cedula || p.nacionalidad + (p.cedula || ''),
+                        email: p.email || '',
+                        celular: p.celular || p.telefono || '',
+                        telefono: p.celular || p.telefono || '',
+                        fechnac: p.fechnac || '',
+                        sexo: p.sexo || 'M',
+                        nacionalidad: p.nacionalidad || 'V',
+                        club_id: p.club_id || 0
+                    }
+                };
+            }
+            return { success: true, resultado: 'persona_externa', persona: p };
+        }
+        return data;
+    }
+
+    /**
+     * Búsqueda única (PASO 0 inscritos → 1 usuarios → 2 externa). Siempre envía torneo_id. Bloqueada con isSearching para evitar duplicados.
      */
     function buscarJugador() {
-        if (busquedaEnCurso) return;
+        if (isSearching || busquedaEnCurso) return;
+        isSearching = true;
+        busquedaEnCurso = true;
         cacheRefs();
         var selectNac = getNacionalidadField();
         var inputCedula = getCedulaField();
@@ -126,6 +171,18 @@
         if (num.length < 4) return;
         if (!BUSCAR_API) {
             console.warn('INSCRIPCIONES: falta BUSCAR_API en INSCRIPCIONES_CONFIG');
+            return;
+        }
+        if (!TORNEOS_ID || TORNEOS_ID === 0) {
+            if (typeof Swal !== 'undefined') {
+                Swal.fire({
+                    icon: 'warning',
+                    title: 'Torneo requerido',
+                    text: 'No se ha indicado el torneo. Acceda a Inscripción en Sitio desde el panel del torneo.'
+                });
+            } else if (mensajeForm) {
+                mostrarMensajeForm('Indique el torneo. Acceda desde el panel del torneo.', 'warning');
+            }
             return;
         }
 
@@ -148,7 +205,9 @@
         fetch(url)
             .then(function (r) { return r.json(); })
             .then(function (data) {
+                isSearching = false;
                 busquedaEnCurso = false;
+                data = normalizeSearchPersonaResponse(data);
                 if (typeof Swal !== 'undefined') { Swal.close(); } else { limpiarMensajeForm(); }
                 if (!data.success) {
                     var msg = data.mensaje || 'No se pudo realizar la búsqueda.';
@@ -159,13 +218,15 @@
                     }
                     return;
                 }
-                // NIVEL 1: Ya inscrito
+                // PASO 0: Ya inscrito
                 if (data.resultado === 'ya_inscrito') {
                     if (typeof Swal !== 'undefined') {
                         Swal.fire({
-                            icon: 'warning',
-                            title: 'Jugador ya inscrito',
-                            text: 'Esta cédula ya está registrada en este torneo.'
+                            icon: 'info',
+                            title: 'Ya inscrito',
+                            text: data.mensaje || 'El jugador ya está en este torneo.',
+                            showConfirmButton: true,
+                            confirmButtonText: 'OK'
                         }).then(function () {
                             limpiarBusquedaCedula();
                             rellenarFormularioDatos('V', '', {});
@@ -250,6 +311,7 @@
                 }
             })
             .catch(function (err) {
+                isSearching = false;
                 busquedaEnCurso = false;
                 console.error(err);
                 if (typeof Swal !== 'undefined') {
@@ -318,7 +380,21 @@
                         else window.location.reload();
                     }
                 } else {
-                    if (typeof Swal !== 'undefined') {
+                    var err = (data.error || '').toLowerCase();
+                    var esDuplicidad = err.indexOf('ya está inscrito') !== -1 || err.indexOf('ya existe un usuario con esta cédula') !== -1 || err.indexOf('duplicidad') !== -1 || err.indexOf('duplicad') !== -1;
+                    if (esDuplicidad && (typeof Swal !== 'undefined')) {
+                        Swal.fire({
+                            icon: 'info',
+                            title: 'Ya inscrito o cédula en uso',
+                            text: data.error || 'El jugador ya está inscrito en este torneo o la cédula ya está registrada. Puede iniciar una nueva búsqueda.',
+                            showConfirmButton: true,
+                            confirmButtonText: 'OK'
+                        }).then(function () {
+                            limpiarBusquedaCedula();
+                            var selNac = getNacionalidadField();
+                            if (selNac) selNac.focus();
+                        });
+                    } else if (typeof Swal !== 'undefined') {
                         Swal.fire({ icon: 'error', title: 'Error', text: data.error || 'No se pudo inscribir.' });
                     } else if (mensajeForm) {
                         mostrarMensajeForm('<strong>Error:</strong> ' + (data.error || ''), 'danger');
@@ -411,7 +487,21 @@
                         else window.location.reload();
                     }
                 } else {
-                    if (typeof Swal !== 'undefined') {
+                    var errReg = (data.error || '').toLowerCase();
+                    var esDuplicidadReg = errReg.indexOf('ya está inscrito') !== -1 || errReg.indexOf('ya existe un usuario con esta cédula') !== -1 || errReg.indexOf('duplicidad') !== -1 || errReg.indexOf('duplicad') !== -1;
+                    if (esDuplicidadReg && (typeof Swal !== 'undefined')) {
+                        Swal.fire({
+                            icon: 'info',
+                            title: 'Ya inscrito o cédula en uso',
+                            text: data.error || 'El jugador ya está inscrito o la cédula ya está registrada. Puede iniciar una nueva búsqueda.',
+                            showConfirmButton: true,
+                            confirmButtonText: 'OK'
+                        }).then(function () {
+                            limpiarBusquedaCedula();
+                            var selNac = getNacionalidadField();
+                            if (selNac) selNac.focus();
+                        });
+                    } else if (typeof Swal !== 'undefined') {
                         Swal.fire({ icon: 'error', title: 'Error', text: data.error || 'No se pudo registrar.' });
                     } else if (mensajeForm) {
                         mostrarMensajeForm('<strong>Error:</strong> ' + (data.error || ''), 'danger');
@@ -479,6 +569,7 @@
     });
 
     window.buscarJugador = buscarJugador;
+    window.buscarOnBlur = buscarJugador;
     window.limpiarBusquedaCedula = limpiarBusquedaCedula;
     window.inscripcionesGetClubIdForInscribir = getClubIdForInscribir;
     window.inscripcionesGetClubIdForRegistrar = getClubIdForRegistrar;

@@ -844,9 +844,7 @@ if ($invitation_data && !$error_message && $club_authenticated) {
                 const result = await response.json();
                 
                 if (result.success && result.exists) {
-                    showMessage(`Esta c�dula ya est� inscrita en este torneo (${result.data.nombre})`, 'warning');
-                    
-                    // Limpiar campos para permitir nueva b�squeda
+                    showMessage(`Ya está registrado (${result.data.nombre}). Puede iniciar una nueva inscripción.`, 'info');
                     clearFormFields();
                 }
             } catch (error) {
@@ -854,13 +852,15 @@ if ($invitation_data && !$error_message && $club_authenticated) {
             }
         }
         
-        // Funci�n para limpiar campos del formulario
+        // Funci�n para limpiar campos del formulario (tras cédula ya registrada)
         function clearFormFields() {
+            const nac = document.getElementById('nacionalidad');
+            if (nac) nac.value = '';
             document.getElementById('cedula').value = '';
             document.getElementById('nombre').value = '';
             document.getElementById('sexo').value = '';
             document.getElementById('fechnac').value = '';
-            document.getElementById('cedula').focus();
+            if (nac) nac.focus();
         }
         
         // Funci�n para mostrar indicador de carga

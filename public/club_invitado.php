@@ -787,8 +787,9 @@ if ($invitation_data && !$error_message && $user_authenticated) {
                 // Mostrar indicador de carga
                 showLoadingIndicator();
                 
-                // Buscar en la base de datos (local y externa)
-                const url = apiUrl(`search_persona.php?nacionalidad=${nacionalidad}&cedula=${encodeURIComponent(cedula)}`);
+                // Buscar: PASO 1 inscritos (si torneo_id), luego usuarios y base externa
+                const torneoId = <?= json_encode((int)($torneo_id ?? 0)) ?>;
+                const url = apiUrl(`search_persona.php?nacionalidad=${nacionalidad}&cedula=${encodeURIComponent(cedula)}&torneo_id=${torneoId}`);
                 console.log('?? URL de b�squeda:', url);
                 
                 const response = await fetch(url);
@@ -796,6 +797,13 @@ if ($invitation_data && !$error_message && $user_authenticated) {
                 
                 const result = await response.json();
                 console.log('?? Resultado completo:', result);
+                
+                if (result.status === 'ya_inscrito') {
+                    showMessage(result.mensaje || 'Ya está inscrito en este torneo. Puede iniciar una nueva inscripción.', 'info');
+                    clearFormFields();
+                    hideLoadingIndicator();
+                    return;
+                }
                 
                 if (result.encontrado && result.persona) {
                     console.log('? Datos de persona encontrados:', result.persona);
@@ -883,9 +891,7 @@ if ($invitation_data && !$error_message && $user_authenticated) {
                 const result = await response.json();
                 
                 if (result.success && result.exists) {
-                    showMessage(`Esta c�dula ya est� registrada en el sistema (${result.data.nombre})`, 'warning');
-                    
-                    // Limpiar campos para permitir nueva b�squeda
+                    showMessage(`Ya está registrado (${result.data.nombre}). Puede iniciar una nueva inscripción.`, 'info');
                     clearFormFields();
                 }
             } catch (error) {
@@ -893,13 +899,15 @@ if ($invitation_data && !$error_message && $user_authenticated) {
             }
         }
         
-        // Funci�n para limpiar campos del formulario
+        // Funci�n para limpiar campos del formulario (tras cédula ya registrada)
         function clearFormFields() {
+            const nac = document.getElementById('nacionalidad');
+            if (nac) nac.value = '';
             document.getElementById('cedula').value = '';
             document.getElementById('nombre').value = '';
             document.getElementById('sexo').value = '';
             document.getElementById('fechnac').value = '';
-            document.getElementById('cedula').focus();
+            if (nac) nac.focus();
         }
     </script>
 </body>
