@@ -71,6 +71,146 @@ if ($action === 'delete' && $id) {
     exit;
 }
 
+// Crear nueva invitación (POST): procesar en el mismo entry point para mantener sesión
+$tb_inv = defined('TABLE_INVITATIONS') ? TABLE_INVITATIONS : 'invitaciones';
+if ($action === 'create' && $_SERVER['REQUEST_METHOD'] === 'POST') {
+    try {
+        CSRF::validate();
+    } catch (Throwable $e) {
+        header('Location: index.php?page=invitations&error=' . urlencode('Sesión inválida o token expirado.'));
+        exit;
+    }
+    $torneo_id = (int)($_POST['torneo_id'] ?? 0);
+    $club_id = (int)($_POST['club_id'] ?? 0);
+    $acceso1 = trim((string)($_POST['acceso1'] ?? ''));
+    $acceso2 = trim((string)($_POST['acceso2'] ?? ''));
+    $err = null;
+    if (!$torneo_id) {
+        $err = 'Debe seleccionar un torneo';
+    } elseif (!$club_id) {
+        $err = 'Debe seleccionar un club';
+    } elseif ($acceso1 === '' || $acceso2 === '') {
+        $err = 'Las fechas de acceso son requeridas';
+    } elseif ($acceso1 > $acceso2) {
+        $err = 'La fecha de inicio no puede ser mayor que la fecha fin';
+    }
+    if (!$err) {
+        $stmt = DB::pdo()->prepare("SELECT id FROM {$tb_inv} WHERE torneo_id = ? AND club_id = ?");
+        $stmt->execute([$torneo_id, $club_id]);
+        if ($stmt->fetch()) {
+            $err = 'Ya existe una invitación para este torneo y club';
+        }
+    }
+    if (!$err && !Auth::canAccessTournament($torneo_id)) {
+        $err = 'No tiene permiso para crear invitaciones en este torneo';
+    }
+    if ($err) {
+        header('Location: index.php?page=invitations&action=new&torneo_id=' . $torneo_id . '&error=' . urlencode($err));
+        exit;
+    }
+    $stmt = DB::pdo()->prepare("SELECT id, nombre, delegado, telefono, email FROM clubes WHERE id = ? AND estatus = 1");
+    $stmt->execute([$club_id]);
+    $club = $stmt->fetch(PDO::FETCH_ASSOC);
+    $inv_delegado = $club['delegado'] ?? null;
+    $inv_email = $club['email'] ?? null;
+    $club_tel = $club['telefono'] ?? null;
+    $token = bin2hex(random_bytes(32));
+    if (strlen($token) !== 64) {
+        header('Location: index.php?page=invitations&action=new&torneo_id=' . $torneo_id . '&error=' . urlencode('Error al generar token.'));
+        exit;
+    }
+    $usuario_creador = (Auth::user() && isset(Auth::user()['id'])) ? (string)Auth::user()['id'] : '';
+    $admin_club_id = Auth::id();
+    $cols_inv = DB::pdo()->query("SHOW COLUMNS FROM {$tb_inv}")->fetchAll(PDO::FETCH_COLUMN);
+    $campos = [
+        'torneo_id' => $torneo_id,
+        'club_id' => $club_id,
+        'invitado_delegado' => $inv_delegado,
+        'invitado_email' => $inv_email,
+        'acceso1' => $acceso1,
+        'acceso2' => $acceso2,
+        'usuario' => $usuario_creador,
+        'club_email' => $inv_email,
+        'club_telefono' => $club_tel,
+        'club_delegado' => $inv_delegado,
+        'token' => $token,
+        'estado' => 'activa',
+    ];
+    foreach ($cols_inv as $col_name) {
+        if (strtolower((string)$col_name) === 'admin_club_id') {
+            $campos[$col_name] = $admin_club_id;
+            break;
+        }
+    }
+    $cols = array_values(array_intersect($cols_inv, array_keys($campos)));
+    $vals = array_map(function ($c) use ($campos) { return $campos[$c]; }, $cols);
+    if (!empty($cols)) {
+        $placeholders = implode(', ', array_fill(0, count($cols), '?'));
+        $stmt = DB::pdo()->prepare("INSERT INTO {$tb_inv} (" . implode(', ', $cols) . ") VALUES ({$placeholders})");
+        $stmt->execute($vals);
+    } else {
+        $stmt = DB::pdo()->prepare("INSERT INTO {$tb_inv} (torneo_id, club_id, acceso1, acceso2, usuario, token, estado) VALUES (?, ?, ?, ?, ?, ?, 'activa')");
+        $stmt->execute([$torneo_id, $club_id, $acceso1, $acceso2, $usuario_creador, $token]);
+    }
+    header('Location: index.php?page=invitations&filter_torneo=' . $torneo_id . '&success=1&msg=' . urlencode('Invitación creada.'));
+    exit;
+}
+
+// Guardar edición de invitación (POST): mismo entry point para mantener sesión
+if ($action === 'edit_save' && $_SERVER['REQUEST_METHOD'] === 'POST') {
+    try {
+        CSRF::validate();
+    } catch (Throwable $e) {
+        header('Location: index.php?page=invitations&error=' . urlencode('Sesión inválida o token expirado.'));
+        exit;
+    }
+    $edit_id = (int)($_POST['id'] ?? 0);
+    if ($edit_id <= 0) {
+        header('Location: index.php?page=invitations&error=' . urlencode('ID de invitación inválido.'));
+        exit;
+    }
+    $acceso1 = trim((string)($_POST['acceso1'] ?? ''));
+    $acceso2 = trim((string)($_POST['acceso2'] ?? ''));
+    $usuario = trim((string)($_POST['usuario'] ?? ''));
+    $estado = $_POST['estado'] ?? 'activa';
+    $invitado_delegado = trim((string)($_POST['invitado_delegado'] ?? ''));
+    $invitado_email = trim((string)($_POST['invitado_email'] ?? ''));
+    $filter_torneo = (int)($_POST['filter_torneo'] ?? $_GET['filter_torneo'] ?? 0);
+    if ($acceso1 === '' || $acceso2 === '' || $acceso1 > $acceso2) {
+        header('Location: index.php?page=invitations&action=edit&id=' . $edit_id . '&error=' . urlencode('Fechas de acceso inválidas.'));
+        exit;
+    }
+    $stmt = DB::pdo()->prepare("SELECT id, torneo_id FROM {$tb_inv} WHERE id = ?");
+    $stmt->execute([$edit_id]);
+    $inv = $stmt->fetch(PDO::FETCH_ASSOC);
+    if (!$inv || !Auth::canModifyTournament((int)$inv['torneo_id'])) {
+        header('Location: index.php?page=invitations&error=' . urlencode('No tiene permiso para editar esta invitación.'));
+        exit;
+    }
+    $cols = DB::pdo()->query("SHOW COLUMNS FROM {$tb_inv}")->fetchAll(PDO::FETCH_COLUMN);
+    $set = "acceso1 = ?, acceso2 = ?, usuario = ?, estado = ?";
+    $params = [$acceso1, $acceso2, $usuario, $estado];
+    if (in_array('invitado_delegado', $cols, true)) {
+        $set .= ", invitado_delegado = ?";
+        $params[] = $invitado_delegado === '' ? null : $invitado_delegado;
+    }
+    if (in_array('invitado_email', $cols, true)) {
+        $set .= ", invitado_email = ?";
+        $params[] = $invitado_email === '' ? null : $invitado_email;
+    }
+    $params[] = $edit_id;
+    $stmt = DB::pdo()->prepare("UPDATE {$tb_inv} SET {$set} WHERE id = ?");
+    $stmt->execute($params);
+    $redirect = "index.php?page=invitations&msg=" . urlencode("Invitación actualizada.");
+    if (!empty($_POST['return_to']) && $_POST['return_to'] === 'invitacion_clubes' && !empty($_POST['torneo_id'])) {
+        $redirect = "index.php?page=invitacion_clubes&torneo_id=" . (int)$_POST['torneo_id'] . "&success=1&msg=" . urlencode("Invitación actualizada.");
+    } elseif ($filter_torneo > 0) {
+        $redirect .= "&filter_torneo=" . $filter_torneo;
+    }
+    header('Location: ' . $redirect);
+    exit;
+}
+
 // Obtener datos para edici�n
 $invitation = null;
 if ($action === 'edit' && $id) {
@@ -112,38 +252,67 @@ $tournaments_list = [];
 $clubs_list = [];
 if (in_array($action, ['new', 'edit'])) {
     try {
-        // Filtrar torneos seg�n el rol del usuario
-        $tournament_filter = Auth::getTournamentFilterForRole('');
-        $where_clause = "WHERE estatus = 1";
+        // Filtrar torneos según el rol del usuario (alias t para el filtro)
+        $tournament_filter = Auth::getTournamentFilterForRole('t');
+        $where_clause = "WHERE t.estatus = 1";
         
         if (!empty($tournament_filter['where'])) {
             $where_clause .= " AND " . $tournament_filter['where'];
         }
         
         $stmt = DB::pdo()->prepare("
-            SELECT id, nombre, fechator,
-                   CASE WHEN fechator < CURDATE() THEN 1 ELSE 0 END as pasado
-            FROM tournaments 
+            SELECT t.id, t.nombre, t.fechator,
+                   CASE WHEN t.fechator < CURDATE() THEN 1 ELSE 0 END as pasado
+            FROM tournaments t
             {$where_clause}
-            ORDER BY fechator DESC
+            ORDER BY t.fechator DESC
         ");
         $stmt->execute($tournament_filter['params']);
         $tournaments_list = $stmt->fetchAll(PDO::FETCH_ASSOC);
-        
-        $stmt = DB::pdo()->query("SELECT id, nombre FROM clubes WHERE estatus = 1 ORDER BY nombre ASC");
-        $clubs_list = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        $tb_inv = defined('TABLE_INVITATIONS') ? TABLE_INVITATIONS : 'invitaciones';
+        $torneo_id_clubs = (int)($_GET['torneo_id'] ?? $_GET['filter_torneo'] ?? 0);
+        if ($torneo_id_clubs > 0) {
+            $stmt = DB::pdo()->prepare("
+                SELECT c.id, c.nombre
+                FROM clubes c
+                WHERE c.estatus = 1
+                  AND c.id NOT IN (SELECT club_id FROM {$tb_inv} WHERE torneo_id = ?)
+                ORDER BY c.nombre ASC
+            ");
+            $stmt->execute([$torneo_id_clubs]);
+            $clubs_list = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        } else {
+            $stmt = DB::pdo()->query("SELECT id, nombre FROM clubes WHERE estatus = 1 ORDER BY nombre ASC");
+            $clubs_list = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        }
     } catch (Exception $e) {
         $error_message = "Error al cargar datos: " . $e->getMessage();
     }
 }
 
-// Obtener lista para vista de lista con paginaci�n Y FILTRO DE TORNEO
+// Obtener lista para vista de lista con paginaci�n. Torneo obligatorio desde panel (sin selector).
 $invitations_list = [];
 $pagination = null;
-$filter_torneo = $_GET['filter_torneo'] ?? '';
+$filter_torneo = $_GET['filter_torneo'] ?? $_GET['torneo_id'] ?? '';
 $stats = ['total' => 0, 'activas' => 0, 'expiradas' => 0, 'canceladas' => 0];
 
-// Validar que el admin_torneo solo filtre por torneos de su club
+// Acceso solo por panel de control: se requiere torneo_id en la URL
+if ($action === 'list' && empty($filter_torneo)) {
+    $dashboard = class_exists('AppHelpers') ? AppHelpers::dashboard('home') : 'index.php';
+    header('Location: ' . $dashboard . (isset($_GET['error']) ? '' : '?error=' . urlencode('Acceda a Invitaciones desde el Panel de Control de un torneo.')));
+    exit;
+}
+if ($action === 'new') {
+    $torneo_id_new = (int)($_GET['torneo_id'] ?? $_GET['filter_torneo'] ?? 0);
+    if ($torneo_id_new <= 0 || !Auth::canAccessTournament($torneo_id_new)) {
+        $dashboard = class_exists('AppHelpers') ? AppHelpers::dashboard('home') : 'index.php';
+        header('Location: ' . $dashboard . '?error=' . urlencode('Indique el torneo desde el Panel de Control.'));
+        exit;
+    }
+}
+
+// Validar que el admin tenga acceso al torneo
 if (!empty($filter_torneo)) {
     if (!Auth::canAccessTournament((int)$filter_torneo)) {
         header('Location: index.php?page=invitations&error=' . urlencode('No tiene permisos para acceder a este torneo'));
@@ -151,22 +320,60 @@ if (!empty($filter_torneo)) {
     }
 }
 
+// Reporte de pagos por invitación (torneo + club)
+$reportes_pago_list = [];
+$reporte_pagos_club_nombre = '';
+$reporte_pagos_torneo_nombre = '';
+$reporte_pagos_subtotal = 0;
+if ($action === 'reporte_pagos') {
+    $torneo_id_rp = (int)($_GET['torneo_id'] ?? 0);
+    $club_id_rp = (int)($_GET['club_id'] ?? 0);
+    $filter_torneo = $filter_torneo ?: (string)$torneo_id_rp;
+    if ($torneo_id_rp <= 0 || $club_id_rp <= 0 || !Auth::canAccessTournament($torneo_id_rp)) {
+        header('Location: index.php?page=invitations&filter_torneo=' . (int)$filter_torneo . '&error=' . urlencode('Parámetros inválidos para el reporte de pagos.'));
+        exit;
+    }
+    try {
+        $pdo = DB::pdo();
+        $stmt = $pdo->prepare("SELECT nombre FROM clubes WHERE id = ? LIMIT 1");
+        $stmt->execute([$club_id_rp]);
+        $reporte_pagos_club_nombre = $stmt->fetchColumn() ?: 'Club #' . $club_id_rp;
+        $stmt = $pdo->prepare("SELECT nombre FROM tournaments WHERE id = ? LIMIT 1");
+        $stmt->execute([$torneo_id_rp]);
+        $reporte_pagos_torneo_nombre = $stmt->fetchColumn() ?: 'Torneo #' . $torneo_id_rp;
+        $stmt = $pdo->prepare("
+            SELECT rpu.id, rpu.fecha, rpu.hora, rpu.tipo_pago, rpu.banco, rpu.referencia, rpu.cantidad_inscritos, rpu.monto, rpu.estatus,
+                   u.nombre as usuario_nombre, u.cedula as usuario_cedula
+            FROM reportes_pago_usuarios rpu
+            INNER JOIN inscritos i ON i.id = rpu.inscrito_id AND i.torneo_id = rpu.torneo_id
+            INNER JOIN usuarios u ON u.id = rpu.id_usuario
+            WHERE rpu.torneo_id = ? AND i.id_club = ?
+            ORDER BY rpu.fecha DESC, rpu.id DESC
+        ");
+        $stmt->execute([$torneo_id_rp, $club_id_rp]);
+        $reportes_pago_list = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        $reporte_pagos_subtotal = array_sum(array_column($reportes_pago_list, 'monto'));
+    } catch (Exception $e) {
+        $error_message = 'Error al cargar reporte de pagos: ' . $e->getMessage();
+    }
+}
+
 // Obtener lista de torneos para el filtro
 $tournaments_filter = [];
 try {
-    $tournament_filter = Auth::getTournamentFilterForRole('');
-    $where_clause = "";
+    $tournament_filter = Auth::getTournamentFilterForRole('t');
+    $where_clause = "WHERE t.estatus = 1";
     
     if (!empty($tournament_filter['where'])) {
-        $where_clause = "WHERE " . $tournament_filter['where'];
+        $where_clause .= " AND " . $tournament_filter['where'];
     }
     
     $stmt = DB::pdo()->prepare("
-        SELECT id, nombre, fechator,
-               CASE WHEN fechator < CURDATE() THEN 1 ELSE 0 END as pasado
-        FROM tournaments 
+        SELECT t.id, t.nombre, t.fechator,
+               CASE WHEN t.fechator < CURDATE() THEN 1 ELSE 0 END as pasado
+        FROM tournaments t
         {$where_clause}
-        ORDER BY fechator DESC
+        ORDER BY t.fechator DESC
     ");
     $stmt->execute($tournament_filter['params']);
     $tournaments_filter = $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -264,7 +471,7 @@ if ($action === 'list' && !empty($filter_torneo)) {
                         <i class="fas fa-arrow-left me-2"></i>Retorno al origen
                     </a>
                     <?php if ($action === 'list'): ?>
-                        <a href="index.php?page=invitations&action=new" class="btn btn-primary">
+                        <a href="index.php?page=invitations&action=new&torneo_id=<?= (int)$filter_torneo ?>" class="btn btn-primary">
                             <i class="fas fa-plus me-2"></i>Nueva Invitaci�n
                         </a>
                     <?php endif; ?>
@@ -303,48 +510,72 @@ if ($action === 'list' && !empty($filter_torneo)) {
     </div>
 </div>
 
-<?php if ($action === 'list'): ?>
-    <!-- Panel de Filtros -->
+<?php if ($action === 'reporte_pagos'): ?>
     <div class="card mb-4">
-        <div class="card-header bg-primary text-white">
-            <h5 class="card-title mb-0">
-                <i class="fas fa-filter me-2"></i>Filtrar Invitaciones por Torneo
-            </h5>
+        <div class="card-header bg-warning text-dark d-flex justify-content-between align-items-center">
+            <h5 class="mb-0"><i class="fas fa-money-bill-wave me-2"></i>Reporte de pagos — <?= htmlspecialchars($reporte_pagos_club_nombre) ?></h5>
+            <a href="index.php?page=invitations&filter_torneo=<?= (int)$filter_torneo ?>" class="btn btn-sm btn-outline-dark"><i class="fas fa-arrow-left me-1"></i>Volver a invitaciones</a>
         </div>
         <div class="card-body">
-            <form method="GET" action="index.php" id="filterForm">
-                <input type="hidden" name="page" value="invitations">
-                
-                <div class="row g-3">
-                    <div class="col-md-10">
-                        <label class="form-label"><i class="fas fa-trophy me-1"></i>Seleccione un Torneo *</label>
-                        <select name="filter_torneo" class="form-select form-select-lg" id="filterTorneo" onchange="this.form.submit()">
-                            <option value="">-- Seleccione un torneo para ver las invitaciones --</option>
-                            <?php foreach ($tournaments_filter as $t): ?>
-                                <option value="<?= $t['id'] ?>" <?= $filter_torneo == $t['id'] ? 'selected' : '' ?>>
-                                    <?= htmlspecialchars($t['nombre']) ?> - <?= date('d/m/Y', strtotime($t['fechator'])) ?>
-                                </option>
+            <p class="text-muted small mb-3">Torneo: <strong><?= htmlspecialchars($reporte_pagos_torneo_nombre) ?></strong></p>
+            <?php if (empty($reportes_pago_list)): ?>
+                <p class="mb-0 text-muted">No hay reportes de pago registrados para este club en este torneo.</p>
+            <?php else: ?>
+                <div class="table-responsive">
+                    <table class="table table-sm table-bordered table-hover">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Jugador / Inscrito</th>
+                                <th>Banco</th>
+                                <th>Comprobante</th>
+                                <th>Fecha</th>
+                                <th>Cat. insc</th>
+                                <th>Total</th>
+                                <th>Validación</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <?php foreach ($reportes_pago_list as $rp): ?>
+                                <tr>
+                                    <td><?= htmlspecialchars($rp['usuario_nombre'] ?? '') ?> (<?= htmlspecialchars($rp['usuario_cedula'] ?? '') ?>)</td>
+                                    <td><?= htmlspecialchars($rp['banco'] ?? '-') ?></td>
+                                    <td><?= htmlspecialchars($rp['referencia'] ?? '-') ?></td>
+                                    <td><?= htmlspecialchars(isset($rp['fecha']) ? date('d/m/Y', strtotime($rp['fecha'])) : '-') ?> <?= htmlspecialchars($rp['hora'] ?? '') ?></td>
+                                    <td><?= (int)($rp['cantidad_inscritos'] ?? 1) ?></td>
+                                    <td>$<?= number_format((float)($rp['monto'] ?? 0), 2) ?></td>
+                                    <td>
+                                        <?php $est = $rp['estatus'] ?? ''; ?>
+                                        <?php if ($est === 'confirmado'): ?><span class="badge bg-success">Confirmado</span>
+                                        <?php elseif ($est === 'rechazado'): ?><span class="badge bg-danger">Rechazado</span>
+                                        <?php else: ?><span class="badge bg-warning">Pendiente</span><?php endif; ?>
+                                    </td>
+                                </tr>
                             <?php endforeach; ?>
-                        </select>
-                    </div>
-                    
-                    <div class="col-md-2 d-flex align-items-end">
-                        <?php if (!empty($filter_torneo)): ?>
-                            <a href="index.php?page=invitations" class="btn btn-secondary w-100">
-                                <i class="fas fa-times me-2"></i>Limpiar
-                            </a>
-                        <?php endif; ?>
-                    </div>
-                </div>
-            </form>
-            
-            <?php if (empty($filter_torneo)): ?>
-                <div class="alert alert-info mt-3 mb-0">
-                    <i class="fas fa-info-circle me-2"></i>
-                    <strong>Por favor seleccione un torneo</strong> para ver las invitaciones correspondientes.
+                        </tbody>
+                        <tfoot class="table-light">
+                            <tr>
+                                <th colspan="5" class="text-end">Subtotal club invitado:</th>
+                                <th>$<?= number_format($reporte_pagos_subtotal, 2) ?></th>
+                                <th></th>
+                            </tr>
+                        </tfoot>
+                    </table>
                 </div>
             <?php endif; ?>
         </div>
+    </div>
+<?php elseif ($action === 'list'): ?>
+    <?php
+    $torneo_nombre_filtro = '';
+    foreach ($tournaments_filter as $t) {
+        if ((int)$t['id'] === (int)$filter_torneo) {
+            $torneo_nombre_filtro = $t['nombre'] . ' (' . date('d/m/Y', strtotime($t['fechator'])) . ')';
+            break;
+        }
+    }
+    ?>
+    <div class="alert alert-secondary mb-3 py-2">
+        <i class="fas fa-trophy me-2"></i><strong>Torneo:</strong> <?= htmlspecialchars($torneo_nombre_filtro ?: 'Torneo #' . (int)$filter_torneo) ?>
     </div>
     
     <?php if (!empty($filter_torneo)): ?>
@@ -390,7 +621,7 @@ if ($action === 'list' && !empty($filter_torneo)) {
             <?php if (empty($invitations_list)): ?>
                 <div class="alert alert-info">
                     <i class="fas fa-info-circle me-2"></i>No hay invitaciones registradas.
-                    <a href="index.php?page=invitations&action=new" class="alert-link">Crear la primera invitaci�n</a>
+                    <a href="index.php?page=invitations&action=new&torneo_id=<?= (int)$filter_torneo ?>" class="alert-link">Crear la primera invitaci�n</a>
                 </div>
             <?php else: ?>
                 <div class="table-responsive">
@@ -479,9 +710,6 @@ if ($action === 'list' && !empty($filter_torneo)) {
                                         $url_telegram = 'https://t.me/share/url?url=' . rawurlencode($url_acceso) . '&text=' . rawurlencode($msg_invitacion);
                                         ?>
                                         <div class="btn-group" role="group">
-                                            <a href="<?= htmlspecialchars($url_acceso) ?>" class="btn btn-sm btn-success" target="_blank" rel="noopener noreferrer" title="Abrir formulario de registro del delegado de club invitado (acceso permitido para admin de este torneo)">
-                                                <i class="fas fa-user-edit me-1"></i>Registro delegado
-                                            </a>
                                             <a href="<?= htmlspecialchars($url_inscripciones) ?>" class="btn btn-sm btn-primary" target="_blank" rel="noopener noreferrer" title="Abrir formulario de inscripciones (enlace para el club)">
                                                 <i class="fas fa-user-plus"></i>
                                             </a>
@@ -493,9 +721,9 @@ if ($action === 'list' && !empty($filter_torneo)) {
                                             <a href="<?= htmlspecialchars($url_tarjeta) ?>" class="btn btn-sm btn-outline-secondary" target="_blank" rel="noopener noreferrer" title="Ver tarjeta digital">
                                                 <i class="fas fa-id-card"></i>
                                             </a>
-                                            <a href="../modules/invitations/inscripciones/login.php?token=<?= htmlspecialchars($item['token']) ?>" 
-                                               class="btn btn-sm btn-outline-success" title="Acceder como invitado">
-                                                <i class="fas fa-sign-in-alt"></i>
+                                            <a href="index.php?page=invitations&action=reporte_pagos&torneo_id=<?= (int)$item['torneo_id'] ?>&club_id=<?= (int)$item['club_id'] ?>&filter_torneo=<?= (int)$filter_torneo ?>" 
+                                               class="btn btn-sm btn-outline-warning" title="Ver reporte de pagos">
+                                                <i class="fas fa-money-bill-wave"></i>
                                             </a>
                                             <a href="index.php?page=invitations&action=edit&id=<?= $item['id'] ?>&filter_torneo=<?= $filter_torneo ?>" 
                                                class="btn btn-sm btn-outline-primary" title="Editar">
@@ -538,7 +766,7 @@ if ($action === 'list' && !empty($filter_torneo)) {
             </h5>
         </div>
         <div class="card-body">
-            <form method="POST" action="../modules/invitations/<?= $action === 'edit' ? 'edit' : 'create' ?>.php">
+            <form method="POST" action="index.php?page=invitations&action=<?= $action === 'edit' ? 'edit_save' : 'create' ?>">
                 <?= CSRF::input(); ?>
                 <?php if ($action === 'edit'): ?>
                     <input type="hidden" name="id" value="<?= (int)$invitation['id'] ?>">
@@ -554,21 +782,35 @@ if ($action === 'list' && !empty($filter_torneo)) {
                 <div class="row">
                     <div class="col-md-6">
                         <div class="mb-3">
-                            <label for="torneo_id" class="form-label">Torneo *</label>
-                            <select class="form-select" id="torneo_id" name="torneo_id" required <?= $action === 'edit' ? 'disabled' : '' ?>>
-                                <option value="">Seleccionar torneo...</option>
-                                <?php foreach ($tournaments_list as $tournament): ?>
-                                    <option value="<?= (int)$tournament['id'] ?>" 
-                                            data-fecha="<?= $tournament['fechator'] ?>"
-                                            <?= ($action === 'edit' && $invitation['torneo_id'] == $tournament['id']) ? 'selected' : '' ?>>
-                                        <?= htmlspecialchars($tournament['nombre']) ?> - <?= date('d/m/Y', strtotime($tournament['fechator'])) ?>
-                                    </option>
-                                <?php endforeach; ?>
-                            </select>
-                            <?php if ($action === 'edit'): ?>
-                                <input type="hidden" name="torneo_id" value="<?= (int)$invitation['torneo_id'] ?>">
-                                <small class="text-muted">El torneo no puede cambiarse al editar</small>
-                            <?php endif; ?>
+                            <label class="form-label">Torneo</label>
+                            <?php
+                            $torneo_id_form = $action === 'edit' ? (int)$invitation['torneo_id'] : (int)($_GET['torneo_id'] ?? $_GET['filter_torneo'] ?? 0);
+                            $torneo_nombre_form = '';
+                            foreach ($tournaments_list as $tournament) {
+                                if ((int)$tournament['id'] === $torneo_id_form) {
+                                    $torneo_nombre_form = $tournament['nombre'] . ' - ' . date('d/m/Y', strtotime($tournament['fechator']));
+                                    break;
+                                }
+                            }
+                            if ($torneo_nombre_form === '' && $action === 'edit' && !empty($invitation['torneo_nombre'])) {
+                                $torneo_nombre_form = $invitation['torneo_nombre'];
+                            }
+                            $default_acceso1 = '';
+                            $default_acceso2 = '';
+                            if ($action === 'new' && $torneo_id_form > 0) {
+                                foreach ($tournaments_list as $tournament) {
+                                    if ((int)$tournament['id'] === $torneo_id_form && !empty($tournament['fechator'])) {
+                                        $f = new DateTime($tournament['fechator']);
+                                        $default_acceso1 = (clone $f)->modify('-7 days')->format('Y-m-d');
+                                        $default_acceso2 = (clone $f)->modify('-1 day')->format('Y-m-d');
+                                        break;
+                                    }
+                                }
+                            }
+                            ?>
+                            <input type="hidden" name="torneo_id" value="<?= $torneo_id_form ?>">
+                            <div class="form-control-plaintext fw-semibold"><?= htmlspecialchars($torneo_nombre_form ?: 'Torneo #' . $torneo_id_form) ?></div>
+                            <small class="text-muted">Definido por el panel de control del torneo</small>
                         </div>
                         
                         <div class="mb-3">
@@ -585,6 +827,11 @@ if ($action === 'list' && !empty($filter_torneo)) {
                             <?php if ($action === 'edit'): ?>
                                 <input type="hidden" name="club_id" value="<?= (int)$invitation['club_id'] ?>">
                                 <small class="text-muted">El club no puede cambiarse al editar</small>
+                            <?php elseif ($action === 'new'): ?>
+                                <small class="text-muted">Solo se muestran clubes que aún no están invitados a este torneo.</small>
+                                <?php if (empty($clubs_list)): ?>
+                                    <div class="alert alert-info mt-2 mb-0">No hay más clubes disponibles para invitar; todos los clubes activos ya tienen invitación en este torneo.</div>
+                                <?php endif; ?>
                             <?php endif; ?>
                         </div>
                     </div>
@@ -593,14 +840,14 @@ if ($action === 'list' && !empty($filter_torneo)) {
                         <div class="mb-3">
                             <label for="acceso1" class="form-label">Fecha Inicio de Acceso *</label>
                             <input type="date" class="form-control" id="acceso1" name="acceso1" 
-                                   value="<?= htmlspecialchars($action === 'edit' ? $invitation['acceso1'] : '') ?>" required>
+                                   value="<?= htmlspecialchars($action === 'edit' ? $invitation['acceso1'] : ($default_acceso1 ?? '')) ?>" required>
                             <small class="text-muted">Desde cu�ndo el club puede inscribir jugadores</small>
                         </div>
                         
                         <div class="mb-3">
                             <label for="acceso2" class="form-label">Fecha Fin de Acceso *</label>
                             <input type="date" class="form-control" id="acceso2" name="acceso2" 
-                                   value="<?= htmlspecialchars($action === 'edit' ? $invitation['acceso2'] : '') ?>" required>
+                                   value="<?= htmlspecialchars($action === 'edit' ? $invitation['acceso2'] : ($default_acceso2 ?? '')) ?>" required>
                             <small class="text-muted">Hasta cu�ndo el club puede inscribir jugadores</small>
                         </div>
                         
@@ -642,6 +889,8 @@ if ($action === 'list' && !empty($filter_torneo)) {
                         $back_url = 'index.php?page=invitacion_clubes&torneo_id=' . (int)$_GET['torneo_id'];
                     } elseif ($action === 'edit' && isset($_GET['filter_torneo'])) {
                         $back_url .= '&filter_torneo=' . (int)$_GET['filter_torneo'];
+                    } elseif ($action === 'new' && $torneo_id_form > 0) {
+                        $back_url .= '&filter_torneo=' . $torneo_id_form;
                     }
                     ?>
                     <a href="<?= htmlspecialchars($back_url) ?>" class="btn btn-secondary">
@@ -671,24 +920,5 @@ document.querySelectorAll('.btn-copy-inscription-link').forEach(function(btn) {
     });
 });
 
-// Auto-calcular fechas basado en el torneo seleccionado
-document.getElementById('torneo_id')?.addEventListener('change', function() {
-    const selected = this.options[this.selectedIndex];
-    const fechaTorneo = selected.dataset.fecha;
-    
-    if (fechaTorneo) {
-        // Calcular acceso1 (7 d�as antes del torneo)
-        const fecha = new Date(fechaTorneo);
-        const acceso1 = new Date(fecha);
-        acceso1.setDate(acceso1.getDate() - 7);
-        
-        // Calcular acceso2 (1 d�a antes del torneo)
-        const acceso2 = new Date(fecha);
-        acceso2.setDate(acceso2.getDate() - 1);
-        
-        document.getElementById('acceso1').value = acceso1.toISOString().split('T')[0];
-        document.getElementById('acceso2').value = acceso2.toISOString().split('T')[0];
-    }
-});
 </script>
 

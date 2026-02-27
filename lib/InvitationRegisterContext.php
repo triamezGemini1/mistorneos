@@ -90,6 +90,8 @@ class InvitationRegisterContext
         try {
             $stmt = DB::pdo()->prepare("
                 SELECT i.*, t.nombre as tournament_name, t.fechator, t.clase, t.modalidad, t.club_responsable,
+                       COALESCE(t.es_evento_masivo, 0) AS es_evento_masivo,
+                       t.cuenta_id,
                        c.nombre as club_name, c.direccion, c.delegado, c.telefono, c.email, c.logo as club_logo,
                        COALESCE(c.delegado_user_id, 0) AS club_delegado_user_id
                 FROM {$tb_inv} i
@@ -101,6 +103,91 @@ class InvitationRegisterContext
             $invitation_data = $stmt->fetch();
 
             if (!$invitation_data) {
+                $tid_int = (int) $torneo_id;
+                $current_user = Auth::user();
+                $is_admin = $current_user && in_array($current_user['role'], ['admin_general', 'admin_torneo', 'admin_club'], true);
+                $can_view_as_admin = $tid_int > 0 && $is_admin && Auth::canAccessTournament($tid_int);
+                if ($can_view_as_admin) {
+                    $pdo = DB::pdo();
+                    $stmt_t = $pdo->prepare("SELECT id, nombre, fechator, clase, modalidad, club_responsable, COALESCE(es_evento_masivo, 0) AS es_evento_masivo, cuenta_id FROM tournaments WHERE id = ? LIMIT 1");
+                    $stmt_t->execute([$tid_int]);
+                    $tournament_row = $stmt_t->fetch(PDO::FETCH_ASSOC);
+                    $stmt_c = $pdo->prepare("SELECT id, nombre, direccion, delegado, telefono, email, logo FROM clubes WHERE id = ? LIMIT 1");
+                    $stmt_c->execute([(int) $club_id]);
+                    $club_row = $stmt_c->fetch(PDO::FETCH_ASSOC);
+                    if ($tournament_row && $club_row) {
+                        $organizer_id = (int) ($tournament_row['club_responsable'] ?? 0);
+                        $organizer_club_data = null;
+                        if ($organizer_id > 0) {
+                            $st_o = $pdo->prepare("SELECT nombre, logo, direccion, delegado, telefono, email FROM clubes WHERE id = ? LIMIT 1");
+                            $st_o->execute([$organizer_id]);
+                            $organizer_club_data = $st_o->fetch(PDO::FETCH_ASSOC);
+                        }
+                        $tournament_data = [
+                            'id' => $tournament_row['id'],
+                            'nombre' => $tournament_row['nombre'],
+                            'fechator' => $tournament_row['fechator'],
+                            'clase' => $tournament_row['clase'] ?? '',
+                            'modalidad' => $tournament_row['modalidad'] ?? '',
+                            'es_evento_masivo' => (int)($tournament_row['es_evento_masivo'] ?? 0),
+                            'cuenta_id' => (int)($tournament_row['cuenta_id'] ?? 0)
+                        ];
+                        $club_data = [
+                            'id' => $club_row['id'],
+                            'nombre' => $club_row['nombre'],
+                            'direccion' => $club_row['direccion'] ?? '',
+                            'delegado' => $club_row['delegado'] ?? '',
+                            'telefono' => $club_row['telefono'] ?? '',
+                            'email' => $club_row['email'] ?? '',
+                            'logo' => $club_row['logo'] ?? null
+                        ];
+                        $existing_registrations = [];
+                        try {
+                            $st_ins = $pdo->prepare("
+                                SELECT i.id, i.id_usuario, i.fecha_inscripcion as created_at,
+                                       u.cedula, u.nombre, u.sexo, u.username,
+                                       COALESCE(u.celular, '') as celular,
+                                       u.email
+                                FROM inscritos i
+                                JOIN usuarios u ON i.id_usuario = u.id
+                                WHERE i.torneo_id = ? AND i.id_club = ?
+                                ORDER BY i.fecha_inscripcion DESC
+                            ");
+                            $st_ins->execute([$tid_int, (int) $club_id]);
+                            $existing_registrations = $st_ins->fetchAll(PDO::FETCH_ASSOC);
+                        } catch (Throwable $e) {
+                            // ignorar
+                        }
+                        $base = rtrim(class_exists('AppHelpers') ? AppHelpers::getPublicUrl() : ($GLOBALS['APP_CONFIG']['app']['base_url'] ?? ''), '/');
+                        $url_retorno = ($base !== '') ? $base . '/index.php?page=invitations' : 'index.php?page=invitations';
+                        $is_admin_general = $current_user && $current_user['role'] === 'admin_general';
+                        $is_admin_torneo = $current_user && $current_user['role'] === 'admin_torneo';
+                        $is_admin_club = $current_user && $current_user['role'] === 'admin_club';
+                        return self::buildReturn(
+                            '',
+                            $success_message,
+                            false,
+                            null,
+                            $tournament_data,
+                            $club_data,
+                            $organizer_club_data ?: null,
+                            true,
+                            $is_admin_general,
+                            $is_admin_torneo,
+                            $is_admin_club,
+                            false,
+                            true,
+                            $existing_registrations,
+                            $torneo_id,
+                            $club_id,
+                            $token,
+                            $base,
+                            $url_retorno,
+                            'Volver a Invitaciones',
+                            $current_user
+                        );
+                    }
+                }
                 $error_message = "Invitación no válida";
                 $error_acceso = true;
                 return self::buildReturn(
@@ -180,7 +267,9 @@ class InvitationRegisterContext
                     'nombre' => $invitation_data['tournament_name'],
                     'fechator' => $invitation_data['fechator'],
                     'clase' => $invitation_data['clase'],
-                    'modalidad' => $invitation_data['modalidad']
+                    'modalidad' => $invitation_data['modalidad'],
+                    'es_evento_masivo' => (int)($invitation_data['es_evento_masivo'] ?? 0),
+                    'cuenta_id' => (int)($invitation_data['cuenta_id'] ?? 0)
                 ];
                 $club_data = [
                     'id' => $invitation_data['club_id'],
@@ -192,7 +281,7 @@ class InvitationRegisterContext
                     'logo' => $club_data_from_directorio['logo'] ?? $invitation_data['club_logo'] ?? null
                 ];
                 $inscripciones_abiertas = ($now >= $start_date && $now <= $end_date);
-            } elseif (!$is_admin_general && !$is_admin_torneo && $id_vinculado > 0 && (int)($current_user['id']) !== $id_vinculado) {
+            } elseif (!$is_admin_general && !$is_admin_torneo && !$is_admin_club && $id_vinculado > 0 && (int)($current_user['id']) !== $id_vinculado) {
                 $error_message = "Esta invitación ya está siendo gestionada por otro delegado.";
                 $error_acceso = true;
                 $invitation_data = null;
@@ -241,7 +330,9 @@ class InvitationRegisterContext
                     'nombre' => $invitation_data['tournament_name'],
                     'fechator' => $invitation_data['fechator'],
                     'clase' => $invitation_data['clase'],
-                    'modalidad' => $invitation_data['modalidad']
+                    'modalidad' => $invitation_data['modalidad'],
+                    'es_evento_masivo' => (int)($invitation_data['es_evento_masivo'] ?? 0),
+                    'cuenta_id' => (int)($invitation_data['cuenta_id'] ?? 0)
                 ];
                 $club_data = [
                     'id' => $invitation_data['club_id'],
@@ -312,6 +403,27 @@ class InvitationRegisterContext
                 }
             }
 
+            $reportes_pago_invitacion = [];
+            $reportes_pago_subtotal = 0;
+            if (!$error_acceso && (int)($tournament_data['es_evento_masivo'] ?? 0) && (int)($tournament_data['cuenta_id'] ?? 0)) {
+                try {
+                    $stmt = DB::pdo()->prepare("
+                        SELECT rpu.id, rpu.fecha, rpu.hora, rpu.tipo_pago, rpu.banco, rpu.referencia, rpu.cantidad_inscritos, rpu.monto, rpu.estatus,
+                               u.nombre as usuario_nombre, u.cedula as usuario_cedula
+                        FROM reportes_pago_usuarios rpu
+                        INNER JOIN inscritos i ON i.id = rpu.inscrito_id AND i.torneo_id = rpu.torneo_id
+                        INNER JOIN usuarios u ON u.id = rpu.id_usuario
+                        WHERE rpu.torneo_id = ? AND i.id_club = ?
+                        ORDER BY rpu.fecha DESC, rpu.id DESC
+                    ");
+                    $stmt->execute([$torneo_id, $club_id]);
+                    $reportes_pago_invitacion = $stmt->fetchAll(PDO::FETCH_ASSOC);
+                    $reportes_pago_subtotal = array_sum(array_column($reportes_pago_invitacion, 'monto'));
+                } catch (Throwable $e) {
+                    // ignorar
+                }
+            }
+
             $base = rtrim(class_exists('AppHelpers') ? AppHelpers::getPublicUrl() : ($GLOBALS['APP_CONFIG']['app']['base_url'] ?? ''), '/');
             $url_invitations = ($base !== '') ? $base . '/index.php?page=invitations' : 'index.php?page=invitations';
             $url_landing = ($base !== '') ? $base . '/' : '/';
@@ -340,7 +452,9 @@ class InvitationRegisterContext
                 $base,
                 $url_retorno,
                 $texto_retorno,
-                $current_user
+                $current_user,
+                $reportes_pago_invitacion,
+                $reportes_pago_subtotal
             );
         } catch (Throwable $e) {
             $error_message = "Error al validar invitación: " . $e->getMessage();
@@ -383,11 +497,13 @@ class InvitationRegisterContext
         array $existing_registrations,
         $torneo_id,
         $club_id,
-        string         $token,
+        string $token,
         string $base = '',
         string $url_retorno = '',
         string $texto_retorno = 'Volver al inicio',
-        $current_user = null
+        $current_user = null,
+        array $reportes_pago_invitacion = [],
+        float $reportes_pago_subtotal = 0.0
     ): array {
         return [
             'error_message' => $error_message,
@@ -411,6 +527,8 @@ class InvitationRegisterContext
             'club_id' => $club_id,
             'token' => $token,
             'current_user' => $current_user,
+            'reportes_pago_invitacion' => $reportes_pago_invitacion,
+            'reportes_pago_subtotal' => $reportes_pago_subtotal,
         ];
     }
 }

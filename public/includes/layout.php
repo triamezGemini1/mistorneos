@@ -233,30 +233,6 @@ if (in_array($user['role'], ['admin_club', 'admin_general', 'admin_torneo'], tru
             <span class="nav-text">Cuentas Bancarias</span>
           </a>
         </li>
-        <li class="mb-2">
-          <a href="<?= htmlspecialchars($dashboard_href('reportes_pago_usuarios')) ?>" class="nav-link <?= $current_page === 'reportes_pago_usuarios' ? 'active' : '' ?>">
-            <i class="fas fa-money-bill-wave me-3"></i>
-            <span class="nav-text">Reportes de Pago</span>
-            <?php
-            try {
-                $org_id_menu = class_exists('Auth') ? Auth::getUserOrganizacionId() : null;
-                if ($org_id_menu) {
-                    $stmt_p = DB::pdo()->prepare("SELECT COUNT(*) FROM reportes_pago_usuarios rpu INNER JOIN tournaments t ON rpu.torneo_id = t.id WHERE rpu.estatus = 'pendiente' AND t.club_responsable = ?");
-                    $stmt_p->execute([$org_id_menu]);
-                    $pendientes_pagos = $stmt_p->fetchColumn();
-                } else {
-                    $pendientes_pagos = 0;
-                }
-                if ($pendientes_pagos > 0):
-            ?>
-              <span class="badge bg-warning rounded-pill ms-2"><?= $pendientes_pagos ?></span>
-            <?php
-                endif;
-            } catch (Exception $e) {}
-            ?>
-          </a>
-        </li>
-        
         <!-- Comentarios -->
         <li class="mb-2">
           <a href="<?= htmlspecialchars($dashboard_href('comments_public')) ?>" class="nav-link <?= $current_page === 'comments_public' ? 'active' : '' ?>">
@@ -480,24 +456,6 @@ if (in_array($user['role'], ['admin_club', 'admin_general', 'admin_torneo'], tru
           <a href="<?= htmlspecialchars($dashboard_href('notificaciones_masivas')) ?>" class="nav-link <?= $current_page === 'notificaciones_masivas' ? 'active' : '' ?>">
             <i class="fas fa-bell me-3"></i>
             <span class="nav-text">Notificaciones</span>
-          </a>
-        </li>
-        <li class="mb-2">
-          <a href="<?= htmlspecialchars($dashboard_href('reportes_pago_usuarios')) ?>" class="nav-link <?= $current_page === 'reportes_pago_usuarios' ? 'active' : '' ?>">
-            <i class="fas fa-money-bill-wave me-3"></i>
-            <span class="nav-text">Reportes de Pago</span>
-            <?php
-            try {
-                $pendientes_pagos = DB::pdo()->query("SELECT COUNT(*) FROM reportes_pago_usuarios WHERE estatus = 'pendiente'")->fetchColumn();
-                if ($pendientes_pagos > 0):
-            ?>
-              <span class="badge bg-warning rounded-pill ms-2"><?= $pendientes_pagos ?></span>
-            <?php
-                endif;
-            } catch (Exception $e) {
-                // Ignorar error si la tabla no existe aún
-            }
-            ?>
           </a>
         </li>
         <li class="mb-2">

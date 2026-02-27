@@ -604,7 +604,6 @@ $page_title = $page_title ?? 'Administrador de Torneos';
                     <i class="fas fa-images"></i>
                     <span>Galería de Fotos</span>
                 </a>
-                
                 <?php if (($current_user['role'] ?? '') === 'admin_club'): ?>
                 <!-- Invitaciones (solo admin_club, deshabilitadas si torneo iniciado o cerrado) -->
                 <?php if ($torneo_iniciado): ?>

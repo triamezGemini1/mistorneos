@@ -250,7 +250,65 @@
             <p class="mb-0">El período de inscripción ha finalizado o aún no ha comenzado. Consulte el listado a continuación.</p>
         </div>
         <?php endif; ?>
+        <?php $mostrar_reportes_lateral = !empty($tournament_data) && !empty($tournament_data['es_evento_masivo']) && !empty($tournament_data['cuenta_id']); ?>
         <div class="row">
+            <?php if ($mostrar_reportes_lateral): ?>
+            <!-- Parte lateral izquierda: Reportar pago + Reporte de pagos del club -->
+            <div class="col-md-4 mb-3">
+                <div class="card">
+                    <div class="card-header bg-warning text-dark py-2">
+                        <strong><i class="fas fa-money-bill-wave me-1"></i>Pagos</strong>
+                    </div>
+                    <div class="card-body py-2">
+                        <?php $url_reportar_pago_izq = (isset($base) && $base !== '' ? rtrim($base, '/') . '/' : '') . 'reportar_pago_evento_masivo.php?torneo_id=' . (int)$torneo_id; ?>
+                        <a href="<?= htmlspecialchars($url_reportar_pago_izq) ?>" class="btn btn-success btn-sm w-100 mb-2" target="_blank" rel="noopener noreferrer">
+                            <i class="fas fa-money-bill-wave me-1"></i>Reportar pago
+                        </a>
+                        <h6 class="small text-muted mb-1">Club invitado: <?= htmlspecialchars($club_data['nombre'] ?? '') ?></h6>
+                        <?php if (empty($reportes_pago_invitacion ?? [])): ?>
+                            <p class="small text-muted mb-0">Sin reportes de pago aún.</p>
+                        <?php else: ?>
+                            <div class="table-responsive">
+                                <table class="table table-sm table-bordered small mb-0">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th>Jugador</th>
+                                            <th>Banco</th>
+                                            <th>Comp.</th>
+                                            <th>Fecha</th>
+                                            <th>Cat.</th>
+                                            <th>Total</th>
+                                            <th>✓</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <?php foreach ($reportes_pago_invitacion as $rp): ?>
+                                            <tr>
+                                                <td title="<?= htmlspecialchars($rp['usuario_nombre'] ?? '') ?>"><?= htmlspecialchars(mb_substr($rp['usuario_nombre'] ?? '-', 0, 10)) ?></td>
+                                                <td><?= htmlspecialchars(mb_substr($rp['banco'] ?? '-', 0, 6)) ?></td>
+                                                <td title="<?= htmlspecialchars($rp['referencia'] ?? '') ?>"><?= htmlspecialchars(mb_substr($rp['referencia'] ?? '-', 0, 6)) ?></td>
+                                                <td><?= isset($rp['fecha']) ? date('d/m', strtotime($rp['fecha'])) : '-' ?></td>
+                                                <td><?= (int)($rp['cantidad_inscritos'] ?? 1) ?></td>
+                                                <td>$<?= number_format((float)($rp['monto'] ?? 0), 0) ?></td>
+                                                <td><?php $est = $rp['estatus'] ?? ''; echo $est === 'confirmado' ? '✓' : ($est === 'rechazado' ? '✗' : '…'); ?></td>
+                                            </tr>
+                                        <?php endforeach; ?>
+                                    </tbody>
+                                    <tfoot class="table-light">
+                                        <tr>
+                                            <th colspan="5" class="text-end small">Subtotal club:</th>
+                                            <th class="small">$<?= number_format($reportes_pago_subtotal ?? 0, 2) ?></th>
+                                            <th></th>
+                                        </tr>
+                                    </tfoot>
+                                </table>
+                            </div>
+                        <?php endif; ?>
+                    </div>
+                </div>
+            </div>
+            <?php endif; ?>
+            <div class="col-<?= $mostrar_reportes_lateral ? 'md-8' : '12' ?>">
             <?php if ($inscripciones_abiertas && empty($stand_by)): ?>
             <!-- Formulario compacto: encabezado con retorno, una fila de campos -->
             <div class="col-12">
@@ -326,12 +384,18 @@
             <!-- Una columna: listado de inscritos -->
             <div class="col-12">
                 <div class="card">
-                    <div class="card-header bg-success text-white">
+                    <div class="card-header bg-success text-white d-flex justify-content-between align-items-center flex-wrap gap-2">
                         <h5 class="mb-0">
                             <i class="fas fa-check-circle me-2"></i>
                             Jugadores Inscritos
                             <span class="badge bg-light text-dark ms-2"><?= count($existing_registrations) ?></span>
                         </h5>
+                        <?php if (!$mostrar_reportes_lateral && !empty($tournament_data['es_evento_masivo']) && !empty($tournament_data['cuenta_id'])): ?>
+                            <?php $url_reportar_pago_card = (isset($base) && $base !== '' ? rtrim($base, '/') . '/' : '') . 'reportar_pago_evento_masivo.php?torneo_id=' . (int)$torneo_id; ?>
+                            <a href="<?= htmlspecialchars($url_reportar_pago_card) ?>" class="btn btn-light btn-sm" target="_blank" rel="noopener noreferrer" title="Reportar pago de inscripción">
+                                <i class="fas fa-money-bill-wave me-1"></i>Reportar pago
+                            </a>
+                        <?php endif; ?>
                     </div>
                     <div class="card-body">
                         <?php if (empty($existing_registrations)): ?>
@@ -385,6 +449,7 @@
                         <?php endif; ?>
                     </div>
                 </div>
+            </div>
             </div>
         </div>
     <?php endif; ?>

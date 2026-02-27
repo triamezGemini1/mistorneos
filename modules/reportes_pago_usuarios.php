@@ -86,9 +86,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
-// Obtener filtros
+// Obtener filtros. Acceso desde panel de control: torneo_id obligatorio (sin selector).
 $filtro_estatus = $_GET['estatus'] ?? 'todos';
 $filtro_torneo = isset($_GET['torneo_id']) ? (int)$_GET['torneo_id'] : 0;
+
+if ($filtro_torneo <= 0) {
+    $dashboard = class_exists('AppHelpers') ? (AppHelpers::dashboard('home') ?? 'index.php') : 'index.php';
+    header('Location: ' . $dashboard . '?error=' . urlencode('Acceda a Reportes de Pago desde el Panel de Control de un torneo (evento masivo).'));
+    exit;
+}
+if (!Auth::canAccessTournament($filtro_torneo)) {
+    $dashboard = class_exists('AppHelpers') ? (AppHelpers::dashboard('home') ?? 'index.php') : 'index.php';
+    header('Location: ' . $dashboard . '?error=' . urlencode('No tiene permiso para este torneo.'));
+    exit;
+}
 
 // Construir consulta
 $where = [];
@@ -271,13 +282,29 @@ $csrf_token = CSRF::token();
         </div>
     </div>
 
+    <?php
+    $torneo_nombre_actual = '';
+    foreach ($torneos as $t) {
+        if ((int)$t['id'] === $filtro_torneo) {
+            $torneo_nombre_actual = $t['nombre'];
+            break;
+        }
+    }
+    if ($torneo_nombre_actual === '' && !empty($reportes[0]['torneo_nombre'])) {
+        $torneo_nombre_actual = $reportes[0]['torneo_nombre'];
+    }
+    ?>
+    <div class="alert alert-secondary py-2 mb-3">
+        <i class="fas fa-trophy me-2"></i><strong>Torneo:</strong> <?= htmlspecialchars($torneo_nombre_actual ?: 'Torneo #' . $filtro_torneo) ?>
+    </div>
     <!-- Filtros -->
     <div class="card mb-4">
         <div class="card-body">
             <form method="GET" action="" class="row g-3">
                 <input type="hidden" name="page" value="reportes_pago_usuarios">
+                <input type="hidden" name="torneo_id" value="<?= (int)$filtro_torneo ?>">
                 
-                <div class="col-md-4">
+                <div class="col-md-6">
                     <label class="form-label">Estado</label>
                     <select name="estatus" class="form-select">
                         <option value="todos" <?= $filtro_estatus === 'todos' ? 'selected' : '' ?>>Todos</option>
@@ -287,19 +314,7 @@ $csrf_token = CSRF::token();
                     </select>
                 </div>
                 
-                <div class="col-md-4">
-                    <label class="form-label">Torneo</label>
-                    <select name="torneo_id" class="form-select">
-                        <option value="0">Todos los torneos</option>
-                        <?php foreach ($torneos as $torneo): ?>
-                        <option value="<?= $torneo['id'] ?>" <?= $filtro_torneo === $torneo['id'] ? 'selected' : '' ?>>
-                            <?= htmlspecialchars($torneo['nombre']) ?>
-                        </option>
-                        <?php endforeach; ?>
-                    </select>
-                </div>
-                
-                <div class="col-md-4 d-flex align-items-end">
+                <div class="col-md-6 d-flex align-items-end">
                     <button type="submit" class="btn btn-primary w-100">
                         <i class="fas fa-filter me-2"></i>Filtrar
                     </button>

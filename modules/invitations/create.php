@@ -1,101 +1,119 @@
 <?php
 /**
- * Crear Nueva Invitaci�n
+ * Crear Nueva Invitación (misma lógica que invitacion_clubes: usuario creador, datos del club, columnas dinámicas).
  */
 
-
-
-error_reporting(E_ALL);
-ini_set('display_errors', '1');
+declare(strict_types=1);
 
 require_once __DIR__ . '/../../config/bootstrap.php';
 require_once __DIR__ . '/../../config/auth.php';
 require_once __DIR__ . '/../../config/db.php';
 require_once __DIR__ . '/../../config/csrf.php';
 
-Auth::requireRole(['admin_general','admin_torneo']);
+Auth::requireRole(['admin_general', 'admin_torneo']);
 
-$title = "Nueva Invitaci�n";
+$title = "Nueva Invitación";
 $errors = [];
+
+$tb_inv = defined('TABLE_INVITATIONS') ? TABLE_INVITATIONS : 'invitaciones';
 
 try {
     $pdo = DB::pdo();
-    
-    // Obtener torneos disponibles
+
     $stmt = $pdo->query("SELECT id, nombre, fechator FROM tournaments WHERE estatus=1 ORDER BY fechator DESC");
     $torneos = $stmt->fetchAll(PDO::FETCH_ASSOC);
-    
-    // Obtener clubes
-    $stmt = $pdo->query("SELECT id, nombre, delegado, telefono FROM clubes WHERE estatus=1 ORDER BY nombre ASC");
+
+    $stmt = $pdo->query("SELECT id, nombre, delegado, telefono, email FROM clubes WHERE estatus=1 ORDER BY nombre ASC");
     $clubes = $stmt->fetchAll(PDO::FETCH_ASSOC);
-    
-    // Procesar formulario
+
     if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         CSRF::validate();
-        
-        $torneo_id = (int)$_POST['torneo_id'];
-        $club_id = (int)$_POST['club_id'];
-        $acceso1 = $_POST['acceso1'];
-        $acceso2 = $_POST['acceso2'];
-        $usuario = trim($_POST['usuario'] ?? '');
-        $estado = $_POST['estado'] ?? 'activa';
-        
-        // Validaciones
+
+        $torneo_id = (int)($_POST['torneo_id'] ?? 0);
+        $club_id = (int)($_POST['club_id'] ?? 0);
+        $acceso1 = trim((string)($_POST['acceso1'] ?? ''));
+        $acceso2 = trim((string)($_POST['acceso2'] ?? ''));
+
         if (!$torneo_id) {
             $errors[] = "Debe seleccionar un torneo";
         }
-        
         if (!$club_id) {
             $errors[] = "Debe seleccionar un club";
         }
-        
-        if (empty($acceso1) || empty($acceso2)) {
+        if ($acceso1 === '' || $acceso2 === '') {
             $errors[] = "Las fechas de acceso son requeridas";
         } elseif ($acceso1 > $acceso2) {
             $errors[] = "La fecha de inicio no puede ser mayor que la fecha fin";
         }
-        
-        // Verificar duplicado
+
         if (empty($errors)) {
-            $stmt = $pdo->prepare("SELECT id FROM " . TABLE_INVITATIONS . " WHERE torneo_id = ? AND club_id = ?");
+            $stmt = $pdo->prepare("SELECT id FROM {$tb_inv} WHERE torneo_id = ? AND club_id = ?");
             $stmt->execute([$torneo_id, $club_id]);
             if ($stmt->fetch()) {
-                $errors[] = "Ya existe una invitaci�n para este torneo y club";
+                $errors[] = "Ya existe una invitación para este torneo y club";
             }
         }
-        
-        // Insertar
+
         if (empty($errors)) {
-            // Generar token �nico
-            $token = bin2hex(random_bytes(32));
-            
-            // Verificar que el token se gener� correctamente
-            if (empty($token) || strlen($token) != 64) {
-                $errors[] = "Error al generar token de seguridad";
+            if (!Auth::canAccessTournament($torneo_id)) {
+                $errors[] = "No tiene permiso para crear invitaciones en este torneo";
             } else {
-                try {
-                    $stmt = $pdo->prepare("
-                        INSERT INTO " . TABLE_INVITATIONS . "
-                        (torneo_id, club_id, acceso1, acceso2, usuario, token, estado)
-                        VALUES (?, ?, ?, ?, ?, ?, ?)
-                    ");
-                    
-                    if ($stmt->execute([$torneo_id, $club_id, $acceso1, $acceso2, $usuario, $token, $estado])) {
-                        header("Location: index.php?msg=" . urlencode("Invitaci�n creada exitosamente"));
-                        exit;
-                    } else {
-                        $errorInfo = $stmt->errorInfo();
-                        $errors[] = "Error al crear la invitaci�n: " . $errorInfo[2];
+                $stmt = $pdo->prepare("SELECT id, nombre, delegado, telefono, email FROM clubes WHERE id = ? AND estatus = 1");
+                $stmt->execute([$club_id]);
+                $club = $stmt->fetch(PDO::FETCH_ASSOC);
+                $inv_delegado = $club['delegado'] ?? null;
+                $inv_email = $club['email'] ?? null;
+                $club_tel = $club['telefono'] ?? null;
+
+                $token = bin2hex(random_bytes(32));
+                if (strlen($token) !== 64) {
+                    $errors[] = "Error al generar token de seguridad";
+                } else {
+                    $usuario_creador = (Auth::user() && isset(Auth::user()['id'])) ? (string)Auth::user()['id'] : '';
+                    $admin_club_id = Auth::id();
+
+                    $cols_inv = $pdo->query("SHOW COLUMNS FROM {$tb_inv}")->fetchAll(PDO::FETCH_COLUMN);
+                    $campos = [
+                        'torneo_id' => $torneo_id,
+                        'club_id' => $club_id,
+                        'invitado_delegado' => $inv_delegado,
+                        'invitado_email' => $inv_email,
+                        'acceso1' => $acceso1,
+                        'acceso2' => $acceso2,
+                        'usuario' => $usuario_creador,
+                        'club_email' => $inv_email,
+                        'club_telefono' => $club_tel,
+                        'club_delegado' => $inv_delegado,
+                        'token' => $token,
+                        'estado' => 'activa',
+                    ];
+                    foreach ($cols_inv as $col_name) {
+                        if (strtolower((string)$col_name) === 'admin_club_id') {
+                            $campos[$col_name] = $admin_club_id;
+                            break;
+                        }
                     }
-                } catch (PDOException $e) {
-                    $errors[] = "Error de base de datos: " . $e->getMessage();
+                    $cols = array_values(array_intersect($cols_inv, array_keys($campos)));
+                    $vals = array_map(function ($c) use ($campos) {
+                        return $campos[$c];
+                    }, $cols);
+                    if (!empty($cols)) {
+                        $placeholders = implode(', ', array_fill(0, count($cols), '?'));
+                        $stmt = $pdo->prepare("INSERT INTO {$tb_inv} (" . implode(', ', $cols) . ") VALUES ({$placeholders})");
+                        $stmt->execute($vals);
+                    } else {
+                        $stmt = $pdo->prepare("INSERT INTO {$tb_inv} (torneo_id, club_id, acceso1, acceso2, usuario, token, estado) VALUES (?, ?, ?, ?, ?, ?, 'activa')");
+                        $stmt->execute([$torneo_id, $club_id, $acceso1, $acceso2, $usuario_creador, $token]);
+                    }
+                    $redirect = "../../public/index.php?page=invitations&filter_torneo=" . $torneo_id . "&success=1&msg=" . urlencode("Invitación creada.");
+                    header("Location: " . $redirect);
+                    exit;
                 }
             }
         }
     }
-    
-} catch (PDOException $e) {
-    die("Error de base de datos: " . $e->getMessage());
+} catch (Throwable $e) {
+    $errors[] = "Error: " . $e->getMessage();
 }
 ?>
 <!DOCTYPE html>
