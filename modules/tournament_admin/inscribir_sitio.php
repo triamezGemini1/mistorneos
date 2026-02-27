@@ -263,6 +263,8 @@ if ($is_admin_general) {
                     <div class="col-md-10">
                         <div class="card">
                             <div class="card-body">
+                                <input type="hidden" id="torneo_id" value="<?= (int)$torneo_id ?>">
+                                <input type="hidden" id="user_id" value="0">
                                 <!-- Mensaje de búsqueda (SweetAlert2 o este div si Swal no está disponible) -->
                                 <div id="mensaje_formulario_cedula" class="mb-3 d-none" role="alert" aria-live="polite" style="min-height: 0;"></div>
 
@@ -374,516 +376,67 @@ if ($is_admin_general) {
 }
 </style>
 
-<!-- SweetAlert2: carga en esta vista; ?v= obliga a no usar caché (cambiar v al actualizar) -->
-<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11?v=4.0"></script>
-
+<!-- Config global para inscripciones.js (motor único). Cargar ANTES del script. -->
 <script>
-console.log('Script de inscripción en sitio cargado (versión nueva)');
-const TORNEOS_ID = <?= $torneo_id ?>;
-const CSRF_TOKEN = '<?= htmlspecialchars(CSRF::token(), ENT_QUOTES) ?>';
-const ESTATUS_DEFAULT = '1';
-const API_URL = '<?= app_base_url() ?>/public/tournament_admin_toggle_inscripcion.php';
-const BUSCAR_INScribir_API = '<?= app_base_url() ?>/public/api/buscar_inscribir_sitio.php';
-
-document.addEventListener('DOMContentLoaded', function() {
-    // Funcionalidad de mover jugadores entre listados
-    const tbodyDisponibles = document.getElementById('tbody_disponibles');
-    const tbodyInscritos = document.getElementById('tbody_inscritos');
-    
-    // Click en disponible -> inscribir
-    if (tbodyDisponibles) {
-        tbodyDisponibles.addEventListener('click', function(e) {
-            const row = e.target.closest('tr');
-            if (row && row.dataset.id) {
-                const idUsuario = parseInt(row.dataset.id);
-                const nombre = row.dataset.nombre;
-                const cedula = row.dataset.cedula || '';
-                const clubId = row.dataset.clubId || '';
-                
-                // Inscribir con estatus por defecto
-                inscribirJugador(idUsuario, nombre, cedula, clubId, ESTATUS_DEFAULT, row);
-            }
-        });
-    }
-    
-    // Click en inscrito -> desinscribir
-    if (tbodyInscritos) {
-        tbodyInscritos.addEventListener('click', function(e) {
-            const row = e.target.closest('tr');
-            if (row && row.dataset.id) {
-                const idUsuario = parseInt(row.dataset.id);
-                const nombre = row.dataset.nombre;
-                const cedula = row.dataset.cedula || '';
-                const clubId = row.dataset.clubId || '';
-                
-                desinscribirJugador(idUsuario, nombre, cedula, clubId, row);
-            }
-        });
-    }
-    
-    function inscribirJugador(idUsuario, nombre, cedula, clubId, estatus, rowElement) {
-        // Validar que tenemos los datos necesarios
-        if (!idUsuario || !TORNEOS_ID) {
-            showMessage('Error: Faltan datos necesarios para inscribir', 'danger');
-            return;
-        }
-        
-        const formData = new FormData();
-        formData.append('action', 'inscribir');
-        formData.append('torneo_id', TORNEOS_ID);
-        formData.append('id_usuario', idUsuario);
-        if (clubId) {
-            formData.append('id_club', clubId);
-        }
-        formData.append('estatus', estatus);
-        formData.append('csrf_token', CSRF_TOKEN);
-        
-        // Mostrar indicador de carga
-        rowElement.style.opacity = '0.5';
-        rowElement.style.pointerEvents = 'none';
-        
-        fetch(API_URL, {
-            method: 'POST',
-            body: formData
-        })
-        .then(response => {
-            if (!response.ok) {
-                throw new Error('Error en la respuesta del servidor: ' + response.status);
-            }
-            return response.json();
-        })
-        .then(data => {
-            rowElement.style.opacity = '1';
-            rowElement.style.pointerEvents = 'auto';
-            
-            if (data.success) {
-                // Mover fila de disponibles a inscritos
-                const newRow = rowElement.cloneNode(true);
-                newRow.style.animation = 'fadeIn 0.3s';
-                tbodyInscritos.appendChild(newRow);
-                rowElement.remove();
-                
-                // Actualizar contadores
-                updateCounters();
-                
-                // Mostrar mensaje de éxito
-                showMessage('Jugador inscrito exitosamente', 'success');
-            } else {
-                showMessage(data.error || 'Error al inscribir jugador', 'danger');
-            }
-        })
-        .catch(error => {
-            rowElement.style.opacity = '1';
-            rowElement.style.pointerEvents = 'auto';
-            console.error('Error:', error);
-            showMessage('Error al inscribir jugador: ' + error.message, 'danger');
-        });
-    }
-    
-    function desinscribirJugador(idUsuario, nombre, cedula, clubId, rowElement) {
-        // Validar que tenemos los datos necesarios
-        if (!idUsuario || !TORNEOS_ID) {
-            showMessage('Error: Faltan datos necesarios para desinscribir', 'danger');
-            return;
-        }
-        
-        const formData = new FormData();
-        formData.append('action', 'desinscribir');
-        formData.append('torneo_id', TORNEOS_ID);
-        formData.append('id_usuario', idUsuario);
-        formData.append('csrf_token', CSRF_TOKEN);
-        
-        // Mostrar indicador de carga
-        rowElement.style.opacity = '0.5';
-        rowElement.style.pointerEvents = 'none';
-        
-        fetch(API_URL, {
-            method: 'POST',
-            body: formData
-        })
-        .then(response => {
-            if (!response.ok) {
-                throw new Error('Error en la respuesta del servidor: ' + response.status);
-            }
-            return response.json();
-        })
-        .then(data => {
-            rowElement.style.opacity = '1';
-            rowElement.style.pointerEvents = 'auto';
-            
-            if (data.success) {
-                // Mover fila de inscritos a disponibles
-                const newRow = rowElement.cloneNode(true);
-                newRow.style.animation = 'fadeIn 0.3s';
-                tbodyDisponibles.appendChild(newRow);
-                rowElement.remove();
-                
-                // Actualizar contadores
-                updateCounters();
-                
-                // Mostrar mensaje de éxito
-                showMessage('Jugador desinscrito exitosamente', 'success');
-            } else {
-                showMessage(data.error || 'Error al desinscribir jugador', 'danger');
-            }
-        })
-        .catch(error => {
-            rowElement.style.opacity = '1';
-            rowElement.style.pointerEvents = 'auto';
-            console.error('Error:', error);
-            showMessage('Error al desinscribir jugador: ' + error.message, 'danger');
-        });
-    }
-    
-    function updateCounters() {
-        const countDisponibles = document.getElementById('count_disponibles');
-        const countInscritos = document.getElementById('count_inscritos');
-        
-        if (countDisponibles) {
-            countDisponibles.textContent = tbodyDisponibles.children.length;
-        }
-        if (countInscritos) {
-            countInscritos.textContent = tbodyInscritos.children.length;
-        }
-    }
-    
-    function showMessage(message, type) {
-        const alertDiv = document.createElement('div');
-        alertDiv.className = `alert alert-${type} alert-dismissible fade show`;
-        alertDiv.innerHTML = `
-            ${message}
-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-        `;
-        
-        const cardBody = document.querySelector('.card-body');
+window.INSCRIPCIONES_CONFIG = {
+    API_URL: '<?= app_base_url() ?>/public/tournament_admin_toggle_inscripcion.php',
+    BUSCAR_API: '<?= app_base_url() ?>/public/api/buscar_inscribir_sitio.php',
+    TORNEOS_ID: <?= (int)$torneo_id ?>,
+    CSRF_TOKEN: '<?= htmlspecialchars(CSRF::token(), ENT_QUOTES) ?>',
+    showMessage: function(message, type) {
+        var alertDiv = document.createElement('div');
+        alertDiv.className = 'alert alert-' + type + ' alert-dismissible fade show';
+        alertDiv.innerHTML = message + ' <button type="button" class="btn-close" data-bs-dismiss="alert"></button>';
+        var cardBody = document.querySelector('.card-body');
         if (cardBody) {
             cardBody.insertBefore(alertDiv, cardBody.firstChild);
-            setTimeout(() => alertDiv.remove(), 3000);
+            setTimeout(function() { alertDiv.remove(); }, 3000);
+        }
+    },
+    onInscritoExitoso: function(data, usuarioEncontrado, clubId) {
+        var tbodyInscritos = document.getElementById('tbody_inscritos');
+        var inputCedula = document.getElementById('input_cedula') || document.getElementById('cedula');
+        var cedulaStr = inputCedula ? inputCedula.value.trim() : '';
+        if (tbodyInscritos && typeof agregarFilaInscrito === 'function') {
+            agregarFilaInscrito(usuarioEncontrado.id, usuarioEncontrado.nombre || usuarioEncontrado.username || 'Usuario', cedulaStr, clubId);
+        }
+        if (typeof updateCounters === 'function') updateCounters();
+        if (typeof showMessage === 'function') showMessage('Jugador inscrito exitosamente', 'success');
+    },
+    onRegistrarInscribirExitoso: function(data, nom, cedulaStr, clubId) {
+        var tbodyInscritos = document.getElementById('tbody_inscritos');
+        if (tbodyInscritos && typeof agregarFilaInscrito === 'function') {
+            agregarFilaInscrito(data.id_usuario, nom, cedulaStr, clubId);
+        }
+        if (typeof updateCounters === 'function') updateCounters();
+        if (typeof showMessage === 'function') showMessage(data.message || 'Usuario registrado e inscrito.', 'success');
+    }
+};
+</script>
+<!-- SweetAlert2 y motor único de búsqueda/inscripción (cache-bust) -->
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11?v=<?php echo time(); ?>"></script>
+<script src="<?= app_base_url() ?>/public/js/inscripciones.js?v=<?php echo time(); ?>"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    var TORNEOS_ID = window.INSCRIPCIONES_CONFIG && window.INSCRIPCIONES_CONFIG.TORNEOS_ID;
+    var API_URL = window.INSCRIPCIONES_CONFIG && window.INSCRIPCIONES_CONFIG.API_URL;
+    var CSRF_TOKEN = window.INSCRIPCIONES_CONFIG && window.INSCRIPCIONES_CONFIG.CSRF_TOKEN;
+    var tbodyDisponibles = document.getElementById('tbody_disponibles');
+    var tbodyInscritos = document.getElementById('tbody_inscritos');
+
+    function showMessage(message, type) {
+        if (window.INSCRIPCIONES_CONFIG && window.INSCRIPCIONES_CONFIG.showMessage) {
+            window.INSCRIPCIONES_CONFIG.showMessage(message, type);
         }
     }
-    
-    // --- Búsqueda por nacionalidad + cédula (on blur, expedita) ---
-    const selectNacionalidad = document.getElementById('select_nacionalidad_cedula');
-    const inputCedula = document.getElementById('input_cedula');
-    const mensajeForm = document.getElementById('mensaje_formulario_cedula');
-    const resultadoBusqueda = document.getElementById('resultado_busqueda');
-    const infoUsuario = document.getElementById('info_usuario_encontrado');
-    const wrapAcciones = document.getElementById('wrap_acciones_cedula');
-    const wrapEstatus = document.getElementById('wrap_estatus_cedula');
-    const wrapBtnInscribir = document.getElementById('wrap_btn_inscribir_cedula');
-    const btnInscribirCedula = document.getElementById('btn_inscribir_cedula');
-    const formNuevo = document.getElementById('form_nuevo_usuario_inscribir');
-    const btnRegistrarInscribir = document.getElementById('btn_registrar_inscribir');
-    let usuarioEncontrado = null;
-
-    function mostrarMensajeForm(html, tipo) {
-        if (!mensajeForm) return;
-        mensajeForm.innerHTML = html;
-        mensajeForm.className = 'mb-3 alert alert-' + (tipo || 'info');
-        mensajeForm.classList.remove('d-none');
-        mensajeForm.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    function updateCounters() {
+        var countDisponibles = document.getElementById('count_disponibles');
+        var countInscritos = document.getElementById('count_inscritos');
+        if (countDisponibles && tbodyDisponibles) countDisponibles.textContent = tbodyDisponibles.children.length;
+        if (countInscritos && tbodyInscritos) countInscritos.textContent = tbodyInscritos.children.length;
     }
-
-    function limpiarMensajeForm() {
-        if (mensajeForm) {
-            mensajeForm.innerHTML = '';
-            mensajeForm.classList.add('d-none');
-        }
-    }
-
-    function limpiarBusquedaCedula() {
-        inputCedula.value = '';
-        if (selectNacionalidad) {
-            selectNacionalidad.value = 'V';
-        }
-        resultadoBusqueda.classList.add('d-none');
-        wrapAcciones.classList.add('d-none');
-        wrapEstatus.classList.add('d-none');
-        wrapBtnInscribir.classList.add('d-none');
-        formNuevo.classList.add('d-none');
-        limpiarMensajeForm();
-        usuarioEncontrado = null;
-        if (selectNacionalidad) {
-            selectNacionalidad.focus();
-        }
-    }
-
-    function rellenarFormularioDatos(nac, num, p) {
-        p = p || {};
-        document.getElementById('form_nac').value = p.nacionalidad || nac;
-        document.getElementById('form_cedula').value = p.cedula || num;
-        document.getElementById('form_nombre').value = p.nombre || '';
-        document.getElementById('form_fechnac').value = p.fechnac || '';
-        document.getElementById('form_sexo').value = (p.sexo || 'M').toUpperCase();
-        document.getElementById('form_telefono').value = p.telefono || p.celular || '';
-        document.getElementById('form_email').value = p.email || '';
-    }
-
-    function buscarOnBlur() {
-        const nac = (selectNacionalidad && selectNacionalidad.value) ? selectNacionalidad.value : 'V';
-        const num = (inputCedula.value || '').replace(/\D/g, '');
-        if (num.length < 4) {
-            return;
-        }
-        resultadoBusqueda.classList.add('d-none');
-        wrapAcciones.classList.add('d-none');
-        wrapBtnInscribir.classList.add('d-none');
-        formNuevo.classList.add('d-none');
-        limpiarMensajeForm();
-        usuarioEncontrado = null;
-
-        var url = BUSCAR_INScribir_API + '?torneo_id=' + TORNEOS_ID + '&nacionalidad=' + encodeURIComponent(nac) + '&cedula=' + encodeURIComponent(num);
-
-        if (typeof Swal !== 'undefined') {
-            Swal.fire({ title: 'Buscando...', allowOutsideClick: false, didOpen: function() { Swal.showLoading(); } });
-        } else {
-            mostrarMensajeForm('<i class="fas fa-spinner fa-spin me-2"></i>Buscando (inscritos → usuarios → base externa)...', 'info');
-        }
-
-        fetch(url)
-            .then(function(r) { return r.json(); })
-            .then(function(data) {
-                if (typeof Swal !== 'undefined') {
-                    Swal.close();
-                } else {
-                    limpiarMensajeForm();
-                }
-                if (!data.success) {
-                    var msg = data.mensaje || 'No se pudo realizar la búsqueda.';
-                    if (typeof Swal !== 'undefined') {
-                        Swal.fire({ icon: 'error', title: 'Error', text: msg });
-                    } else {
-                        mostrarMensajeForm('<strong>Error:</strong> ' + msg, 'danger');
-                    }
-                    return;
-                }
-                // NIVEL 1: Ya inscrito (validación en tabla inscritos por nacionalidad+cedula+torneo_id)
-                if (data.resultado === 'ya_inscrito') {
-                    if (typeof Swal !== 'undefined') {
-                        Swal.fire({
-                            icon: 'warning',
-                            title: 'Jugador ya inscrito',
-                            text: 'Esta cédula ya está registrada en este torneo.'
-                        }).then(function() {
-                            limpiarBusquedaCedula();
-                            rellenarFormularioDatos('V', '', {});
-                            if (wrapBtnInscribir) { wrapBtnInscribir.classList.add('d-none'); }
-                            if (selectNacionalidad) { selectNacionalidad.focus(); }
-                        });
-                    } else {
-                        limpiarBusquedaCedula();
-                        mostrarMensajeForm('Esta cédula ya está registrada en este torneo.', 'warning');
-                    }
-                    return;
-                }
-                // NIVEL 2: Usuario local — todos los campos desde usuarios (telefono/email pueden vacíos); foco al primer vacío
-                // NIVEL 3: Persona externa — datos traídos; foco en Teléfono para completar la ficha
-                if (data.resultado === 'usuario' || data.resultado === 'persona_externa') {
-                    var esExterno = data.resultado === 'persona_externa';
-                    var p = esExterno ? (data.persona || {}) : data.usuario;
-                    rellenarFormularioDatos(nac, num, p);
-                    if (data.resultado === 'usuario') {
-                        usuarioEncontrado = data.usuario;
-                        if (btnRegistrarInscribir) { btnRegistrarInscribir.classList.add('d-none'); }
-                        resultadoBusqueda.classList.remove('d-none');
-                        infoUsuario.innerHTML = '<div class="alert alert-success mb-0"><strong><i class="fas fa-check-circle me-2"></i>Usuario encontrado</strong><br>ID: ' + usuarioEncontrado.id + ' &middot; ' + (usuarioEncontrado.nombre || usuarioEncontrado.username || '') + '</div>';
-                        wrapAcciones.classList.remove('d-none');
-                        wrapEstatus.classList.remove('d-none');
-                        wrapBtnInscribir.classList.remove('d-none');
-                    } else {
-                        if (btnRegistrarInscribir) { btnRegistrarInscribir.classList.remove('d-none'); }
-                    }
-                    formNuevo.classList.remove('d-none');
-                    if (typeof Swal !== 'undefined') {
-                        Swal.fire({
-                            icon: 'success',
-                            title: 'Jugador Localizado',
-                            text: 'Datos cargados correctamente.',
-                            timer: 1500,
-                            showConfirmButton: false
-                        }).then(function() {
-                            var tel = document.getElementById('form_telefono');
-                            var eml = document.getElementById('form_email');
-                            if (esExterno) {
-                                if (tel) { tel.focus(); }
-                            } else {
-                                if (tel && !tel.value.trim()) { tel.focus(); }
-                                else if (eml && !eml.value.trim()) { eml.focus(); }
-                                else if (tel) { tel.focus(); }
-                            }
-                        });
-                    } else {
-                        var tel = document.getElementById('form_telefono');
-                        if (esExterno && tel) { setTimeout(function() { tel.focus(); }, 100); }
-                        else if (tel) { setTimeout(function() { tel.focus(); }, 100); }
-                    }
-                    return;
-                }
-                // NIVEL 4: No encontrado — SweetAlert question, luego formulario manual (mantener Cédula/Nac)
-                if (data.resultado === 'no_encontrado') {
-                    if (typeof Swal !== 'undefined') {
-                        Swal.fire({
-                            icon: 'question',
-                            title: 'Sin registros',
-                            text: 'El jugador no existe. Por favor, complete los datos manualmente.'
-                        }).then(function() {
-                            rellenarFormularioDatos(nac, num, {});
-                            formNuevo.classList.remove('d-none');
-                            if (btnRegistrarInscribir) { btnRegistrarInscribir.classList.remove('d-none'); }
-                            var nom = document.getElementById('form_nombre');
-                            if (nom) { nom.focus(); }
-                        });
-                    } else {
-                        rellenarFormularioDatos(nac, num, {});
-                        formNuevo.classList.remove('d-none');
-                        if (btnRegistrarInscribir) { btnRegistrarInscribir.classList.remove('d-none'); }
-                        var nom = document.getElementById('form_nombre');
-                        if (nom) { setTimeout(function() { nom.focus(); }, 100); }
-                    }
-                    return;
-                }
-                if (typeof Swal !== 'undefined') {
-                    Swal.fire({ icon: 'info', title: 'Sin resultados', text: data.mensaje || 'Sin resultados.' });
-                } else {
-                    mostrarMensajeForm((data.mensaje || 'Sin resultados.'), 'secondary');
-                }
-            })
-            .catch(function(err) {
-                console.error(err);
-                if (typeof Swal !== 'undefined') {
-                    Swal.close();
-                    Swal.fire({ icon: 'error', title: 'Error', text: 'No se pudo conectar. Revise la consola.' });
-                } else {
-                    mostrarMensajeForm('<strong>Error:</strong> No se pudo conectar. Revise la consola.', 'danger');
-                }
-            });
-    }
-
-    if (inputCedula) {
-        inputCedula.addEventListener('blur', function() {
-            if (formNuevo.classList.contains('d-none')) {
-                buscarOnBlur();
-            }
-        });
-        inputCedula.addEventListener('keypress', function(e) {
-            if (e.key === 'Enter') {
-                e.preventDefault();
-                buscarOnBlur();
-            }
-        });
-    }
-
-    if (document.getElementById('btn_otra_busqueda_cedula')) {
-        document.getElementById('btn_otra_busqueda_cedula').addEventListener('click', limpiarBusquedaCedula);
-    }
-
-    if (btnInscribirCedula) {
-        btnInscribirCedula.addEventListener('click', function() {
-            if (!usuarioEncontrado || !usuarioEncontrado.id) {
-                return;
-            }
-            var clubId = document.getElementById('select_club_cedula').value || '';
-            var estatus = document.getElementById('select_estatus_cedula').value || '1';
-            var fd = new FormData();
-            fd.append('action', 'inscribir');
-            fd.append('torneo_id', TORNEOS_ID);
-            fd.append('id_usuario', usuarioEncontrado.id);
-            fd.append('id_club', clubId);
-            fd.append('estatus', estatus);
-            fd.append('csrf_token', CSRF_TOKEN);
-            btnInscribirCedula.disabled = true;
-            fetch(API_URL, { method: 'POST', body: fd })
-                .then(function(r) { return r.json(); })
-                .then(function(data) {
-                    btnInscribirCedula.disabled = false;
-                    if (data.success) {
-                        agregarFilaInscrito(usuarioEncontrado.id, usuarioEncontrado.nombre || usuarioEncontrado.username || 'Usuario', inputCedula.value.trim(), clubId);
-                        limpiarBusquedaCedula();
-                        showMessage('Jugador inscrito exitosamente', 'success');
-                        updateCounters();
-                    } else {
-                        if (typeof Swal !== 'undefined') {
-                            Swal.fire({ icon: 'error', title: 'Error', text: data.error || 'No se pudo inscribir.' });
-                        } else {
-                            mostrarMensajeForm('<strong>Error:</strong> ' + (data.error || ''), 'danger');
-                        }
-                    }
-                })
-                .catch(function(err) {
-                    btnInscribirCedula.disabled = false;
-                    if (typeof Swal !== 'undefined') {
-                        Swal.fire({ icon: 'error', title: 'Error', text: err.message });
-                    } else {
-                        mostrarMensajeForm('<strong>Error:</strong> ' + err.message, 'danger');
-                    }
-                });
-        });
-    }
-
-    if (document.getElementById('btn_registrar_inscribir')) {
-        document.getElementById('btn_registrar_inscribir').addEventListener('click', function() {
-            var nac = document.getElementById('form_nac').value;
-            var ced = (document.getElementById('form_cedula').value || '').replace(/\D/g, '');
-            var nom = (document.getElementById('form_nombre').value || '').trim();
-            if (ced.length < 4 || nom.length < 2) {
-                if (typeof Swal !== 'undefined') {
-                    Swal.fire({ icon: 'warning', title: 'Datos obligatorios', text: 'Cédula (mín. 4 dígitos) y nombre son obligatorios.' });
-                } else {
-                    mostrarMensajeForm('Cédula (mín. 4 dígitos) y nombre son obligatorios.', 'danger');
-                }
-                return;
-            }
-            var fd = new FormData();
-            fd.append('action', 'registrar_inscribir');
-            fd.append('torneo_id', TORNEOS_ID);
-            fd.append('csrf_token', CSRF_TOKEN);
-            fd.append('nacionalidad', nac);
-            fd.append('cedula', ced);
-            fd.append('nombre', nom);
-            fd.append('fechnac', document.getElementById('form_fechnac').value || '');
-            fd.append('sexo', document.getElementById('form_sexo').value || 'M');
-            fd.append('telefono', document.getElementById('form_telefono').value || '');
-            fd.append('email', document.getElementById('form_email').value || '');
-            fd.append('id_club', document.getElementById('form_club').value || '');
-            var btn = document.getElementById('btn_registrar_inscribir');
-            btn.disabled = true;
-            fetch(API_URL, { method: 'POST', body: fd })
-                .then(function(r) { return r.json(); })
-                .then(function(data) {
-                    btn.disabled = false;
-                    if (data.success) {
-                        agregarFilaInscrito(data.id_usuario, nom, nac + ced, document.getElementById('form_club').value || '');
-                        limpiarBusquedaCedula();
-                        showMessage(data.message || 'Usuario registrado e inscrito.', 'success');
-                        updateCounters();
-                    } else {
-                        if (typeof Swal !== 'undefined') {
-                            Swal.fire({ icon: 'error', title: 'Error', text: data.error || 'No se pudo registrar.' });
-                        } else {
-                            mostrarMensajeForm('<strong>Error:</strong> ' + (data.error || ''), 'danger');
-                        }
-                    }
-                })
-                .catch(function(err) {
-                    btn.disabled = false;
-                    if (typeof Swal !== 'undefined') {
-                        Swal.fire({ icon: 'error', title: 'Error', text: err.message });
-                    } else {
-                        mostrarMensajeForm('<strong>Error:</strong> ' + err.message, 'danger');
-                    }
-                });
-        });
-    }
-
-    if (document.getElementById('btn_cancelar_form_nuevo')) {
-        document.getElementById('btn_cancelar_form_nuevo').addEventListener('click', function() {
-            formNuevo.classList.add('d-none');
-            mensajeForm.innerHTML = '';
-            mensajeForm.classList.add('d-none');
-        });
-    }
-
     function agregarFilaInscrito(id, nombre, cedula, clubId) {
+        if (!tbodyInscritos) return;
         var newRow = document.createElement('tr');
         newRow.style.cursor = 'pointer';
         newRow.className = 'table-row-hover';
@@ -895,5 +448,90 @@ document.addEventListener('DOMContentLoaded', function() {
         newRow.innerHTML = '<td><strong>' + (nombre || '') + '</strong></td><td><code>' + id + '</code></td>';
         tbodyInscritos.appendChild(newRow);
     }
+
+    if (tbodyDisponibles) {
+        tbodyDisponibles.addEventListener('click', function(e) {
+            var row = e.target.closest('tr');
+            if (row && row.dataset.id) {
+                inscribirJugador(parseInt(row.dataset.id), row.dataset.nombre, row.dataset.cedula || '', row.dataset.clubId || '', row);
+            }
+        });
+    }
+    if (tbodyInscritos) {
+        tbodyInscritos.addEventListener('click', function(e) {
+            var row = e.target.closest('tr');
+            if (row && row.dataset.id) {
+                desinscribirJugador(parseInt(row.dataset.id), row.dataset.nombre, row.dataset.cedula || '', row.dataset.clubId || '', row);
+            }
+        });
+    }
+
+    function inscribirJugador(idUsuario, nombre, cedula, clubId, rowElement) {
+        if (!idUsuario || !TORNEOS_ID) { showMessage('Error: Faltan datos necesarios para inscribir', 'danger'); return; }
+        var formData = new FormData();
+        formData.append('action', 'inscribir');
+        formData.append('torneo_id', TORNEOS_ID);
+        formData.append('id_usuario', idUsuario);
+        if (clubId) formData.append('id_club', clubId);
+        formData.append('estatus', '1');
+        formData.append('csrf_token', CSRF_TOKEN);
+        rowElement.style.opacity = '0.5';
+        rowElement.style.pointerEvents = 'none';
+        fetch(API_URL, { method: 'POST', body: formData })
+            .then(function(r) { return r.json(); })
+            .then(function(data) {
+                rowElement.style.opacity = '1';
+                rowElement.style.pointerEvents = 'auto';
+                if (data.success) {
+                    var newRow = rowElement.cloneNode(true);
+                    newRow.style.animation = 'fadeIn 0.3s';
+                    tbodyInscritos.appendChild(newRow);
+                    rowElement.remove();
+                    updateCounters();
+                    showMessage('Jugador inscrito exitosamente', 'success');
+                } else {
+                    showMessage(data.error || 'Error al inscribir jugador', 'danger');
+                }
+            })
+            .catch(function(err) {
+                rowElement.style.opacity = '1';
+                rowElement.style.pointerEvents = 'auto';
+                showMessage('Error al inscribir jugador: ' + err.message, 'danger');
+            });
+    }
+    function desinscribirJugador(idUsuario, nombre, cedula, clubId, rowElement) {
+        if (!idUsuario || !TORNEOS_ID) { showMessage('Error: Faltan datos necesarios para desinscribir', 'danger'); return; }
+        var formData = new FormData();
+        formData.append('action', 'desinscribir');
+        formData.append('torneo_id', TORNEOS_ID);
+        formData.append('id_usuario', idUsuario);
+        formData.append('csrf_token', CSRF_TOKEN);
+        rowElement.style.opacity = '0.5';
+        rowElement.style.pointerEvents = 'none';
+        fetch(API_URL, { method: 'POST', body: formData })
+            .then(function(r) { return r.json(); })
+            .then(function(data) {
+                rowElement.style.opacity = '1';
+                rowElement.style.pointerEvents = 'auto';
+                if (data.success) {
+                    var newRow = rowElement.cloneNode(true);
+                    newRow.style.animation = 'fadeIn 0.3s';
+                    tbodyDisponibles.appendChild(newRow);
+                    rowElement.remove();
+                    updateCounters();
+                    showMessage('Jugador desinscrito exitosamente', 'success');
+                } else {
+                    showMessage(data.error || 'Error al desinscribir jugador', 'danger');
+                }
+            })
+            .catch(function(err) {
+                rowElement.style.opacity = '1';
+                rowElement.style.pointerEvents = 'auto';
+                showMessage('Error al desinscribir jugador: ' + err.message, 'danger');
+            });
+    }
+    window.agregarFilaInscrito = agregarFilaInscrito;
+    window.updateCounters = updateCounters;
+    window.showMessage = showMessage;
 });
 </script>

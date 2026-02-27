@@ -1,64 +1,98 @@
 <?php
 /**
- * Endpoint para buscar persona por nacionalidad + cédula.
- * Usado por el formulario de inscripción por invitación.
+ * Búsqueda de persona por nacionalidad + cédula. Jerarquía estricta de descarte.
+ * Usado por: Formulario de Invitación e Inscripción en Sitio (mismo backend).
  *
- * Orden de búsqueda (el cliente debe validar inscritos antes de llamar a este endpoint):
- * 1. [Cliente] Validar en `inscritos` (check_cedula.php) → si existe, abortar con "Jugador ya registrado".
- * 2. Buscar en tabla `usuarios` → si existe, retornar: sexo, fecha_nacimiento, telefono, email, nacionalidad.
- * 3. Si no en usuarios: consulta externa (API/Legacy) como último recurso.
+ * Parámetros obligatorios desde frontend: cedula, nacionalidad.
+ * Parámetro crítico para NIVEL 1: torneo_id (GET o POST). Si no se envía, no se valida "ya inscrito".
+ *
+ * NIVEL 1 (prioridad): inscritos → si existe: { "status": "ya_inscrito", "mensaje": "..." }. STOP.
+ * NIVEL 2: usuarios → si existe: datos + existe_en_usuarios: true.
+ * NIVEL 3: base externa → si existe: datos + fuente: "externa".
+ * NIVEL 4: no encontrado → { "status": "no_encontrado" } (registro manual).
  */
 
 require_once __DIR__ . '/../../config/bootstrap.php';
 require_once __DIR__ . '/../../config/db.php';
 
-header('Content-Type: application/json');
+header('Content-Type: application/json; charset=utf-8');
 
-// Log de parámetros recibidos
-error_log("search_persona.php - GET params: " . print_r($_GET, true));
+$input = array_merge($_GET, $_POST);
+$cedula_raw = isset($input['cedula']) ? trim((string) $input['cedula']) : '';
+$cedula = preg_replace('/^[VEJP]/i', '', $cedula_raw);
+$cedula = preg_replace('/\D/', '', $cedula);
+$nacionalidad = isset($input['nacionalidad']) ? strtoupper(trim((string) $input['nacionalidad'])) : 'V';
+if (!in_array($nacionalidad, ['V', 'E', 'J', 'P'], true)) {
+    $nacionalidad = 'V';
+}
+$torneo_id = isset($input['torneo_id']) ? (int) $input['torneo_id'] : (isset($input['torneo']) ? (int) $input['torneo'] : 0);
 
-// Verificar que se haya enviado nacionalidad y cédula
-if (!isset($_GET['cedula']) || empty($_GET['cedula'])) {
+error_log("search_persona.php - ENTRADA: nacionalidad=" . $nacionalidad . ", cedula=" . $cedula . ", torneo_id=" . $torneo_id);
+
+if ($cedula === '') {
     http_response_code(400);
-    echo json_encode(['encontrado' => false, 'error' => 'Cédula requerida']);
+    echo json_encode(['status' => 'error', 'encontrado' => false, 'error' => 'Cédula requerida']);
     exit;
 }
 
-$cedula = trim($_GET['cedula']);
-$nacionalidad = isset($_GET['nacionalidad']) ? trim($_GET['nacionalidad']) : 'V';
-
-// Validar nacionalidad
-if (!in_array($nacionalidad, ['V', 'E', 'J', 'P'])) {
-    $nacionalidad = 'V';
-}
-
-error_log("search_persona.php - Buscando: Nacionalidad=$nacionalidad, Cédula=$cedula");
-
 try {
-    // 1. PRIMERO buscar en usuarios (prioridad para inscripción en línea)
-    error_log("search_persona.php - Paso 1: Buscando en tabla usuarios");
-    $cedula_variantes = [preg_replace('/^[VEJP]/i', '', $cedula), $cedula];
-    if (!empty($nacionalidad) && !preg_match('/^[VEJP]/i', $cedula)) {
-        $cedula_variantes[] = strtoupper(substr($nacionalidad, 0, 1)) . preg_replace('/^[VEJP]/i', '', $cedula);
-    }
-    foreach (array_unique($cedula_variantes) as $c) {
-        if (empty($c)) continue;
+    $pdo = DB::pdo();
+
+    // ─── PASO 1: Buscar en tabla inscritos (solo si torneo_id > 0). Si existe → ya_inscrito, STOP. ───
+    if ($torneo_id > 0) {
+        error_log("search_persona.php - PASO 1: Buscando en INSCRITOS (torneo_id=" . $torneo_id . ", nac=" . $nacionalidad . ", cedula=" . $cedula . ")");
         try {
-            $stmt = DB::pdo()->prepare("SELECT nacionalidad, nombre, sexo, fechnac, celular, email FROM usuarios WHERE cedula = ? LIMIT 1");
+            $stmtInscrito = $pdo->prepare("
+                SELECT id FROM inscritos
+                WHERE torneo_id = ? AND nacionalidad = ? AND cedula = ?
+                LIMIT 1
+            ");
+            $stmtInscrito->execute([$torneo_id, $nacionalidad, $cedula]);
+            $rowInscrito = $stmtInscrito->fetch();
+            if ($rowInscrito) {
+                error_log("search_persona.php - PASO 1 resultado: YA_INSCRITO (id=" . ($rowInscrito['id'] ?? '') . ")");
+                echo json_encode([
+                    'status' => 'ya_inscrito',
+                    'mensaje' => 'El jugador ya está inscrito en este torneo',
+                    'encontrado' => false
+                ]);
+                exit;
+            }
+            error_log("search_persona.php - PASO 1 resultado: no encontrado en inscritos, continuar a PASO 2");
+        } catch (Throwable $e) {
+            error_log("search_persona.php - PASO 1 excepcion: " . $e->getMessage());
+            if (strpos($e->getMessage(), 'nacionalidad') !== false || strpos($e->getMessage(), 'cedula') !== false) {
+                error_log("search_persona.php - Tabla inscritos sin columnas nacionalidad/cedula. Continuar a PASO 2.");
+            }
+        }
+    } else {
+        error_log("search_persona.php - PASO 1 OMITIDO: torneo_id=0 (no se envio desde frontend). Continuar a PASO 2.");
+    }
+
+    // ─── PASO 2: Buscar en tabla usuarios. Si existe → retornar datos + existe_en_usuarios: true. ───
+    error_log("search_persona.php - PASO 2: Buscando en USUARIOS (cedula variantes)");
+    $cedula_variantes = array_unique([$cedula, $nacionalidad . $cedula]);
+    foreach ($cedula_variantes as $c) {
+        if ($c === '') continue;
+        try {
+            $stmt = $pdo->prepare("SELECT id, nacionalidad, nombre, sexo, fechnac, celular, email FROM usuarios WHERE cedula = ? LIMIT 1");
             $stmt->execute([$c]);
             $persona = $stmt->fetch(PDO::FETCH_ASSOC);
             if ($persona) {
-                error_log("search_persona.php - Encontrado en usuarios: " . $persona['nombre']);
+                error_log("search_persona.php - PASO 2 resultado: ENCONTRADO en usuarios (" . ($persona['nombre'] ?? '') . ")");
                 $fechnac = $persona['fechnac'] ?? '';
-                if ($fechnac && preg_match('/^\d{4}-\d{2}-\d{2}/', $fechnac) === false && (strtotime($fechnac) !== false)) {
+                if ($fechnac && preg_match('/^\d{4}-\d{2}-\d{2}/', $fechnac) === false && strtotime($fechnac) !== false) {
                     $fechnac = date('Y-m-d', strtotime($fechnac));
                 }
                 $celular = $persona['celular'] ?? '';
                 echo json_encode([
+                    'status' => 'encontrado',
                     'encontrado' => true,
+                    'existe_en_usuarios' => true,
                     'fuente' => 'usuarios',
                     'usuario_registrado' => true,
                     'persona' => [
+                        'id' => (int) ($persona['id'] ?? 0),
                         'nacionalidad' => $persona['nacionalidad'] ?? 'V',
                         'nombre' => $persona['nombre'] ?? '',
                         'sexo' => $persona['sexo'] ?? '',
@@ -71,84 +105,90 @@ try {
                 exit;
             }
         } catch (Exception $e) {
-            error_log("search_persona.php - Error buscando en usuarios: " . $e->getMessage());
+            error_log("search_persona.php - PASO 2 excepcion: " . $e->getMessage());
         }
     }
+    error_log("search_persona.php - PASO 2 resultado: no encontrado en usuarios, continuar a PASO 3");
 
-    // 2. Buscar en base de datos externa (BD personas, tabla dbo_persona - IDUsuario sin prefijo V/E)
-    error_log("search_persona.php - Paso 2: Buscando en base de datos externa");
-    $cedula_externa = preg_replace('/^[VEJP]/i', '', $cedula);
-    $cedula_externa = $cedula_externa ?: $cedula;
-    
+    // ─── PASO 3: Buscar en base de datos externa (personas). Si existe → datos + fuente: "externa". ───
     if (file_exists(__DIR__ . '/../../config/persona_database.php')) {
+        error_log("search_persona.php - PASO 3: Buscando en BASE PERSONAS (externa)");
         require_once __DIR__ . '/../../config/persona_database.php';
-        
         try {
             $database = new PersonaDatabase();
-            $result = $database->searchPersonaById($nacionalidad, $cedula_externa);
-            
-            error_log("search_persona.php - Resultado base externa: " . print_r($result, true));
-            
-            // Verificar diferentes formatos de respuesta
+            $result = $database->searchPersonaById($nacionalidad, $cedula);
+
             if (isset($result['encontrado']) && $result['encontrado'] && isset($result['persona'])) {
-                $cel = $result['persona']['celular'] ?? $result['persona']['telefono'] ?? '';
-                $fechnac = $result['persona']['fechnac'] ?? '';
+                error_log("search_persona.php - PASO 3 resultado: ENCONTRADO en base externa");
+                $p = $result['persona'];
+                $cel = $p['celular'] ?? $p['telefono'] ?? '';
+                $fechnac = $p['fechnac'] ?? '';
                 if ($fechnac && preg_match('/^\d{4}-\d{2}-\d{2}/', $fechnac) === false && strtotime($fechnac) !== false) {
                     $fechnac = date('Y-m-d', strtotime($fechnac));
                 }
                 echo json_encode([
+                    'status' => 'encontrado',
                     'encontrado' => true,
+                    'existe_en_usuarios' => false,
                     'fuente' => 'externa',
                     'persona' => [
-                        'nacionalidad' => $result['persona']['nacionalidad'] ?? $nacionalidad,
-                        'nombre' => $result['persona']['nombre'] ?? '',
-                        'sexo' => $result['persona']['sexo'] ?? '',
+                        'nacionalidad' => $p['nacionalidad'] ?? $nacionalidad,
+                        'nombre' => $p['nombre'] ?? '',
+                        'sexo' => $p['sexo'] ?? '',
                         'fechnac' => $fechnac,
                         'celular' => $cel,
                         'telefono' => $cel,
-                        'email' => $result['persona']['email'] ?? ''
-                    ]
-                ]);
-                exit;
-            } elseif (isset($result['success']) && $result['success'] && isset($result['data'])) {
-                $cel = $result['data']['telefono'] ?? $result['data']['celular'] ?? '';
-                $fechnac = $result['data']['fechnac'] ?? '';
-                if ($fechnac && preg_match('/^\d{4}-\d{2}-\d{2}/', $fechnac) === false && strtotime($fechnac) !== false) {
-                    $fechnac = date('Y-m-d', strtotime($fechnac));
-                }
-                echo json_encode([
-                    'encontrado' => true,
-                    'fuente' => 'externa',
-                    'persona' => [
-                        'nacionalidad' => $result['data']['nacionalidad'] ?? $nacionalidad,
-                        'nombre' => $result['data']['nombre'] ?? '',
-                        'sexo' => $result['data']['sexo'] ?? '',
-                        'fechnac' => $fechnac,
-                        'celular' => $cel,
-                        'telefono' => $cel,
-                        'email' => $result['data']['email'] ?? ''
+                        'email' => $p['email'] ?? ''
                     ]
                 ]);
                 exit;
             }
+            if (isset($result['success']) && $result['success'] && isset($result['data'])) {
+                error_log("search_persona.php - PASO 3 resultado: ENCONTRADO en base externa (formato data)");
+                $d = $result['data'];
+                $cel = $d['telefono'] ?? $d['celular'] ?? '';
+                $fechnac = $d['fechnac'] ?? '';
+                if ($fechnac && preg_match('/^\d{4}-\d{2}-\d{2}/', $fechnac) === false && strtotime($fechnac) !== false) {
+                    $fechnac = date('Y-m-d', strtotime($fechnac));
+                }
+                echo json_encode([
+                    'status' => 'encontrado',
+                    'encontrado' => true,
+                    'existe_en_usuarios' => false,
+                    'fuente' => 'externa',
+                    'persona' => [
+                        'nacionalidad' => $d['nacionalidad'] ?? $nacionalidad,
+                        'nombre' => $d['nombre'] ?? '',
+                        'sexo' => $d['sexo'] ?? '',
+                        'fechnac' => $fechnac,
+                        'celular' => $cel,
+                        'telefono' => $cel,
+                        'email' => $d['email'] ?? ''
+                    ]
+                ]);
+                exit;
+            }
+            error_log("search_persona.php - PASO 3 resultado: no encontrado en base externa");
         } catch (Exception $e) {
-            error_log("search_persona.php - Error en búsqueda externa: " . $e->getMessage());
+            error_log("search_persona.php - PASO 3 excepcion: " . $e->getMessage());
         }
     } else {
-        error_log("search_persona.php - No existe persona_database.php");
+        error_log("search_persona.php - PASO 3 OMITIDO: no existe config persona_database.php");
     }
 
-    // 4. No se encontró en ninguna parte
-    error_log("search_persona.php - No encontrado");
+    // ─── PASO 4: No encontrado en ninguno → registro manual. ───
+    error_log("search_persona.php - PASO 4: NO_ENCONTRADO, devolver registro manual");
     echo json_encode([
+        'status' => 'no_encontrado',
         'encontrado' => false,
-        'mensaje' => 'Persona no encontrada con ' . $nacionalidad . $cedula
+        'mensaje' => 'Persona no encontrada. Complete los datos manualmente.'
     ]);
-    
+
 } catch (Exception $e) {
     error_log("search_persona.php - Error general: " . $e->getMessage());
     http_response_code(500);
     echo json_encode([
+        'status' => 'error',
         'encontrado' => false,
         'error' => 'Error interno del servidor: ' . $e->getMessage()
     ]);

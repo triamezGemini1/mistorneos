@@ -715,17 +715,23 @@ if ($invitation_data && !$error_message && $club_authenticated) {
                 showLoadingIndicator();
                 
                 // Buscar en la base de datos (local y externa)
-                const url = apiUrl(`search_persona.php?nacionalidad=${nacionalidad}&cedula=${encodeURIComponent(cedula)}`);
+                const torneoId = '<?= (int)($torneo_id ?? 0) ?>';
+                const url = apiUrl(`search_persona.php?nacionalidad=${nacionalidad}&cedula=${encodeURIComponent(cedula)}&torneo_id=${torneoId}`);
                 console.log('?? URL de b�squeda:', url);
                 
                 const response = await fetch(url);
                 console.log('?? Response status:', response.status);
                 
                 const result = await response.json();
-                console.log('?? Resultado completo:', result);
+                
+                if (result.status === 'ya_inscrito') {
+                    showMessage(result.mensaje || 'El jugador ya está en este torneo', 'warning');
+                    clearFormFields();
+                    hideLoadingIndicator();
+                    return;
+                }
                 
                 if (result.encontrado && result.persona) {
-                    console.log('? Datos de persona encontrados:', result.persona);
                     
                     // Llenar campos autom�ticamente
                     document.getElementById('nombre').value = result.persona.nombre || '';

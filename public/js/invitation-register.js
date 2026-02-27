@@ -19,7 +19,14 @@
             API_BASE = '/api';
         }
     }
-    var TORNEO_ID = config.torneoId || 0;
+    function getTorneoId() {
+        var id = config.torneoId || 0;
+        if (id === 0) {
+            var el = document.getElementById('torneo_id') || document.querySelector('input[name="torneo_id"]');
+            if (el && el.value) id = parseInt(el.value, 10) || 0;
+        }
+        return id;
+    }
 
     var TOAST_DURATION_MS = 4500;
     var toastContainer = null;
@@ -71,6 +78,10 @@
         if (indicator) indicator.style.display = 'none';
     }
 
+    /**
+     * Limpia todos los campos del formulario de búsqueda y deja listo para una nueva búsqueda.
+     * Coloca el foco en nacionalidad.
+     */
     function clearFormFields() {
         var nac = document.getElementById('nacionalidad');
         if (nac) nac.value = '';
@@ -86,7 +97,28 @@
         if (tel) tel.value = '';
         var email = document.getElementById('email');
         if (email) email.value = '';
-        if (ced) ced.focus();
+        var idUsuarioEl = document.getElementById('id_usuario');
+        if (idUsuarioEl) idUsuarioEl.value = '';
+        if (nac) nac.focus();
+    }
+
+    /**
+     * Limpia solo los campos de registro (nombre, sexo, fechnac, teléfono, email, id_usuario).
+     * Mantiene nacionalidad y cédula para permitir registro manual (inserción en usuarios e inscritos).
+     */
+    function clearFormFieldsExceptSearch() {
+        var nom = document.getElementById('nombre');
+        if (nom) nom.value = '';
+        var sexo = document.getElementById('sexo');
+        if (sexo) sexo.value = '';
+        var fech = document.getElementById('fechnac');
+        if (fech) fech.value = '';
+        var tel = document.getElementById('telefono');
+        if (tel) tel.value = '';
+        var email = document.getElementById('email');
+        if (email) email.value = '';
+        var idUsuarioEl = document.getElementById('id_usuario');
+        if (idUsuarioEl) idUsuarioEl.value = '';
     }
 
     function fillFormFromPersona(persona) {
@@ -104,6 +136,12 @@
         if (tel) tel.value = (persona.celular || persona.telefono || '');
         var email = document.getElementById('email');
         if (email) email.value = (persona.email || '');
+        // Si la persona viene de usuarios (tiene id), enviar id_usuario para que el servidor no intente crear usuario (evitar "cédula duplicada")
+        var idUsuarioEl = document.getElementById('id_usuario');
+        if (idUsuarioEl) {
+            var pid = (persona.id && parseInt(persona.id, 10) > 0) ? parseInt(persona.id, 10) : '';
+            idUsuarioEl.value = pid;
+        }
     }
 
     /**
@@ -123,30 +161,58 @@
         try {
             showLoadingIndicator();
 
-            // 1. Validar en inscritos
-            var checkUrl = API_BASE + '/check_cedula.php?cedula=' + encodeURIComponent(cedula) + '&torneo=' + TORNEO_ID + '&nacionalidad=' + encodeURIComponent(nacionalidad);
-            var checkRes = await fetch(checkUrl);
-            var checkData = await checkRes.json();
+            // Una sola llamada: search_persona con torneo_id hace PASO 1 (inscritos) + 2 (usuarios) + 3 (base personas)
+            var torneoId = getTorneoId();
+            var searchUrl = API_BASE + '/search_persona.php?cedula=' + encodeURIComponent(cedula) + '&nacionalidad=' + encodeURIComponent(nacionalidad) + '&torneo_id=' + torneoId;
+            if (typeof console !== 'undefined' && console.log) {
+                console.log('search_persona: URL=', searchUrl, 'torneo_id=', torneoId);
+            }
+            var response = await fetch(searchUrl);
+            var result = await response.json();
+            var status = (result.status || '').toString().toLowerCase();
 
-            if (checkData.success && checkData.exists) {
-                showToast('Jugador ya registrado', 'warning');
+            // Siempre emitir mensaje resultante y, cuando aplique, limpiar formulario y foco en nacionalidad
+
+            if (status === 'ya_inscrito') {
+                showToast(result.mensaje || 'El jugador ya está inscrito en este torneo', 'warning');
                 clearFormFields();
+                setTimeout(function () {
+                    var el = document.getElementById('nacionalidad');
+                    if (el) el.focus();
+                }, 0);
                 return;
             }
 
-            // 2 y 3. Buscar en usuarios y, si no, en API externa (search_persona hace ambos en orden)
-            var searchUrl = API_BASE + '/search_persona.php?cedula=' + encodeURIComponent(cedula) + '&nacionalidad=' + encodeURIComponent(nacionalidad);
-            var response = await fetch(searchUrl);
-            var result = await response.json();
+            if (status === 'no_encontrado') {
+                showToast(result.mensaje || 'No encontrado. Complete nombre y el resto de datos para registrar e inscribir.', 'info');
+                clearFormFieldsExceptSearch();
+                setTimeout(function () {
+                    var el = document.getElementById('nombre');
+                    if (el) el.focus();
+                }, 0);
+                return;
+            }
 
             if ((result.encontrado || result.success) && (result.persona || result.data)) {
                 fillFormFromPersona(result.persona || result.data);
-            } else {
-                showToast('No se encontraron datos para esta cédula', 'info');
+                showToast('Datos encontrados. Revise los datos y pulse Inscribir.', 'success');
+                return;
             }
+
+            showToast('No se encontraron datos para esta cédula', 'info');
+            clearFormFields();
+            setTimeout(function () {
+                var el = document.getElementById('nacionalidad');
+                if (el) el.focus();
+            }, 0);
         } catch (err) {
             console.error('Error en la búsqueda:', err);
             showToast('Error al buscar datos de la cédula', 'danger');
+            clearFormFields();
+            setTimeout(function () {
+                var el = document.getElementById('nacionalidad');
+                if (el) el.focus();
+            }, 0);
         } finally {
             hideLoadingIndicator();
         }

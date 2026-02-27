@@ -32,8 +32,8 @@ try {
     $torneo_id = (int)($_POST['torneo_id'] ?? 0);
     $id_usuario = (int)($_POST['id_usuario'] ?? 0);
     $id_club = !empty($_POST['id_club']) ? (int)$_POST['id_club'] : null;
-    // estatus en BD es INT/TINYINT: valor numérico 1 = confirmado (nunca string "activo" ni con comillas)
-    $estatus = (int) 1;
+    // REGLA CRÍTICA: estatus forzado a (int) 1 para que "Gestionar Inscripciones" reconozca al jugador como activo de inmediato
+    $estatus = 1;
 
     // Registrar nuevo usuario e inscribir (registro manual / persona externa).
     // Transacción: INSERT usuarios + INSERT inscritos atómicos (o rollback). estatus siempre numérico (1).

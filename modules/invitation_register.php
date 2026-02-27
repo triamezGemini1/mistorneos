@@ -100,7 +100,7 @@ if (empty($torneo_id) || empty($club_id)) {
             $stand_by = false;
 
             if (!$current_user) {
-                // Si el club tiene usuario asociado (directorio_clubes.id_usuario o clubes.delegado_user_id) -> login. Si no -> registro.
+                // Guardar token y url_retorno para uso posterior (login puede redirigir aquí).
                 $base = class_exists('AppHelpers') ? rtrim(AppHelpers::getPublicUrl(), '/') : (rtrim(($GLOBALS['APP_CONFIG']['app']['base_url'] ?? ''), '/') ?: '');
                 if ($base !== '' && !empty($token)) {
                     $_SESSION['url_retorno'] = $base . '/invitation/register?token=' . urlencode($token);
@@ -110,12 +110,11 @@ if (empty($torneo_id) || empty($club_id)) {
                     if (!headers_sent()) {
                         setcookie('invitation_token', $token, time() + ($cookie_days * 86400), '/', '', isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on', true);
                     }
-                    if ($club_tiene_usuario) {
-                        header('Location: ' . $base . '/auth/login');
-                    } else {
+                    // Solo redirigir a join si el club AÚN NO tiene delegado (id_usuario). Si ya tiene, quedarse en esta página y mostrar formulario con aviso "Para inscribir debe autenticarse".
+                    if (!$club_tiene_usuario) {
                         header('Location: ' . $base . '/join?token=' . urlencode($token));
+                        exit;
                     }
-                    exit;
                 }
                 $stand_by = true;
                 // Fallback: mostrar stand-by si no hubo redirección
@@ -240,17 +239,51 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
             $fechnac = !empty($_POST['fechnac']) ? $_POST['fechnac'] : null;
             $nacionalidad = in_array($_POST['nacionalidad'] ?? '', ['V', 'E', 'J', 'P']) ? $_POST['nacionalidad'] : 'V';
             $id_club_insc = !empty($_POST['club_id']) ? (int)$_POST['club_id'] : $club_id;
-
-            if (empty($cedula) || empty($nombre) || empty($telefono)) {
-                throw new Exception('Los campos cédula, nombre y teléfono son requeridos');
-            }
+            $id_usuario_enviado = !empty($_POST['id_usuario']) ? (int)$_POST['id_usuario'] : 0;
 
             $pdo = DB::pdo();
-            // 1) Buscar usuario por cedula + nacionalidad
-            $stmt = $pdo->prepare("SELECT id FROM usuarios WHERE cedula = ? AND nacionalidad = ? LIMIT 1");
-            $stmt->execute([$cedula, $nacionalidad]);
-            $usuario = $stmt->fetch(PDO::FETCH_ASSOC);
-            $id_usuario = $usuario ? (int)$usuario['id'] : null;
+
+            // Si el frontend envió id_usuario (persona encontrada en PASO 2 - usuarios), usar ese usuario y grabar solo en inscritos
+            if ($id_usuario_enviado > 0) {
+                $stmt = $pdo->prepare("SELECT id, cedula, nacionalidad, nombre FROM usuarios WHERE id = ? LIMIT 1");
+                $stmt->execute([$id_usuario_enviado]);
+                $usuario = $stmt->fetch(PDO::FETCH_ASSOC);
+                if (!$usuario) {
+                    throw new Exception('El usuario indicado no existe. Busque de nuevo por cédula.');
+                }
+                $id_usuario = (int)$usuario['id'];
+                // Opcional: actualizar datos de contacto si el formulario trae cambios
+                try {
+                    $st = $pdo->prepare("SELECT username FROM usuarios WHERE id = ? LIMIT 1");
+                    $st->execute([$id_usuario]);
+                    $row = $st->fetch(PDO::FETCH_ASSOC);
+                    $email_actual = $email !== '' ? $email : (($row['username'] ?? '') . '@gmail.com');
+                    if ($email_actual === '@gmail.com') $email_actual = 'inv@mistorneos.local';
+                    $st = $pdo->prepare("UPDATE usuarios SET nombre = ?, sexo = ?, fechnac = ?, email = ? WHERE id = ?");
+                    $st->execute([$nombre, $sexo, $fechnac ?: null, $email_actual, $id_usuario]);
+                    $chk = @$pdo->query("SELECT 1 FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'usuarios' AND COLUMN_NAME = 'celular'");
+                    if ($chk && $chk->fetch()) {
+                        $pdo->prepare("UPDATE usuarios SET celular = ? WHERE id = ?")->execute([$telefono ?: null, $id_usuario]);
+                    }
+                } catch (Exception $e) { /* ignorar */ }
+                // Ir directo a verificar inscritos e insertar (no crear usuario)
+            } else {
+                // Registro manual: no vino id_usuario, validar campos y buscar o crear usuario
+                if (empty($cedula) || empty($nombre) || empty($telefono)) {
+                    throw new Exception('Los campos cédula, nombre y teléfono son requeridos');
+                }
+                // 1) Buscar usuario por cedula + nacionalidad (mismas variantes que search_persona para evitar duplicado)
+                $id_usuario = null;
+                foreach (array_unique([$cedula, $nacionalidad . $cedula]) as $c) {
+                    if ($c === '') continue;
+                    $stmt = $pdo->prepare("SELECT id FROM usuarios WHERE cedula = ? LIMIT 1");
+                    $stmt->execute([$c]);
+                    $usuario = $stmt->fetch(PDO::FETCH_ASSOC);
+                    if ($usuario) {
+                        $id_usuario = (int)$usuario['id'];
+                        break;
+                    }
+                }
 
             if (!$id_usuario) {
                 // Usuario = nombre.apellido (slug); contraseña = cédula
@@ -313,8 +346,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                     }
                 } catch (Exception $e) { /* ignorar */ }
             }
+            } // fin else (registro manual: buscar/crear usuario)
 
-            // 2) Verificar si ya está inscrito en este torneo
+            // 2) Verificar si ya está inscrito en este torneo (común: id_usuario ya definido)
             $stmt = $pdo->prepare("SELECT id FROM inscritos WHERE id_usuario = ? AND torneo_id = ? LIMIT 1");
             $stmt->execute([$id_usuario, $torneo_id]);
             if ($stmt->fetch()) {
@@ -698,8 +732,9 @@ $texto_retorno = $es_admin_para_retorno ? 'Volver a Invitaciones' : 'Volver al i
 
                         <form method="POST" id="registrationForm" class="form-compact-invitation" <?= !$form_enabled ? 'onsubmit="return false;"' : '' ?>>
                             <input type="hidden" name="action" value="register_player">
-                            <input type="hidden" name="torneo_id" value="<?= htmlspecialchars($torneo_id) ?>">
+                            <input type="hidden" id="torneo_id" name="torneo_id" value="<?= htmlspecialchars($torneo_id) ?>">
                             <input type="hidden" name="club_id" value="<?= htmlspecialchars($club_id) ?>">
+                            <input type="hidden" id="id_usuario" name="id_usuario" value="">
                             <div class="d-flex flex-wrap align-items-end gap-2 gx-2 inv-form-row">
                                 <div class="inv-field">
                                     <label for="nacionalidad" class="form-label inv-label">Nac. <span class="text-danger">*</span></label>
@@ -855,6 +890,8 @@ $texto_retorno = $es_admin_para_retorno ? 'Volver a Invitaciones' : 'Volver al i
     <?php if (!empty($success_message)): ?>
     document.addEventListener('DOMContentLoaded', function() {
         if (typeof showToastInvitation === 'function') showToastInvitation(<?= json_encode($success_message) ?>, 'success');
+        var nac = document.getElementById('nacionalidad');
+        if (nac) { nac.focus(); }
     });
     <?php endif; ?>
     <?php if (!empty($error_message) && !$error_acceso): ?>
