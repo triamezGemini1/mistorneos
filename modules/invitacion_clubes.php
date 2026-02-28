@@ -172,6 +172,7 @@ if ($torneo && $_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['action']) &&
                 $campos = [
                     'torneo_id' => $torneo_id,
                     'club_id' => $club_id,
+                    'admin_club_id' => $admin_club_id,
                     'invitado_delegado' => $inv_delegado,
                     'invitado_email' => $inv_email,
                     'acceso1' => $acceso1,
@@ -189,32 +190,29 @@ if ($torneo && $_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['action']) &&
                 if (in_array('id_usuario_vinculado', $cols_inv, true)) {
                     $campos['id_usuario_vinculado'] = null;
                 }
-                // admin_club_id = ID del administrador logueado (obligatorio si la columna existe)
-                $admin_col_name = null;
+                $cols = array_values(array_intersect($cols_inv, array_keys($campos)));
+                $vals = array_map(function ($c) use ($campos) { return $campos[$c]; }, $cols);
                 foreach ($cols_inv as $col_name) {
-                    if (strtolower(trim((string) $col_name)) === 'admin_club_id') {
-                        $admin_col_name = $col_name;
+                    if (strtolower(trim((string) $col_name)) === 'admin_club_id' && !in_array($col_name, $cols, true)) {
+                        $cols[] = $col_name;
+                        $vals[] = $admin_club_id;
                         break;
                     }
                 }
-                if ($admin_col_name !== null) {
-                    $campos[$admin_col_name] = $admin_club_id;
-                }
-                $cols = array_values(array_intersect($cols_inv, array_keys($campos)));
-                $vals = array_map(function ($c) use ($campos) { return $campos[$c]; }, $cols);
                 if (!empty($cols)) {
                     $placeholders = implode(', ', array_fill(0, count($cols), '?'));
                     $stmt = $pdo->prepare("INSERT INTO {$tb_inv} (" . implode(', ', $cols) . ") VALUES ({$placeholders})");
                     $stmt->execute($vals);
                 } else {
-                    $insert_cols = ['torneo_id', 'club_id', 'acceso1', 'acceso2', 'usuario', 'token'];
-                    $insert_vals = [$torneo_id, $club_id, $acceso1, $acceso2, $usuario_creador, $token];
-                    if ($admin_col_name !== null) {
-                        $insert_cols[] = $admin_col_name;
-                        $insert_vals[] = $admin_club_id;
+                    $insert_cols = ['torneo_id', 'club_id', 'acceso1', 'acceso2', 'usuario', 'token', 'estado'];
+                    $insert_vals = [$torneo_id, $club_id, $acceso1, $acceso2, $usuario_creador, $token, 'activa'];
+                    foreach ($cols_inv as $col_name) {
+                        if (strtolower(trim((string) $col_name)) === 'admin_club_id') {
+                            $insert_cols[] = $col_name;
+                            $insert_vals[] = $admin_club_id;
+                            break;
+                        }
                     }
-                    $insert_cols[] = 'estado';
-                    $insert_vals[] = 'activa';
                     $placeholders = implode(', ', array_fill(0, count($insert_vals), '?'));
                     $stmt = $pdo->prepare("INSERT INTO {$tb_inv} (" . implode(', ', $insert_cols) . ") VALUES ({$placeholders})");
                     $stmt->execute($insert_vals);
@@ -370,6 +368,7 @@ if ($torneo && $_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) 
             $campos = [
                 'torneo_id' => $torneo_id,
                 'club_id' => $club_id,
+                'admin_club_id' => $admin_club_id,
                 'invitado_delegado' => $inv_delegado,
                 'invitado_email' => $inv_email,
                 'acceso1' => $acceso1,
@@ -387,31 +386,29 @@ if ($torneo && $_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) 
             if (in_array('id_usuario_vinculado', $cols_inv, true)) {
                 $campos['id_usuario_vinculado'] = null;
             }
-            $admin_col_name = null;
+            $cols = array_values(array_intersect($cols_inv, array_keys($campos)));
+            $vals = array_map(function ($c) use ($campos) { return $campos[$c]; }, $cols);
             foreach ($cols_inv as $col_name) {
-                if (strtolower(trim((string) $col_name)) === 'admin_club_id') {
-                    $admin_col_name = $col_name;
+                if (strtolower(trim((string) $col_name)) === 'admin_club_id' && !in_array($col_name, $cols, true)) {
+                    $cols[] = $col_name;
+                    $vals[] = $admin_club_id;
                     break;
                 }
             }
-            if ($admin_col_name !== null) {
-                $campos[$admin_col_name] = $admin_club_id;
-            }
-            $cols = array_values(array_intersect($cols_inv, array_keys($campos)));
-            $vals = array_map(function ($c) use ($campos) { return $campos[$c]; }, $cols);
             if (!empty($cols)) {
                 $placeholders = implode(', ', array_fill(0, count($cols), '?'));
                 $stmt = $pdo->prepare("INSERT INTO {$tb_inv} (" . implode(', ', $cols) . ") VALUES ({$placeholders})");
                 $stmt->execute($vals);
             } else {
-                $insert_cols = ['torneo_id', 'club_id', 'acceso1', 'acceso2', 'usuario', 'token'];
-                $insert_vals = [$torneo_id, $club_id, $acceso1, $acceso2, $usuario_creador, $token];
-                if ($admin_col_name !== null) {
-                    $insert_cols[] = $admin_col_name;
-                    $insert_vals[] = $admin_club_id;
+                $insert_cols = ['torneo_id', 'club_id', 'acceso1', 'acceso2', 'usuario', 'token', 'estado'];
+                $insert_vals = [$torneo_id, $club_id, $acceso1, $acceso2, $usuario_creador, $token, 'activa'];
+                foreach ($cols_inv as $col_name) {
+                    if (strtolower(trim((string) $col_name)) === 'admin_club_id') {
+                        $insert_cols[] = $col_name;
+                        $insert_vals[] = $admin_club_id;
+                        break;
+                    }
                 }
-                $insert_cols[] = 'estado';
-                $insert_vals[] = 'activa';
                 $placeholders = implode(', ', array_fill(0, count($insert_vals), '?'));
                 $stmt = $pdo->prepare("INSERT INTO {$tb_inv} (" . implode(', ', $insert_cols) . ") VALUES ({$placeholders})");
                 $stmt->execute($insert_vals);
