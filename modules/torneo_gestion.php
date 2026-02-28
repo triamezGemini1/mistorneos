@@ -3951,9 +3951,10 @@ function guardarMesaAdicional($torneo_id, $ronda, $user_id, $is_admin_general) {
         }
         
         // Insertar los jugadores en la nueva mesa
+        $registrado_por = (int)$user_id ?: 1;
         $stmt = $pdo->prepare("INSERT INTO partiresul 
-                               (id_torneo, id_usuario, partida, mesa, secuencia, fecha_partida, registrado)
-                               VALUES (?, ?, ?, ?, ?, NOW(), 0)");
+                               (id_torneo, id_usuario, partida, mesa, secuencia, fecha_partida, registrado, registrado_por)
+                               VALUES (?, ?, ?, ?, ?, NOW(), 0, ?)");
         
         foreach ($jugadores_ids as $index => $jugador_id) {
             $stmt->execute([
@@ -3961,7 +3962,8 @@ function guardarMesaAdicional($torneo_id, $ronda, $user_id, $is_admin_general) {
                 $jugador_id,
                 $ronda,
                 $nuevaMesa,
-                $index + 1
+                $index + 1,
+                $registrado_por
             ]);
         }
         

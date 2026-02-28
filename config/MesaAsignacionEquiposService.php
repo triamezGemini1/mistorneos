@@ -721,10 +721,11 @@ class MesaAsignacionEquiposService
             foreach ($mesas as $mesa) {
                 $secuencia = 1;
                 foreach ($mesa as $jugador) {
+                    $registrado_por = (class_exists('Auth') && method_exists('Auth', 'id')) ? ((int)Auth::id() ?: 1) : 1;
                     $sql = "INSERT INTO partiresul 
-                            (id_torneo, id_usuario, partida, mesa, secuencia, fecha_partida, registrado,
+                            (id_torneo, id_usuario, partida, mesa, secuencia, fecha_partida, registrado, registrado_por,
                              resultado1, resultado2, efectividad, ff)
-                            VALUES (?, ?, ?, ?, ?, NOW(), 0, 0, 0, 0, 0)";
+                            VALUES (?, ?, ?, ?, ?, NOW(), 0, ?, 0, 0, 0, 0)";
                     
                     $stmt = $this->pdo->prepare($sql);
                     $stmt->execute([
@@ -732,7 +733,8 @@ class MesaAsignacionEquiposService
                         $jugador['id_usuario'],
                         $ronda,
                         $numeroMesa,
-                        $secuencia
+                        $secuencia,
+                        $registrado_por
                     ]);
                     $secuencia++;
                 }

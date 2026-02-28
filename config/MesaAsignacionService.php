@@ -1774,14 +1774,15 @@ class MesaAsignacionService
                 foreach ($mesa as $jugador) {
                     $idUsuario = (int)($jugador['id_usuario'] ?? 0);
                     if ($idUsuario <= 0) continue; // Saltar comodín/bye
+                    $registrado_por = (class_exists('Auth') && method_exists('Auth', 'id')) ? ((int)Auth::id() ?: 1) : 1;
                     $sql = "INSERT INTO partiresul 
-                            (id_torneo, id_usuario, partida, mesa, secuencia, fecha_partida, registrado)
-                            VALUES (?, ?, ?, ?, ?, NOW(), 0)
+                            (id_torneo, id_usuario, partida, mesa, secuencia, fecha_partida, registrado, registrado_por)
+                            VALUES (?, ?, ?, ?, ?, NOW(), 0, ?)
                             ON DUPLICATE KEY UPDATE
                             mesa = VALUES(mesa),
                             secuencia = VALUES(secuencia)";
                     $stmt = $this->pdo->prepare($sql);
-                    $stmt->execute([$torneoId, $idUsuario, $ronda, $numeroMesa, $secuencia]);
+                    $stmt->execute([$torneoId, $idUsuario, $ronda, $numeroMesa, $secuencia, $registrado_por]);
                     $secuencia++;
                 }
                 $numeroMesa++;
@@ -1882,14 +1883,15 @@ class MesaAsignacionService
         // 1) Crear filas mesa=0 para esta ronda (borrar previos y insertar jugadores BYE)
         $this->pdo->prepare("DELETE FROM partiresul WHERE id_torneo = ? AND partida = ? AND mesa = 0")
             ->execute([$torneoId, $ronda]);
+        $registrado_por = (class_exists('Auth') && method_exists('Auth', 'id')) ? ((int)Auth::id() ?: 1) : 1;
         $stmt = $this->pdo->prepare("
-            INSERT INTO partiresul (id_torneo, id_usuario, partida, mesa, secuencia, fecha_partida, registrado)
-            VALUES (?, ?, ?, 0, 1, NOW(), 0)
+            INSERT INTO partiresul (id_torneo, id_usuario, partida, mesa, secuencia, fecha_partida, registrado, registrado_por)
+            VALUES (?, ?, ?, 0, 1, NOW(), 0, ?)
         ");
         foreach ($jugadoresBye as $jugador) {
             $idUsuario = (int)($jugador['id_usuario'] ?? 0);
             if ($idUsuario <= 0) continue;
-            $stmt->execute([$torneoId, $idUsuario, $ronda]);
+            $stmt->execute([$torneoId, $idUsuario, $ronda, $registrado_por]);
         }
 
         // 2) Aplicar la regla BYE a todos los registros de la ronda con mesa=0
