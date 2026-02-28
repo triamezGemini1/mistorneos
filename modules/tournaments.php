@@ -328,7 +328,8 @@ function getModalidadLabel($modalidad) {
         0 => '<span class="badge bg-secondary">No definido</span>',
         1 => '<span class="badge bg-info">Individual</span>',
         2 => '<span class="badge bg-warning">Parejas</span>',
-        3 => '<span class="badge bg-success">Equipos</span>'
+        3 => '<span class="badge bg-success">Equipos</span>',
+        4 => '<span class="badge bg-primary">Parejas fijas</span>'
     ];
     return $labels[$modalidad_int] ?? '<span class="badge bg-secondary">No definido</span>';
 }
@@ -579,8 +580,14 @@ function getModalidadLabel($modalidad) {
                                                         <?= getModalidadLabel($item['modalidad'] ?? 0) ?>
                                                     </div>
                                                     <div class="row g-2 mb-2">
-                                                        <div class="col-auto"><small class="text-muted"><i class="fas fa-calendar-alt me-1"></i><strong>Fecha:</strong> <?= $item['fechator'] ? date('d/m/Y', strtotime($item['fechator'])) : 'Sin fecha' ?></small></div>
+                                                        <div class="col-auto"><small class="text-muted"><i class="fas fa-calendar-alt me-1"></i><strong>Fecha:</strong> <?= $item['fechator'] ? date('d/m/Y', strtotime($item['fechator'])) : 'Sin fecha' ?><?php
+                                                            $hora_item = isset($item['hora_torneo']) && $item['hora_torneo'] !== '' ? $item['hora_torneo'] : (isset($item['hora']) ? $item['hora'] : '');
+                                                            if ($hora_item !== '') {
+                                                                echo ' <i class="fas fa-clock me-1"></i><strong>Hora:</strong> ' . htmlspecialchars(strlen($hora_item) >= 5 ? substr($hora_item, 0, 5) : $hora_item);
+                                                            }
+                                                        ?></small></div>
                                                         <?php if (!empty($item['lugar'])): ?><div class="col-auto"><small class="text-muted"><i class="fas fa-map-marker-alt me-1"></i><strong>Lugar:</strong> <?= htmlspecialchars($item['lugar']) ?></small></div><?php endif; ?>
+                                                        <?php if (!empty($item['tipo_torneo'])): ?><div class="col-auto"><small class="text-muted"><i class="fas fa-flag me-1"></i><strong>Tipo:</strong> <?= htmlspecialchars($item['tipo_torneo'] === 'suizo_puro' ? 'Suizo puro' : ($item['tipo_torneo'] === 'interclubes' ? 'Interclubes' : ucfirst($item['tipo_torneo']))) ?></small></div><?php endif; ?>
                                                     </div>
                                                     <div class="row g-2">
                                                         <?php if ($item['costo'] > 0): ?><div class="col-auto"><small class="text-muted"><i class="fas fa-dollar-sign me-1"></i><strong>Costo:</strong> $<?= number_format((float)$item['costo'], 2) ?></small></div><?php endif; ?>
@@ -690,6 +697,8 @@ function getModalidadLabel($modalidad) {
                                                     <small class="text-muted">
                                                         <i class="fas fa-calendar-alt me-1"></i>
                                                         <strong>Fecha:</strong> <?= $item['fechator'] ? date('d/m/Y', strtotime($item['fechator'])) : 'Sin fecha' ?>
+                                                        <?php $hora_l = isset($item['hora_torneo']) && $item['hora_torneo'] !== '' ? $item['hora_torneo'] : (isset($item['hora']) ? $item['hora'] : ''); if ($hora_l !== '') { echo ' · <strong>Hora:</strong> ' . htmlspecialchars(strlen($hora_l) >= 5 ? substr($hora_l, 0, 5) : $hora_l); } ?>
+                                                        <?php if (!empty($item['tipo_torneo'])) { echo ' · <strong>Tipo:</strong> ' . htmlspecialchars($item['tipo_torneo'] === 'suizo_puro' ? 'Suizo puro' : ($item['tipo_torneo'] === 'interclubes' ? 'Interclubes' : ucfirst($item['tipo_torneo']))); } ?>
                                                     </small>
                                                 </div>
                                                 <?php if (!empty($item['lugar'])): ?>
@@ -960,6 +969,30 @@ function getModalidadLabel($modalidad) {
                                 </div>
                                 
                                 <div class="mb-3">
+                                    <label class="form-label fw-bold text-muted"><i class="fas fa-clock me-2 text-primary"></i>Hora</label>
+                                    <p class="fs-5"><?php
+                                    $hora_ver = isset($tournament['hora_torneo']) && $tournament['hora_torneo'] !== '' && $tournament['hora_torneo'] !== null
+                                        ? $tournament['hora_torneo'] : (isset($tournament['hora']) ? $tournament['hora'] : null);
+                                    if ($hora_ver && is_string($hora_ver)) {
+                                        echo htmlspecialchars(strlen($hora_ver) >= 5 ? substr($hora_ver, 0, 5) : $hora_ver);
+                                    } else {
+                                        echo '<span class="text-muted">No especificada</span>';
+                                    }
+                                    ?></p>
+                                </div>
+                                
+                                <div class="mb-3">
+                                    <label class="form-label fw-bold text-muted"><i class="fas fa-flag me-2 text-primary"></i>Tipo de torneo</label>
+                                    <p class="fs-5"><?php
+                                    $tt = $tournament['tipo_torneo'] ?? '';
+                                    if ($tt === 'interclubes') echo 'Interclubes';
+                                    elseif ($tt === 'suizo') echo 'Suizo';
+                                    elseif ($tt === 'suizo_puro') echo 'Suizo puro';
+                                    else echo '<span class="text-muted">No definido</span>';
+                                    ?></p>
+                                </div>
+                                
+                                <div class="mb-3">
                                     <label class="form-label fw-bold text-muted"><i class="fas fa-map-marker-alt me-2 text-primary"></i>Lugar</label>
                                     <p class="fs-5"><?= !empty($tournament['lugar']) ? htmlspecialchars($tournament['lugar']) : '<span class="text-muted">No especificado</span>' ?></p>
                                 </div>
@@ -1143,6 +1176,34 @@ function getModalidadLabel($modalidad) {
                         </div>
                         
                         <div class="mb-3">
+                            <label for="hora_torneo" class="form-label">Hora</label>
+                            <input type="time" class="form-control" id="hora_torneo" name="hora_torneo" 
+                                   value="<?php
+                                   if ($action === 'edit' && !empty($tournament['hora_torneo'])) {
+                                       $ht = $tournament['hora_torneo'];
+                                       echo htmlspecialchars(strlen($ht) >= 5 ? substr($ht, 0, 5) : $ht);
+                                   } elseif ($action === 'edit' && isset($tournament['hora']) && $tournament['hora'] !== '') {
+                                       $ht = $tournament['hora'];
+                                       echo htmlspecialchars(strlen($ht) >= 5 ? substr($ht, 0, 5) : $ht);
+                                   } else {
+                                       echo '';
+                                   }
+                                   ?>">
+                            <small class="form-text text-muted">Hora de inicio del torneo (opcional).</small>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="tipo_torneo" class="form-label">Tipo de torneo</label>
+                            <select class="form-select" id="tipo_torneo" name="tipo_torneo">
+                                <option value="">No definido</option>
+                                <option value="interclubes"<?= ($action === 'edit' && isset($tournament['tipo_torneo']) && $tournament['tipo_torneo'] === 'interclubes') ? ' selected' : '' ?>>Interclubes</option>
+                                <option value="suizo"<?= ($action === 'edit' && isset($tournament['tipo_torneo']) && $tournament['tipo_torneo'] === 'suizo') ? ' selected' : '' ?>>Suizo</option>
+                                <option value="suizo_puro"<?= ($action === 'edit' && isset($tournament['tipo_torneo']) && $tournament['tipo_torneo'] === 'suizo_puro') ? ' selected' : '' ?>>Suizo puro</option>
+                            </select>
+                            <small class="form-text text-muted">Relevante para parejas fijas y equipos (rondas 2+).</small>
+                        </div>
+                        
+                        <div class="mb-3">
                             <label for="lugar" class="form-label">Lugar</label>
                             <input type="text" class="form-control" id="lugar" name="lugar" 
                                    value="<?= htmlspecialchars($action === 'edit' ? ($tournament['lugar'] ?? '') : '') ?>" 
@@ -1180,6 +1241,7 @@ function getModalidadLabel($modalidad) {
                                 <option value="1"<?= $modalidad_actual === 1 ? ' selected' : '' ?>>Individual</option>
                                 <option value="2"<?= $modalidad_actual === 2 ? ' selected' : '' ?>>Parejas</option>
                                 <option value="3"<?= $modalidad_actual === 3 ? ' selected' : '' ?>>Equipos</option>
+                                <option value="4"<?= $modalidad_actual === 4 ? ' selected' : '' ?>>Parejas fijas</option>
                             </select>
                         </div>
                         

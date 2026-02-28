@@ -367,6 +367,53 @@ try {
             $view_file = __DIR__ . '/gestion_torneos/inscribir_equipo_sitio.php';
             $view_data = obtenerDatosInscribirEquipoSitio($torneo_id);
             break;
+
+        case 'guardar_pareja_fija':
+            if (!$torneo_id || $_SERVER['REQUEST_METHOD'] !== 'POST') {
+                throw new Exception('Solicitud inválida');
+            }
+            verificarPermisosTorneo($torneo_id, $user_id, $is_admin_general);
+            $base_retorno = (strpos($_SERVER['PHP_SELF'] ?? '', 'admin_torneo.php') !== false || strpos($_SERVER['PHP_SELF'] ?? '', 'panel_torneo.php') !== false)
+                ? 'admin_torneo.php' : 'index.php?page=torneo_gestion';
+            $sep = (strpos($base_retorno, '?') !== false) ? '&' : '?';
+            $url_retorno = $base_retorno . $sep . 'action=gestionar_inscripciones_parejas_fijas&torneo_id=' . (int)$torneo_id;
+            require_once __DIR__ . '/../lib/ParejasFijasHelper.php';
+            $pdo = DB::pdo();
+            $club_id = (int)($_POST['id_club'] ?? 0);
+            $nombre_equipo = trim((string)($_POST['nombre_equipo'] ?? ''));
+            $id_usuario1 = (int)($_POST['id_usuario_1'] ?? 0);
+            $id_usuario2 = (int)($_POST['id_usuario_2'] ?? 0);
+            if ($club_id <= 0 || $nombre_equipo === '' || $id_usuario1 <= 0 || $id_usuario2 <= 0) {
+                $_SESSION['error'] = 'Complete todos los campos: club, nombre de pareja y los dos jugadores. No se permiten inscripciones incompletas.';
+                header('Location: ' . $url_retorno);
+                exit;
+            }
+            $resultado = ParejasFijasHelper::crearPareja($pdo, $torneo_id, $club_id, $nombre_equipo, [$id_usuario1, $id_usuario2], $user_id);
+            if ($resultado['success']) {
+                $_SESSION['success'] = $resultado['message'];
+            } else {
+                $_SESSION['error'] = $resultado['message'];
+            }
+            header('Location: ' . $url_retorno);
+            exit;
+
+        case 'gestionar_inscripciones_parejas_fijas':
+            if (!$torneo_id) {
+                throw new Exception('Debe especificar un torneo');
+            }
+            verificarPermisosTorneo($torneo_id, $user_id, $is_admin_general);
+            $view_file = __DIR__ . '/gestion_torneos/gestionar_inscripciones_parejas_fijas.php';
+            $view_data = obtenerDatosGestionarInscripcionesParejasFijas($torneo_id);
+            break;
+
+        case 'inscribir_pareja_sitio':
+            if (!$torneo_id) {
+                throw new Exception('Debe especificar un torneo');
+            }
+            verificarPermisosTorneo($torneo_id, $user_id, $is_admin_general);
+            $view_file = __DIR__ . '/gestion_torneos/gestionar_inscripciones_parejas_fijas.php';
+            $view_data = array_merge(obtenerDatosGestionarInscripcionesParejasFijas($torneo_id), ['solo_inscribir' => true]);
+            break;
             
         case 'mesas':
             if (!$torneo_id || !$ronda) {
@@ -1407,6 +1454,9 @@ function obtenerDatosNotificacionesTorneo($torneo_id) {
         if ($modalidad === 3) {
             require_once __DIR__ . '/../config/MesaAsignacionEquiposService.php';
             $mesaService = new MesaAsignacionEquiposService();
+        } elseif ($modalidad === 4) {
+            require_once __DIR__ . '/../config/MesaAsignacionParejasFijasService.php';
+            $mesaService = new MesaAsignacionParejasFijasService();
         } else {
             require_once __DIR__ . '/../config/MesaAsignacionService.php';
             $mesaService = new MesaAsignacionService();
@@ -1984,6 +2034,57 @@ function obtenerDatosGestionarInscripcionesEquipos($torneo_id) {
         'equipos' => $equipos,
         'equipos_por_club' => $equipos_por_club,
         'jugadores_por_equipo' => max(2, (int)($torneo['pareclub'] ?? 4))
+    ];
+}
+
+/**
+ * Obtiene datos para gestionar inscripciones de parejas fijas (modalidad 4).
+ */
+function obtenerDatosGestionarInscripcionesParejasFijas($torneo_id) {
+    require_once __DIR__ . '/../lib/ParejasFijasHelper.php';
+    $pdo = DB::pdo();
+    $stmt = $pdo->prepare("SELECT * FROM tournaments WHERE id = ?");
+    $stmt->execute([$torneo_id]);
+    $torneo = $stmt->fetch(PDO::FETCH_ASSOC);
+    if (!$torneo) {
+        throw new Exception('Torneo no encontrado');
+    }
+    if ((int)($torneo['modalidad'] ?? 0) !== ParejasFijasHelper::MODALIDAD_PAREJAS_FIJAS) {
+        throw new Exception('Este torneo no es de parejas fijas');
+    }
+    $parejas = ParejasFijasHelper::listarParejas($pdo, $torneo_id);
+    $club_ids = array_unique(array_column($parejas, 'id_club'));
+    $nombres_club = [];
+    if (!empty($club_ids)) {
+        $placeholders = implode(',', array_fill(0, count($club_ids), '?'));
+        $stmt = $pdo->prepare("SELECT id, nombre FROM clubes WHERE id IN ($placeholders)");
+        $stmt->execute(array_values($club_ids));
+        foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $r) {
+            $nombres_club[(int)$r['id']] = $r['nombre'];
+        }
+    }
+    foreach ($parejas as &$p) {
+        $p['nombre_club'] = $nombres_club[$p['id_club']] ?? 'Sin club';
+    }
+    unset($p);
+    $stmt = $pdo->prepare("SELECT id, nombre FROM clubes WHERE estatus = 1 ORDER BY nombre ASC");
+    $stmt->execute();
+    $clubes = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    $stmt = $pdo->prepare("
+        SELECT u.id, u.nombre, u.cedula
+        FROM usuarios u
+        WHERE u.status = 0
+        AND NOT EXISTS (SELECT 1 FROM inscritos i WHERE i.torneo_id = ? AND i.id_usuario = u.id AND i.estatus != 4)
+        ORDER BY u.nombre ASC
+    ");
+    $stmt->execute([$torneo_id]);
+    $jugadores_disponibles = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    return [
+        'torneo' => $torneo,
+        'parejas' => $parejas,
+        'clubes' => $clubes,
+        'jugadores_disponibles' => $jugadores_disponibles,
+        'solo_inscribir' => false,
     ];
 }
 
@@ -3215,12 +3316,16 @@ function generarRonda($torneo_id, $user_id, $is_admin_general) {
         $total_rondas = (int)($torneo['rondas'] ?? 0);
         $modalidad = (int)($torneo['modalidad'] ?? 0);
         
-        // Determinar qué servicio usar según modalidad (3 = Equipos)
+        // Determinar qué servicio usar según modalidad (3 = Equipos, 4 = Parejas fijas)
         $es_torneo_equipos = ($modalidad === 3);
+        $es_torneo_parejas_fijas = ($modalidad === 4);
         
         if ($es_torneo_equipos) {
             require_once __DIR__ . '/../config/MesaAsignacionEquiposService.php';
             $mesaService = new MesaAsignacionEquiposService();
+        } elseif ($es_torneo_parejas_fijas) {
+            require_once __DIR__ . '/../config/MesaAsignacionParejasFijasService.php';
+            $mesaService = new MesaAsignacionParejasFijasService();
         } else {
             require_once __DIR__ . '/../config/MesaAsignacionService.php';
             $mesaService = new MesaAsignacionService();
@@ -3250,29 +3355,22 @@ function generarRonda($torneo_id, $user_id, $is_admin_general) {
         
         $proxima_ronda = $ultima_ronda + 1;
         
-        // Obtener estrategia de asignación (para equipos puede ser: secuencial, intercalada_13_24, intercalada_14_23, por_rendimiento)
+        // Obtener estrategia de asignación (equipos: secuencial, etc.; parejas fijas: numero_aleatorio; resto: separar)
         if ($es_torneo_equipos) {
             $estrategia = $_POST['estrategia_asignacion'] ?? 'secuencial';
+        } elseif ($es_torneo_parejas_fijas) {
+            $estrategia = $_POST['estrategia_asignacion'] ?? 'numero_aleatorio';
         } else {
             $estrategia = $_POST['estrategia_ronda2'] ?? 'separar';
         }
         
         // Generar ronda usando el servicio apropiado
-        if ($es_torneo_equipos) {
-            $resultado = $mesaService->generarAsignacionRonda(
-                $torneo_id,
-                $proxima_ronda,
-                $total_rondas,
-                $estrategia
-            );
-        } else {
-            $resultado = $mesaService->generarAsignacionRonda(
-                $torneo_id,
-                $proxima_ronda,
-                $total_rondas,
-                $estrategia
-            );
-        }
+        $resultado = $mesaService->generarAsignacionRonda(
+            $torneo_id,
+            $proxima_ronda,
+            $total_rondas,
+            $estrategia
+        );
         
         if ($resultado['success']) {
             $mensaje = $resultado['message'];
@@ -3366,7 +3464,21 @@ function eliminarUltimaRonda($torneo_id, $user_id, $is_admin_general) {
     try {
         verificarPermisosTorneo($torneo_id, $user_id, $is_admin_general);
         
-        $mesaService = new MesaAsignacionService();
+        $pdo = DB::pdo();
+        $stmt = $pdo->prepare("SELECT modalidad FROM tournaments WHERE id = ?");
+        $stmt->execute([$torneo_id]);
+        $torneo = $stmt->fetch(PDO::FETCH_ASSOC);
+        $modalidad = (int)($torneo['modalidad'] ?? 0);
+        if ($modalidad === 3) {
+            require_once __DIR__ . '/../config/MesaAsignacionEquiposService.php';
+            $mesaService = new MesaAsignacionEquiposService();
+        } elseif ($modalidad === 4) {
+            require_once __DIR__ . '/../config/MesaAsignacionParejasFijasService.php';
+            $mesaService = new MesaAsignacionParejasFijasService();
+        } else {
+            require_once __DIR__ . '/../config/MesaAsignacionService.php';
+            $mesaService = new MesaAsignacionService();
+        }
         $ultima_ronda = $mesaService->obtenerUltimaRonda($torneo_id);
         
         if ($ultima_ronda === 0) {
@@ -3375,7 +3487,13 @@ function eliminarUltimaRonda($torneo_id, $user_id, $is_admin_general) {
             exit;
         }
         
-        $eliminada = $mesaService->eliminarRonda($torneo_id, $ultima_ronda);
+        // Eliminar ronda (partiresul e historial_parejas): usar servicio que tenga eliminarRonda
+        if ($modalidad === 4 && $mesaService instanceof MesaAsignacionParejasFijasService) {
+            $eliminada = $mesaService->eliminarRonda($torneo_id, $ultima_ronda);
+        } else {
+            require_once __DIR__ . '/../config/MesaAsignacionService.php';
+            $eliminada = (new MesaAsignacionService())->eliminarRonda($torneo_id, $ultima_ronda);
+        }
         
         if ($eliminada) {
             $_SESSION['success'] = "Ronda {$ultima_ronda} eliminada exitosamente";

@@ -37,7 +37,7 @@ try {
     if (empty($_POST['clase']) || !in_array((int)$_POST['clase'], [1, 2])) {
         throw new Exception('La clase del torneo es inv�lida');
     }
-    if (empty($_POST['modalidad']) || !in_array((int)$_POST['modalidad'], [1, 2, 3])) {
+    if (empty($_POST['modalidad']) || !in_array((int)$_POST['modalidad'], [1, 2, 3, 4])) {
         throw new Exception('La modalidad del torneo es inv�lida');
     }
     
@@ -45,9 +45,13 @@ try {
     $tiene_owner_col = false;
     $tiene_permite_inscripcion_col = false;
     $tiene_publicar_landing_col = false;
+    $tiene_hora_torneo_col = false;
+    $tiene_tipo_torneo_col = false;
     try {
         $cols = DB::pdo()->query("SHOW COLUMNS FROM tournaments")->fetchAll(PDO::FETCH_COLUMN);
         $tiene_owner_col = in_array('owner_user_id', $cols);
+        $tiene_hora_torneo_col = in_array('hora_torneo', $cols);
+        $tiene_tipo_torneo_col = in_array('tipo_torneo', $cols);
         $tiene_permite_inscripcion_col = in_array('permite_inscripcion_linea', $cols);
         $tiene_publicar_landing_col = in_array('publicar_landing', $cols);
     } catch (Exception $e) {
@@ -163,6 +167,14 @@ try {
     $cuenta_id = !empty($_POST['cuenta_id']) ? (int)$_POST['cuenta_id'] : null;
     $permite_inscripcion_linea = isset($_POST['permite_inscripcion_linea']) ? 1 : 0;
     $publicar_landing = isset($_POST['publicar_landing']) ? 1 : 0;
+    $hora_torneo = !empty($_POST['hora_torneo']) ? trim($_POST['hora_torneo']) : null;
+    if ($hora_torneo !== null && !preg_match('/^\d{1,2}:\d{2}(:\d{2})?$/', $hora_torneo)) {
+        $hora_torneo = null;
+    }
+    $tipo_torneo = !empty($_POST['tipo_torneo']) ? trim($_POST['tipo_torneo']) : null;
+    if ($tipo_torneo !== null && !in_array($tipo_torneo, ['interclubes', 'suizo', 'suizo_puro'], true)) {
+        $tipo_torneo = null;
+    }
     
     // Validar: solo admin_general puede cambiar la organización del torneo
     // admin_club y admin_torneo mantienen la organización original
@@ -231,6 +243,12 @@ try {
         normas = :normas,
         afiche = :afiche
     ";
+    if ($tiene_hora_torneo_col) {
+        $update_fields .= ", hora_torneo = :hora_torneo";
+    }
+    if ($tiene_tipo_torneo_col) {
+        $update_fields .= ", tipo_torneo = :tipo_torneo";
+    }
     $params = [
         ':id' => $id,
         ':nombre' => $nombre,
@@ -252,6 +270,12 @@ try {
         ':normas' => $file_paths['normas'],
         ':afiche' => $file_paths['afiche']
     ];
+    if ($tiene_hora_torneo_col) {
+        $params[':hora_torneo'] = $hora_torneo;
+    }
+    if ($tiene_tipo_torneo_col) {
+        $params[':tipo_torneo'] = $tipo_torneo;
+    }
     
     if ($tiene_owner_col && $owner_user_id > 0) {
         $update_fields .= ", owner_user_id = :owner_user_id";
