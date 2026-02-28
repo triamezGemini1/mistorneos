@@ -95,8 +95,10 @@ class TournamentPhaseHelper
                 'revisar_inscripciones',
                 'inscribir_sitio',
                 'invitar_whatsapp',
+                'activar_participantes',
             ],
             self::FASE_PREPARACION => [
+                'activar_participantes',
                 'generar_rondas',
                 'eliminar_ronda',
                 'tabla_asignacion',

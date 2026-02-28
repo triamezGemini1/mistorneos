@@ -8,6 +8,7 @@ require_once __DIR__ . '/../config/db.php';
 require_once __DIR__ . '/../config/csrf.php';
 require_once __DIR__ . '/../config/auth.php';
 require_once __DIR__ . '/../lib/InscritosHelper.php';
+require_once __DIR__ . '/../lib/UserActivationHelper.php';
 require_once __DIR__ . '/../lib/security.php';
 
 header('Content-Type: application/json; charset=utf-8');
@@ -152,6 +153,7 @@ try {
                 'nacionalidad' => $nacionalidad,
                 'cedula' => $cedula
             ]);
+            UserActivationHelper::activateUser($pdo, $id_usuario);
             $pdo->commit();
             echo json_encode(['success' => true, 'message' => 'Usuario registrado e inscrito correctamente', 'id' => $id_inscrito, 'id_usuario' => $id_usuario]);
         } catch (Exception $e) {
@@ -194,6 +196,7 @@ try {
             // Re-inscribir: actualizar estatus a 1 (confirmado)
             $stmt = $pdo->prepare("UPDATE inscritos SET estatus = 1 WHERE id = ?");
             $stmt->execute([$existe['id']]);
+            UserActivationHelper::activateUser($pdo, $id_usuario);
             echo json_encode(['success' => true, 'message' => 'Jugador inscrito exitosamente', 'id' => (int)$existe['id']]);
             exit;
         }
@@ -260,6 +263,7 @@ try {
                 'nacionalidad' => $nac_inscrito,
                 'cedula' => $ced_inscrito
             ]);
+            UserActivationHelper::activateUser($pdo, $id_usuario);
             echo json_encode(['success' => true, 'message' => 'Jugador inscrito exitosamente', 'id' => $id_inscrito]);
         } catch (Exception $e) {
             error_log("Error al inscribir jugador (API): " . $e->getMessage());

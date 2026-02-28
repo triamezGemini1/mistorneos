@@ -245,7 +245,7 @@ try {
                     error_log("PASO 5.$jugador_numero: Creando nuevo registro en inscritos");
                     // Crear nuevo registro en inscritos usando función centralizada
                     require_once __DIR__ . '/../../lib/InscritosHelper.php';
-                    
+                    require_once __DIR__ . '/../../lib/UserActivationHelper.php';
                     try {
                         $id_inscrito = InscritosHelper::insertarInscrito($pdo, [
                             'id_usuario' => $id_usuario,
@@ -256,6 +256,7 @@ try {
                             'inscrito_por' => $creado_por,
                             'numero' => 0 // Se asignará después con asignarNumeroSecuencialPorEquipo
                         ]);
+                        UserActivationHelper::activateUser($pdo, $id_usuario);
                         // $id_inscrito ya viene de la función insertarInscrito
                         error_log("PASO 5.$jugador_numero: Registro creado exitosamente - id_inscrito=$id_inscrito");
                     } catch (Exception $e) {

@@ -201,6 +201,10 @@ if ($_POST['action'] === 'register_player') {
                 VALUES (?, ?, ?, 'confirmado', ?, NOW(), ?, ?)
             ");
             $stmt->execute([$id_usuario, $torneo_id, $id_club_insc, $inscrito_por, $nac_insc, $ced_insc]);
+            if (file_exists(__DIR__ . '/../lib/UserActivationHelper.php')) {
+                require_once __DIR__ . '/../lib/UserActivationHelper.php';
+                UserActivationHelper::activateUser($pdo, $id_usuario);
+            }
             $success_message = "Jugador inscrito exitosamente";
         } catch (Throwable $e) {
             $error_message = "Error al inscribir jugador: " . $e->getMessage();

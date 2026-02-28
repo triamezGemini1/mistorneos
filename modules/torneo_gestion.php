@@ -2232,8 +2232,9 @@ function guardarInscripcionSitio($torneo_id, $user_id, $is_admin_general) {
     try {
         verificarPermisosTorneo($torneo_id, $user_id, $is_admin_general);
         
-        // Incluir helper de estatus
+        // Incluir helper de estatus y activación de usuarios
         require_once __DIR__ . '/../lib/InscritosHelper.php';
+        require_once __DIR__ . '/../lib/UserActivationHelper.php';
         
         $pdo = DB::pdo();
         $id_usuario = (int)($_POST['id_usuario'] ?? 0);
@@ -2354,7 +2355,7 @@ function guardarInscripcionSitio($torneo_id, $user_id, $is_admin_general) {
                 'inscrito_por' => $inscrito_por,
                 'numero' => 0 // Se asignará después si es necesario para equipos
             ]);
-            
+            UserActivationHelper::activateUser($pdo, $id_usuario);
             $_SESSION['success'] = 'Jugador inscrito exitosamente';
             header('Location: ' . buildRedirectUrl('inscribir_sitio', ['torneo_id' => $torneo_id]));
             exit;

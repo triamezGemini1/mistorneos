@@ -209,7 +209,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $torneo) {
                 'inscrito_por' => null,
                 'numero' => 0
             ]);
-            
+            if (file_exists(__DIR__ . '/../lib/UserActivationHelper.php')) {
+                require_once __DIR__ . '/../lib/UserActivationHelper.php';
+                UserActivationHelper::activateUser($pdo, $id_usuario);
+            }
             $pdo->commit();
             
             // Enviar notificación por WhatsApp si es nuevo usuario

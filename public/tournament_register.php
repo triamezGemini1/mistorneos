@@ -234,6 +234,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                 'inscrito_por' => $nuevo_user_id,
                 'numero' => 0
             ]);
+            if (file_exists(__DIR__ . '/../lib/UserActivationHelper.php')) {
+                require_once __DIR__ . '/../lib/UserActivationHelper.php';
+                UserActivationHelper::activateUser($pdo, $nuevo_user_id);
+            }
             $pdo->commit();
             RateLimiter::recordSubmit('tournament_register_new');
             $success_message = 'Te has registrado al torneo ' . htmlspecialchars($torneo['nombre']) . '. Debes formalizar tu inscripción haciendo el pago correspondiente a través de la notificación de pagos o al presentarte al evento.';
@@ -307,7 +311,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
             'inscrito_por' => $usuario['id'],
             'numero' => 0
         ]);
-        
+        if (file_exists(__DIR__ . '/../lib/UserActivationHelper.php')) {
+            require_once __DIR__ . '/../lib/UserActivationHelper.php';
+            UserActivationHelper::activateUser($pdo, (int)$usuario['id']);
+        }
         // Generar notificación de pago si el torneo tiene costo
         if ($torneo['costo'] > 0) {
             // Crear registro de pago pendiente
