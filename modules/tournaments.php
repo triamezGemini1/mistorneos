@@ -587,7 +587,7 @@ function getModalidadLabel($modalidad) {
                                                             }
                                                         ?></small></div>
                                                         <?php if (!empty($item['lugar'])): ?><div class="col-auto"><small class="text-muted"><i class="fas fa-map-marker-alt me-1"></i><strong>Lugar:</strong> <?= htmlspecialchars($item['lugar']) ?></small></div><?php endif; ?>
-                                                        <?php if (!empty($item['tipo_torneo'])): ?><div class="col-auto"><small class="text-muted"><i class="fas fa-flag me-1"></i><strong>Tipo:</strong> <?= htmlspecialchars($item['tipo_torneo'] === 'interclubes' ? 'Interclubes' : ($item['tipo_torneo'] === 'suizo_puro' ? 'Suizo puro' : ($item['tipo_torneo'] === 'suizo_sin_repetir' ? 'Suizo sin repetir' : $item['tipo_torneo']))) ?></small></div><?php endif; ?>
+                                                        <?php if (isset($item['tipo_torneo']) && (int)$item['tipo_torneo'] > 0): $tt = (int)$item['tipo_torneo']; ?><div class="col-auto"><small class="text-muted"><i class="fas fa-flag me-1"></i><strong>Tipo:</strong> <?= htmlspecialchars($tt === 1 ? 'Interclubes' : ($tt === 2 ? 'Suizo puro' : ($tt === 3 ? 'Suizo sin repetir' : ''))) ?></small></div><?php endif; ?>
                                                     </div>
                                                     <div class="row g-2">
                                                         <?php if ($item['costo'] > 0): ?><div class="col-auto"><small class="text-muted"><i class="fas fa-dollar-sign me-1"></i><strong>Costo:</strong> $<?= number_format((float)$item['costo'], 2) ?></small></div><?php endif; ?>
@@ -698,7 +698,7 @@ function getModalidadLabel($modalidad) {
                                                         <i class="fas fa-calendar-alt me-1"></i>
                                                         <strong>Fecha:</strong> <?= $item['fechator'] ? date('d/m/Y', strtotime($item['fechator'])) : 'Sin fecha' ?>
                                                         <?php $hora_l = isset($item['hora_torneo']) && $item['hora_torneo'] !== '' ? $item['hora_torneo'] : (isset($item['hora']) ? $item['hora'] : ''); if ($hora_l !== '') { echo ' · <strong>Hora:</strong> ' . htmlspecialchars(strlen($hora_l) >= 5 ? substr($hora_l, 0, 5) : $hora_l); } ?>
-                                                        <?php if (!empty($item['tipo_torneo'])) { echo ' · <strong>Tipo:</strong> ' . htmlspecialchars($item['tipo_torneo'] === 'interclubes' ? 'Interclubes' : ($item['tipo_torneo'] === 'suizo_puro' ? 'Suizo puro' : ($item['tipo_torneo'] === 'suizo_sin_repetir' ? 'Suizo sin repetir' : $item['tipo_torneo']))); } ?>
+                                                        <?php if (isset($item['tipo_torneo']) && (int)$item['tipo_torneo'] > 0) { $tt = (int)$item['tipo_torneo']; echo ' · <strong>Tipo:</strong> ' . htmlspecialchars($tt === 1 ? 'Interclubes' : ($tt === 2 ? 'Suizo puro' : ($tt === 3 ? 'Suizo sin repetir' : ''))); } ?>
                                                     </small>
                                                 </div>
                                                 <?php if (!empty($item['lugar'])): ?>
@@ -984,11 +984,10 @@ function getModalidadLabel($modalidad) {
                                 <div class="mb-3">
                                     <label class="form-label fw-bold text-muted"><i class="fas fa-flag me-2 text-primary"></i>Tipo de torneo</label>
                                     <p class="fs-5"><?php
-                                    $tt = isset($tournament['tipo_torneo']) ? trim((string)$tournament['tipo_torneo']) : '';
-                                    if ($tt === 'interclubes') echo 'Interclubes';
-                                    elseif ($tt === 'suizo_puro') echo 'Suizo puro';
-                                    elseif ($tt === 'suizo_sin_repetir') echo 'Suizo sin repetir';
-                                    else echo '<span class="text-muted">No definido</span>';
+                                    <?php
+                                    $tt = isset($tournament['tipo_torneo']) ? (int)$tournament['tipo_torneo'] : 0;
+                                    echo $tt === 1 ? 'Interclubes' : ($tt === 2 ? 'Suizo puro' : ($tt === 3 ? 'Suizo sin repetir' : '<span class="text-muted">No definido</span>'));
+                                    ?>
                                     ?></p>
                                 </div>
                                 
@@ -1301,10 +1300,11 @@ function getModalidadLabel($modalidad) {
                         <div class="mb-3">
                             <label for="tipo_torneo" class="form-label">Tipo torneo</label>
                             <select class="form-select" id="tipo_torneo" name="tipo_torneo">
-                                <option value="">No definido</option>
-                                <option value="interclubes"<?= ($action === 'edit' && isset($tournament['tipo_torneo']) && (string)$tournament['tipo_torneo'] === 'interclubes') ? ' selected' : '' ?>>Interclubes</option>
-                                <option value="suizo_puro"<?= ($action === 'edit' && isset($tournament['tipo_torneo']) && (string)$tournament['tipo_torneo'] === 'suizo_puro') ? ' selected' : '' ?>>Suizo puro</option>
-                                <option value="suizo_sin_repetir"<?= ($action === 'edit' && isset($tournament['tipo_torneo']) && (string)$tournament['tipo_torneo'] === 'suizo_sin_repetir') ? ' selected' : '' ?>>Suizo sin repetir</option>
+                                <?php $tt_val = isset($tournament['tipo_torneo']) ? (int)$tournament['tipo_torneo'] : 0; ?>
+                                <option value="0"<?= $tt_val === 0 ? ' selected' : '' ?>>No definido</option>
+                                <option value="1"<?= $tt_val === 1 ? ' selected' : '' ?>>Interclubes</option>
+                                <option value="2"<?= $tt_val === 2 ? ' selected' : '' ?>>Suizo puro</option>
+                                <option value="3"<?= $tt_val === 3 ? ' selected' : '' ?>>Suizo sin repetir</option>
                             </select>
                         </div>
                     </div>

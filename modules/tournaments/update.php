@@ -171,9 +171,11 @@ try {
     if ($hora_torneo !== null && !preg_match('/^\d{1,2}:\d{2}(:\d{2})?$/', $hora_torneo)) {
         $hora_torneo = null;
     }
-    $tipo_torneo = !empty($_POST['tipo_torneo']) ? trim($_POST['tipo_torneo']) : null;
-    if ($tipo_torneo !== null && !in_array($tipo_torneo, ['interclubes', 'suizo_puro', 'suizo_sin_repetir'], true)) {
-        $tipo_torneo = null;
+    // tipo_torneo: entero (índice) 0=no definido, 1=interclubes, 2=suizo_puro, 3=suizo_sin_repetir
+    $tipo_torneo_raw = isset($_POST['tipo_torneo']) ? trim((string)$_POST['tipo_torneo']) : '';
+    $tipo_torneo = null;
+    if ($tipo_torneo_raw !== '' && in_array((int)$tipo_torneo_raw, [1, 2, 3], true)) {
+        $tipo_torneo = (int)$tipo_torneo_raw;
     }
     
     // Validar: solo admin_general puede cambiar la organización del torneo
@@ -274,7 +276,7 @@ try {
         $params[':hora_torneo'] = $hora_torneo;
     }
     if ($tiene_tipo_torneo_col) {
-        $params[':tipo_torneo'] = $tipo_torneo;
+        $params[':tipo_torneo'] = $tipo_torneo === null ? 0 : $tipo_torneo;
     }
     
     if ($tiene_owner_col && $owner_user_id > 0) {
