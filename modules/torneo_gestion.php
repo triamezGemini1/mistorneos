@@ -4162,7 +4162,7 @@ function actualizarEstadisticasInscritos($torneo_id) {
             $zapato = (int)$jugadorActual['zapato'];
             $fechaPartida = $jugadorActual['fecha_partida'];
             
-            // Determinar si ganó o perdió
+            // Determinar si ganó o perdió (con sanción: restar del resultado1; si no es mayor que resultado2 → perdida)
             $gano = false;
             
             if ($hayForfaitMesa) {
@@ -4170,7 +4170,12 @@ function actualizarEstadisticasInscritos($torneo_id) {
             } elseif ($hayTarjetaGraveMesa) {
                 $gano = !($tarjeta == 3 || $tarjeta == 4);
             } else {
-                $gano = ($resultado1 > $resultado2);
+                if ($sancion > 0) {
+                    $resultadoAjustado = max(0, $resultado1 - $sancion);
+                    $gano = ($resultadoAjustado > $resultado2);
+                } else {
+                    $gano = ($resultado1 > $resultado2);
+                }
             }
             
             // Actualizar contadores
