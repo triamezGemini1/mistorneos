@@ -150,6 +150,33 @@
     }
 
     /**
+     * Rellena una fila del formulario de pareja (jugador 1 o 2) con los datos de persona.
+     * Sufijos: _1 o _2 (nacionalidad_1, cedula_1, nombre_1, telefono_1, id_usuario_1, etc.).
+     */
+    function fillFormRowFromPersona(rowNum, persona) {
+        if (!persona || !rowNum) return;
+        var suf = String(rowNum);
+        var n = (persona.nacionalidad || '').toString().trim().toUpperCase().substring(0, 1);
+        var nac = document.getElementById('nacionalidad_' + suf) || document.querySelector('input[name="nacionalidad_' + suf + '"]');
+        if (nac && n && ['V','E','J','P'].indexOf(n) >= 0) nac.value = n;
+        var nom = document.getElementById('nombre_' + suf) || document.querySelector('input[name="nombre_' + suf + '"]');
+        if (nom) nom.value = (persona.nombre || '');
+        var tel = document.getElementById('telefono_' + suf) || document.querySelector('input[name="telefono_' + suf + '"]');
+        if (tel) tel.value = (persona.celular || persona.telefono || '');
+        var idEl = document.getElementById('id_usuario_' + suf) || document.querySelector('input[name="id_usuario_' + suf + '"]');
+        if (idEl) {
+            var pid = (persona.id && parseInt(persona.id, 10) > 0) ? parseInt(persona.id, 10) : '';
+            idEl.value = pid;
+        }
+        var sexo = document.getElementById('sexo_' + suf) || document.querySelector('select[name="sexo_' + suf + '"]');
+        if (sexo) sexo.value = (persona.sexo || '').toString().substring(0, 1).toUpperCase() || 'M';
+        var fech = document.getElementById('fechnac_' + suf) || document.querySelector('input[name="fechnac_' + suf + '"]');
+        if (fech) fech.value = (persona.fechnac || '');
+        var email = document.getElementById('email_' + suf) || document.querySelector('input[name="email_' + suf + '"]');
+        if (email) email.value = (persona.email || '');
+    }
+
+    /**
      * Búsqueda en cuatro bloques (backend devuelve accion: ya_inscrito | encontrado_usuario | encontrado_persona | nuevo | error).
      * Cada acción ejecuta una sola respuesta: mensaje + limpiar/rellenar + foco.
      */
@@ -272,6 +299,110 @@
         }
     }
 
+    /**
+     * Búsqueda por cédula para una fila del formulario de pareja (jugador 1 o 2).
+     * Lee cedula_X y nacionalidad_X, llama a search_persona.php y según accion rellena la fila o muestra mensaje.
+     */
+    async function searchPersonaForRow(rowNum) {
+        if (isSearching) return;
+        var suf = String(rowNum);
+        var cedulaEl = document.getElementById('cedula_' + suf) || document.querySelector('input[name="cedula_' + suf + '"]');
+        var nacEl = document.getElementById('nacionalidad_' + suf) || document.querySelector('select[name="nacionalidad_' + suf + '"]');
+        var cedula = (cedulaEl && cedulaEl.value || '').trim().replace(/\D/g, '');
+        var nacionalidad = (nacEl && nacEl.value) || '';
+        if (!nacionalidad) {
+            showToast('Seleccione la nacionalidad del jugador ' + suf + ' primero.', 'warning');
+            if (nacEl) nacEl.focus();
+            return;
+        }
+        if (!cedula) {
+            showToast('Ingrese la cédula del jugador ' + suf + '.', 'warning');
+            if (cedulaEl) cedulaEl.focus();
+            return;
+        }
+        isSearching = true;
+        try {
+            showLoadingIndicator();
+            var torneoId = getTorneoId();
+            var searchUrl = (API_BASE ? API_BASE.replace(/\/$/, '') : '') + '/search_persona.php?cedula=' + encodeURIComponent(cedula) + '&nacionalidad=' + encodeURIComponent(nacionalidad) + '&torneo_id=' + torneoId;
+            var response = await fetch(searchUrl);
+            var result;
+            try {
+                result = await response.json();
+            } catch (parseErr) {
+                console.error('searchPersonaForRow: respuesta no es JSON', parseErr);
+                showToast('Error en la respuesta del servidor.', 'danger');
+                hideLoadingIndicator();
+                isSearching = false;
+                return;
+            }
+            if (!response.ok) {
+                showToast((result.mensaje || result.error || 'Error ') + (response.status ? ' (' + response.status + ')' : ''), 'danger');
+                hideLoadingIndicator();
+                isSearching = false;
+                return;
+            }
+            var accion = (result.accion || result.status || '').toString().toLowerCase();
+            if (accion === 'error') {
+                showToast(result.mensaje || result.error || 'Error en la búsqueda', 'danger');
+                hideLoadingIndicator();
+                isSearching = false;
+                return;
+            }
+            if (accion === 'ya_inscrito') {
+                showToast(result.mensaje || 'El jugador ' + suf + ' ya está en este torneo.', 'info');
+                var idEl = document.getElementById('id_usuario_' + suf) || document.querySelector('input[name="id_usuario_' + suf + '"]');
+                if (idEl) idEl.value = '';
+                var nom = document.getElementById('nombre_' + suf) || document.querySelector('input[name="nombre_' + suf + '"]');
+                if (nom) nom.value = '';
+                var tel = document.getElementById('telefono_' + suf) || document.querySelector('input[name="telefono_' + suf + '"]');
+                if (tel) tel.value = '';
+                hideLoadingIndicator();
+                isSearching = false;
+                return;
+            }
+            if (accion === 'encontrado_usuario' || accion === 'encontrado_persona' || ((result.encontrado || result.success) && (result.persona || result.data))) {
+                var persona = result.persona || result.data;
+                if (persona) {
+                    fillFormRowFromPersona(rowNum, persona);
+                    showToast(result.mensaje || 'Jugador ' + suf + ' encontrado. Revise los datos.', 'success');
+                    setTimeout(function () {
+                        var el = document.getElementById('nombre_' + suf) || document.querySelector('input[name="nombre_' + suf + '"]');
+                        if (el) el.focus();
+                    }, 0);
+                } else {
+                    showToast('No se recibieron datos del jugador ' + suf + '.', 'warning');
+                }
+                hideLoadingIndicator();
+                isSearching = false;
+                return;
+            }
+            if (accion === 'nuevo' || accion === 'no_encontrado') {
+                showToast(result.mensaje || 'Jugador ' + suf + ' no encontrado. Complete nombre y teléfono.', 'info');
+                var idEl = document.getElementById('id_usuario_' + suf) || document.querySelector('input[name="id_usuario_' + suf + '"]');
+                if (idEl) idEl.value = '';
+                var nom = document.getElementById('nombre_' + suf) || document.querySelector('input[name="nombre_' + suf + '"]');
+                if (nom) nom.value = '';
+                var tel = document.getElementById('telefono_' + suf) || document.querySelector('input[name="telefono_' + suf + '"]');
+                if (tel) tel.value = '';
+                setTimeout(function () {
+                    var el = document.getElementById('nombre_' + suf) || document.querySelector('input[name="nombre_' + suf + '"]');
+                    if (el) el.focus();
+                }, 0);
+                hideLoadingIndicator();
+                isSearching = false;
+                return;
+            }
+            showToast(result.mensaje || 'No se encontraron datos para esta cédula.', 'info');
+        } catch (err) {
+            console.error('Error searchPersonaForRow:', err);
+            showToast('Error al buscar datos del jugador ' + suf, 'danger');
+        } finally {
+            isSearching = false;
+            hideLoadingIndicator();
+        }
+    }
+
     function clearForm() {
         if (confirm('¿Estás seguro de que deseas limpiar todos los campos del formulario?')) {
             var form = document.getElementById('registrationForm');
@@ -282,6 +413,7 @@
 
     function init() {
         window.searchPersona = searchPersona;
+        window.searchPersonaForRow = searchPersonaForRow;
         window.clearFormInvitation = clearForm;
         window.clearForm = clearForm;
         window.clearFormFieldsInvitation = clearFormFields;
@@ -292,8 +424,23 @@
             cedulaEl.addEventListener('input', function () {
                 this.value = this.value.replace(/[^0-9]/g, '');
             });
-            // Búsqueda automática: el onblur está en el HTML del input para que siempre se dispare al salir del campo
         }
+        [1, 2].forEach(function (rowNum) {
+            var ced = document.getElementById('cedula_' + rowNum) || document.querySelector('input[name="cedula_' + rowNum + '"]');
+            if (ced) {
+                ced.addEventListener('input', function () {
+                    this.value = this.value.replace(/[^0-9]/g, '');
+                });
+            }
+            var tel = document.getElementById('telefono_' + rowNum) || document.querySelector('input[name="telefono_' + rowNum + '"]');
+            if (tel) {
+                tel.addEventListener('input', function () {
+                    var v = this.value.replace(/[^0-9-]/g, '');
+                    if (v.length > 4 && v.indexOf('-') === -1) v = v.substring(0, 4) + '-' + v.substring(4);
+                    this.value = v;
+                });
+            }
+        });
 
         var tel = document.getElementById('telefono');
         if (tel) {

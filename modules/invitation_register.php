@@ -12,7 +12,7 @@ if (!class_exists('AppHelpers')) {
 require_once __DIR__ . '/../lib/InvitationRegisterContext.php';
 
 // POST: delegar a archivo de acciones y terminar
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && in_array($_POST['action'], ['retirar', 'register_player'], true)) {
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && in_array($_POST['action'], ['retirar', 'register_player', 'register_pair'], true)) {
     require_once __DIR__ . '/invitation_register_actions.php';
     exit;
 }

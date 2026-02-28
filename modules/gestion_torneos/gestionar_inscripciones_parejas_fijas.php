@@ -50,7 +50,7 @@ $csrf_token = class_exists('CSRF') ? CSRF::token() : '';
     <!-- Formulario nueva pareja -->
     <div class="card border-0 shadow-sm mb-4">
         <div class="card-header bg-primary text-white">
-            <strong>Nueva pareja</strong> — Nombre de equipo, código generado automático, número por club. Exactamente 2 jugadores (no se permiten inscripciones incompletas).
+            <strong>Nueva pareja</strong> — Exactamente 2 jugadores por pareja. Nombre de equipo opcional (código se genera automático).
         </div>
         <div class="card-body">
             <form method="post" action="<?php echo $base_url . ($use_standalone ? '?' : '&'); ?>action=guardar_pareja_fija&torneo_id=<?php echo (int)$torneo['id']; ?>">
@@ -68,8 +68,8 @@ $csrf_token = class_exists('CSRF') ? CSRF::token() : '';
                         </select>
                     </div>
                     <div class="col-md-4">
-                        <label class="form-label">Nombre de la pareja (equipo) *</label>
-                        <input type="text" name="nombre_equipo" class="form-control" required maxlength="100" placeholder="Ej: Los Duendes">
+                        <label class="form-label">Nombre de la pareja (opcional)</label>
+                        <input type="text" name="nombre_equipo" class="form-control" maxlength="100" placeholder="Ej: Los Duendes (puede quedar vacío)">
                     </div>
                 </div>
                 <div class="row g-3 mt-1">

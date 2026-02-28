@@ -327,18 +327,61 @@
             <?php endif; ?>
             <div class="col-<?= $mostrar_reportes_lateral ? 'md-8' : '12' ?>">
             <?php if ($inscripciones_abiertas && empty($stand_by)): ?>
-            <!-- Formulario compacto: encabezado con retorno, una fila de campos -->
+            <?php $es_parejas = !empty($tournament_data['modalidad']) && (int)$tournament_data['modalidad'] === 4; ?>
+            <!-- Formulario: parejas (2 jug + nombre opc) o un jugador según modalidad -->
             <div class="col-12">
                 <div class="card mb-3">
                     <div class="card-body py-2 px-3">
                         <div class="d-flex justify-content-end mb-2">
                             <a href="<?= htmlspecialchars($url_retorno) ?>" class="btn btn-outline-secondary btn-sm"><i class="fas fa-arrow-left me-1"></i><?= htmlspecialchars($texto_retorno) ?></a>
                         </div>
-                        <?php /* Mensajes efímeros vía toasts (invitation-register.js); no alertas bloqueantes */ ?>
                         <?php if (!$form_enabled): ?>
                             <div class="alert alert-info py-2 mb-2 small">Para inscribir debe autenticarse primero.</div>
                         <?php endif; ?>
 
+                        <?php if ($es_parejas): ?>
+                        <!-- Inscripción por parejas: 2 jugadores + nombre de pareja opcional -->
+                        <form method="POST" id="registrationFormPareja" class="form-compact-invitation" <?= !$form_enabled ? 'onsubmit="return false;"' : '' ?>>
+                            <input type="hidden" name="action" value="register_pair">
+                            <input type="hidden" name="torneo_id" value="<?= (int)$torneo_id ?>">
+                            <input type="hidden" name="club_id" value="<?= (int)$club_id ?>">
+                            <input type="hidden" name="id_usuario_1" id="id_usuario_1" value="">
+                            <input type="hidden" name="id_usuario_2" id="id_usuario_2" value="">
+                            <div class="mb-2">
+                                <label class="form-label small">Nombre de la pareja (opcional)</label>
+                                <input type="text" name="nombre_equipo" class="form-control form-control-sm" maxlength="100" placeholder="Ej: Los Duendes (puede quedar vacío)" style="max-width: 280px;">
+                            </div>
+                            <div class="row g-2 mb-2">
+                                <div class="col-md-6">
+                                    <strong class="small text-muted">Jugador 1</strong>
+                                    <div class="d-flex flex-wrap align-items-end gap-1 mt-1">
+                                        <div class="inv-field"><label class="inv-label">Nac.</label><select class="form-select form-select-sm inv-input" name="nacionalidad_1" id="nacionalidad_1" <?= !$form_enabled ? 'disabled' : '' ?>><option value="V">V</option><option value="E">E</option><option value="J">J</option><option value="P">P</option></select></div>
+                                        <div class="inv-field"><label class="inv-label">Cédula</label><input type="text" class="form-control form-control-sm inv-input inv-input-cedula" name="cedula_1" id="cedula_1" placeholder="Cédula" maxlength="10" <?= !$form_enabled ? 'readonly' : '' ?> onblur="if(typeof searchPersonaForRow==='function')searchPersonaForRow(1);"></div>
+                                        <div class="inv-field inv-field-nombre"><label class="inv-label">Nombre</label><input type="text" class="form-control form-control-sm inv-input" name="nombre_1" id="nombre_1" <?= !$form_enabled ? 'readonly' : '' ?> required></div>
+                                        <div class="inv-field"><label class="inv-label">Tel.</label><input type="tel" class="form-control form-control-sm inv-input inv-input-tel" name="telefono_1" id="telefono_1" <?= !$form_enabled ? 'readonly' : '' ?> required></div>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <strong class="small text-muted">Jugador 2</strong>
+                                    <div class="d-flex flex-wrap align-items-end gap-1 mt-1">
+                                        <div class="inv-field"><label class="inv-label">Nac.</label><select class="form-select form-select-sm inv-input" name="nacionalidad_2" id="nacionalidad_2" <?= !$form_enabled ? 'disabled' : '' ?>><option value="V">V</option><option value="E">E</option><option value="J">J</option><option value="P">P</option></select></div>
+                                        <div class="inv-field"><label class="inv-label">Cédula</label><input type="text" class="form-control form-control-sm inv-input inv-input-cedula" name="cedula_2" id="cedula_2" placeholder="Cédula" maxlength="10" <?= !$form_enabled ? 'readonly' : '' ?> onblur="if(typeof searchPersonaForRow==='function')searchPersonaForRow(2);"></div>
+                                        <div class="inv-field inv-field-nombre"><label class="inv-label">Nombre</label><input type="text" class="form-control form-control-sm inv-input" name="nombre_2" id="nombre_2" <?= !$form_enabled ? 'readonly' : '' ?> required></div>
+                                        <div class="inv-field"><label class="inv-label">Tel.</label><input type="tel" class="form-control form-control-sm inv-input inv-input-tel" name="telefono_2" id="telefono_2" <?= !$form_enabled ? 'readonly' : '' ?> required></div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="mt-2">
+                                <?php if ($form_enabled): ?>
+                                    <button type="submit" class="btn btn-primary btn-sm"><i class="fas fa-handshake me-1"></i>Inscribir pareja</button>
+                                    <button type="button" class="btn btn-outline-secondary btn-sm" onclick="document.getElementById('registrationFormPareja').reset(); document.getElementById('id_usuario_1').value=''; document.getElementById('id_usuario_2').value='';"><i class="fas fa-eraser me-1"></i>Limpiar</button>
+                                <?php else: ?>
+                                    <a href="<?= htmlspecialchars(isset($base) && $base !== '' ? $base . '/' : '/') ?>auth/login?<?= http_build_query(['return_url' => 'invitation/register?token=' . urlencode($token)]) ?>" class="btn btn-primary btn-sm"><i class="fas fa-sign-in-alt me-1"></i>Iniciar sesión</a>
+                                <?php endif; ?>
+                            </div>
+                        </form>
+                        <p class="small text-muted mb-0 mt-1">Busque por cédula en cada jugador; al inscribir se usan los datos encontrados o los que complete. Nombre de pareja opcional.</p>
+                        <?php else: ?>
                         <form method="POST" id="registrationForm" class="form-compact-invitation" <?= !$form_enabled ? 'onsubmit="return false;"' : '' ?>>
                             <input type="hidden" name="action" value="register_player">
                             <input type="hidden" id="torneo_id" name="torneo_id" value="<?= htmlspecialchars($torneo_id) ?>">
@@ -393,6 +436,7 @@
                                 </div>
                             </div>
                         </form>
+                        <?php endif; ?>
                     </div>
                 </div>
             </div>

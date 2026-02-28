@@ -383,12 +383,12 @@ try {
             $nombre_equipo = trim((string)($_POST['nombre_equipo'] ?? ''));
             $id_usuario1 = (int)($_POST['id_usuario_1'] ?? 0);
             $id_usuario2 = (int)($_POST['id_usuario_2'] ?? 0);
-            if ($club_id <= 0 || $nombre_equipo === '' || $id_usuario1 <= 0 || $id_usuario2 <= 0) {
-                $_SESSION['error'] = 'Complete todos los campos: club, nombre de pareja y los dos jugadores. No se permiten inscripciones incompletas.';
+            if ($club_id <= 0 || $id_usuario1 <= 0 || $id_usuario2 <= 0) {
+                $_SESSION['error'] = 'Complete club y los dos jugadores. El nombre de la pareja es opcional.';
                 header('Location: ' . $url_retorno);
                 exit;
             }
-            $resultado = ParejasFijasHelper::crearPareja($pdo, $torneo_id, $club_id, $nombre_equipo, [$id_usuario1, $id_usuario2], $user_id);
+            $resultado = ParejasFijasHelper::crearPareja($pdo, $torneo_id, $club_id, $nombre_equipo !== '' ? $nombre_equipo : null, [$id_usuario1, $id_usuario2], $user_id);
             if ($resultado['success']) {
                 $_SESSION['success'] = $resultado['message'];
             } else {

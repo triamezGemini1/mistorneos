@@ -6,7 +6,7 @@
  */
 declare(strict_types=1);
 
-if ($_SERVER['REQUEST_METHOD'] !== 'POST' || !isset($_POST['action']) || !in_array($_POST['action'], ['retirar', 'register_player'], true)) {
+if ($_SERVER['REQUEST_METHOD'] !== 'POST' || !isset($_POST['action']) || !in_array($_POST['action'], ['retirar', 'register_player', 'register_pair'], true)) {
     return;
 }
 
@@ -222,6 +222,122 @@ if ($_POST['action'] === 'register_player') {
     $params = ['token' => $token, 'torneo' => $torneo_id, 'club' => $club_id];
     if ($success_message) $params['success'] = urlencode($success_message);
     if ($error_message) $params['error'] = urlencode($error_message);
+    header('Location: ' . $base . '/invitation/register?' . http_build_query($params));
+    exit;
+}
+
+// Inscripción por pareja (2 jugadores + nombre opcional). Mismo flujo que equipos pero con 2 jugadores.
+if ($_POST['action'] === 'register_pair') {
+    require_once __DIR__ . '/../lib/ParejasFijasHelper.php';
+    $current_user = Auth::user();
+    $is_admin_general = $current_user && $current_user['role'] === 'admin_general';
+    $is_admin_torneo = $current_user && $current_user['role'] === 'admin_torneo';
+    $is_admin_club = $current_user && $current_user['role'] === 'admin_club';
+    $id_vinculado_inv = $invitation_data ? (int)($invitation_data['id_usuario_vinculado'] ?? 0) : 0;
+    $es_usuario_vinculado = $current_user && $id_vinculado_inv > 0 && (int)$current_user['id'] === $id_vinculado_inv;
+    $puede_inscribir = $is_admin_general || $is_admin_torneo || $is_admin_club || $es_usuario_vinculado;
+    $dentro_vigencia = $invitation_data && (new DateTime() >= new DateTime($invitation_data['acceso1']) && new DateTime() <= new DateTime($invitation_data['acceso2']));
+    $error_message = '';
+    $success_message = '';
+    $torneo_id_int = (int)$torneo_id;
+    $club_id_int = (int)$club_id;
+
+    if ($puede_inscribir && $dentro_vigencia) {
+        $pdo = DB::pdo();
+        $stmt = $pdo->prepare('SELECT modalidad FROM tournaments WHERE id = ?');
+        $stmt->execute([$torneo_id_int]);
+        $t = $stmt->fetch(PDO::FETCH_ASSOC);
+        if (!$t || (int)($t['modalidad'] ?? 0) !== ParejasFijasHelper::MODALIDAD_PAREJAS_FIJAS) {
+            $error_message = 'Este torneo no es de parejas fijas. Use el formulario de un jugador.';
+        } else {
+            try {
+                $nombre_equipo = trim((string)($_POST['nombre_equipo'] ?? ''));
+                $ids = [];
+                foreach (['1', '2'] as $suf) {
+                    $id_u = (int)($_POST['id_usuario_' . $suf] ?? 0);
+                    if ($id_u <= 0) {
+                        $ced = preg_replace('/\D/', '', trim($_POST['cedula_' . $suf] ?? ''));
+                        $nom = trim($_POST['nombre_' . $suf] ?? '');
+                        $tel = trim($_POST['telefono_' . $suf] ?? '');
+                        if ($ced === '' || $nom === '' || $tel === '') {
+                            throw new Exception("Jugador {$suf}: complete cédula, nombre y teléfono (o busque por cédula).");
+                        }
+                        $nac = in_array($_POST['nacionalidad_' . $suf] ?? '', ['V', 'E', 'J', 'P'], true) ? $_POST['nacionalidad_' . $suf] : 'V';
+                        foreach (array_unique([$ced, $nac . $ced]) as $c) {
+                            if ($c === '') continue;
+                            $st = $pdo->prepare("SELECT id FROM usuarios WHERE cedula = ? LIMIT 1");
+                            $st->execute([$c]);
+                            $u = $st->fetch(PDO::FETCH_ASSOC);
+                            if ($u) {
+                                $id_u = (int)$u['id'];
+                                break;
+                            }
+                        }
+                        if ($id_u <= 0) {
+                            $sexo = in_array($_POST['sexo_' . $suf] ?? '', ['M', 'F', 'O'], true) ? $_POST['sexo_' . $suf] : 'M';
+                            $fechnac = !empty($_POST['fechnac_' . $suf]) ? $_POST['fechnac_' . $suf] : null;
+                            $email = trim($_POST['email_' . $suf] ?? '');
+                            $partes = preg_split('/\s+/u', $nom, 2);
+                            $np = $partes[0] ?? '';
+                            $ap = isset($partes[1]) ? trim($partes[1]) : '';
+                            $slug = function ($s) {
+                                $s = mb_strtolower($s, 'UTF-8');
+                                $s = preg_replace('/[áàäâéèëêíìïîóòöôúùüûñ]/u', 'a', $s);
+                                $s = preg_replace('/[^a-z0-9]/u', '', $s);
+                                return $s ?: 'u';
+                            };
+                            $username_base = $slug($np) . ($ap !== '' ? '.' . $slug($ap) : '') . $ced;
+                            $username = $username_base;
+                            $idx = 0;
+                            while (true) {
+                                $st = $pdo->prepare("SELECT id FROM usuarios WHERE username = ? LIMIT 1");
+                                $st->execute([$username]);
+                                if (!$st->fetch()) break;
+                                $username = $username_base . '_' . (++$idx);
+                            }
+                            $email_val = $email !== '' ? $email : ($username . '@gmail.com');
+                            $cols = "nombre, cedula, nacionalidad, sexo, fechnac, email, username, password_hash, role, club_id, entidad, status";
+                            $placeholders = "?, ?, ?, ?, ?, ?, ?, ?, 'usuario', 0, 0, 0";
+                            $params = [$nom, $ced, $nac, $sexo, $fechnac ?: null, $email_val, $username, password_hash($ced, PASSWORD_DEFAULT)];
+                            if (@$pdo->query("SELECT 1 FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'usuarios' AND COLUMN_NAME = 'celular'")->fetch()) {
+                                $cols .= ", celular";
+                                $placeholders .= ", ?";
+                                $params[] = $tel ?: null;
+                            }
+                            $pdo->prepare("INSERT INTO usuarios ({$cols}) VALUES ({$placeholders})")->execute($params);
+                            $id_u = (int)$pdo->lastInsertId();
+                        }
+                    }
+                    $ids[] = $id_u;
+                }
+                $id_usuario_1 = $ids[0];
+                $id_usuario_2 = $ids[1];
+                if ($id_usuario_1 === $id_usuario_2) {
+                    throw new Exception('Los dos jugadores deben ser distintos.');
+                }
+                $creado_por = $current_user ? (int)$current_user['id'] : null;
+                $resultado = ParejasFijasHelper::crearPareja($pdo, $torneo_id_int, $club_id_int, $nombre_equipo !== '' ? $nombre_equipo : null, [$id_usuario_1, $id_usuario_2], $creado_por);
+                if ($resultado['success']) {
+                    $success_message = $resultado['message'];
+                } else {
+                    $error_message = $resultado['message'];
+                }
+            } catch (Throwable $e) {
+                $error_message = 'Error al inscribir pareja: ' . $e->getMessage();
+            }
+        }
+    } else {
+        if ($invitation_data && !$dentro_vigencia) {
+            $error_message = 'El período de inscripción está cerrado';
+        } elseif ($current_user) {
+            $error_message = in_array($current_user['role'], ['admin_club', 'usuario'], true) ? 'Debe autenticarse como club para inscribir.' : 'No tiene permisos.';
+        } else {
+            $error_message = 'Debe autenticarse para inscribir.';
+        }
+    }
+    $params = ['token' => $token, 'torneo' => $torneo_id, 'club' => $club_id];
+    if ($success_message !== '') $params['success'] = urlencode($success_message);
+    if ($error_message !== '') $params['error'] = urlencode($error_message);
     header('Location: ' . $base . '/invitation/register?' . http_build_query($params));
     exit;
 }

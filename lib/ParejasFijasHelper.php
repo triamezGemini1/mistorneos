@@ -54,11 +54,14 @@ class ParejasFijasHelper
      * @param array $idUsuarios [id_usuario1, id_usuario2] (2 elementos)
      * @return array ['success' => bool, 'id_equipo' => int|null, 'codigo_equipo' => string|null, 'numero' => int|null, 'message' => string]
      */
+    /**
+     * @param string|null $nombreEquipo Nombre de la pareja (opcional). Si null o vacío se asigna "Pareja {codigo}".
+     */
     public static function crearPareja(
         PDO $pdo,
         int $torneoId,
         int $clubId,
-        string $nombreEquipo,
+        $nombreEquipo,
         array $idUsuarios,
         ?int $creadoPor = null
     ): array {
@@ -111,28 +114,33 @@ class ParejasFijasHelper
             ];
         }
 
-        $stmt = $pdo->prepare(
-            'SELECT id FROM equipos WHERE id_torneo = ? AND id_club = ? AND UPPER(nombre_equipo) = UPPER(?)'
-        );
-        $stmt->execute([$torneoId, $clubId, trim($nombreEquipo)]);
-        if ($stmt->fetch()) {
-            return [
-                'success' => false,
-                'id_equipo' => null,
-                'codigo_equipo' => null,
-                'numero' => null,
-                'message' => 'Ya existe una pareja con ese nombre en este club.',
-            ];
+        $nombreEquipoTrim = trim((string) $nombreEquipo);
+        // Solo comprobar duplicado por nombre si el usuario indicó un nombre
+        if ($nombreEquipoTrim !== '') {
+            $stmt = $pdo->prepare(
+                'SELECT id FROM equipos WHERE id_torneo = ? AND id_club = ? AND UPPER(nombre_equipo) = UPPER(?)'
+            );
+            $stmt->execute([$torneoId, $clubId, $nombreEquipoTrim]);
+            if ($stmt->fetch()) {
+                return [
+                    'success' => false,
+                    'id_equipo' => null,
+                    'codigo_equipo' => null,
+                    'numero' => null,
+                    'message' => 'Ya existe una pareja con ese nombre en este club.',
+                ];
+            }
         }
 
         try {
             $pdo->beginTransaction();
 
-            // Insertar equipo; el trigger puede asignar consecutivo/codigo; luego unificamos formato (3 dígitos + guión).
+            // Si no se indica nombre, usamos un placeholder único; tras el INSERT el trigger asigna codigo_equipo y lo usamos para actualizar el nombre
+            $nombreParaInsertar = $nombreEquipoTrim !== '' ? $nombreEquipoTrim : ('Pareja_' . $torneoId . '_' . $clubId . '_' . time());
             $stmt = $pdo->prepare(
                 'INSERT INTO equipos (id_torneo, id_club, nombre_equipo, creado_por) VALUES (?, ?, ?, ?)'
             );
-            $stmt->execute([$torneoId, $clubId, trim($nombreEquipo), $creadoPor]);
+            $stmt->execute([$torneoId, $clubId, $nombreParaInsertar, $creadoPor]);
             $idEquipo = (int) $pdo->lastInsertId() ?: 0;
             if ($idEquipo <= 0) {
                 $pdo->rollBack();
@@ -145,17 +153,19 @@ class ParejasFijasHelper
                 ];
             }
 
-            $stmt = $pdo->prepare('SELECT consecutivo_club FROM equipos WHERE id = ?');
+            $stmt = $pdo->prepare('SELECT consecutivo_club, codigo_equipo FROM equipos WHERE id = ?');
             $stmt->execute([$idEquipo]);
-            $consecutivo = (int) $stmt->fetchColumn();
-            if ($consecutivo <= 0) {
+            $rowEq = $stmt->fetch(PDO::FETCH_ASSOC);
+            $consecutivo = (int) ($rowEq['consecutivo_club'] ?? 0);
+            $codigoEquipo = (string) ($rowEq['codigo_equipo'] ?? '');
+            if ($codigoEquipo === '') {
                 $consecutivo = self::obtenerConsecutivoSiguienteClub($pdo, $torneoId, $clubId);
-                $stmt = $pdo->prepare('UPDATE equipos SET consecutivo_club = ? WHERE id = ?');
-                $stmt->execute([$consecutivo, $idEquipo]);
+                $codigoEquipo = self::formatoCodigoEquipo($clubId, $consecutivo);
+                $pdo->prepare('UPDATE equipos SET consecutivo_club = ?, codigo_equipo = ? WHERE id = ?')->execute([$consecutivo, $codigoEquipo, $idEquipo]);
             }
-            $codigoEquipo = self::formatoCodigoEquipo($clubId, $consecutivo);
-            $stmt = $pdo->prepare('UPDATE equipos SET codigo_equipo = ? WHERE id = ?');
-            $stmt->execute([$codigoEquipo, $idEquipo]);
+            if ($nombreEquipoTrim === '') {
+                $pdo->prepare('UPDATE equipos SET nombre_equipo = ? WHERE id = ?')->execute(['Pareja ' . $codigoEquipo, $idEquipo]);
+            }
 
             require_once __DIR__ . '/InscritosHelper.php';
             $usuarios = [$id1, $id2];
