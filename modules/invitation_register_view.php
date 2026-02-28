@@ -91,8 +91,12 @@
         .form-compact-invitation .inv-field-email .inv-input { width: 100%; min-width: 8rem; }
         .inv-parejas-recuadro { border: 3px solid #0d6efd; border-radius: 8px; padding: 1rem; margin-bottom: 1rem; }
         .inv-parejas-separador { border: none; border-top: 3px solid #dc3545; margin: 1rem 0; }
-        .inv-jugador-block { margin-bottom: 0.5rem; }
-        .inv-jugador-block .inv-field { margin-bottom: 0.5rem; }
+        .inv-jugador-block { margin-bottom: 0.25rem; }
+        .inv-parejas-recuadro .inv-field .form-control-sm,
+        .inv-parejas-recuadro .inv-field .form-select-sm { font-size: 0.75rem; padding: 0.2rem 0.35rem; height: auto; min-height: 28px; max-width: 140px; }
+        .inv-parejas-recuadro .inv-field-nombre .form-control-sm { max-width: 180px; }
+        .inv-parejas-recuadro .inv-input-cedula { max-width: 90px; }
+        .inv-parejas-recuadro .inv-input-tel { max-width: 110px; }
         .invitation-club-logo-wrap img { max-width: 240px !important; max-height: 240px !important; width: auto; height: auto; object-fit: contain; }
         .invitation-club-logo-wrap .img-thumbnail { padding: 0.25rem; background: #f8f9fa; border-radius: 8px; }
         .invitation-inner-logos .logo-box img { max-width: 120px; max-height: 120px; object-fit: contain; }
@@ -373,7 +377,7 @@
                             <div class="inv-parejas-recuadro">
                                 <div class="inv-jugador-block">
                                     <strong class="small text-muted">Jugador 1</strong>
-                                    <div class="d-flex flex-column gap-1 mt-1">
+                                    <div class="d-flex flex-wrap align-items-end gap-2 mt-1">
                                         <div class="inv-field"><label class="inv-label">Nac.</label><select class="form-select form-select-sm inv-input" name="nacionalidad_1" id="nacionalidad_1" <?= !$form_enabled ? 'disabled' : '' ?>><option value="V">V</option><option value="E">E</option><option value="J">J</option><option value="P">P</option></select></div>
                                         <div class="inv-field"><label class="inv-label">Cédula</label><input type="text" class="form-control form-control-sm inv-input inv-input-cedula" name="cedula_1" id="cedula_1" placeholder="Cédula" maxlength="10" <?= !$form_enabled ? 'readonly' : '' ?> onblur="if(typeof searchPersonaForRow==='function')searchPersonaForRow(1);"></div>
                                         <div class="inv-field inv-field-nombre"><label class="inv-label">Nombre</label><input type="text" class="form-control form-control-sm inv-input" name="nombre_1" id="nombre_1" <?= !$form_enabled ? 'readonly' : '' ?> required></div>
@@ -383,7 +387,7 @@
                                 <hr class="inv-parejas-separador">
                                 <div class="inv-jugador-block">
                                     <strong class="small text-muted">Jugador 2</strong>
-                                    <div class="d-flex flex-column gap-1 mt-1">
+                                    <div class="d-flex flex-wrap align-items-end gap-2 mt-1">
                                         <div class="inv-field"><label class="inv-label">Nac.</label><select class="form-select form-select-sm inv-input" name="nacionalidad_2" id="nacionalidad_2" <?= !$form_enabled ? 'disabled' : '' ?>><option value="V">V</option><option value="E">E</option><option value="J">J</option><option value="P">P</option></select></div>
                                         <div class="inv-field"><label class="inv-label">Cédula</label><input type="text" class="form-control form-control-sm inv-input inv-input-cedula" name="cedula_2" id="cedula_2" placeholder="Cédula" maxlength="10" <?= !$form_enabled ? 'readonly' : '' ?> onblur="if(typeof searchPersonaForRow==='function')searchPersonaForRow(2);"></div>
                                         <div class="inv-field inv-field-nombre"><label class="inv-label">Nombre</label><input type="text" class="form-control form-control-sm inv-input" name="nombre_2" id="nombre_2" <?= !$form_enabled ? 'readonly' : '' ?> required></div>
