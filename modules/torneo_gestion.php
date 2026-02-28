@@ -2510,7 +2510,7 @@ function obtenerDatosRegistroResultados($torneo_id, $ronda, $mesa, $user_id = 0,
     // Debug: Log de mesas encontradas
     error_log("Mesas encontradas para torneo $torneo_id, ronda $ronda: " . implode(', ', array_column($todasLasMesas, 'numero')));
     
-    // Obtener jugadores de la mesa actual (incluyendo el campo id de partiresul)
+    // Obtener jugadores de la mesa actual (incluyendo id de partiresul y tarjeta de inscritos para verificar acción)
     $sql = "SELECT 
                 pr.id,
                 pr.*,
@@ -2520,7 +2520,8 @@ function obtenerDatosRegistroResultados($torneo_id, $ronda, $mesa, $user_id = 0,
                 i.perdidos,
                 i.efectividad,
                 i.puntos as puntos_acumulados,
-                i.sancion as sancion_acumulada
+                i.sancion as sancion_acumulada,
+                COALESCE(i.tarjeta, 0) AS tarjeta_inscritos
             FROM partiresul pr
             INNER JOIN usuarios u ON pr.id_usuario = u.id
             LEFT JOIN inscritos i ON i.id_usuario = u.id AND i.torneo_id = pr.id_torneo
@@ -2531,14 +2532,27 @@ function obtenerDatosRegistroResultados($torneo_id, $ronda, $mesa, $user_id = 0,
     $stmt->execute([$torneo_id, $ronda, $mesa]);
     $jugadores = $stmt->fetchAll(PDO::FETCH_ASSOC);
     
-    // Agregar estadísticas de Inscritos a cada jugador
+    // Tarjeta previa desde partidas anteriores (para acumulación 80 pts y checkbox)
+    $tarjeta_previa_por_usuario = [];
+    if (!empty($jugadores)) {
+        require_once __DIR__ . '/../lib/SancionesHelper.php';
+        $ids_mesa = array_map(function ($j) {
+            return (int)$j['id_usuario'];
+        }, $jugadores);
+        $tarjeta_previa_por_usuario = SancionesHelper::getTarjetaPreviaDesdePartidasAnteriores($pdo, $torneo_id, $ronda, array_values($ids_mesa));
+    }
+    
+    // Agregar estadísticas de Inscritos a cada jugador (tarjeta y tarjeta_previa para verificar acción a tomar)
     foreach ($jugadores as &$jugador) {
+        $id_u = (int)$jugador['id_usuario'];
         $jugador['inscrito'] = [
             'posicion' => (int)($jugador['posicion'] ?? 0),
             'ganados' => (int)($jugador['ganados'] ?? 0),
             'perdidos' => (int)($jugador['perdidos'] ?? 0),
             'efectividad' => (int)($jugador['efectividad'] ?? 0),
-            'puntos' => (int)($jugador['puntos'] ?? 0)
+            'puntos' => (int)($jugador['puntos'] ?? 0),
+            'tarjeta' => (int)($jugador['tarjeta_inscritos'] ?? 0),
+            'tarjeta_previa' => (int)($tarjeta_previa_por_usuario[$id_u] ?? 0)
         ];
     }
     
@@ -3468,6 +3482,14 @@ function guardarResultados($user_id, $is_admin_general) {
         // Asegurar que el array está indexado numéricamente
         $jugadores = array_values($jugadores);
         
+        // Tarjeta previa por jugador (partidas anteriores) para SancionesHelper
+        require_once __DIR__ . '/../lib/SancionesHelper.php';
+        $ids_usuarios_mesa = array_map(function ($j) {
+            return (int)($j['id_usuario'] ?? 0);
+        }, $jugadores);
+        $ids_usuarios_mesa = array_filter($ids_usuarios_mesa);
+        $tarjetaPreviaPorUsuario = SancionesHelper::getTarjetaPreviaDesdePartidasAnteriores($pdo, $torneo_id, $ronda, array_values($ids_usuarios_mesa));
+        
         // Primero, detectar si hay algún forfait en la mesa
         $hayForfaitEnMesa = false;
         foreach ($jugadores as $jugador) {
@@ -3519,8 +3541,17 @@ function guardarResultados($user_id, $is_admin_general) {
             // Determinar pareja (A: secuencias 1-2, B: secuencias 3-4)
             $esParejaA = ($secuencia == 1 || $secuencia == 2);
             
-            // Aplicar sanción antes de calcular efectividad
-            $resultado1Ajustado = max(0, $resultado1 - $sancion);
+            // Sanción y tarjeta: pasar por SancionesHelper (40=resta pts sin tarjeta; 80=resta y tarjeta según acumulación; tarjeta directa)
+            $tarjetaInscritos = (int)($tarjetaPreviaPorUsuario[$id_usuario] ?? 0);
+            if ($sancion > 0 || $tarjeta > 0) {
+                $procesado = SancionesHelper::procesar($sancion, $tarjeta, $tarjetaInscritos);
+                $sancionParaCalculo = $procesado['sancion_para_calculo'];
+                $tarjeta = $procesado['tarjeta'];
+                $sancion = $procesado['sancion_guardar'];
+            } else {
+                $sancionParaCalculo = 0;
+            }
+            $resultado1Ajustado = max(0, $resultado1 - $sancionParaCalculo);
             
             $datosJugadores[] = [
                 'id' => $id,
@@ -3532,6 +3563,7 @@ function guardarResultados($user_id, $is_admin_general) {
                 'ff' => $ff,
                 'tarjeta' => $tarjeta,
                 'sancion' => $sancion,
+                'sancion_para_calculo' => $sancionParaCalculo,
                 'chancleta' => $chancleta,
                 'zapato' => $zapato,
                 'esParejaA' => $esParejaA,
@@ -3584,9 +3616,10 @@ function guardarResultados($user_id, $is_admin_general) {
                     }
                 }
                 
-                // Si hay sanción, evaluar individualmente
-                if ($sancion > 0) {
-                    $evaluacionSancion = evaluarSancionIndividual($resultado1, $resultadoOponente, $sancion, $puntosTorneo);
+                // Si hay sanción, evaluar individualmente (usar sancion_para_calculo: 40 resta 40, 80 resta 80)
+                $sancionParaCalc = $jugador['sancion_para_calculo'] ?? $jugador['sancion'] ?? 0;
+                if ($sancionParaCalc > 0) {
+                    $evaluacionSancion = evaluarSancionIndividual($resultado1, $resultadoOponente, $sancionParaCalc, $puntosTorneo);
                     $efectividad = $evaluacionSancion['efectividad'];
                 } else {
                     $efectividad = calcularEfectividad($resultado1Ajustado, $resultado2, $puntosTorneo, $ff, $tarjeta, 0);

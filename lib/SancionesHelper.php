@@ -4,8 +4,8 @@
  * Procesa Tarjetas Amarillas y Rojas según las reglas establecidas.
  *
  * Reglas:
- * - Sanción 40 pts: Tarjeta Amarilla (advertencia administrativa). NO resta puntos.
- * - Sanción 80 pts: Si NO hay tarjeta previa → Amarilla. Si HAY tarjeta previa → tarjeta siguiente (Roja/Negra). SÍ resta puntos.
+ * - Sanción 40 pts: Resta 40 del resultado1. Sin tarjeta amarilla.
+ * - Sanción 80 pts: Resta 80 del resultado1. Si inscritos.tarjeta > 0 → tarjeta siguiente (Roja/Negra); si no → Amarilla.
  * - La tarjeta se guarda solo en partiresul; inscritos se actualiza vía actualizarEstadisticasInscritos.
  * - Tarjeta previa = desde partiresul de partidas ANTERIORES (excluir la partida actual para evitar doble escalación al re-editar).
  */
@@ -17,7 +17,8 @@ class SancionesHelper {
     const TARJETA_ROJA = 3;
     const TARJETA_NEGRA = 4;
 
-    /** Sanción que dispara Amarilla sin restar puntos (advertencia administrativa) */
+    /** Sanción 40 pts: resta de resultado1, sin asignar tarjeta (alias para compatibilidad: SANCION_AMARILLA) */
+    const SANCION_40 = 40;
     const SANCION_AMARILLA = 40;
 
     /** Sanción máxima que dispara Amarilla o Roja (según tarjeta previa) y SÍ resta puntos */
@@ -43,11 +44,11 @@ class SancionesHelper {
         $sancionParaCalculo = $sancion;
         $sancionGuardar = $sancion;
 
-        // Sanción 40: Amarilla administrativa, NO resta puntos
-        if ($sancion === self::SANCION_AMARILLA) {
-            $tarjeta = self::TARJETA_AMARILLA;
-            $sancionParaCalculo = 0;
-            $sancionGuardar = self::SANCION_AMARILLA;
+        // Sanción 40: resta 40 de resultado1, sin tarjeta
+        if ($sancion === self::SANCION_40 || $sancion === self::SANCION_AMARILLA) {
+            $tarjeta = self::TARJETA_NINGUNA;
+            $sancionParaCalculo = self::SANCION_40;
+            $sancionGuardar = self::SANCION_40;
             return ['tarjeta' => $tarjeta, 'sancion_para_calculo' => $sancionParaCalculo, 'sancion_guardar' => $sancionGuardar];
         }
 

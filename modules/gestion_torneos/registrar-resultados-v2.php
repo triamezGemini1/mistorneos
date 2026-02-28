@@ -834,7 +834,7 @@ $action_param = $use_standalone ? '?' : '&';
                                                 </td>
                                                 <?php endif; ?>
                                                 
-                                                <!-- Sanción: 40=amarilla (adv. adm., no resta pts); 80=sin prev→amarilla, con prev→siguiente (roja/negra) -->
+                                                <!-- Sanción: 40=resta pts sin tarjeta; 80=resta pts y tarjeta (amarilla o siguiente si ya tenía) -->
                                                 <td class="text-center columna-sancion" data-tarjeta-inscritos="<?php echo (int)($jugador['inscrito']['tarjeta_previa'] ?? $jugador['inscrito']['tarjeta'] ?? 0); ?>">
                                                     <input type="number" 
                                                            name="jugadores[<?php echo $indiceArray; ?>][sancion]"
@@ -848,7 +848,7 @@ $action_param = $use_standalone ? '?' : '&';
                                                     <small id="indicador_tarjeta_80_<?php echo $indiceArray; ?>" class="d-block text-muted mt-1" style="display:none !important;"></small>
                                                 </td>
                                                 
-                                                <!-- Forfait (FF) -->
+                                                <!-- Forfait (FF): marca checkbox y aplica procedimiento establecido -->
                                                 <td class="text-center columna-forfait">
                                                     <input type="checkbox" 
                                                            name="jugadores[<?php echo $indiceArray; ?>][ff]"
@@ -859,7 +859,7 @@ $action_param = $use_standalone ? '?' : '&';
                                                            onchange="validarPuntosEnTiempoReal();">
                                                 </td>
                                                 
-                                                <!-- Tarjeta -->
+                                                <!-- Tarjeta directa: marca checkbox correspondiente y procedimiento establecido -->
                                                 <td class="text-center columna-tarjeta">
                                                     <div class="d-flex justify-content-center gap-1">
                                                         <button type="button" class="tarjeta-btn" 
@@ -883,7 +883,7 @@ $action_param = $use_standalone ? '?' : '&';
                                                     </div>
                                                 </td>
                                                 
-                                                <!-- Zapato/Chancleta -->
+                                                <!-- Chancleta/Zapato: solo indicadores, no accionan procedimiento sancionatorio -->
                                                 <td class="text-center">
                                                     <div class="d-flex justify-content-center gap-2">
                                                         <label class="mb-0 cursor-pointer">
@@ -979,7 +979,7 @@ $action_param = $use_standalone ? '?' : '&';
                                                 </td>
                                                 <?php endif; ?>
                                                 
-                                                <!-- Sanción: 40=amarilla (adv. adm., no resta pts); 80=sin prev→amarilla, con prev→siguiente (roja/negra) -->
+                                                <!-- Sanción: 40=resta pts sin tarjeta; 80=resta pts y tarjeta (amarilla o siguiente si ya tenía) -->
                                                 <td class="text-center columna-sancion" data-tarjeta-inscritos="<?php echo (int)($jugador['inscrito']['tarjeta_previa'] ?? $jugador['inscrito']['tarjeta'] ?? 0); ?>">
                                                     <input type="number" 
                                                            name="jugadores[<?php echo $indiceArray; ?>][sancion]"
@@ -1529,7 +1529,7 @@ function validarSancionYTarjeta(index) {
     if (indicador) {
         if (mostrarIndicador) {
             if (val === SANCION_AMARILLA) {
-                indicador.textContent = 'Será: Amarilla (adv. adm., no resta pts)';
+                indicador.textContent = 'Resta 40 pts. Sin tarjeta.';
             } else if (val === SANCION_MAXIMA || tarjetaForm === 1) {
                 indicador.textContent = tarjetaInscritos >= 1 ? 'Será: Roja (acum.)' : 'Será: Amarilla';
             } else {
@@ -1541,8 +1541,9 @@ function validarSancionYTarjeta(index) {
             indicador.style.display = 'none';
         }
     }
+    // 40 pts: no se asigna tarjeta. 80 pts: asignar amarilla o siguiente según tarjeta previa.
     if (val === SANCION_AMARILLA && campoHidden) {
-        if (1 !== tarjetaForm) seleccionarTarjeta(index, 1);
+        if (0 !== tarjetaForm) seleccionarTarjeta(index, 0);
     } else if (val === SANCION_MAXIMA && campoHidden) {
         const nuevaTarjeta = tarjetaInscritos >= 1 ? 3 : 1;
         if (nuevaTarjeta !== tarjetaForm) seleccionarTarjeta(index, nuevaTarjeta);
