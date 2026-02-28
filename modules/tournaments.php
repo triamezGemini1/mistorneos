@@ -997,10 +997,8 @@ function getModalidadLabel($modalidad) {
                                 <div class="mb-3">
                                     <label class="form-label fw-bold text-muted"><i class="fas fa-flag me-2 text-primary"></i>Tipo de torneo</label>
                                     <p class="fs-5"><?php
-                                    <?php
                                     $tt = isset($tournament['tipo_torneo']) ? (int)$tournament['tipo_torneo'] : 0;
                                     echo $tt === 1 ? 'Interclubes' : ($tt === 2 ? 'Suizo puro' : ($tt === 3 ? 'Suizo sin repetir' : '<span class="text-muted">No definido</span>'));
-                                    ?>
                                     ?></p>
                                 </div>
                                 
