@@ -325,5 +325,10 @@ if ($page === 'organizaciones') {
     }
 }
 
+// Verificar permisos de torneos ANTES de enviar cualquier salida (layout). Así el redirect a access_denied funciona y no se queda la página en blanco.
+if ($page === 'tournaments') {
+    Auth::requireRole(['admin_general', 'admin_torneo', 'admin_club']);
+}
+
 // Incluir layout principal (para GET normal y páginas de visualización). $page ya está definida y saneada; el layout la usa para incluir el módulo correcto.
 include __DIR__ . "/includes/layout.php";

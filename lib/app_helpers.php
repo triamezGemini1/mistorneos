@@ -80,6 +80,16 @@ class AppHelpers {
                         $path = '/' . $m[1];
                     }
                 }
+                // Subcarpeta tipo /mistorneos_beta/public: derivar base desde SCRIPT_NAME para que redirects y assets funcionen
+                if ($path === '' && !empty($_SERVER['SCRIPT_NAME'])) {
+                    $scriptDir = str_replace('\\', '/', dirname($_SERVER['SCRIPT_NAME']));
+                    if ($scriptDir !== '.' && $scriptDir !== '' && $scriptDir !== '/' && (str_ends_with($scriptDir, '/public') || strpos($scriptDir, '/public/') !== false)) {
+                        $path = $scriptDir === '/public' ? '' : rtrim(preg_replace('#/public/?$#', '', $scriptDir), '/');
+                        if ($path !== '' && $path[0] !== '/') {
+                            $path = '/' . $path;
+                        }
+                    }
+                }
                 self::$base_url = $protocol . '://' . $host . $path;
             }
             if (str_ends_with(self::$base_url, '/public')) {

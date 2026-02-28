@@ -89,14 +89,16 @@ class Auth {
     if (!$u || !in_array($u['role'], $roles, true)) {
       // Redirigir a una p�gina de error en lugar de establecer c�digo de respuesta
       if (!headers_sent()) {
-        header('Location: ' . app_base_url() . '/public/access_denied.php');
+        $base = class_exists('AppHelpers') && method_exists('AppHelpers', 'getRequestEntryUrl') ? AppHelpers::getRequestEntryUrl() : rtrim(app_base_url(), '/') . '/public';
+        header('Location: ' . $base . '/access_denied.php');
         exit;
       } else {
         // Si los headers ya se enviaron, mostrar mensaje de error
         echo '<div class="alert alert-danger text-center mt-4">';
         echo '<h4>Acceso Denegado</h4>';
         echo '<p>No tienes permisos para acceder a esta secci�n.</p>';
-        echo '<a href="' . app_base_url() . '/public/index.php?page=registrants" class="btn btn-primary">Ir a Inscripciones</a>';
+        $base = class_exists('AppHelpers') && method_exists('AppHelpers', 'getRequestEntryUrl') ? AppHelpers::getRequestEntryUrl() : rtrim(app_base_url(), '/') . '/public';
+        echo '<a href="' . $base . '/index.php?page=registrants" class="btn btn-primary">Ir a Inscripciones</a>';
         echo '</div>';
         exit;
       }
