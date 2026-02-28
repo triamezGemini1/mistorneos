@@ -640,7 +640,13 @@ tailwind.config = {
                                     <a href="index.php?page=registrants&torneo_id=<?php echo $torneo['id']; ?><?php echo $use_standalone ? '&return_to=panel_torneo' : ''; ?>" class="tw-btn bg-blue-500 hover:bg-blue-600 text-white"><i class="fas fa-clipboard-list"></i> Gestionar Inscripciones</a>
                                     <a href="<?php echo $base_url . ($use_standalone ? '?' : '&'); ?>action=inscribir_sitio&torneo_id=<?php echo $torneo['id']; ?>" class="tw-btn bg-amber-500 hover:bg-amber-600 text-white"><i class="fas fa-user-check"></i> Inscripción en Sitio</a>
                                 <?php endif; ?>
+                                <a href="index.php?page=tournament_admin&torneo_id=<?php echo (int)$torneo['id']; ?>&action=activar_participantes" class="tw-btn bg-green-500 hover:bg-green-600 text-white"><i class="fas fa-user-check"></i> Activar participantes</a>
                             </div>
+                        <?php endif; ?>
+                        <?php if ($isLocked || $torneo_bloqueado_inscripciones): ?>
+                        <div class="d-flex flex-column gap-1 mt-2">
+                            <a href="index.php?page=tournament_admin&torneo_id=<?php echo (int)$torneo['id']; ?>&action=activar_participantes" class="tw-btn bg-green-500 hover:bg-green-600 text-white"><i class="fas fa-user-check"></i> Activar participantes</a>
+                        </div>
                         <?php endif; ?>
                         
                         <!-- Mostrar Asignaciones (solo si hay rondas generadas) -->

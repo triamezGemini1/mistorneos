@@ -499,13 +499,11 @@ $error_message = $_GET['error'] ?? null;
                     </a>
                     <?php endif; ?>
                     
-                    <?php if ($mostrar('activar_participantes')): ?>
                     <a href="index.php?page=tournament_admin&torneo_id=<?= $torneo_id ?>&action=activar_participantes" 
                        class="menu-item d-block text-decoration-none text-dark <?= $menu_action === 'activar_participantes' ? 'active' : '' ?>">
                         <i class="fas fa-user-check"></i>
                         <strong>Activar participantes</strong>
                     </a>
-                    <?php endif; ?>
                     
                     <?php if ($mostrar('invitar_whatsapp')): ?>
                     <a href="index.php?page=tournament_admin&torneo_id=<?= $torneo_id ?>&action=invitar_whatsapp" 

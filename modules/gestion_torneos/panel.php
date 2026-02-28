@@ -152,6 +152,10 @@
                             <i class="fas fa-user-check mr-1"></i> Inscripción en Sitio
                         </a>
                     <?php endif; ?>
+                    <a href="index.php?page=tournament_admin&torneo_id=<?php echo (int)$torneo['id']; ?>&action=activar_participantes" 
+                       class="btn btn-sm btn-outline-primary w-100 mt-1">
+                        <i class="fas fa-user-check mr-1"></i> Activar participantes
+                    </a>
                 </div>
             </div>
         </div>
