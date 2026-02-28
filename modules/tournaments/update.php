@@ -172,7 +172,7 @@ try {
         $hora_torneo = null;
     }
     $tipo_torneo = !empty($_POST['tipo_torneo']) ? trim($_POST['tipo_torneo']) : null;
-    if ($tipo_torneo !== null && !in_array($tipo_torneo, ['interclubes', 'suizo', 'suizo_puro'], true)) {
+    if ($tipo_torneo !== null && !in_array($tipo_torneo, ['interclubes', 'suizo_puro', 'suizo_sin_repetir'], true)) {
         $tipo_torneo = null;
     }
     
