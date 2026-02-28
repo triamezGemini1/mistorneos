@@ -1,5 +1,9 @@
 <?php
 
+if (!ob_get_level()) {
+    ob_start();
+}
+
 require_once __DIR__ . '/../../config/bootstrap.php';
 require_once __DIR__ . '/../../config/db.php';
 require_once __DIR__ . '/../../config/csrf.php';
@@ -274,13 +278,16 @@ try {
     }
     
     // Redirigir con �xito
-    header('Location: index.php?page=tournaments&success=' . urlencode('Torneo actualizado exitosamente'));
+    $redirect_url = class_exists('AppHelpers') ? AppHelpers::dashboard('tournaments', ['success' => 'Torneo actualizado exitosamente']) : 'index.php?page=tournaments&success=' . urlencode('Torneo actualizado exitosamente');
+    if (ob_get_level()) ob_end_clean();
+    header('Location: ' . $redirect_url, true, 302);
     exit;
 
 } catch (Exception $e) {
-    // Redirigir con error
     $id = isset($id) ? $id : ($_POST['id'] ?? 0);
-    header('Location: index.php?page=tournaments&action=edit&id=' . (int)$id . '&error=' . urlencode($e->getMessage()));
+    $redirect_url = class_exists('AppHelpers') ? AppHelpers::dashboard('tournaments', ['action' => 'edit', 'id' => (int)$id, 'error' => $e->getMessage()]) : 'index.php?page=tournaments&action=edit&id=' . (int)$id . '&error=' . urlencode($e->getMessage());
+    if (ob_get_level()) ob_end_clean();
+    header('Location: ' . $redirect_url, true, 302);
     exit;
 }
 

@@ -1,5 +1,10 @@
 <?php
 
+// Evitar salida previa que impida el redirect (pantalla blanca)
+if (!ob_get_level()) {
+    ob_start();
+}
+
 require_once __DIR__ . '/../../config/bootstrap.php';
 require_once __DIR__ . '/../../config/db.php';
 require_once __DIR__ . '/../../config/csrf.php';
@@ -483,16 +488,20 @@ try {
         $stmt_update->execute($file_updates);
     }
     
-    // Redirigir con éxito a la lista de torneos (misma entrada para mantener sesión)
+    // Redirigir con éxito a la lista de torneos (URL absoluta para evitar pantalla en blanco)
     $success_msg = 'Torneo creado exitosamente';
     $_SESSION['success'] = $success_msg;
-    header('Location: index.php?page=tournaments&success=' . urlencode($success_msg));
+    $redirect_url = class_exists('AppHelpers') ? AppHelpers::dashboard('tournaments', ['success' => $success_msg]) : 'index.php?page=tournaments&success=' . urlencode($success_msg);
+    if (ob_get_level()) ob_end_clean();
+    header('Location: ' . $redirect_url, true, 302);
     exit;
 
 } catch (Exception $e) {
     $error_msg = $e->getMessage();
     $_SESSION['error'] = $error_msg;
-    header('Location: index.php?page=tournaments&action=new&error=' . urlencode($error_msg));
+    $redirect_url = class_exists('AppHelpers') ? AppHelpers::dashboard('tournaments', ['action' => 'new', 'error' => $error_msg]) : 'index.php?page=tournaments&action=new&error=' . urlencode($error_msg);
+    if (ob_get_level()) ob_end_clean();
+    header('Location: ' . $redirect_url, true, 302);
     exit;
 }
 
