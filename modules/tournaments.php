@@ -21,6 +21,19 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST' && in_array($action_get, ['
     }
 }
 
+// action=save y action=update solo tienen sentido por POST (envío del formulario). Si se accede por GET, redirigir al formulario adecuado.
+if (($_SERVER['REQUEST_METHOD'] ?? 'GET') !== 'POST' && in_array($action_get, ['save', 'update'], true)) {
+    $script = isset($_SERVER['SCRIPT_NAME']) ? $_SERVER['SCRIPT_NAME'] : 'index.php';
+    $prefix = (strpos($script, '/') !== false) ? dirname($script) . '/' : '';
+    if ($action_get === 'save') {
+        header('Location: ' . $prefix . 'index.php?page=tournaments&action=new');
+    } else {
+        $id = !empty($_GET['id']) ? (int)$_GET['id'] : 0;
+        header('Location: ' . $prefix . 'index.php?page=tournaments&action=' . ($id > 0 ? 'edit&id=' . $id : 'list'));
+    }
+    exit;
+}
+
 // Obtener usuario actual y su club_id
 $current_user = Auth::user();
 $user_role = $current_user['role'];
