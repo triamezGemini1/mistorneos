@@ -19,13 +19,26 @@ $csrf_token = class_exists('CSRF') ? CSRF::token() : '';
 <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
 <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
 <style>
-    body { background-color: #f8f9fa; }
-    .row-jugador { border: 1px solid #dee2e6; border-radius: 6px; padding: 12px; margin-bottom: 12px; background: #fff; }
-    .row-jugador .form-control:read-only { background-color: #e9ecef; }
+    body { background-color: #f0f2f5; }
+    .inscribir-pareja-compact .card-body { padding: 0.85rem 1rem; }
+    .inscribir-pareja-compact .card-header { padding: 0.5rem 1rem; font-size: 0.95rem; }
+    .inscribir-pareja-compact .form-label { font-size: 0.8rem; margin-bottom: 0.2rem; }
+    .inscribir-pareja-compact .row.g-3 { --bs-gutter-y: 0.5rem; }
+    .inscribir-pareja-compact .row.g-3 .col-md-4 { padding-bottom: 0.25rem; }
+    .bloque-jugadores { border: 3px solid #0d6efd; border-radius: 8px; padding: 0.6rem 0.85rem; margin: 0.5rem 0 0.75rem; background: #fff; }
+    .bloque-jugadores .row-jugador { border: none; border-radius: 4px; padding: 0.4rem 0.5rem; margin: 0; background: #f8fafc; display: flex; flex-wrap: nowrap; align-items: center; gap: 0.35rem 0.6rem; min-height: 32px; }
+    .bloque-jugadores .row-jugador .form-control:read-only { background-color: #e9ecef; }
+    .bloque-jugadores .form-control, .bloque-jugadores .form-select { width: auto; min-width: 56px; max-width: 100px; font-size: 0.8rem; padding: 0.2rem 0.35rem; height: 28px; line-height: 1.3; }
+    .bloque-jugadores .form-select { max-width: 52px; padding: 0.2rem 0.25rem; }
+    .bloque-jugadores .form-label-inline { font-size: 0.78rem; margin: 0; white-space: nowrap; font-weight: 600; color: #495057; }
+    .bloque-jugadores .form-label-inline.jugador-titulo { color: #0d6efd; margin-right: 0.35rem; }
+    .separador-rojo { border: none; border-top: 3px solid #dc3545; margin: 0.5rem 0; }
+    .inscribir-pareja-compact .btn { font-size: 0.875rem; padding: 0.35rem 0.65rem; }
+    .inscribir-pareja-compact hr:not(.separador-rojo) { margin: 0.4rem 0; }
 </style>
 
-<div class="container-fluid py-4">
-    <nav aria-label="breadcrumb" class="mb-4">
+<div class="container-fluid py-3">
+    <nav aria-label="breadcrumb" class="mb-2">
         <ol class="breadcrumb">
             <li class="breadcrumb-item"><a href="<?php echo $base_url . ($use_standalone ? '?' : '&'); ?>action=index">Gestión de Torneos</a></li>
             <li class="breadcrumb-item"><a href="<?php echo $base_url . ($use_standalone ? '?' : '&'); ?>action=panel&torneo_id=<?php echo (int)$torneo['id']; ?>"><?php echo htmlspecialchars($torneo['nombre']); ?></a></li>
@@ -33,12 +46,12 @@ $csrf_token = class_exists('CSRF') ? CSRF::token() : '';
         </ol>
     </nav>
 
-    <div class="card mb-4 border-0 shadow-sm">
-        <div class="card-body">
-            <div class="d-flex justify-content-between align-items-center flex-wrap">
+    <div class="card mb-2 border-0 shadow-sm">
+        <div class="card-body py-2">
+            <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
                 <div>
-                    <h2 class="h4 mb-1"><i class="fas fa-handshake text-primary me-2"></i>Inscribir pareja en sitio</h2>
-                    <p class="text-muted mb-0"><?php echo htmlspecialchars($torneo['nombre']); ?> — 2 jugadores por pareja. Busque por cédula.</p>
+                    <h2 class="h5 mb-0"><i class="fas fa-handshake text-primary me-2"></i>Inscribir pareja en sitio</h2>
+                    <p class="text-muted small mb-0"><?php echo htmlspecialchars($torneo['nombre']); ?> — 2 jugadores, busque por cédula.</p>
                 </div>
                 <a href="<?php echo $base_url . ($use_standalone ? '?' : '&'); ?>action=gestionar_inscripciones_parejas_fijas&torneo_id=<?php echo (int)$torneo['id']; ?>" class="btn btn-secondary btn-sm"><i class="fas fa-arrow-left me-1"></i>Gestionar inscripciones</a>
             </div>
@@ -58,82 +71,65 @@ $csrf_token = class_exists('CSRF') ? CSRF::token() : '';
     </div>
     <?php endif; ?>
 
-    <div class="card border-0 shadow-sm">
-        <div class="card-header bg-primary text-white">
-            <strong>Nueva pareja</strong> — Busque cada jugador por cédula (al salir del campo se buscan los datos). Nombre de pareja opcional.
+    <div class="card border-0 shadow-sm inscribir-pareja-compact">
+        <div class="card-header bg-primary text-white py-2">
+            <strong>Nueva pareja</strong> <span class="opacity-90 small">— Busque por cédula. Nombre opcional.</span>
         </div>
         <div class="card-body">
             <form method="post" action="<?php echo $base_url . ($use_standalone ? '?' : '&'); ?>action=guardar_pareja_fija&torneo_id=<?php echo (int)$torneo['id']; ?>" id="formPareja">
                 <?php if ($csrf_token): ?>
                 <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($csrf_token); ?>">
                 <?php endif; ?>
-                <div class="row g-3 mb-3">
-                    <div class="col-md-4">
+                <div class="row g-3 mb-2">
+                    <div class="col-md-3 col-lg-2">
                         <label class="form-label">Club *</label>
-                        <select name="id_club" id="id_club" class="form-select" required <?= $torneo_iniciado ? 'disabled' : '' ?>>
-                            <option value="">Seleccionar club...</option>
+                        <select name="id_club" id="id_club" class="form-select form-select-sm" required <?= $torneo_iniciado ? 'disabled' : '' ?>>
+                            <option value="">Seleccionar...</option>
                             <?php foreach ($clubes_disponibles as $c): ?>
                             <option value="<?php echo (int)$c['id']; ?>"><?php echo htmlspecialchars($c['nombre']); ?></option>
                             <?php endforeach; ?>
                         </select>
                     </div>
-                    <div class="col-md-4">
-                        <label class="form-label">Nombre de la pareja (opcional)</label>
-                        <input type="text" name="nombre_equipo" class="form-control" maxlength="100" placeholder="Ej: Los Duendes" <?= $torneo_iniciado ? 'readonly' : '' ?>>
+                    <div class="col-md-3 col-lg-2">
+                        <label class="form-label">Nombre pareja (opc.)</label>
+                        <input type="text" name="nombre_equipo" class="form-control form-control-sm" maxlength="100" placeholder="Ej: Los Duendes" <?= $torneo_iniciado ? 'readonly' : '' ?>>
                     </div>
                 </div>
-                <hr>
-                <div class="row-jugador">
-                    <label class="form-label fw-bold">Jugador 1 *</label>
-                    <div class="row g-2">
-                        <div class="col-md-1">
-                            <label class="form-label small">Nac.</label>
-                            <select name="nacionalidad_1" id="nacionalidad_1" class="form-select form-select-sm" <?= $torneo_iniciado ? 'disabled' : '' ?>>
-                                <option value="V">V</option><option value="E">E</option><option value="J">J</option><option value="P">P</option>
-                            </select>
-                        </div>
-                        <div class="col-md-2">
-                            <label class="form-label small">Cédula</label>
-                            <input type="text" class="form-control form-control-sm" name="cedula_1" id="cedula_1" placeholder="Cédula" maxlength="10" <?= $torneo_iniciado ? 'readonly' : '' ?> onblur="buscarJugadorPareja(1)">
-                        </div>
-                        <div class="col-md-4">
-                            <label class="form-label small">Nombre</label>
-                            <input type="text" class="form-control form-control-sm" name="nombre_1" id="nombre_1" placeholder="Se busca al salir de cédula" readonly>
-                        </div>
-                        <div class="col-md-2">
-                            <label class="form-label small">Tel.</label>
-                            <input type="text" class="form-control form-control-sm" name="telefono_1" id="telefono_1" placeholder="Tel." readonly>
-                        </div>
+                <hr class="my-2">
+                <div class="bloque-jugadores">
+                    <div class="row-jugador">
+                        <span class="form-label-inline jugador-titulo">Jugador 1 *</span>
+                        <span class="form-label-inline">Nac.</span>
+                        <select name="nacionalidad_1" id="nacionalidad_1" class="form-select form-select-sm" <?= $torneo_iniciado ? 'disabled' : '' ?>>
+                            <option value="V">V</option><option value="E">E</option><option value="J">J</option><option value="P">P</option>
+                        </select>
+                        <span class="form-label-inline">Cédula</span>
+                        <input type="text" class="form-control form-control-sm" name="cedula_1" id="cedula_1" placeholder="Cédula" maxlength="10" <?= $torneo_iniciado ? 'readonly' : '' ?> onblur="buscarJugadorPareja(1)">
+                        <span class="form-label-inline">Nombre</span>
+                        <input type="text" class="form-control form-control-sm" name="nombre_1" id="nombre_1" placeholder="Al salir de cédula" readonly>
+                        <span class="form-label-inline">Tel.</span>
+                        <input type="text" class="form-control form-control-sm" name="telefono_1" id="telefono_1" placeholder="Tel." readonly>
+                        <input type="hidden" name="id_usuario_1" id="id_usuario_1" value="">
                     </div>
-                    <input type="hidden" name="id_usuario_1" id="id_usuario_1" value="">
-                </div>
-                <div class="row-jugador">
-                    <label class="form-label fw-bold">Jugador 2 *</label>
-                    <div class="row g-2">
-                        <div class="col-md-1">
-                            <label class="form-label small">Nac.</label>
-                            <select name="nacionalidad_2" id="nacionalidad_2" class="form-select form-select-sm" <?= $torneo_iniciado ? 'disabled' : '' ?>>
-                                <option value="V">V</option><option value="E">E</option><option value="J">J</option><option value="P">P</option>
-                            </select>
-                        </div>
-                        <div class="col-md-2">
-                            <label class="form-label small">Cédula</label>
-                            <input type="text" class="form-control form-control-sm" name="cedula_2" id="cedula_2" placeholder="Cédula" maxlength="10" <?= $torneo_iniciado ? 'readonly' : '' ?> onblur="buscarJugadorPareja(2)">
-                        </div>
-                        <div class="col-md-4">
-                            <label class="form-label small">Nombre</label>
-                            <input type="text" class="form-control form-control-sm" name="nombre_2" id="nombre_2" placeholder="Se busca al salir de cédula" readonly>
-                        </div>
-                        <div class="col-md-2">
-                            <label class="form-label small">Tel.</label>
-                            <input type="text" class="form-control form-control-sm" name="telefono_2" id="telefono_2" placeholder="Tel." readonly>
-                        </div>
+                    <hr class="separador-rojo">
+                    <div class="row-jugador">
+                        <span class="form-label-inline jugador-titulo">Jugador 2 *</span>
+                        <span class="form-label-inline">Nac.</span>
+                        <select name="nacionalidad_2" id="nacionalidad_2" class="form-select form-select-sm" <?= $torneo_iniciado ? 'disabled' : '' ?>>
+                            <option value="V">V</option><option value="E">E</option><option value="J">J</option><option value="P">P</option>
+                        </select>
+                        <span class="form-label-inline">Cédula</span>
+                        <input type="text" class="form-control form-control-sm" name="cedula_2" id="cedula_2" placeholder="Cédula" maxlength="10" <?= $torneo_iniciado ? 'readonly' : '' ?> onblur="buscarJugadorPareja(2)">
+                        <span class="form-label-inline">Nombre</span>
+                        <input type="text" class="form-control form-control-sm" name="nombre_2" id="nombre_2" placeholder="Al salir de cédula" readonly>
+                        <span class="form-label-inline">Tel.</span>
+                        <input type="text" class="form-control form-control-sm" name="telefono_2" id="telefono_2" placeholder="Tel." readonly>
+                        <input type="hidden" name="id_usuario_2" id="id_usuario_2" value="">
                     </div>
-                    <input type="hidden" name="id_usuario_2" id="id_usuario_2" value="">
                 </div>
-                <div class="mt-3">
-                    <button type="submit" class="btn btn-success" id="btnGuardarPareja" <?= $torneo_iniciado ? 'disabled' : '' ?>><i class="fas fa-save me-1"></i>Guardar pareja</button>
-                    <a href="<?php echo $base_url . ($use_standalone ? '?' : '&'); ?>action=inscribir_pareja_sitio&torneo_id=<?php echo (int)$torneo['id']; ?>" class="btn btn-outline-secondary ms-2">Nueva pareja</a>
+                <div class="mt-2">
+                    <button type="submit" class="btn btn-success btn-sm" id="btnGuardarPareja" <?= $torneo_iniciado ? 'disabled' : '' ?>><i class="fas fa-save me-1"></i>Guardar pareja</button>
+                    <a href="<?php echo $base_url . ($use_standalone ? '?' : '&'); ?>action=inscribir_pareja_sitio&torneo_id=<?php echo (int)$torneo['id']; ?>" class="btn btn-outline-secondary btn-sm ms-1">Nueva pareja</a>
                 </div>
             </form>
         </div>
