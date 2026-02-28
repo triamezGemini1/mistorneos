@@ -174,7 +174,7 @@
             </div>
         </div>
     <?php else: ?>
-        <!-- Card: logo club invitado (izq) + nombre del club + bloque Bienvenido (der, solo si club autenticado) -->
+        <!-- Card: logo club invitado + información del torneo + nombre del club + bloque Bienvenido (solo si club autenticado) -->
         <div class="card mb-4">
             <div class="card-body text-center py-4">
                 <div class="row align-items-center">
@@ -184,15 +184,32 @@
                            <?= displayClubLogoInvitation($club_data, 'invitado') ?>
                         </div>
                     </div>
-                    <!-- Nombre del club (centro) -->
-                    <div class="col-md-<?= ($is_admin_club) ? '5' : '9' ?> text-center text-md-start">
+                    <!-- Información del torneo (entre logo y nombre de la organización) -->
+                    <div class="col-md-<?= ($is_admin_club) ? '3' : '4' ?> text-center text-md-start">
+                        <?php if (!empty($tournament_data)): ?>
+                        <div class="border rounded p-2 bg-light">
+                            <strong class="d-block text-primary small mb-1">Torneo</strong>
+                            <span class="fw-semibold"><?= htmlspecialchars($tournament_data['nombre'] ?? '') ?></span>
+                            <?php if (!empty($tournament_data['fechator'])): ?>
+                            <br><span class="small text-muted"><i class="fas fa-calendar-alt me-1"></i><?= date('d/m/Y', strtotime($tournament_data['fechator'])) ?></span>
+                            <?php endif; ?>
+                            <?php if (!empty($tournament_data['clase']) || !empty($tournament_data['modalidad'])): ?>
+                            <br><span class="small text-muted"><?= htmlspecialchars(trim(($tournament_data['clase'] ?? '') . ' ' . ($tournament_data['modalidad'] ?? ''))) ?></span>
+                            <?php endif; ?>
+                        </div>
+                        <?php else: ?>
+                        <span class="text-muted small">—</span>
+                        <?php endif; ?>
+                    </div>
+                    <!-- Nombre del club / organización -->
+                    <div class="col-md-<?= ($is_admin_club) ? '3' : '5' ?> text-center text-md-start">
                         <h1 class="display-6 text-success mb-0">
                             <?= htmlspecialchars($club_data['nombre']) ?>
                         </h1>
                     </div>
                     <?php if ($is_admin_club): ?>
                     <!-- Bloque Bienvenido a la derecha del nombre -->
-                    <div class="col-md-4 text-start">
+                    <div class="col-md-3 text-start">
                         <div class="small text-muted mb-1">
                             <strong class="text-dark">Bienvenido:</strong> <?= htmlspecialchars($club_data['nombre']) ?><br>
                             <strong>Usuario:</strong> <?= htmlspecialchars($current_user['username']) ?><br>
