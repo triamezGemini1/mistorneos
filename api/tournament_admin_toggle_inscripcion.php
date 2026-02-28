@@ -235,12 +235,19 @@ try {
             exit;
         }
         
-        // Si no se especificó club, usar el club del usuario o el club del administrador
+        // Si no se especificó club: asumir club de la organización (club_responsable del torneo), igual que inscripción en sitio
         if (empty($id_club) || $id_club == 0) {
-            $stmt = $pdo->prepare("SELECT club_id FROM usuarios WHERE id = ?");
-            $stmt->execute([$id_usuario]);
-            $usuario_club = $stmt->fetchColumn();
-            $id_club = $usuario_club ?: $user_club_id;
+            $stmt = $pdo->prepare("SELECT club_responsable FROM tournaments WHERE id = ? LIMIT 1");
+            $stmt->execute([$torneo_id]);
+            $club_org = $stmt->fetchColumn();
+            if (!empty($club_org) && (int)$club_org > 0) {
+                $id_club = (int)$club_org;
+            } else {
+                $stmt = $pdo->prepare("SELECT club_id FROM usuarios WHERE id = ?");
+                $stmt->execute([$id_usuario]);
+                $usuario_club = $stmt->fetchColumn();
+                $id_club = $usuario_club ?: $user_club_id;
+            }
         }
         
         // Si aún no hay club, usar NULL

@@ -286,6 +286,7 @@ $base_url_return = $use_standalone ? $script_actual : 'index.php?page=torneo_ges
                         <th class="border border-gray-300 px-4 py-3 text-center font-bold text-gray-700">Pos.</th>
                         <th class="border border-gray-300 px-4 py-3 text-center font-bold text-gray-700">ID Usuario</th>
                         <th class="border border-gray-300 px-4 py-3 text-left font-bold text-gray-700">Jugador</th>
+                        <th class="border border-gray-300 px-4 py-3 text-left font-bold text-gray-700">Club</th>
                         <th class="border border-gray-300 px-4 py-3 text-left font-bold text-gray-700">Equipo</th>
                         <th class="border border-gray-300 px-4 py-3 text-center font-bold text-gray-700">G</th>
                         <th class="border border-gray-300 px-4 py-3 text-center font-bold text-gray-700">P</th>
@@ -348,6 +349,10 @@ $base_url_return = $use_standalone ? $script_actual : 'index.php?page=torneo_ges
                                 <?php endif; ?>
                             </td>
                             <td class="border border-gray-300 px-4 py-3 text-gray-700">
+                                <i class="fas fa-building mr-1 text-gray-500"></i>
+                                <?php echo htmlspecialchars($participante['club_nombre'] ?? '—'); ?>
+                            </td>
+                            <td class="border border-gray-300 px-4 py-3 text-gray-700">
                                 <i class="fas fa-users mr-1 text-purple-600"></i>
                                 <?php echo htmlspecialchars($equipo_display); ?>
                             </td>
@@ -384,7 +389,7 @@ $base_url_return = $use_standalone ? $script_actual : 'index.php?page=torneo_ges
                     
                     <?php if (empty($participantes)): ?>
                         <tr>
-                            <td colspan="12" class="border border-gray-300 px-4 py-8 text-center text-gray-500">
+                            <td colspan="13" class="border border-gray-300 px-4 py-8 text-center text-gray-500">
                                 <i class="fas fa-info-circle mr-2"></i>
                                 No hay participantes registrados en este torneo
                             </td>

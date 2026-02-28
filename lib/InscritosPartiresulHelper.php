@@ -258,9 +258,11 @@ class InscritosPartiresulHelper {
         $sql = "
             SELECT 
                 i.*,
+                MAX(c.nombre) AS club_nombre,
                 COUNT(DISTINCT p.id) as total_partidas,
                 COUNT(DISTINCT CASE WHEN p.ff = 1 THEN p.id END) as total_forfaits
             FROM inscritos i
+            LEFT JOIN clubes c ON i.id_club = c.id
             LEFT JOIN partiresul p ON i.id_usuario = p.id_usuario AND i.torneo_id = p.id_torneo
             WHERE i.torneo_id = ?
               AND i.estatus = 'confirmado'
