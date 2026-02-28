@@ -705,6 +705,7 @@ if ($action === 'list' && !empty($filter_torneo)) {
                                         $url_tarjeta = rtrim(AppHelpers::getPublicUrl(), '/') . '/invitation/digital?token=' . urlencode($item['token']);
                                         $url_acceso = InvitationJoinResolver::buildJoinUrl($item['token']);
                                         $url_inscripciones = $url_acceso;
+                                        $url_portal_admin = rtrim(AppHelpers::getPublicUrl(), '/') . '/invitation/register?torneo=' . (int)$item['torneo_id'] . '&club=' . (int)$item['club_id'];
                                         $msg_invitacion = "Estimado delegado de " . $item['club_nombre'] . ", le invitamos formalmente a nuestro evento " . $item['torneo_nombre'] . ". Enlace de acceso (registro e inscripción de jugadores): " . $url_acceso . " — Ver detalles de la invitación: " . $url_tarjeta;
                                         $url_wa = 'https://api.whatsapp.com/send?text=' . rawurlencode($msg_invitacion);
                                         $url_telegram = 'https://t.me/share/url?url=' . rawurlencode($url_acceso) . '&text=' . rawurlencode($msg_invitacion);
@@ -712,6 +713,9 @@ if ($action === 'list' && !empty($filter_torneo)) {
                                         <div class="btn-group" role="group">
                                             <a href="<?= htmlspecialchars($url_inscripciones) ?>" class="btn btn-sm btn-primary" target="_blank" rel="noopener noreferrer" title="Abrir formulario de inscripciones (enlace para el club)">
                                                 <i class="fas fa-user-plus"></i>
+                                            </a>
+                                            <a href="<?= htmlspecialchars($url_portal_admin) ?>" class="btn btn-sm btn-outline-primary" title="Ver inscritos (portal del club, acceso admin)">
+                                                <i class="fas fa-list-alt"></i>
                                             </a>
                                             <button type="button" class="btn btn-sm btn-outline-primary btn-copy-inscription-link" title="Copiar enlace de inscripciones" data-url="<?= htmlspecialchars($url_inscripciones) ?>">
                                                 <i class="fas fa-link"></i>

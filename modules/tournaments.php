@@ -8,6 +8,19 @@ require_once __DIR__ . '/../lib/Pagination.php';
 // Verificar permisos
 Auth::requireRole(['admin_general', 'admin_torneo', 'admin_club']);
 
+// POST crear/actualizar torneo: procesar en el mismo entry point (index.php) para mantener sesión
+$action_get = $_GET['action'] ?? '';
+if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST' && in_array($action_get, ['save', 'update'], true)) {
+    if ($action_get === 'save') {
+        require_once __DIR__ . '/tournaments/save.php';
+        exit;
+    }
+    if ($action_get === 'update') {
+        require_once __DIR__ . '/tournaments/update.php';
+        exit;
+    }
+}
+
 // Obtener usuario actual y su club_id
 $current_user = Auth::user();
 $user_role = $current_user['role'];
@@ -1106,7 +1119,7 @@ function getModalidadLabel($modalidad) {
             </div>
             <div class="card-body">
             <?php
-            $form_action = (function_exists('app_base_url') ? rtrim(app_base_url(), '/') : '') . '/public/' . ($action === 'edit' ? 'tournament_update.php' : 'tournament_save.php');
+            $form_action = 'index.php?page=tournaments&action=' . ($action === 'edit' ? 'update' : 'save');
             ?>
             <form method="POST" action="<?= htmlspecialchars($form_action) ?>" enctype="multipart/form-data">
                 <?= CSRF::input(); ?>

@@ -105,9 +105,9 @@ if ($organizacion_id) {
         }
     }
     if (!$organizacion) {
-        header('Location: index.php?page=organizaciones');
-        exit;
+        $organizacion_id = null;
     }
+    if ($organizacion) {
     $stmt = $pdo->prepare("
         SELECT c.id, c.nombre, c.delegado, c.telefono, c.direccion, c.estatus,
                COUNT(DISTINCT u.id) as total_afiliados,
@@ -135,6 +135,7 @@ if ($organizacion_id) {
     }
     include __DIR__ . '/organizaciones/org_detail.php';
     return;
+    }
 }
 
 // ---------- Vista: Listado de organizaciones de una entidad (entidad_id) ----------

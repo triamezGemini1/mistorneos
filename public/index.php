@@ -300,5 +300,30 @@ if ($page === 'torneo_gestion') {
     }
 }
 
+// Organizaciones: si se pide detalle (id) y la organización no existe o el usuario no tiene acceso, redirigir antes de enviar output
+if ($page === 'organizaciones') {
+    $org_id = isset($_GET['id']) ? (int)$_GET['id'] : 0;
+    if ($org_id > 0) {
+        $stmt = DB::pdo()->prepare("SELECT id, estatus FROM organizaciones WHERE id = ? LIMIT 1");
+        $stmt->execute([$org_id]);
+        $row = $stmt->fetch(PDO::FETCH_ASSOC);
+        if (!$row) {
+            header('Location: index.php?page=organizaciones');
+            exit;
+        }
+        if (!Auth::isAdminGeneral()) {
+            if (empty($row['estatus']) || (int)$row['estatus'] !== 1) {
+                header('Location: index.php?page=organizaciones');
+                exit;
+            }
+            $user_org = Auth::getUserOrganizacionId();
+            if ($user_org === null || (int)$user_org !== $org_id) {
+                header('Location: index.php?page=organizaciones');
+                exit;
+            }
+        }
+    }
+}
+
 // Incluir layout principal (para GET normal y páginas de visualización). $page ya está definida y saneada; el layout la usa para incluir el módulo correcto.
 include __DIR__ . "/includes/layout.php";

@@ -483,37 +483,16 @@ try {
         $stmt_update->execute($file_updates);
     }
     
-    // Redirigir con éxito a la lista de torneos (organización)
+    // Redirigir con éxito a la lista de torneos (misma entrada para mantener sesión)
     $success_msg = 'Torneo creado exitosamente';
     $_SESSION['success'] = $success_msg;
-    if (function_exists('AppHelpers') && method_exists('AppHelpers', 'url')) {
-        $redirect_url = AppHelpers::url('index.php', ['page' => 'tournaments', 'success' => $success_msg]);
-    } else {
-        $base = (function_exists('app_base_url') ? rtrim(app_base_url(), '/') : '');
-        if ($base === '') {
-            $scheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
-            $base = $scheme . '://' . ($_SERVER['HTTP_HOST'] ?? 'localhost');
-        }
-        $redirect_url = $base . '/public/index.php?page=tournaments&success=' . urlencode($success_msg);
-    }
-    header('Location: ' . $redirect_url);
+    header('Location: index.php?page=tournaments&success=' . urlencode($success_msg));
     exit;
 
 } catch (Exception $e) {
-    // Redirigir a la lista de torneos (organización) con mensaje de error
     $error_msg = $e->getMessage();
     $_SESSION['error'] = $error_msg;
-    if (function_exists('AppHelpers') && method_exists('AppHelpers', 'url')) {
-        $redirect_url = AppHelpers::url('index.php', ['page' => 'tournaments', 'error' => $error_msg]);
-    } else {
-        $base = (function_exists('app_base_url') ? rtrim(app_base_url(), '/') : '');
-        if ($base === '') {
-            $scheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
-            $base = $scheme . '://' . ($_SERVER['HTTP_HOST'] ?? 'localhost');
-        }
-        $redirect_url = $base . '/public/index.php?page=tournaments&error=' . urlencode($error_msg);
-    }
-    header('Location: ' . $redirect_url);
+    header('Location: index.php?page=tournaments&action=new&error=' . urlencode($error_msg));
     exit;
 }
 

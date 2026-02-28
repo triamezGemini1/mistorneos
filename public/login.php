@@ -39,18 +39,28 @@ if (isset($_SESSION['user'])) {
     exit;
 }
 
-// Captura del token de invitación desde cookie (para vincular tras registro o sesión expirada)
-if (empty($_SESSION['invitation_token']) && !empty($_COOKIE['invitation_token']) && strlen(trim($_COOKIE['invitation_token'])) >= 32) {
+// Solo tratar como "acceso por invitación" si la petición viene del flujo de invitación (return_url con invitation/register o join)
+$from_invitation_flow = $return_url && (strpos($return_url, 'invitation/register') !== false || strpos($return_url, 'join') !== false);
+
+// Captura del token de invitación desde cookie solo cuando vino del flujo de invitación (evitar confundir con login normal o admin)
+if ($from_invitation_flow && empty($_SESSION['invitation_token']) && !empty($_COOKIE['invitation_token']) && strlen(trim($_COOKIE['invitation_token'])) >= 32) {
     require_once __DIR__ . '/../lib/app_helpers.php';
     $_SESSION['invitation_token'] = trim($_COOKIE['invitation_token']);
     $_SESSION['url_retorno'] = rtrim(AppHelpers::getPublicUrl(), '/') . '/invitation/register?token=' . urlencode($_SESSION['invitation_token']);
     $_SESSION['invitation_club_name'] = 'Club';
 }
 
+if (!$from_invitation_flow) {
+    unset($_SESSION['invitation_token'], $_SESSION['invitation_club_name']);
+    if (isset($_SESSION['url_retorno']) && strpos((string)$_SESSION['url_retorno'], 'invitation/register') !== false) {
+        unset($_SESSION['url_retorno']);
+    }
+}
+
 $error = null;
 $success = !empty($_GET['registered']) ? 'Registro exitoso. Ya puedes iniciar sesión.' : null;
 $invitation_message = null;
-if (!empty($_SESSION['invitation_club_name'])) {
+if ($from_invitation_flow && !empty($_SESSION['invitation_club_name'])) {
     $invitation_message = 'Has accedido mediante una invitación. Por favor, inicia sesión o regístrate para vincular tu cuenta al Club ' . htmlspecialchars($_SESSION['invitation_club_name']) . '.';
 }
 

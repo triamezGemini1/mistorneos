@@ -274,15 +274,13 @@ try {
     }
     
     // Redirigir con �xito
-    $redirect_url = app_base_url() . '/public/index.php?page=tournaments&success=' . urlencode('Torneo actualizado exitosamente');
-    header('Location: ' . $redirect_url);
+    header('Location: index.php?page=tournaments&success=' . urlencode('Torneo actualizado exitosamente'));
     exit;
-    
+
 } catch (Exception $e) {
     // Redirigir con error
     $id = isset($id) ? $id : ($_POST['id'] ?? 0);
-    $redirect_url = app_base_url() . '/public/index.php?page=tournaments&action=edit&id=' . $id . '&error=' . urlencode($e->getMessage());
-    header('Location: ' . $redirect_url);
+    header('Location: index.php?page=tournaments&action=edit&id=' . (int)$id . '&error=' . urlencode($e->getMessage()));
     exit;
 }
 
