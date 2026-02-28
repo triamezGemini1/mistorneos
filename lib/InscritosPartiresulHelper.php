@@ -58,18 +58,10 @@ class InscritosPartiresulHelper {
     public static function obtenerEstadisticas(int $id_usuario, int $torneo_id): array {
         $pdo = DB::pdo();
         
-        // Partidas ganadas (solo mesas normales; BYE se cuenta aparte)
+        // Partidas ganadas (solo mesas normales; BYE se cuenta aparte). Con sanción: (resultado1 - sancion) > resultado2.
         $stmt = $pdo->prepare("
             SELECT COUNT(*) as ganados
             FROM partiresul pr1
-            LEFT JOIN partiresul pr2 ON pr1.id_torneo = pr2.id_torneo 
-                AND pr1.partida = pr2.partida 
-                AND pr1.mesa = pr2.mesa
-                AND pr2.id_usuario != pr1.id_usuario
-                AND (
-                    (pr1.secuencia IN (1, 2) AND pr2.secuencia IN (3, 4)) OR
-                    (pr1.secuencia IN (3, 4) AND pr2.secuencia IN (1, 2))
-                )
             WHERE pr1.id_usuario = ? 
               AND pr1.id_torneo = ?
               AND pr1.mesa > 0
@@ -77,7 +69,7 @@ class InscritosPartiresulHelper {
               AND pr1.ff = 0
               AND (
                   (pr1.sancion = 0 AND pr1.resultado1 > pr1.resultado2) OR
-                  (pr1.sancion > 0 AND (pr1.resultado1 - pr1.sancion) > COALESCE(pr2.resultado1, pr1.resultado2))
+                  (pr1.sancion > 0 AND (pr1.resultado1 - pr1.sancion) > pr1.resultado2)
               )
         ");
         $stmt->execute([$id_usuario, $torneo_id]);
@@ -91,18 +83,10 @@ class InscritosPartiresulHelper {
         $stmt->execute([$id_usuario, $torneo_id]);
         $ganados += (int)$stmt->fetchColumn();
         
-        // Partidas perdidas (solo mesas normales; BYE no cuenta como perdida)
+        // Partidas perdidas (solo mesas normales; BYE no cuenta como perdida). Con sanción: (resultado1 - sancion) <= resultado2.
         $stmt = $pdo->prepare("
             SELECT COUNT(*) as perdidos
             FROM partiresul pr1
-            LEFT JOIN partiresul pr2 ON pr1.id_torneo = pr2.id_torneo 
-                AND pr1.partida = pr2.partida 
-                AND pr1.mesa = pr2.mesa
-                AND pr2.id_usuario != pr1.id_usuario
-                AND (
-                    (pr1.secuencia IN (1, 2) AND pr2.secuencia IN (3, 4)) OR
-                    (pr1.secuencia IN (3, 4) AND pr2.secuencia IN (1, 2))
-                )
             WHERE pr1.id_usuario = ? 
               AND pr1.id_torneo = ?
               AND pr1.mesa > 0
@@ -110,7 +94,7 @@ class InscritosPartiresulHelper {
               AND pr1.ff = 0
               AND (
                   (pr1.sancion = 0 AND pr1.resultado1 < pr1.resultado2) OR
-                  (pr1.sancion > 0 AND (pr1.resultado1 - pr1.sancion) <= COALESCE(pr2.resultado1, pr1.resultado2))
+                  (pr1.sancion > 0 AND (pr1.resultado1 - pr1.sancion) <= pr1.resultado2)
               )
         ");
         $stmt->execute([$id_usuario, $torneo_id]);

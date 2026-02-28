@@ -3064,25 +3064,9 @@ function obtenerDatosResumenIndividual($torneo_id, $inscrito_id) {
             } elseif ($hayTarjetaGrave) {
                 $gano = false; // El jugador con tarjeta grave pierde
             } elseif ($sancion > 0) {
-                // Si hay sanción, evaluar individualmente
-                // Obtener puntos del torneo
                 $puntosTorneo = (int)($torneo['puntos'] ?? 100);
-                
-                // Obtener resultado del oponente (pareja contraria) - buscar en los jugadores de la mesa
-                $resultadoOponente = 0;
-                $sqlOponente = "SELECT resultado1 FROM partiresul 
-                               WHERE id_torneo = ? AND partida = ? AND mesa = ?
-                               AND secuencia IN (" . ($esParejaA ? "3,4" : "1,2") . ")
-                               LIMIT 1";
-                $stmtOponente = $pdo->prepare($sqlOponente);
-                $stmtOponente->execute([$torneo_id, $partida, $mesa]);
-                $oponenteData = $stmtOponente->fetch(PDO::FETCH_ASSOC);
-                if ($oponenteData) {
-                    $resultadoOponente = (int)($oponenteData['resultado1'] ?? 0);
-                }
-                
-                // Evaluar sanción individualmente
-                $evaluacionSancion = evaluarSancionIndividual($resultado1, $resultadoOponente, $sancion, $puntosTorneo);
+                // Restar sanción del resultado1; ganado si (resultado1-sancion) > resultado2, perdido si <= resultado2
+                $evaluacionSancion = evaluarSancionIndividual($resultado1, $resultado2, $sancion, $puntosTorneo);
                 $gano = $evaluacionSancion['gano'];
             } else {
                 $gano = ($resultado1 > $resultado2);
@@ -3604,22 +3588,11 @@ function guardarResultados($user_id, $is_admin_general) {
                 $resultado2 = $calculoTarjeta['resultado2'];
             }
             // PRIORIDAD 3: Calcular efectividad normal (sin forfait ni tarjeta grave)
-            // Evaluar sanciones individualmente para cada jugador
             else {
-                // Obtener el resultado del oponente (pareja contraria) SIN ajustar
-                $resultadoOponente = 0;
-                foreach ($datosJugadores as $oponente) {
-                    if ($oponente['esParejaA'] != $esParejaA) {
-                        // Es de la pareja contraria, obtener su resultado1 (puntos de su pareja)
-                        $resultadoOponente = $oponente['resultado1'];
-                        break;
-                    }
-                }
-                
-                // Si hay sanción, evaluar individualmente (usar sancion_para_calculo: 40 resta 40, 80 resta 80)
+                // Si hay sanción: restar del resultado1 de la pareja infractora; ganado si (resultado1-sancion) > resultado2, perdido si <= resultado2
                 $sancionParaCalc = $jugador['sancion_para_calculo'] ?? $jugador['sancion'] ?? 0;
                 if ($sancionParaCalc > 0) {
-                    $evaluacionSancion = evaluarSancionIndividual($resultado1, $resultadoOponente, $sancionParaCalc, $puntosTorneo);
+                    $evaluacionSancion = evaluarSancionIndividual($resultado1, $resultado2, $sancionParaCalc, $puntosTorneo);
                     $efectividad = $evaluacionSancion['efectividad'];
                 } else {
                     $efectividad = calcularEfectividad($resultado1Ajustado, $resultado2, $puntosTorneo, $ff, $tarjeta, 0);
@@ -3776,38 +3749,36 @@ function calcularEfectividadNoAlcanzo($resultado1, $resultado2) {
 }
 
 /**
- * Evaluar sanción de puntos para un jugador individualmente
- * Calcula el resultado ajustado aplicando la sanción y determina si ganó o perdió
- * 
- * @param int $resultado1 Resultado1 original del jugador
- * @param int $resultadoOponente Resultado1 de la pareja oponente (sin ajustar)
- * @param int $sancion Puntos de sanción del jugador
+ * Evaluar sanción de puntos para la pareja infractora.
+ * Resta la sanción del resultado1 de la pareja infractora; compara el monto resultante con resultado2 (puntos de la pareja contraria).
+ * Si resultado_ajustado <= resultado2 → perdido; si resultado_ajustado > resultado2 → ganado.
+ *
+ * @param int $resultado1 Puntos de la pareja infractora (resultado1)
+ * @param int $resultado2 Puntos de la pareja contraria (resultado2 en la misma fila)
+ * @param int $sancion Puntos de sanción a restar
  * @param int $puntosTorneo Puntos del torneo
  * @return array ['resultado_ajustado' => int, 'gano' => bool, 'efectividad' => int]
  */
-function evaluarSancionIndividual($resultado1, $resultadoOponente, $sancion, $puntosTorneo) {
-    // Aplicar sanción: resultado ajustado = resultado1 - sanción (mínimo 0)
+function evaluarSancionIndividual($resultado1, $resultado2, $sancion, $puntosTorneo) {
+    // Restar sanción del resultado1 de la pareja infractora (mínimo 0)
     $resultadoAjustado = max(0, $resultado1 - $sancion);
     
-    // Determinar si ganó o perdió comparando resultado ajustado con oponente
-    $gano = ($resultadoAjustado > $resultadoOponente);
+    // Ganado si resultado_ajustado > resultado2; perdido si resultado_ajustado <= resultado2
+    $gano = ($resultadoAjustado > $resultado2);
     
-    // Calcular efectividad según si ganó o perdió
-    $mayor = max($resultadoAjustado, $resultadoOponente);
+    $mayor = max($resultadoAjustado, $resultado2);
     
     if ($gano) {
-        // Ganó: efectividad positiva
         if ($mayor >= $puntosTorneo) {
-            $efectividad = calcularEfectividadAlcanzo($resultadoAjustado, $resultadoOponente, $puntosTorneo);
+            $efectividad = calcularEfectividadAlcanzo($resultadoAjustado, $resultado2, $puntosTorneo);
         } else {
-            $efectividad = calcularEfectividadNoAlcanzo($resultadoAjustado, $resultadoOponente);
+            $efectividad = calcularEfectividadNoAlcanzo($resultadoAjustado, $resultado2);
         }
     } else {
-        // Perdió: efectividad negativa
         if ($mayor >= $puntosTorneo) {
             $efectividad = -($puntosTorneo - $resultadoAjustado);
         } else {
-            $efectividad = -($resultadoOponente - $resultadoAjustado);
+            $efectividad = -($resultado2 - $resultadoAjustado);
         }
     }
     

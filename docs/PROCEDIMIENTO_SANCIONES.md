@@ -69,17 +69,17 @@ Documento que describe la lógica y el flujo para cada tipo de sanción/discipli
 
 ### 2.1 Efectividad cuando hay sanción de puntos (sin forfait ni tarjeta grave)
 
-- **Ajuste:** `resultado1Ajustado = max(0, resultado1 - sancion)` (en `guardarResultados` y en `evaluarSancionIndividual`).
-- **Ganado/Perdido:** se compara `resultado1Ajustado` con el `resultado1` de la pareja contraria (oponente).
-  - Ganado: `resultado1Ajustado > resultadoOponente`.
-  - Perdido: `resultado1Ajustado <= resultadoOponente`.
-- **Efectividad:** función `evaluarSancionIndividual($resultado1, $resultadoOponente, $sancion, $puntosTorneo)` en `torneo_gestion.php`:
-  - Calcula `resultadoAjustado`, determina si ganó o perdió y devuelve la efectividad (positiva si ganó, negativa si perdió) usando `calcularEfectividadAlcanzo` / `calcularEfectividadNoAlcanzo` según si se alcanzaron o no los puntos del torneo.
+- **Ajuste:** se resta la sanción del resultado1 de la pareja infractora: `resultado1Ajustado = max(0, resultado1 - sancion)`.
+- **Ganado/Perdido:** se compara el monto resultante con **resultado2** (puntos de la pareja contraria).
+  - **Perdido:** si `resultado1Ajustado <= resultado2`.
+  - **Ganado:** si `resultado1Ajustado > resultado2`.
+- **Efectividad:** función `evaluarSancionIndividual($resultado1, $resultado2, $sancion, $puntosTorneo)` en `torneo_gestion.php`:
+  - Calcula `resultadoAjustado`, asigna ganado o perdido según la comparación con resultado2, y devuelve la efectividad usando `calcularEfectividadAlcanzo` / `calcularEfectividadNoAlcanzo`.
 
-En **estadísticas** (`InscritosPartiresulHelper`), ganado/perdido con sanción se calcula así:
+En **estadísticas** (`InscritosPartiresulHelper`), ganado/perdido con sanción se calcula así (comparando con resultado2 = puntos de la pareja contraria):
 
-- Ganado: `(sancion = 0 AND resultado1 > resultado2) OR (sancion > 0 AND (resultado1 - sancion) > resultado_oponente)`.
-- Perdido: `(sancion = 0 AND resultado1 < resultado2) OR (sancion > 0 AND (resultado1 - sancion) <= resultado_oponente)`.
+- Ganado: `(sancion = 0 AND resultado1 > resultado2) OR (sancion > 0 AND (resultado1 - sancion) > resultado2)`.
+- Perdido: `(sancion = 0 AND resultado1 < resultado2) OR (sancion > 0 AND (resultado1 - sancion) <= resultado2)`.
 
 ---
 
