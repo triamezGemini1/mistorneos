@@ -14,6 +14,62 @@ require_once __DIR__ . '/../public/simple_image_config.php';
 
 Auth::requireRole(['admin_general', 'admin_torneo', 'admin_club']);
 
+/** Estatus de club que procede del directorio (pendiente aceptación/completar datos al loguearse) */
+const CLUB_ESTATUS_DIRECTORIO = 9;
+
+/**
+ * Obtiene o crea un club en tabla clubes a partir de un registro de directorio_clubes.
+ * Homologación: nombre, direccion, delegado, telefono, email, logo → clubes; estatus = 9.
+ * Lo que no exista en directorio (organizacion_id, entidad, admin_club_id) queda NULL/0 hasta que el club acepte e inicie sesión.
+ * @param PDO $pdo
+ * @param array $dir fila de directorio_clubes (id, nombre, direccion, delegado, telefono, email, logo)
+ * @param int $id_directorio_club id del registro en directorio_clubes
+ * @return int club id
+ */
+function invitacion_find_or_create_club_from_directorio(PDO $pdo, array $dir, $id_directorio_club) {
+    $id_directorio_club = (int) $id_directorio_club;
+    $cols_clubes = $pdo->query("SHOW COLUMNS FROM clubes")->fetchAll(PDO::FETCH_COLUMN);
+    $has_id_directorio = in_array('id_directorio_club', $cols_clubes, true);
+
+    if ($has_id_directorio && $id_directorio_club > 0) {
+        $st = $pdo->prepare("SELECT id FROM clubes WHERE id_directorio_club = ? LIMIT 1");
+        $st->execute([$id_directorio_club]);
+        $row = $st->fetch(PDO::FETCH_ASSOC);
+        if ($row) {
+            return (int) $row['id'];
+        }
+    }
+
+    $nombre = trim($dir['nombre'] ?? '');
+    if ($nombre === '') {
+        throw new Exception('El registro del directorio no tiene nombre.');
+    }
+    $ins = [
+        'nombre' => $nombre,
+        'direccion' => trim($dir['direccion'] ?? '') ?: null,
+        'delegado' => trim($dir['delegado'] ?? '') ?: null,
+        'telefono' => trim($dir['telefono'] ?? '') ?: null,
+        'email' => trim($dir['email'] ?? '') ?: null,
+        'logo' => !empty($dir['logo']) ? $dir['logo'] : null,
+        'estatus' => CLUB_ESTATUS_DIRECTORIO,
+    ];
+    if ($has_id_directorio && $id_directorio_club > 0) {
+        $ins['id_directorio_club'] = $id_directorio_club;
+    }
+    if (in_array('entidad', $cols_clubes, true)) {
+        $ins['entidad'] = 0;
+    }
+    $cols = array_keys($ins);
+    $placeholders = array_map(function ($c) { return ':' . $c; }, $cols);
+    $params = [];
+    foreach ($ins as $k => $v) {
+        $params[':' . $k] = $v;
+    }
+    $stmt = $pdo->prepare("INSERT INTO clubes (" . implode(', ', $cols) . ") VALUES (" . implode(', ', $placeholders) . ")");
+    $stmt->execute($params);
+    return (int) $pdo->lastInsertId();
+}
+
 $torneo_id = isset($_GET['torneo_id']) ? (int)$_GET['torneo_id'] : 0;
 $success_message = (isset($_GET['success']) && $_GET['success'] === '1') ? ($_GET['msg'] ?? 'Operación correcta.') : ($_GET['success'] ?? null);
 $error_message = $_GET['error'] ?? null;
@@ -41,30 +97,19 @@ if ($torneo_id <= 0) {
                 $tb_inv = defined('TABLE_INVITATIONS') ? TABLE_INVITATIONS : 'invitaciones';
                 $cols_inv = $pdo->query("SHOW COLUMNS FROM {$tb_inv}")->fetchAll(PDO::FETCH_COLUMN);
                 $sel_id_directorio = in_array('id_directorio_club', $cols_inv, true) ? ', i.id_directorio_club' : '';
-                $stmt = $pdo->prepare("
-                    SELECT i.id, i.club_id, i.token{$sel_id_directorio} FROM {$tb_inv} i
-                    INNER JOIN clubes c ON c.id = i.club_id
-                    WHERE i.torneo_id = ?
-                ");
+                $stmt = $pdo->prepare("SELECT i.id, i.club_id, i.token{$sel_id_directorio} FROM {$tb_inv} i WHERE i.torneo_id = ?");
                 $stmt->execute([$torneo_id]);
                 $rows_inv = $stmt->fetchAll(PDO::FETCH_ASSOC);
-                $ya_invitados = array_map('intval', array_column($rows_inv, 'club_id'));
+                $ya_invitados = [];
+                $invitaciones_por_club = [];
                 $cols_dc = @$pdo->query("SHOW COLUMNS FROM directorio_clubes LIKE 'id_usuario'")->fetchAll();
                 $has_id_usuario = !empty($cols_dc);
                 foreach ($rows_inv as $r) {
-                    $req_registro = true;
                     $id_dc = isset($r['id_directorio_club']) ? (int)$r['id_directorio_club'] : 0;
-                    if ($id_dc <= 0 && !empty($r['club_id'])) {
-                        $st = $pdo->prepare("SELECT c.nombre FROM clubes c WHERE c.id = ?");
-                        $st->execute([$r['club_id']]);
-                        $cn = $st->fetch(PDO::FETCH_ASSOC);
-                        if ($cn) {
-                            $st2 = $pdo->prepare("SELECT id FROM directorio_clubes WHERE nombre = ? LIMIT 1");
-                            $st2->execute([$cn['nombre']]);
-                            $dr = $st2->fetch(PDO::FETCH_ASSOC);
-                            if ($dr) $id_dc = (int)$dr['id'];
-                        }
+                    if ($id_dc > 0) {
+                        $ya_invitados[] = $id_dc;
                     }
+                    $req_registro = true;
                     if ($id_dc > 0 && $has_id_usuario) {
                         $st = $pdo->prepare("SELECT id_usuario FROM directorio_clubes WHERE id = ? LIMIT 1");
                         $st->execute([$id_dc]);
@@ -73,11 +118,14 @@ if ($torneo_id <= 0) {
                             $req_registro = false;
                         }
                     }
-                    $invitaciones_por_club[(int)$r['club_id']] = [
-                        'id' => (int)$r['id'],
-                        'token' => $r['token'],
-                        'requiere_registro' => $req_registro
-                    ];
+                    $key = $id_dc > 0 ? $id_dc : (int)$r['club_id'];
+                    if ($key > 0) {
+                        $invitaciones_por_club[$key] = [
+                            'id' => (int)$r['id'],
+                            'token' => $r['token'],
+                            'requiere_registro' => $req_registro
+                        ];
+                    }
                 }
 
                 $total = (int) $pdo->query("SELECT COUNT(*) FROM directorio_clubes")->fetchColumn();
@@ -117,48 +165,17 @@ if ($torneo && $_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['action']) &&
         try {
             $pdo = DB::pdo();
             $tb_inv = defined('TABLE_INVITATIONS') ? TABLE_INVITATIONS : 'invitaciones';
-            $stmt = $pdo->prepare("SELECT id, nombre, direccion, delegado, telefono, email FROM directorio_clubes WHERE id = ?");
+            $stmt = $pdo->prepare("SELECT id, nombre, direccion, delegado, telefono, email, logo FROM directorio_clubes WHERE id = ?");
             $stmt->execute([$dir_id_one]);
             $dir = $stmt->fetch(PDO::FETCH_ASSOC);
             if ($dir) {
-                $nombre = trim($dir['nombre'] ?? '');
-                if ($nombre === '') {
-                    header('Location: ' . $build_redirect_one(['error' => 'El club del directorio no tiene nombre.']));
-                    exit;
-                }
-                // Buscar club por nombre (activo o inactivo) para evitar duplicado y reutilizar ID
-                $stmt = $pdo->prepare("SELECT id, estatus FROM clubes WHERE nombre = ? LIMIT 1");
-                $stmt->execute([$nombre]);
-                $club_row = $stmt->fetch(PDO::FETCH_ASSOC);
-                if (!$club_row) {
-                    $stmt = $pdo->prepare("INSERT INTO clubes (nombre, direccion, delegado, telefono, email, estatus) VALUES (?, ?, ?, ?, ?, 1)");
-                    $stmt->execute([
-                        $nombre,
-                        $dir['direccion'] ?? null,
-                        $dir['delegado'] ?? null,
-                        $dir['telefono'] ?? null,
-                        $dir['email'] ?? null
-                    ]);
-                    $club_id = (int) $pdo->lastInsertId();
-                } else {
-                    $club_id = (int) $club_row['id'];
-                    if (empty($club_row['estatus'])) {
-                        $pdo->prepare("UPDATE clubes SET direccion = ?, delegado = ?, telefono = ?, email = ?, estatus = 1 WHERE id = ?")
-                            ->execute([
-                                $dir['direccion'] ?? null,
-                                $dir['delegado'] ?? null,
-                                $dir['telefono'] ?? null,
-                                $dir['email'] ?? null,
-                                $club_id
-                            ]);
-                    }
-                }
-                $stmt = $pdo->prepare("SELECT id FROM {$tb_inv} WHERE torneo_id = ? AND club_id = ?");
-                $stmt->execute([$torneo_id, $club_id]);
+                $stmt = $pdo->prepare("SELECT id FROM {$tb_inv} WHERE torneo_id = ? AND id_directorio_club = ?");
+                $stmt->execute([$torneo_id, $dir_id_one]);
                 if ($stmt->fetch()) {
                     header('Location: ' . $build_redirect_one(['msg' => 'Ya estaba invitado.']));
                     exit;
                 }
+                $club_id = invitacion_find_or_create_club_from_directorio($pdo, $dir, $dir_id_one);
                 $fechator = $torneo['fechator'] ?? date('Y-m-d');
                 $acceso1 = date('Y-m-d', strtotime($fechator . ' -30 days'));
                 $acceso2 = date('Y-m-d', strtotime($fechator . ' +7 days'));
@@ -175,13 +192,13 @@ if ($torneo && $_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['action']) &&
                     $stmt->execute($full_params);
                 } catch (PDOException $e) {
                     if (strpos($e->getMessage(), 'Unknown column') !== false) {
-                        $stmt = $pdo->prepare("INSERT INTO {$tb_inv} (torneo_id, club_id, admin_club_id, invitado_delegado, invitado_email, acceso1, acceso2, usuario, club_email, club_telefono, club_delegado, token, estado) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'activa')");
-                        $stmt->execute([$torneo_id, $club_id, $admin_club_id, $inv_delegado, $inv_email, $acceso1, $acceso2, $usuario_creador, $inv_email, $club_tel, $inv_delegado, $token]);
+                        $stmt = $pdo->prepare("INSERT INTO {$tb_inv} (torneo_id, club_id, admin_club_id, invitado_delegado, invitado_email, acceso1, acceso2, usuario, club_email, club_telefono, club_delegado, token, estado, id_directorio_club) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'activa', ?)");
+                        $stmt->execute([$torneo_id, $club_id, $admin_club_id, $inv_delegado, $inv_email, $acceso1, $acceso2, $usuario_creador, $inv_email, $club_tel, $inv_delegado, $token, $dir_id_one]);
                     } else {
                         throw $e;
                     }
                 }
-                header('Location: ' . $build_redirect_one(['success' => '1', 'msg' => 'Invitación creada.']));
+                header('Location: ' . $build_redirect_one(['success' => '1', 'msg' => 'Invitación creada. Lista para enviar al celular.']));
                 exit;
             }
         } catch (Exception $e) {
@@ -284,42 +301,20 @@ if ($torneo && $_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) 
     try {
         $pdo->beginTransaction();
         foreach ($ids_directorio as $dir_id) {
-            $stmt = $pdo->prepare("SELECT id, nombre, direccion, delegado, telefono, email FROM directorio_clubes WHERE id = ?");
+            $stmt = $pdo->prepare("SELECT id, nombre, direccion, delegado, telefono, email, logo FROM directorio_clubes WHERE id = ?");
             $stmt->execute([$dir_id]);
             $dir = $stmt->fetch(PDO::FETCH_ASSOC);
             if (!$dir) continue;
-            $nombre = trim($dir['nombre'] ?? '');
-            if ($nombre === '') continue;
-            $stmt = $pdo->prepare("SELECT id, estatus FROM clubes WHERE nombre = ? LIMIT 1");
-            $stmt->execute([$nombre]);
-            $club_row = $stmt->fetch(PDO::FETCH_ASSOC);
-            if (!$club_row) {
-                $stmt = $pdo->prepare("INSERT INTO clubes (nombre, direccion, delegado, telefono, email, estatus) VALUES (?, ?, ?, ?, ?, 1)");
-                $stmt->execute([
-                    $nombre,
-                    $dir['direccion'] ?? null,
-                    $dir['delegado'] ?? null,
-                    $dir['telefono'] ?? null,
-                    $dir['email'] ?? null
-                ]);
-                $club_id = (int) $pdo->lastInsertId();
-            } else {
-                $club_id = (int) $club_row['id'];
-                if (empty($club_row['estatus'])) {
-                    $pdo->prepare("UPDATE clubes SET direccion = ?, delegado = ?, telefono = ?, email = ?, estatus = 1 WHERE id = ?")
-                        ->execute([
-                            $dir['direccion'] ?? null,
-                            $dir['delegado'] ?? null,
-                            $dir['telefono'] ?? null,
-                            $dir['email'] ?? null,
-                            $club_id
-                        ]);
-                }
-            }
-            $stmt = $pdo->prepare("SELECT id FROM {$tb_inv} WHERE torneo_id = ? AND club_id = ?");
-            $stmt->execute([$torneo_id, $club_id]);
+            $stmt = $pdo->prepare("SELECT id FROM {$tb_inv} WHERE torneo_id = ? AND id_directorio_club = ?");
+            $stmt->execute([$torneo_id, $dir_id]);
             if ($stmt->fetch()) {
                 $omitidas++;
+                continue;
+            }
+            try {
+                $club_id = invitacion_find_or_create_club_from_directorio($pdo, $dir, $dir_id);
+            } catch (Exception $e) {
+                $errores[] = 'Directorio ' . $dir_id . ': ' . $e->getMessage();
                 continue;
             }
             $token = bin2hex(random_bytes(32));
@@ -327,7 +322,6 @@ if ($torneo && $_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) 
             $inv_delegado = $dir['delegado'] ?? null;
             $inv_email = $dir['email'] ?? null;
             $club_tel = $dir['telefono'] ?? null;
-            // Usar solo columnas que existan en la tabla invitaciones (estructura real, sin inventar)
             $full_sql = "INSERT INTO {$tb_inv} (torneo_id, club_id, admin_club_id, invitado_delegado, invitado_email, acceso1, acceso2, usuario, club_email, club_telefono, club_delegado, token, estado, id_directorio_club, id_usuario_vinculado) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'activa', ?, ?)";
             $full_params = [$torneo_id, $club_id, $admin_club_id, $inv_delegado, $inv_email, $acceso1, $acceso2, $usuario_creador, $inv_email, $club_tel, $inv_delegado, $token, $dir_id, null];
             try {
@@ -335,8 +329,8 @@ if ($torneo && $_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) 
                 $stmt->execute($full_params);
             } catch (PDOException $e) {
                 if (strpos($e->getMessage(), 'Unknown column') !== false) {
-                    $stmt = $pdo->prepare("INSERT INTO {$tb_inv} (torneo_id, club_id, admin_club_id, invitado_delegado, invitado_email, acceso1, acceso2, usuario, club_email, club_telefono, club_delegado, token, estado) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'activa')");
-                    $stmt->execute([$torneo_id, $club_id, $admin_club_id, $inv_delegado, $inv_email, $acceso1, $acceso2, $usuario_creador, $inv_email, $club_tel, $inv_delegado, $token]);
+                    $stmt = $pdo->prepare("INSERT INTO {$tb_inv} (torneo_id, club_id, admin_club_id, invitado_delegado, invitado_email, acceso1, acceso2, usuario, club_email, club_telefono, club_delegado, token, estado, id_directorio_club) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'activa', ?)");
+                    $stmt->execute([$torneo_id, $club_id, $admin_club_id, $inv_delegado, $inv_email, $acceso1, $acceso2, $usuario_creador, $inv_email, $club_tel, $inv_delegado, $token, $dir_id]);
                 } else {
                     throw $e;
                 }
@@ -456,21 +450,13 @@ $fechator_fmt = $torneo && !empty($torneo['fechator']) ? date('d/m/Y', strtotime
                                     </thead>
                                     <tbody>
                                         <?php
-                                        $club_ids_by_name = [];
-                                        try {
-                                            $stmt = $pdo->prepare("SELECT id, nombre FROM clubes WHERE estatus = 1");
-                                            $stmt->execute();
-                                            while ($r = $stmt->fetch(PDO::FETCH_ASSOC)) {
-                                                $club_ids_by_name[$r['nombre']] = (int)$r['id'];
-                                            }
-                                        } catch (Exception $e) {}
                                         $url_base_join = rtrim(AppHelpers::getPublicUrl(), '/') . '/join';
                                         $url_base_inv = rtrim(AppHelpers::getPublicUrl(), '/') . '/invitation/digital?token=';
                                         $torneo_nombre_inv = $torneo['nombre'] ?? '';
                                         foreach ($clubs_list as $row):
-                                            $club_id_linked = $club_ids_by_name[$row['nombre'] ?? ''] ?? null;
-                                            $ya_invitado = $club_id_linked && in_array($club_id_linked, $ya_invitados, true);
-                                            $inv_data = $ya_invitado && $club_id_linked ? ($invitaciones_por_club[$club_id_linked] ?? null) : null;
+                                            $dir_id = (int)($row['id'] ?? 0);
+                                            $ya_invitado = $dir_id > 0 && in_array($dir_id, $ya_invitados, true);
+                                            $inv_data = $ya_invitado ? ($invitaciones_por_club[$dir_id] ?? null) : null;
                                             if ($inv_data) {
                                                 $url_join = InvitationJoinResolver::buildJoinUrl($inv_data['token']);
                                                 $url_tarjeta = $url_base_inv . urlencode($inv_data['token']);

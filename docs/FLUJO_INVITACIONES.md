@@ -10,8 +10,8 @@ Este documento describe **paso a paso** cada acción desde que se genera la invi
 |------|--------|------------------|---------|
 | 1.1 | Admin entra al panel de invitación de clubes | `index.php?page=invitacion_clubes&torneo_id=X` | Módulo `modules/invitacion_clubes.php`. Lista clubes de `directorio_clubes`. |
 | 1.2 | Admin marca clubes y envía el formulario | POST `action=invitar_seleccionados` | Se envían `directorio_ids[]`, `acceso1`, `acceso2`. |
-| 1.3 | Por cada club seleccionado: | `invitacion_clubes.php` (bloque try, foreach) | 1) Se lee el club en `directorio_clubes` por `id`. 2) Se busca o crea el registro en `clubes` (por nombre). 3) Si ya existe invitación para ese torneo+club, se omite. |
-| 1.4 | Se genera el **token** y se inserta la invitación | `invitacion_clubes.php` | `$token = bin2hex(random_bytes(32));` → INSERT en `invitaciones` (torneo_id, club_id, id_directorio_club si existe, token, estado='activa', etc.). |
+| 1.3 | Por cada club seleccionado: | `invitacion_clubes.php` (bloque try, foreach) | 1) Se lee el club en `directorio_clubes` por `id` (con logo). 2) Se busca o crea el registro en `clubes` por `id_directorio_club` (homologación: nombre, direccion, delegado, telefono, email, logo; **estatus = 9** = procede del directorio). 3) Si ya existe invitación para ese torneo+id_directorio_club, se omite. |
+| 1.4 | Se genera el **token** y se inserta la invitación | `invitacion_clubes.php` | `$token = bin2hex(random_bytes(32));` → INSERT en `invitaciones` (torneo_id, **club_id** del club creado/encontrado, id_directorio_club, token, estado='activa', etc.). |
 | 1.5 | En la misma pantalla se construye el **enlace de acceso** | `InvitationJoinResolver::buildJoinUrl($token)` | URL final: `{base}/join?token={token}`. Se muestra en la tabla (botón copiar, WhatsApp, Telegram) y en la tarjeta digital. |
 
 **Resultado:** Queda un registro en `invitaciones` con `token` único. En `directorio_clubes` el club puede tener `id_usuario` NULL (delegado sin cuenta) o ya asignado.
@@ -120,6 +120,6 @@ Ejemplo: `http://localhost/mistorneos/public/join?token=5fc0c78c84eea803...`
 
 - **invitaciones:** token, torneo_id, club_id, id_directorio_club, estado, acceso1, acceso2, …
 - **directorio_clubes:** id, nombre, id_usuario (delegado; NULL = sin cuenta).
-- **clubes:** id, nombre (referenciado por invitaciones.club_id).
+- **clubes:** id, nombre, id_directorio_club (opcional), estatus, … Referenciado por invitaciones.club_id. **Estatus 9** = procede del directorio (creado al invitar desde directorio; organizacion_id, entidad, admin_club_id quedan pendientes hasta que el club acepte la invitación y se loguee).
 - **usuarios:** creados en registro express; luego referenciados por directorio_clubes.id_usuario.
 - **inscritos:** jugadores inscritos al torneo (formulario de inscripción de jugadores).
