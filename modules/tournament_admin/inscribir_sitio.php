@@ -379,8 +379,8 @@ if ($is_admin_general) {
 <!-- Config global para inscripciones.js (motor único). Cargar ANTES del script. -->
 <script>
 window.INSCRIPCIONES_CONFIG = {
-    API_URL: '<?= app_base_url() ?>/public/tournament_admin_toggle_inscripcion.php',
-    BUSCAR_API: '<?= app_base_url() ?>/public/api/search_persona.php',
+    API_URL: 'tournament_admin_toggle_inscripcion.php',
+    BUSCAR_API: 'api/search_persona.php',
     TORNEOS_ID: <?= (int)$torneo_id ?>,
     CSRF_TOKEN: '<?= htmlspecialchars(CSRF::token(), ENT_QUOTES) ?>',
     showMessage: function(message, type) {
@@ -415,7 +415,7 @@ window.INSCRIPCIONES_CONFIG = {
 </script>
 <!-- SweetAlert2 y motor único de búsqueda/inscripción (cache-bust) -->
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11?v=<?php echo time(); ?>"></script>
-<script src="<?= app_base_url() ?>/public/js/inscripciones.js?v=<?php echo time(); ?>"></script>
+<script src="js/inscripciones.js?v=<?php echo time(); ?>"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     var TORNEOS_ID = window.INSCRIPCIONES_CONFIG && window.INSCRIPCIONES_CONFIG.TORNEOS_ID;

@@ -287,13 +287,8 @@ require_once __DIR__ . '/../../lib/InscritosHelper.php';
 const TORNEOS_ID = <?= $torneo['id'] ?>;
 const CSRF_TOKEN = '<?= htmlspecialchars(CSRF::token(), ENT_QUOTES) ?>';
 const ESTATUS_DEFAULT = '1'; // Estatus por defecto: confirmado
-const API_URL = '<?php 
-if (!function_exists("app_base_url")) {
-    require_once __DIR__ . "/../../config/bootstrap.php";
-}
-echo app_base_url() . "/public/tournament_admin_toggle_inscripcion.php"; 
-?>';
-const SEARCH_API_URL = '<?php echo rtrim(app_base_url(), "/") . "/public/api/search_usuario_inscripcion_sitio.php"; ?>';
+const API_URL = 'tournament_admin_toggle_inscripcion.php';
+const SEARCH_API_URL = 'api/search_usuario_inscripcion_sitio.php';
 
 document.addEventListener('DOMContentLoaded', function() {
     // Funcionalidad de mover jugadores entre listados
