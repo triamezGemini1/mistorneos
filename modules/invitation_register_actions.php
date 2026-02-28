@@ -240,7 +240,23 @@ if ($_POST['action'] === 'register_pair') {
     $error_message = '';
     $success_message = '';
     $torneo_id_int = (int)$torneo_id;
+    // Club siempre desde la invitación (no confiar en POST)
     $club_id_int = (int)$club_id;
+    $token_str = trim((string)($_POST['token'] ?? $_GET['token'] ?? ''));
+    if (strlen($token_str) >= 32) {
+        try {
+            $pdo_inv = DB::pdo();
+            $tb_inv = defined('TABLE_INVITATIONS') ? TABLE_INVITATIONS : 'invitaciones';
+            $st = $pdo_inv->prepare("SELECT club_id FROM {$tb_inv} WHERE token = ? LIMIT 1");
+            $st->execute([$token_str]);
+            $row = $st->fetch(PDO::FETCH_ASSOC);
+            if ($row && (int)$row['club_id'] > 0) {
+                $club_id_int = (int)$row['club_id'];
+            }
+        } catch (Throwable $e) {
+            // mantener $club_id_int ya asignado
+        }
+    }
 
     if ($puede_inscribir && $dentro_vigencia) {
         $pdo = DB::pdo();

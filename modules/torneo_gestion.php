@@ -411,8 +411,8 @@ try {
                 throw new Exception('Debe especificar un torneo');
             }
             verificarPermisosTorneo($torneo_id, $user_id, $is_admin_general);
-            $view_file = __DIR__ . '/gestion_torneos/gestionar_inscripciones_parejas_fijas.php';
-            $view_data = array_merge(obtenerDatosGestionarInscripcionesParejasFijas($torneo_id), ['solo_inscribir' => true]);
+            $view_file = __DIR__ . '/gestion_torneos/inscribir_pareja_sitio.php';
+            $view_data = obtenerDatosInscribirParejaSitio($torneo_id);
             break;
             
         case 'mesas':
@@ -2213,6 +2213,142 @@ function obtenerDatosInscribirEquipoSitio($torneo_id) {
         'total_jugadores_disponibles' => count($jugadores_disponibles),
         'total_equipos' => count($equipos_registrados),
         'jugadores_por_equipo' => max(2, (int)($torneo['pareclub'] ?? 4))
+    ];
+}
+
+/**
+ * Obtiene datos para inscribir pareja en sitio (modalidad 4): clubes, jugadores disponibles, parejas registradas.
+ * Misma lógica que equipos pero para 2 jugadores; búsqueda por cédula en la vista.
+ */
+function obtenerDatosInscribirParejaSitio($torneo_id) {
+    require_once __DIR__ . '/../lib/ClubHelper.php';
+    require_once __DIR__ . '/../lib/ParejasFijasHelper.php';
+    require_once __DIR__ . '/../config/auth.php';
+
+    $pdo = DB::pdo();
+    $current_user = Auth::user();
+    $user_club_id_raw = Auth::getUserClubId();
+    $user_club_id = ($user_club_id_raw !== null && (int)$user_club_id_raw > 0) ? (int)$user_club_id_raw : null;
+    $is_admin_general = Auth::isAdminGeneral();
+    $is_admin_club = Auth::isAdminClub();
+
+    $stmt = $pdo->prepare("SELECT * FROM tournaments WHERE id = ?");
+    $stmt->execute([$torneo_id]);
+    $torneo = $stmt->fetch(PDO::FETCH_ASSOC);
+    if (!$torneo) {
+        throw new Exception('Torneo no encontrado');
+    }
+    if ((int)($torneo['modalidad'] ?? 0) !== ParejasFijasHelper::MODALIDAD_PAREJAS_FIJAS) {
+        throw new Exception('Este torneo no es de parejas fijas');
+    }
+
+    $jugadores_disponibles = [];
+    if ($is_admin_general) {
+        $stmt = $pdo->prepare("
+            SELECT u.id as id_usuario, u.nombre, u.cedula, u.sexo,
+                   u.club_id as club_id, c.nombre as club_nombre,
+                   ins.id as id_inscrito, ins.codigo_equipo
+            FROM usuarios u
+            LEFT JOIN clubes c ON u.club_id = c.id
+            LEFT JOIN inscritos ins ON ins.id_usuario = u.id AND ins.torneo_id = ? AND ins.estatus != 4
+            WHERE u.role = 'usuario'
+              AND (u.status IN ('approved', 'active', 'activo') OR u.status = 1)
+              AND (ins.id IS NULL OR ins.codigo_equipo IS NULL)
+            ORDER BY COALESCE(u.nombre, u.username) ASC
+        ");
+        $stmt->execute([$torneo_id]);
+        $jugadores_disponibles = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    } else if ($user_club_id) {
+        if ($is_admin_club) {
+            $clubes_supervisados = ClubHelper::getClubesSupervised($user_club_id);
+            $clubes_ids = array_merge([$user_club_id], $clubes_supervisados);
+        } else {
+            $clubes_ids = [$user_club_id];
+        }
+        if (!empty($clubes_ids)) {
+            $placeholders = str_repeat('?,', count($clubes_ids) - 1) . '?';
+            $stmt = $pdo->prepare("
+                SELECT u.id as id_usuario, u.nombre, u.cedula, u.sexo,
+                       u.club_id as club_id, c.nombre as club_nombre,
+                       ins.id as id_inscrito, ins.codigo_equipo
+                FROM usuarios u
+                LEFT JOIN clubes c ON u.club_id = c.id
+                LEFT JOIN inscritos ins ON ins.id_usuario = u.id AND ins.torneo_id = ? AND ins.estatus != 4
+                WHERE u.role = 'usuario'
+                  AND (u.status IN ('approved', 'active', 'activo') OR u.status = 1)
+                  AND u.club_id IN ({$placeholders})
+                  AND (ins.id IS NULL OR ins.codigo_equipo IS NULL)
+                ORDER BY COALESCE(u.nombre, u.username) ASC
+            ");
+            $stmt->execute(array_merge([$torneo_id], $clubes_ids));
+            $jugadores_disponibles = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        }
+    }
+
+    foreach ($jugadores_disponibles as &$j) {
+        $j['id'] = $j['id_usuario'];
+        $j['club_nombre'] = $j['club_nombre'] ?? 'Sin Club';
+    }
+    unset($j);
+
+    $clubes_disponibles = [];
+    if ($is_admin_general) {
+        $stmt = $pdo->query("SELECT id, nombre FROM clubes WHERE (estatus = 1 OR estatus = '1' OR estatus = 'activo') ORDER BY nombre ASC");
+        $clubes_disponibles = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    } else if ($user_club_id) {
+        if ($is_admin_club) {
+            $clubes_disponibles = ClubHelper::getClubesSupervisedWithData($user_club_id);
+            $club_ids = array_column($clubes_disponibles, 'id');
+            if (!in_array($user_club_id, $club_ids)) {
+                $stmt = $pdo->prepare("SELECT id, nombre FROM clubes WHERE id = ? AND (estatus = 1 OR estatus = '1' OR estatus = 'activo')");
+                $stmt->execute([$user_club_id]);
+                $club = $stmt->fetch(PDO::FETCH_ASSOC);
+                if ($club) {
+                    array_unshift($clubes_disponibles, $club);
+                }
+            }
+        } else {
+            $stmt = $pdo->prepare("SELECT id, nombre FROM clubes WHERE id = ? AND (estatus = 1 OR estatus = '1' OR estatus = 'activo')");
+            $stmt->execute([$user_club_id]);
+            $club = $stmt->fetch(PDO::FETCH_ASSOC);
+            if ($club) {
+                $clubes_disponibles = [$club];
+            }
+        }
+    }
+
+    $parejas_registradas = ParejasFijasHelper::listarParejas($pdo, $torneo_id);
+    $club_ids_p = array_unique(array_column($parejas_registradas, 'id_club'));
+    $nombres_club_p = [];
+    if (!empty($club_ids_p)) {
+        $ph = implode(',', array_fill(0, count($club_ids_p), '?'));
+        $stmt = $pdo->prepare("SELECT id, nombre FROM clubes WHERE id IN ($ph)");
+        $stmt->execute(array_values($club_ids_p));
+        foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $r) {
+            $nombres_club_p[(int)$r['id']] = $r['nombre'];
+        }
+    }
+    foreach ($parejas_registradas as &$pr) {
+        $pr['nombre_club'] = $nombres_club_p[$pr['id_club']] ?? 'Sin club';
+    }
+    unset($pr);
+
+    $torneo_iniciado = false;
+    try {
+        $stmt = $pdo->prepare("SELECT MAX(CAST(partida AS UNSIGNED)) AS ultima_ronda FROM partiresul WHERE id_torneo = ? AND mesa > 0");
+        $stmt->execute([$torneo_id]);
+        $ultima_ronda = (int)($stmt->fetchColumn() ?? 0);
+        $torneo_iniciado = $ultima_ronda >= 1;
+    } catch (Exception $e) {
+        // ignorar
+    }
+
+    return [
+        'torneo' => $torneo,
+        'jugadores_disponibles' => $jugadores_disponibles,
+        'clubes_disponibles' => $clubes_disponibles,
+        'parejas_registradas' => $parejas_registradas,
+        'torneo_iniciado' => $torneo_iniciado,
     ];
 }
 
