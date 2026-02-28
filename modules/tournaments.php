@@ -147,7 +147,7 @@ $tournament = null;
 if (($action === 'edit' || $action === 'view') && $id) {
     try {
         $stmt = DB::pdo()->prepare("
-            SELECT t.*, o.nombre as organizacion_nombre
+            SELECT t.*, o.nombre as organizacion_nombre, o.logo as organizacion_logo
             FROM tournaments t
             LEFT JOIN organizaciones o ON t.club_responsable = o.id
             WHERE t.id = ?
@@ -1158,219 +1158,231 @@ function getModalidadLabel($modalidad) {
                 <?= CSRF::input(); ?>
                 <?php if ($action === 'edit'): ?>
                     <input type="hidden" name="id" value="<?= (int)$tournament['id'] ?>">
-                <?php endif; ?>
+                <?php endif;
+                $form_org_id = ($action === 'edit' && isset($tournament['club_responsable'])) ? (int)$tournament['club_responsable'] : (int)($default_organizacion_id ?? 0);
+                if ($action === 'new' && $organizacion_id_cuentas_new !== null && $organizacion_id_cuentas_new > 0) {
+                    $form_org_id = (int)$organizacion_id_cuentas_new;
+                }
+                $form_org_logo = null;
+                if ($form_org_id > 0) {
+                    $stmt_logo = DB::pdo()->prepare("SELECT logo, nombre FROM organizaciones WHERE id = ?");
+                    $stmt_logo->execute([$form_org_id]);
+                    $row_org = $stmt_logo->fetch(PDO::FETCH_ASSOC);
+                    $form_org_logo = $row_org['logo'] ?? null;
+                    $form_org_nombre_display = $row_org['nombre'] ?? ($action === 'edit' ? ($tournament['organizacion_nombre'] ?? '') : ($default_organizacion_nombre ?? ''));
+                } else {
+                    $form_org_nombre_display = '';
+                }
+                $base_asset = isset($layout_asset_base) ? rtrim($layout_asset_base, '/') : (class_exists('AppHelpers') && method_exists('AppHelpers', 'getPublicUrl') ? rtrim(AppHelpers::getPublicUrl(), '/') : '');
+                ?>
                 
+                <!-- Fila 1: Organización + logo -->
+                <div class="row align-items-center mb-3 pb-3 border-bottom">
+                    <div class="col d-flex align-items-center gap-3">
+                        <?php if ($is_admin_general): ?>
+                        <div class="flex-grow-1">
+                            <label for="club_responsable" class="form-label mb-1">Organización *</label>
+                            <select class="form-select form-select-lg" id="club_responsable" name="club_responsable" <?= $action === 'new' ? 'required' : '' ?>>
+                                <option value="">Seleccionar organización...</option>
+                                <?php foreach ($organizaciones_list as $org): ?>
+                                <option value="<?= (int)$org['id'] ?>"
+                                    <?= ($action === 'edit' && ($tournament['club_responsable'] ?? 0) == $org['id']) || ($action === 'new' && $organizacion_id_cuentas_new !== null && $organizacion_id_cuentas_new == $org['id']) ? 'selected' : '' ?>>
+                                    <?= htmlspecialchars($org['nombre']) ?>
+                                </option>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
+                        <?php else: ?>
+                        <?php $org_id = ($action === 'edit' && isset($tournament['club_responsable'])) ? (int)$tournament['club_responsable'] : (int)($default_organizacion_id ?? 0); ?>
+                        <input type="hidden" name="club_responsable" value="<?= $org_id ?>">
+                        <div class="flex-grow-1">
+                            <label class="form-label mb-1 text-muted">Organización</label>
+                            <p class="mb-0 fs-5 fw-bold"><?= htmlspecialchars($action === 'edit' ? ($tournament['organizacion_nombre'] ?? '') : ($default_organizacion_nombre ?? '—')) ?></p>
+                        </div>
+                        <?php endif; ?>
+                        <?php if (!empty($form_org_logo) && $base_asset !== ''): ?>
+                        <div class="flex-shrink-0">
+                            <img src="<?= htmlspecialchars($base_asset . '/' . ltrim($form_org_logo, '/')) ?>" alt="Logo" class="rounded" style="max-height: 60px; max-width: 120px; object-fit: contain;">
+                        </div>
+                        <?php endif; ?>
+                    </div>
+                </div>
+                
+                <!-- Fila 2: Nombre, Lugar -->
                 <div class="row">
-                    <div class="col-md-6">
+                    <div class="col-md-8">
                         <div class="mb-3">
                             <label for="nombre" class="form-label">Nombre del Torneo *</label>
                             <input type="text" class="form-control" id="nombre" name="nombre" 
                                    value="<?= htmlspecialchars($action === 'edit' ? $tournament['nombre'] : '') ?>" 
-                                   required placeholder="Ej: Torneo Nacional de Domin� 2025">
+                                   required placeholder="Ej: Torneo Nacional de Dominó 2025">
                         </div>
-                        
-                        <div class="mb-3">
-                            <label for="fechator" class="form-label">Fecha del Torneo *</label>
-                            <input type="date" class="form-control" id="fechator" name="fechator" 
-                                   value="<?= htmlspecialchars($action === 'edit' ? ($tournament['fechator'] ?? '') : '') ?>" required>
-                        </div>
-                        
-                        <div class="mb-3">
-                            <label for="hora_torneo" class="form-label">Hora</label>
-                            <input type="time" class="form-control" id="hora_torneo" name="hora_torneo" 
-                                   value="<?php
-                                   if ($action === 'edit' && !empty($tournament['hora_torneo'])) {
-                                       $ht = $tournament['hora_torneo'];
-                                       echo htmlspecialchars(strlen($ht) >= 5 ? substr($ht, 0, 5) : $ht);
-                                   } elseif ($action === 'edit' && isset($tournament['hora']) && $tournament['hora'] !== '') {
-                                       $ht = $tournament['hora'];
-                                       echo htmlspecialchars(strlen($ht) >= 5 ? substr($ht, 0, 5) : $ht);
-                                   } else {
-                                       echo '';
-                                   }
-                                   ?>">
-                            <small class="form-text text-muted">Hora de inicio del torneo (opcional).</small>
-                        </div>
-                        
-                        <div class="mb-3">
-                            <label for="tipo_torneo" class="form-label">Tipo de torneo</label>
-                            <select class="form-select" id="tipo_torneo" name="tipo_torneo">
-                                <option value="">No definido</option>
-                                <option value="interclubes"<?= ($action === 'edit' && isset($tournament['tipo_torneo']) && (string)$tournament['tipo_torneo'] === 'interclubes') ? ' selected' : '' ?>>Interclubes</option>
-                                <option value="suizo_puro"<?= ($action === 'edit' && isset($tournament['tipo_torneo']) && (string)$tournament['tipo_torneo'] === 'suizo_puro') ? ' selected' : '' ?>>Suizo puro</option>
-                                <option value="suizo_sin_repetir"<?= ($action === 'edit' && isset($tournament['tipo_torneo']) && (string)$tournament['tipo_torneo'] === 'suizo_sin_repetir') ? ' selected' : '' ?>>Suizo sin repetir</option>
-                            </select>
-                            <small class="form-text text-muted">Relevante para parejas fijas y equipos (rondas 2+).</small>
-                        </div>
-                        
+                    </div>
+                    <div class="col-md-4">
                         <div class="mb-3">
                             <label for="lugar" class="form-label">Lugar</label>
                             <input type="text" class="form-control" id="lugar" name="lugar" 
                                    value="<?= htmlspecialchars($action === 'edit' ? ($tournament['lugar'] ?? '') : '') ?>" 
-                                   placeholder="Ej: Club Domin� Central, Sala Principal">
-                            <small class="form-text text-muted">Ingrese el lugar donde se realizar� el torneo</small>
+                                   placeholder="Ej: Club Central, Sala Principal">
                         </div>
-                        
+                    </div>
+                </div>
+                
+                <!-- Fila 3: Fecha, Hora, Tiempo, Puntos, Rondas -->
+                <div class="row">
+                    <div class="col-md-2">
+                        <div class="mb-3">
+                            <label for="fechator" class="form-label">Fecha *</label>
+                            <input type="date" class="form-control" id="fechator" name="fechator" 
+                                   value="<?= htmlspecialchars($action === 'edit' ? ($tournament['fechator'] ?? '') : '') ?>" required>
+                        </div>
+                    </div>
+                    <div class="col-md-2">
+                        <div class="mb-3">
+                            <label for="hora_torneo" class="form-label">Hora</label>
+                            <input type="time" class="form-control" id="hora_torneo" name="hora_torneo" 
+                                   value="<?php
+                                   if ($action === 'edit' && !empty($tournament['hora_torneo'])) { $ht = $tournament['hora_torneo']; echo htmlspecialchars(strlen($ht) >= 5 ? substr($ht, 0, 5) : $ht); }
+                                   elseif ($action === 'edit' && isset($tournament['hora']) && $tournament['hora'] !== '') { $ht = $tournament['hora']; echo htmlspecialchars(strlen($ht) >= 5 ? substr($ht, 0, 5) : $ht); }
+                                   else { echo ''; }
+                                   ?>">
+                        </div>
+                    </div>
+                    <div class="col-md-2">
+                        <div class="mb-3">
+                            <label for="tiempo" class="form-label">Tiempo (min)</label>
+                            <input type="number" class="form-control" id="tiempo" name="tiempo" 
+                                   value="<?= $action === 'edit' ? (int)($tournament['tiempo'] ?? 35) : 35 ?>" min="0" placeholder="35">
+                        </div>
+                    </div>
+                    <div class="col-md-2">
+                        <div class="mb-3">
+                            <label for="puntos" class="form-label">Puntos</label>
+                            <input type="number" class="form-control" id="puntos" name="puntos" 
+                                   value="<?= $action === 'edit' ? (int)($tournament['puntos'] ?? 200) : 200 ?>" min="0" placeholder="200">
+                        </div>
+                    </div>
+                    <div class="col-md-2">
+                        <div class="mb-3">
+                            <label for="rondas" class="form-label">Rondas</label>
+                            <input type="number" class="form-control" id="rondas" name="rondas" 
+                                   value="<?= $action === 'edit' ? (int)($tournament['rondas'] ?? 9) : 9 ?>" min="0" placeholder="9">
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Fila 4: Clase, Modalidad, Tipo torneo, Ranking, Jugadores club -->
+                <div class="row">
+                    <div class="col-md-2">
                         <div class="mb-3">
                             <label for="clase" class="form-label">Clase *</label>
                             <select class="form-select" id="clase" name="clase" required>
                                 <option value="">Seleccionar...</option>
-                                <?php 
-                                // Convertir clase de ENUM (texto) a número si es necesario
-                                $clase_actual = 0;
-                                if ($action === 'edit' && isset($tournament['clase'])) {
-                                    $clase_actual = getClaseNumero($tournament['clase']);
-                                }
-                                ?>
+                                <?php $clase_actual = ($action === 'edit' && isset($tournament['clase'])) ? getClaseNumero($tournament['clase']) : 0; ?>
                                 <option value="1"<?= $clase_actual === 1 ? ' selected' : '' ?>>Torneo</option>
                                 <option value="2"<?= $clase_actual === 2 ? ' selected' : '' ?>>Campeonato</option>
                             </select>
                         </div>
-                        
+                    </div>
+                    <div class="col-md-2">
                         <div class="mb-3">
                             <label for="modalidad" class="form-label">Modalidad *</label>
                             <select class="form-select" id="modalidad" name="modalidad" required>
                                 <option value="">Seleccionar...</option>
-                                <?php 
-                                // Convertir modalidad de ENUM (texto) a número si es necesario
-                                $modalidad_actual = 0;
-                                if ($action === 'edit' && isset($tournament['modalidad'])) {
-                                    $modalidad_actual = getModalidadNumero($tournament['modalidad']);
-                                }
-                                ?>
+                                <?php $modalidad_actual = ($action === 'edit' && isset($tournament['modalidad'])) ? getModalidadNumero($tournament['modalidad']) : 0; ?>
                                 <option value="1"<?= $modalidad_actual === 1 ? ' selected' : '' ?>>Individual</option>
                                 <option value="2"<?= $modalidad_actual === 2 ? ' selected' : '' ?>>Parejas</option>
                                 <option value="3"<?= $modalidad_actual === 3 ? ' selected' : '' ?>>Equipos</option>
                                 <option value="4"<?= $modalidad_actual === 4 ? ' selected' : '' ?>>Parejas fijas</option>
                             </select>
                         </div>
-                        
-                        <?php if ($is_admin_general): ?>
-                        <div class="mb-3">
-                            <label for="club_responsable" class="form-label">Organización *</label>
-                            <select class="form-select" id="club_responsable" name="club_responsable" <?= $action === 'new' ? 'required' : '' ?>>
-                                <option value="">Seleccionar organización...</option>
-                                <?php foreach ($organizaciones_list as $org): ?>
-                                    <option value="<?= (int)$org['id'] ?>"
-                                            <?= ($action === 'edit' && ($tournament['club_responsable'] ?? 0) == $org['id']) || ($action === 'new' && $organizacion_id_cuentas_new !== null && $organizacion_id_cuentas_new == $org['id']) ? 'selected' : '' ?>>
-                                        <?= htmlspecialchars($org['nombre']) ?>
-                                    </option>
-                                <?php endforeach; ?>
-                            </select>
-                            <small class="form-text text-muted">Todo torneo debe estar bajo una organización con entidad definida.</small>
-                        </div>
-                        <?php else: ?>
-                        <?php $org_id = ($action === 'edit' && isset($tournament['club_responsable'])) ? (int)$tournament['club_responsable'] : (int)($default_organizacion_id ?? 0); ?>
-                        <input type="hidden" name="club_responsable" value="<?= $org_id ?>">
-                        <?php if ($default_organizacion_nombre !== null || ($action === 'edit' && !empty($tournament['organizacion_nombre']))): ?>
-                        <div class="mb-3">
-                            <label class="form-label text-muted">Organización</label>
-                            <p class="form-control-plaintext mb-0"><strong><?= htmlspecialchars($action === 'edit' ? ($tournament['organizacion_nombre'] ?? '') : ($default_organizacion_nombre ?? '')) ?></strong></p>
-                            <small class="form-text text-muted">El torneo se asigna a su organización.</small>
-                        </div>
-                        <?php endif; ?>
-                        <?php endif; ?>
                     </div>
-                    
-                    <div class="col-md-6">
+                    <div class="col-md-2">
                         <div class="mb-3">
-                            <label for="tiempo" class="form-label">Tiempo (minutos)</label>
-                            <input type="number" class="form-control" id="tiempo" name="tiempo" 
-                                   value="<?= $action === 'edit' ? (int)($tournament['tiempo'] ?? 35) : 35 ?>" 
-                                   min="0" placeholder="35">
+                            <label for="tipo_torneo" class="form-label">Tipo torneo</label>
+                            <select class="form-select" id="tipo_torneo" name="tipo_torneo">
+                                <option value="">No definido</option>
+                                <option value="interclubes"<?= ($action === 'edit' && isset($tournament['tipo_torneo']) && (string)$tournament['tipo_torneo'] === 'interclubes') ? ' selected' : '' ?>>Interclubes</option>
+                                <option value="suizo_puro"<?= ($action === 'edit' && isset($tournament['tipo_torneo']) && (string)$tournament['tipo_torneo'] === 'suizo_puro') ? ' selected' : '' ?>>Suizo puro</option>
+                                <option value="suizo_sin_repetir"<?= ($action === 'edit' && isset($tournament['tipo_torneo']) && (string)$tournament['tipo_torneo'] === 'suizo_sin_repetir') ? ' selected' : '' ?>>Suizo sin repetir</option>
+                            </select>
                         </div>
-                        
-                        <div class="mb-3">
-                            <label for="puntos" class="form-label">Puntos</label>
-                            <input type="number" class="form-control" id="puntos" name="puntos" 
-                                   value="<?= $action === 'edit' ? (int)($tournament['puntos'] ?? 200) : 200 ?>" 
-                                   min="0" placeholder="200">
-                        </div>
-                        
-                        <div class="mb-3">
-                            <label for="rondas" class="form-label">Rondas</label>
-                            <input type="number" class="form-control" id="rondas" name="rondas" 
-                                   value="<?= $action === 'edit' ? (int)($tournament['rondas'] ?? 9) : 9 ?>" 
-                                   min="0" placeholder="9">
-                        </div>
-                        
-                        <div class="mb-3">
-                            <label for="costo" class="form-label">Costo de Inscripci�n</label>
-                            <div class="input-group">
-                                <span class="input-group-text">$</span>
-                                <input type="number" class="form-control" id="costo" name="costo" step="0.01"
-                                       value="<?= number_format((float)($action === 'edit' ? ($tournament['costo'] ?? 0) : 0), 2, '.', '') ?>" 
-                                       min="0" placeholder="0.00">
-                            </div>
-                        </div>
-                        
+                    </div>
+                    <div class="col-md-2">
                         <div class="mb-3">
                             <label for="ranking" class="form-label">Ranking</label>
                             <select class="form-select" id="ranking" name="ranking">
                                 <option value="0"<?= ($action === 'edit' && ($tournament['ranking'] ?? 0) == 0) ? ' selected' : '' ?>>No</option>
-                                <option value="1"<?= ($action === 'edit' && ($tournament['ranking'] ?? 0) == 1) ? ' selected' : '' ?>>S�</option>
+                                <option value="1"<?= ($action === 'edit' && ($tournament['ranking'] ?? 0) == 1) ? ' selected' : '' ?>>Sí</option>
                             </select>
                         </div>
-                        
+                    </div>
+                    <div class="col-md-2">
                         <div class="mb-3">
-                            <label for="pareclub" class="form-label">Jugadores por club (interclubes)</label>
+                            <label for="pareclub" class="form-label">Jugadores por club</label>
                             <input type="number" class="form-control" id="pareclub" name="pareclub" 
-                                   value="<?= $action === 'edit' ? (int)($tournament['pareclub'] ?? 0) : '' ?>" 
-                                   min="1" step="1" placeholder="Ej: 1, 2, 3...">
-                            <small class="form-text text-muted">Número de jugadores por club para torneos interclubes. Debe ser un entero mayor o igual a 1.</small>
+                                   value="<?= $action === 'edit' ? (int)($tournament['pareclub'] ?? 0) : '' ?>" min="0" step="1" placeholder="0">
                         </div>
                     </div>
                 </div>
                 
-                <div class="row mt-3">
-                    <div class="col-md-12">
-                        <div class="row mb-3">
-                            <div class="col-md-4">
-                                <label for="estatus" class="form-label">Estado *</label>
-                                <select class="form-select" id="estatus" name="estatus" required>
-                                    <option value="1"<?= ($action === 'edit' && ($tournament['estatus'] ?? 1) == 1) ? ' selected' : ' selected' ?>>Activo</option>
-                                    <option value="0"<?= ($action === 'edit' && ($tournament['estatus'] ?? 1) == 0) ? ' selected' : '' ?>>Inactivo</option>
-                                </select>
+                <!-- Fila 5: Costo, Estado, Evento, Inscripción línea, Publicación, Cuenta bancaria -->
+                <div class="row">
+                    <div class="col-md-2">
+                        <div class="mb-3">
+                            <label for="costo" class="form-label">Costo</label>
+                            <div class="input-group">
+                                <span class="input-group-text">$</span>
+                                <input type="number" class="form-control" id="costo" name="costo" step="0.01"
+                                       value="<?= number_format((float)($action === 'edit' ? ($tournament['costo'] ?? 0) : 0), 2, '.', '') ?>" min="0" placeholder="0.00">
                             </div>
-                            
-                            <div class="col-md-4">
-                                <label for="es_evento_masivo" class="form-label">Tipo de Evento *</label>
-                                <select class="form-select" id="es_evento_masivo" name="es_evento_masivo" required>
-                                    <option value="0"<?= ($action === 'edit' && isset($tournament['es_evento_masivo']) && (int)$tournament['es_evento_masivo'] == 0) ? ' selected' : (!isset($tournament['es_evento_masivo']) ? ' selected' : '') ?>>Ninguno</option>
-                                    <option value="1"<?= ($action === 'edit' && isset($tournament['es_evento_masivo']) && (int)$tournament['es_evento_masivo'] == 1) ? ' selected' : '' ?>>Evento Nacional</option>
-                                    <option value="2"<?= ($action === 'edit' && isset($tournament['es_evento_masivo']) && (int)$tournament['es_evento_masivo'] == 2) ? ' selected' : '' ?>>Evento Regional</option>
-                                    <option value="3"<?= ($action === 'edit' && isset($tournament['es_evento_masivo']) && (int)$tournament['es_evento_masivo'] == 3) ? ' selected' : '' ?>>Evento Local</option>
-                                    <option value="4"<?= ($action === 'edit' && isset($tournament['es_evento_masivo']) && (int)$tournament['es_evento_masivo'] == 4) ? ' selected' : '' ?>>Evento Privado</option>
-                                </select>
-                                <small class="form-text text-muted" id="tipo-evento-info-wrap">
-                                    <i class="fas fa-info-circle"></i>
-                                    <span id="tipo-evento-info">Ninguno: Torneo normal. Inscripción en línea si está habilitada.</span>
-                                </small>
+                        </div>
+                    </div>
+                    <div class="col-md-2">
+                        <div class="mb-3">
+                            <label for="estatus" class="form-label">Estado *</label>
+                            <select class="form-select" id="estatus" name="estatus" required>
+                                <option value="1"<?= ($action === 'edit' && ($tournament['estatus'] ?? 1) == 1) ? ' selected' : ' selected' ?>>Activo</option>
+                                <option value="0"<?= ($action === 'edit' && ($tournament['estatus'] ?? 1) == 0) ? ' selected' : '' ?>>Inactivo</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="col-md-2">
+                        <div class="mb-3">
+                            <label for="es_evento_masivo" class="form-label">Evento *</label>
+                            <select class="form-select" id="es_evento_masivo" name="es_evento_masivo" required>
+                                <option value="0"<?= ($action === 'edit' && isset($tournament['es_evento_masivo']) && (int)$tournament['es_evento_masivo'] == 0) ? ' selected' : (!isset($tournament['es_evento_masivo']) ? ' selected' : '') ?>>Ninguno</option>
+                                <option value="1"<?= ($action === 'edit' && isset($tournament['es_evento_masivo']) && (int)$tournament['es_evento_masivo'] == 1) ? ' selected' : '' ?>>Nacional</option>
+                                <option value="2"<?= ($action === 'edit' && isset($tournament['es_evento_masivo']) && (int)$tournament['es_evento_masivo'] == 2) ? ' selected' : '' ?>>Regional</option>
+                                <option value="3"<?= ($action === 'edit' && isset($tournament['es_evento_masivo']) && (int)$tournament['es_evento_masivo'] == 3) ? ' selected' : '' ?>>Local</option>
+                                <option value="4"<?= ($action === 'edit' && isset($tournament['es_evento_masivo']) && (int)$tournament['es_evento_masivo'] == 4) ? ' selected' : '' ?>>Privado</option>
+                            </select>
+                            <small class="form-text text-muted d-block" id="tipo-evento-info-wrap"><span id="tipo-evento-info">Ninguno: torneo normal.</span></small>
+                        </div>
+                    </div>
+                    <div class="col-md-2">
+                        <div class="mb-3">
+                            <label class="form-label d-block">&nbsp;</label>
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" id="permite_inscripcion_linea" name="permite_inscripcion_linea" value="1"
+                                    <?= ($action === 'edit' ? (($tournament['permite_inscripcion_linea'] ?? 1) == 1) : true) ? ' checked' : '' ?>>
+                                <label class="form-check-label" for="permite_inscripcion_linea">Inscripción en línea</label>
                             </div>
-                            
-                            <div class="col-md-4">
-                                <div class="form-check form-switch mt-4">
-                                    <input class="form-check-input" type="checkbox" id="permite_inscripcion_linea" name="permite_inscripcion_linea" value="1"
-                                        <?= ($action === 'edit' ? (($tournament['permite_inscripcion_linea'] ?? 1) == 1) : true) ? ' checked' : '' ?>>
-                                    <label class="form-check-label" for="permite_inscripcion_linea">
-                                        <i class="fas fa-globe me-1"></i>Permitir inscripción en línea
-                                    </label>
-                                </div>
-                                <small class="form-text text-muted">Si está desactivado, los usuarios verán la opción de contactar al administrador de la organización para inscribirse.</small>
-                                <div class="form-check form-switch mt-2">
-                                    <input class="form-check-input" type="checkbox" id="publicar_landing" name="publicar_landing" value="1"
-                                        <?= ($action === 'edit' ? (($tournament['publicar_landing'] ?? 1) == 1) : false) ? ' checked' : '' ?>>
-                                    <label class="form-check-label" for="publicar_landing">
-                                        <i class="fas fa-globe me-1"></i>Publicar en Portal Público (Landing)
-                                    </label>
-                                </div>
-                                <small class="form-text text-muted">Activa cuando quieras que el evento sea visible en la página principal. Si está desactivado, el torneo no aparecerá en el landing ni en resultados públicos.</small>
+                        </div>
+                    </div>
+                    <div class="col-md-2">
+                        <div class="mb-3">
+                            <label class="form-label d-block">&nbsp;</label>
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" id="publicar_landing" name="publicar_landing" value="1"
+                                    <?= ($action === 'edit' ? (($tournament['publicar_landing'] ?? 1) == 1) : false) ? ' checked' : '' ?>>
+                                <label class="form-check-label" for="publicar_landing">Publicar en portal</label>
                             </div>
-                            
-                            <div class="col-md-4">
-                                <label for="cuenta_id" class="form-label">
-                                    <i class="fas fa-university me-2 text-success"></i>Cuenta Bancaria
-                                </label>
+                        </div>
+                    </div>
+                    <div class="col-md-2">
+                        <div class="mb-3">
+                            <label for="cuenta_id" class="form-label">Cuenta bancaria</label>
                                 <?php
                                 // Solo mostrar la(s) cuenta(s) del administrador de la organización del torneo
                                 $cuentas_disponibles = [];
