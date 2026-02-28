@@ -327,7 +327,20 @@
             <?php endif; ?>
             <div class="col-<?= $mostrar_reportes_lateral ? 'md-8' : '12' ?>">
             <?php if ($inscripciones_abiertas && empty($stand_by)): ?>
-            <?php $es_parejas = !empty($tournament_data['modalidad']) && (int)$tournament_data['modalidad'] === 4; ?>
+            <?php
+            $modalidad_val = isset($tournament_data['modalidad']) ? (int)$tournament_data['modalidad'] : 0;
+            if ($modalidad_val === 0 && !empty($torneo_id)) {
+                try {
+                    $st = DB::pdo()->prepare("SELECT modalidad FROM tournaments WHERE id = ? LIMIT 1");
+                    $st->execute([(int)$torneo_id]);
+                    $row = $st->fetch(PDO::FETCH_ASSOC);
+                    if ($row !== false) {
+                        $modalidad_val = (int)$row['modalidad'];
+                    }
+                } catch (Throwable $e) { /* ignorar */ }
+            }
+            $es_parejas = $modalidad_val === 4;
+            ?>
             <!-- Formulario: parejas (2 jug + nombre opc) o un jugador según modalidad -->
             <div class="col-12">
                 <div class="card mb-3">
@@ -340,9 +353,11 @@
                         <?php endif; ?>
 
                         <?php if ($es_parejas): ?>
-                        <!-- Inscripción por parejas: 2 jugadores + nombre de pareja opcional -->
+                        <!-- Inscripción por parejas: 2 jugadores + nombre de pareja (equipo) opcional -->
+                        <h6 class="text-primary mb-2"><i class="fas fa-handshake me-1"></i>Inscripción por parejas — 2 jugadores y nombre de equipo (opcional)</h6>
                         <form method="POST" id="registrationFormPareja" class="form-compact-invitation" <?= !$form_enabled ? 'onsubmit="return false;"' : '' ?>>
                             <input type="hidden" name="action" value="register_pair">
+                            <input type="hidden" name="token" value="<?= htmlspecialchars($token ?? '') ?>">
                             <input type="hidden" name="torneo_id" value="<?= (int)$torneo_id ?>">
                             <input type="hidden" name="club_id" value="<?= (int)$club_id ?>">
                             <input type="hidden" name="id_usuario_1" id="id_usuario_1" value="">
