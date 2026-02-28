@@ -662,10 +662,14 @@ tailwind.config = {
                                 <i class="fas fa-user-cog"></i> Asignar mesas al operador
                             </a>
                             
-                            <!-- Agregar Mesa -->
+                            <!-- Agregar Mesa: solo habilitado en ronda 1 -->
                             <?php if ($isLocked): ?>
                                 <button type="button" disabled class="tw-btn bg-gray-400 text-white">
                                     <i class="fas fa-lock"></i> Agregar Mesa (Cerrado)
+                                </button>
+                            <?php elseif ($ultima_ronda >= 2): ?>
+                                <button type="button" disabled class="tw-btn bg-gray-400 text-white" title="Solo disponible en la ronda 1">
+                                    <i class="fas fa-plus-circle"></i> Agregar Mesa (solo ronda 1)
                                 </button>
                             <?php else: ?>
                                 <a href="<?php echo $base_url . ($use_standalone ? '?' : '&'); ?>action=agregar_mesa&torneo_id=<?php echo $torneo['id']; ?>&ronda=<?php echo $ultima_ronda; ?>" 

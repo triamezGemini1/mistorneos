@@ -172,6 +172,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         case 'guardar_mesa_adicional':
             $torneo_id = (int)($_POST['torneo_id'] ?? 0);
             $ronda = (int)($_POST['ronda'] ?? 0);
+            if ($ronda >= 2) {
+                $_SESSION['error'] = 'Agregar mesa solo está disponible en la ronda 1.';
+                header('Location: ' . buildRedirectUrl('panel', ['torneo_id' => $torneo_id]));
+                exit;
+            }
             guardarMesaAdicional($torneo_id, $ronda, $user_id, $is_admin_general);
             break;
             
@@ -507,14 +512,11 @@ try {
             if (!$torneo_id || !$ronda) {
                 throw new Exception('Debe especificar torneo y ronda');
             }
-            verificarPermisosTorneo($torneo_id, $user_id, $is_admin_general);
-            $view_file = __DIR__ . '/gestion_torneos/agregar-mesa.php';
-            $view_data = obtenerDatosAgregarMesa($torneo_id, $ronda);
-            break;
-            
-        case 'agregar_mesa':
-            if (!$torneo_id || !$ronda) {
-                throw new Exception('Debe especificar torneo y ronda');
+            $ronda = (int)$ronda;
+            if ($ronda >= 2) {
+                $_SESSION['error'] = 'Agregar mesa solo está disponible en la ronda 1.';
+                header('Location: ' . buildRedirectUrl('panel', ['torneo_id' => $torneo_id]));
+                exit;
             }
             verificarPermisosTorneo($torneo_id, $user_id, $is_admin_general);
             $view_file = __DIR__ . '/gestion_torneos/agregar-mesa.php';
