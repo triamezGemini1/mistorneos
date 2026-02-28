@@ -8,13 +8,13 @@ Este documento describe **paso a paso** cada acción desde que se genera la invi
 
 | Paso | Acción | Archivo / Lugar | Detalle |
 |------|--------|------------------|---------|
-| 1.1 | Admin entra al panel de invitación de clubes | `index.php?page=invitacion_clubes&torneo_id=X` | Módulo `modules/invitacion_clubes.php`. Lista clubes de `directorio_clubes`. |
-| 1.2 | Admin marca clubes y envía el formulario | POST `action=invitar_seleccionados` | Se envían `directorio_ids[]`, `acceso1`, `acceso2`. |
-| 1.3 | Por cada club seleccionado: | `invitacion_clubes.php` (bloque try, foreach) | 1) Se lee el club en `directorio_clubes` por `id` (con logo). 2) Se busca o crea el registro en `clubes` por `id_directorio_club` (homologación: nombre, direccion, delegado, telefono, email, logo; **estatus = 9** = procede del directorio). 3) Si ya existe invitación para ese torneo+id_directorio_club, se omite. |
-| 1.4 | Se genera el **token** y se inserta la invitación | `invitacion_clubes.php` | `$token = bin2hex(random_bytes(32));` → INSERT en `invitaciones` (torneo_id, **club_id** del club creado/encontrado, id_directorio_club, token, estado='activa', etc.). |
+| 1.1 | Admin entra al panel de invitación de clubes | `index.php?page=invitacion_clubes&torneo_id=X` | Módulo `modules/invitacion_clubes.php`. Lista clubes de la tabla **`clubes`**. |
+| 1.2 | Admin marca clubes y envía el formulario | POST `action=invitar_seleccionados` | Se envían `club_ids[]`, `acceso1`, `acceso2`. |
+| 1.3 | Por cada club seleccionado: | `invitacion_clubes.php` (bloque try, foreach) | 1) Se lee el club en **`clubes`** por `id`. 2) Si ya existe invitación para ese torneo+club_id, se omite. 3) Se crea la invitación con datos del club (delegado, email, teléfono). |
+| 1.4 | Se genera el **token** y se inserta la invitación | `invitacion_clubes.php` | `$token = bin2hex(random_bytes(32));` → INSERT en `invitaciones` (torneo_id, **club_id**, admin_club_id, token, estado='activa', etc.). Si el club tiene `id_directorio_club` se guarda también para trazabilidad. |
 | 1.5 | En la misma pantalla se construye el **enlace de acceso** | `InvitationJoinResolver::buildJoinUrl($token)` | URL final: `{base}/join?token={token}`. Se muestra en la tabla (botón copiar, WhatsApp, Telegram) y en la tarjeta digital. |
 
-**Resultado:** Queda un registro en `invitaciones` con `token` único. En `directorio_clubes` el club puede tener `id_usuario` NULL (delegado sin cuenta) o ya asignado.
+**Resultado:** Queda un registro en `invitaciones` con `token` único y `club_id` del club invitado. Las invitaciones se gestionan desde **Clubes** (tabla `clubes`), no desde el directorio.
 
 ---
 
@@ -78,8 +78,8 @@ Ejemplo: `http://localhost/mistorneos/public/join?token=5fc0c78c84eea803...`
 
 ```
 [Panel admin] invitacion_clubes.php
-    → Selección de clubes (directorio_clubes)
-    → INSERT invitaciones (token, club_id, id_directorio_club, estado='activa')
+    → Selección de clubes (tabla clubes)
+    → INSERT invitaciones (token, club_id, estado='activa')
     → Enlace compartido: {base}/join?token=XXX
 
 [Delegado abre] {base}/join?token=XXX  (join_invitation.php)
