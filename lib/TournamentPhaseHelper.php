@@ -126,7 +126,7 @@ class TournamentPhaseHelper
      */
     public static function getHerramientasGlobales(): array
     {
-        return ['mostrar_resultados', 'galeria_fotos', 'generar_qr_general', 'generar_qr_personal'];
+        return ['activar_participantes', 'mostrar_resultados', 'galeria_fotos', 'generar_qr_general', 'generar_qr_personal'];
     }
 
     /**
