@@ -20,14 +20,16 @@ const CLUB_ESTATUS_DIRECTORIO = 9;
 /**
  * Obtiene o crea un club en tabla clubes a partir de un registro de directorio_clubes.
  * Homologación: nombre, direccion, delegado, telefono, email, logo → clubes; estatus = 9.
- * Lo que no exista en directorio (organizacion_id, entidad, admin_club_id) queda NULL/0 hasta que el club acepte e inicie sesión.
+ * admin_club_id del club = id del admin/organización que hace la invitación (hasta que el club acepte).
  * @param PDO $pdo
  * @param array $dir fila de directorio_clubes (id, nombre, direccion, delegado, telefono, email, logo)
  * @param int $id_directorio_club id del registro en directorio_clubes
+ * @param int|null $id_invitador id del usuario admin que hace la invitación (para admin_club_id del club). Si null, se usa 0.
  * @return int club id
  */
-function invitacion_find_or_create_club_from_directorio(PDO $pdo, array $dir, $id_directorio_club) {
+function invitacion_find_or_create_club_from_directorio(PDO $pdo, array $dir, $id_directorio_club, $id_invitador = null) {
     $id_directorio_club = (int) $id_directorio_club;
+    $id_invitador = (int) ($id_invitador ?? 0);
     $cols_clubes = $pdo->query("SHOW COLUMNS FROM clubes")->fetchAll(PDO::FETCH_COLUMN);
     $has_id_directorio = in_array('id_directorio_club', $cols_clubes, true);
 
@@ -58,6 +60,9 @@ function invitacion_find_or_create_club_from_directorio(PDO $pdo, array $dir, $i
     }
     if (in_array('entidad', $cols_clubes, true)) {
         $ins['entidad'] = 0;
+    }
+    if (in_array('admin_club_id', $cols_clubes, true)) {
+        $ins['admin_club_id'] = $id_invitador;
     }
     $cols = array_keys($ins);
     $placeholders = array_map(function ($c) { return ':' . $c; }, $cols);
@@ -181,7 +186,8 @@ if ($torneo && $_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['action']) &&
                         exit;
                     }
                 }
-                $club_id = invitacion_find_or_create_club_from_directorio($pdo, $dir, $dir_id_one);
+                $admin_club_id = (int) (Auth::id() ?? 0);
+                $club_id = invitacion_find_or_create_club_from_directorio($pdo, $dir, $dir_id_one, $admin_club_id);
                 if (!$has_inv_id_directorio) {
                     $stmt = $pdo->prepare("SELECT id FROM {$tb_inv} WHERE torneo_id = ? AND club_id = ?");
                     $stmt->execute([$torneo_id, $club_id]);
@@ -198,7 +204,6 @@ if ($torneo && $_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['action']) &&
                 $inv_delegado = $dir['delegado'] ?? null;
                 $inv_email = $dir['email'] ?? null;
                 $club_tel = $dir['telefono'] ?? null;
-                $admin_club_id = (int) Auth::id();
 
                 $inv_cols = ['torneo_id', 'club_id', 'admin_club_id', 'invitado_delegado', 'invitado_email', 'acceso1', 'acceso2', 'usuario', 'club_email', 'club_telefono', 'club_delegado', 'token', 'estado'];
                 $inv_vals = [$torneo_id, $club_id, $admin_club_id, $inv_delegado, $inv_email, $acceso1, $acceso2, $usuario_creador, $inv_email, $club_tel, $inv_delegado, $token, 'activa'];
@@ -314,8 +319,8 @@ if ($torneo && $_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) 
     $has_inv_id_directorio = in_array('id_directorio_club', $cols_inv, true);
     $has_inv_id_usuario_vinculado = in_array('id_usuario_vinculado', $cols_inv, true);
 
-    // admin_club_id = ID del administrador logueado que crea las invitaciones
-    $admin_club_id = (int) Auth::id();
+    // admin_club_id = ID del admin/organización que hace la invitación (valor por defecto 0)
+    $admin_club_id = (int) (Auth::id() ?? 0);
 
     try {
         $pdo->beginTransaction();
@@ -333,7 +338,7 @@ if ($torneo && $_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) 
                 }
             }
             try {
-                $club_id = invitacion_find_or_create_club_from_directorio($pdo, $dir, $dir_id);
+                $club_id = invitacion_find_or_create_club_from_directorio($pdo, $dir, $dir_id, $admin_club_id);
             } catch (Exception $e) {
                 $errores[] = 'Directorio ' . $dir_id . ': ' . $e->getMessage();
                 continue;
