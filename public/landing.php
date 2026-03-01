@@ -44,6 +44,21 @@ $eventos_privados = array_values(array_filter($eventos_todos_futuros, function($
 // Calendario (LandingDataService)
 $eventos_calendario = $landingService->getEventosCalendario();
 
+// Logos de clientes: desde la carpeta de logos de clubes (tabla clubes, columna logo = upload/logos/...)
+$logos_clientes_clubes = [];
+try {
+    $stmt = $pdo->prepare("SELECT id, nombre, logo FROM clubes WHERE logo IS NOT NULL AND TRIM(logo) != '' AND (estatus = 1 OR estatus = '1') ORDER BY nombre ASC");
+    $stmt->execute();
+    while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
+        $logos_clientes_clubes[] = ['nombre' => $row['nombre'] ?? 'Club', 'path' => $row['logo']];
+    }
+} catch (Exception $e) {
+    // ignorar
+}
+$mitad = (int) ceil(count($logos_clientes_clubes) / 2);
+$logos_fila1 = array_slice($logos_clientes_clubes, 0, $mitad);
+$logos_fila2 = array_slice($logos_clientes_clubes, $mitad);
+
 // Función helper para obtener URL de afiche (compatible con view_tournament_file.php)
 function getAficheUrl($torneo) {
     if (!empty($torneo['afiche'])) {
@@ -298,21 +313,13 @@ foreach ($eventos_calendario as $ev) {
         </div>
     </section>
 
-    <!-- Logos de clientes atendidos (dos filas, cintillo con desplazamiento lento) -->
-    <?php
-    $base_img = (function_exists('app_base_url') ? rtrim(app_base_url(), '/') : '') . '/view_image.php?path=';
-    $logos_fila1 = [
-        ['nombre' => 'FVD', 'path' => 'lib/Assets/clientes/fvd.png', 'url' => null],
-    ];
-    $logos_fila2 = [
-        ['nombre' => 'FVD', 'path' => 'lib/Assets/clientes/fvd.png', 'url' => null],
-    ];
-    ?>
+    <!-- Logos de clientes atendidos (desde carpeta de logos de clubes: upload/logos) -->
+    <?php if (!empty($logos_fila1) || !empty($logos_fila2)): ?>
     <section id="logos-clientes" class="logos-clientes-wrap" aria-label="Clientes y entidades que nos respaldan">
         <div class="logos-clientes-row mb-4">
             <?php for ($r = 0; $r < 2; $r++): foreach ($logos_fila1 as $logo): ?>
                 <div class="logo-item">
-                    <img src="<?= htmlspecialchars($base_img . rawurlencode($logo['path'])) ?>" alt="<?= htmlspecialchars($logo['nombre']) ?>" loading="lazy" onerror="this.style.display='none'; this.nextElementSibling&&this.nextElementSibling.classList.remove('hidden');">
+                    <img src="view_image.php?path=<?= rawurlencode($logo['path']) ?>" alt="<?= htmlspecialchars($logo['nombre']) ?>" loading="lazy" onerror="this.style.display='none'; this.nextElementSibling&&this.nextElementSibling.classList.remove('hidden');">
                     <span class="hidden text-xl font-bold text-primary-600"><?= htmlspecialchars($logo['nombre']) ?></span>
                 </div>
             <?php endforeach; endfor; ?>
@@ -320,12 +327,13 @@ foreach ($eventos_calendario as $ev) {
         <div class="logos-clientes-row">
             <?php for ($r = 0; $r < 2; $r++): foreach ($logos_fila2 as $logo): ?>
                 <div class="logo-item">
-                    <img src="<?= htmlspecialchars($base_img . rawurlencode($logo['path'])) ?>" alt="<?= htmlspecialchars($logo['nombre']) ?>" loading="lazy" onerror="this.style.display='none'; this.nextElementSibling&&this.nextElementSibling.classList.remove('hidden');">
+                    <img src="view_image.php?path=<?= rawurlencode($logo['path']) ?>" alt="<?= htmlspecialchars($logo['nombre']) ?>" loading="lazy" onerror="this.style.display='none'; this.nextElementSibling&&this.nextElementSibling.classList.remove('hidden');">
                     <span class="hidden text-xl font-bold text-primary-600"><?= htmlspecialchars($logo['nombre']) ?></span>
                 </div>
             <?php endforeach; endfor; ?>
         </div>
     </section>
+    <?php endif; ?>
 
     <!-- Eventos Masivos Section -->
     <?php if (!empty($eventos_masivos)): ?>

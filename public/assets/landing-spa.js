@@ -45,8 +45,11 @@ const LandingContent = {
         const commentErrors = ref([]);
         const commentForm = ref({ tipo: 'comentario', contenido: '', calificacion: null });
 
-        const logosFila1 = [{ nombre: 'FVD', path: 'lib/Assets/clientes/fvd.png' }];
-        const logosFila2 = [{ nombre: 'FVD', path: 'lib/Assets/clientes/fvd.png' }];
+        // Logos de clientes desde carpeta de logos de clubes (upload/logos), repartidos en dos filas
+        const logosClientes = computed(() => Array.isArray(props.data?.logos_clientes) ? props.data.logos_clientes : []);
+        const mitadLogos = computed(() => Math.ceil(logosClientes.value.length / 2));
+        const logosFila1 = computed(() => logosClientes.value.slice(0, mitadLogos.value));
+        const logosFila2 = computed(() => logosClientes.value.slice(mitadLogos.value));
 
         const eventosPorFecha = computed(() => props.data?.eventos_por_fecha || {});
         const hoyStr = new Date().toISOString().slice(0, 10);

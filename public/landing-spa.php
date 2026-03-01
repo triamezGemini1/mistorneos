@@ -180,11 +180,11 @@ if ($entidad_param > 0) {
                 </div>
             </section>
 
-            <!-- Logos de clientes atendidos (cintillo, dos filas, desplazamiento lento) -->
-            <section id="logos-clientes" class="logos-clientes-wrap" aria-label="Clientes y entidades que nos respaldan">
+            <!-- Logos de clientes (desde carpeta de logos de clubes: upload/logos) -->
+            <section v-if="logosFila1.length || logosFila2.length" id="logos-clientes" class="logos-clientes-wrap" aria-label="Clientes y entidades que nos respaldan">
                 <div class="logos-clientes-row mb-4">
                     <template v-for="r in 2" :key="'r1-'+r">
-                        <div v-for="logo in logosFila1" :key="'1-'+r+'-'+logo.nombre" class="logo-item">
+                        <div v-for="(logo, idx) in logosFila1" :key="'1-'+r+'-'+idx" class="logo-item">
                             <img :src="baseUrl + 'view_image.php?path=' + encodeURIComponent(logo.path)" :alt="logo.nombre" loading="lazy" @error="$event.target.style.display='none'; $event.target.nextElementSibling&&$event.target.nextElementSibling.classList.remove('hidden')">
                             <span class="hidden text-xl font-bold text-primary-600">{{ logo.nombre }}</span>
                         </div>
@@ -192,7 +192,7 @@ if ($entidad_param > 0) {
                 </div>
                 <div class="logos-clientes-row">
                     <template v-for="r in 2" :key="'r2-'+r">
-                        <div v-for="logo in logosFila2" :key="'2-'+r+'-'+logo.nombre" class="logo-item">
+                        <div v-for="(logo, idx) in logosFila2" :key="'2-'+r+'-'+idx" class="logo-item">
                             <img :src="baseUrl + 'view_image.php?path=' + encodeURIComponent(logo.path)" :alt="logo.nombre" loading="lazy" @error="$event.target.style.display='none'; $event.target.nextElementSibling&&$event.target.nextElementSibling.classList.remove('hidden')">
                             <span class="hidden text-xl font-bold text-primary-600">{{ logo.nombre }}</span>
                         </div>

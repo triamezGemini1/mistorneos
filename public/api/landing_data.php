@@ -160,6 +160,16 @@ try {
         ")->fetchAll(PDO::FETCH_ASSOC);
     } catch (Exception $e) {}
 
+    // Logos de clientes: desde carpeta de logos de clubes (tabla clubes, columna logo = upload/logos/...)
+    $logos_clientes = [];
+    try {
+        $stmt = $pdo->prepare("SELECT id, nombre, logo FROM clubes WHERE logo IS NOT NULL AND TRIM(logo) != '' AND (estatus = 1 OR estatus = '1') ORDER BY nombre ASC");
+        $stmt->execute();
+        while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
+            $logos_clientes[] = ['nombre' => $row['nombre'] ?? 'Club', 'path' => $row['logo']];
+        }
+    } catch (Exception $e) {}
+
     $csrf_token = CSRF::token();
 
     echo json_encode([
@@ -183,6 +193,7 @@ try {
         'entidad_seleccionada' => $entidadParam,
         'filtro_aplicado_entidad' => $filtro_aplicado_entidad,
         'entidad_nombre_usuario' => $entidad_nombre_usuario,
+        'logos_clientes' => $logos_clientes,
     ], JSON_UNESCAPED_UNICODE);
 
 } catch (Exception $e) {
