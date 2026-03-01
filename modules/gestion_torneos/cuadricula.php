@@ -127,34 +127,34 @@ $letras = [1 => 'A', 2 => 'C', 3 => 'B', 4 => 'D'];
             font-size: 0.75rem;
             table-layout: fixed;
             font-family: Calibri, 'Lato', sans-serif !important;
-            font-weight: 300 !important;
+            font-weight: 700 !important;
         }
         
         .cuadricula-table th,
         .cuadricula-table td {
             border: 1px solid #000;
-            padding: 0.247rem 0.19rem;
+            padding: 0.222rem 0.171rem;
             text-align: center;
             vertical-align: middle;
             height: auto;
-            min-height: 1.62vh;
+            min-height: 1.458vh;
             white-space: nowrap !important;
             overflow: hidden !important;
             text-overflow: ellipsis !important;
             font-family: Calibri, 'Lato', sans-serif !important;
-            font-weight: 300 !important;
+            font-weight: 700 !important;
             font-size: 0.75rem !important;
         }
         
         .cuadricula-table thead th {
-            font-weight: 300 !important;
+            font-weight: 700 !important;
             font-size: 0.85em;
         }
         
         /* Columna 1: ID Usuario (Verde) - 5 dígitos 99999 */
         .col-id-usuario {
             background-color: #4ade80 !important; /* Verde */
-            font-weight: 300 !important;
+            font-weight: 700 !important;
             color: #000;
             width: 10%;
             min-width: 2.8rem;
@@ -163,7 +163,7 @@ $letras = [1 => 'A', 2 => 'C', 3 => 'B', 4 => 'D'];
         /* Columna 2: Mesa y Letra (Azul) - 5 dígitos + letra "99999 A" */
         .col-mesa-letra {
             background-color: #60a5fa !important; /* Azul */
-            font-weight: 300 !important;
+            font-weight: 700 !important;
             color: #000;
             width: 10%;
             min-width: 3.5rem;
@@ -188,7 +188,7 @@ $letras = [1 => 'A', 2 => 'C', 3 => 'B', 4 => 'D'];
         .celda-bye {
             background-color: #fef08a !important;
             font-style: italic;
-            font-weight: 300 !important;
+            font-weight: 700 !important;
         }
         
         /* Responsive para tablets */
@@ -198,8 +198,8 @@ $letras = [1 => 'A', 2 => 'C', 3 => 'B', 4 => 'D'];
             }
             .cuadricula-table th,
             .cuadricula-table td {
-                padding: 0.195rem 0.148rem;
-                min-height: 1.55vh;
+                padding: 0.176rem 0.133rem;
+                min-height: 1.395vh;
             }
         }
         
@@ -210,8 +210,8 @@ $letras = [1 => 'A', 2 => 'C', 3 => 'B', 4 => 'D'];
             }
             .cuadricula-table th,
             .cuadricula-table td {
-                padding: 0.163rem 0.108rem;
-                min-height: 1.30vh;
+                padding: 0.147rem 0.097rem;
+                min-height: 1.17vh;
             }
             .col-id-usuario {
                 width: 10%;
@@ -249,8 +249,8 @@ $letras = [1 => 'A', 2 => 'C', 3 => 'B', 4 => 'D'];
             }
             .cuadricula-table th,
             .cuadricula-table td {
-                padding: 0.135rem 0.079rem;
-                min-height: 1.21vh;
+                padding: 0.122rem 0.071rem;
+                min-height: 1.089vh;
             }
             .col-id-usuario {
                 width: 10%;
@@ -269,7 +269,7 @@ $letras = [1 => 'A', 2 => 'C', 3 => 'B', 4 => 'D'];
             }
             .cuadricula-table th,
             .cuadricula-table td {
-                min-height: 1.01vh;
+                min-height: 0.909vh;
             }
         }
     </style>
