@@ -229,6 +229,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             verificarActaRechazar($user_id, $is_admin_general);
             break;
 
+        case 'activar_participantes':
+            if (!empty($_POST['confirmar'])) {
+                $torneo_id_act = (int)($_GET['torneo_id'] ?? $_POST['torneo_id'] ?? 0);
+                if ($torneo_id_act <= 0) {
+                    $_SESSION['error'] = 'Torneo no especificado.';
+                    header('Location: ' . buildRedirectUrl('index'));
+                    exit;
+                }
+                verificarPermisosTorneo($torneo_id_act, $user_id, $is_admin_general);
+                require_once __DIR__ . '/../lib/UserActivationHelper.php';
+                $activados = UserActivationHelper::activateTournamentParticipants(DB::pdo(), $torneo_id_act);
+                $msg = $activados > 0
+                    ? "Se activaron {$activados} participante(s). Ya pueden acceder al sistema y recibir notificaciones."
+                    : "No había participantes por activar o ya estaban activos.";
+                header('Location: ' . buildRedirectUrl('activar_participantes', ['torneo_id' => $torneo_id_act, 'success' => $msg]));
+                exit;
+            }
+            break;
+
         default:
             $_SESSION['error'] = 'Acción POST no válida';
             // Si hay torneo_id en POST, redirigir al panel; de lo contrario, al índice
@@ -348,6 +367,18 @@ try {
             $view_file = __DIR__ . '/gestion_torneos/cronometro.php';
             $view_data = ['torneo' => $torneo, 'torneo_id' => $torneo_id];
             $use_cronometro_standalone = true;
+            break;
+
+        case 'activar_participantes':
+            if (!$torneo_id) {
+                throw new Exception('Debe especificar un torneo');
+            }
+            $torneo = obtenerTorneo($torneo_id, $user_id, $is_admin_general);
+            if (!$torneo) {
+                throw new Exception('Torneo no encontrado o sin permisos');
+            }
+            $view_file = __DIR__ . '/gestion_torneos/activar_participantes.php';
+            $view_data = ['torneo' => $torneo, 'torneo_id' => $torneo_id];
             break;
             
         case 'gestionar_inscripciones_equipos':
