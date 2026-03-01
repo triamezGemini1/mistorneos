@@ -21,7 +21,7 @@ $action_param = $use_standalone ? '?' : '&';
         margin-right: auto;
     }
     
-    /* Navegación de partidas: 10% del ancho de pantalla */
+    /* Navegación de partidas: 10% del ancho de pantalla (solo pantallas >= 14") */
     @media (min-width: 769px) {
         .registrar-resultados-wrap #sidebar-mesas {
             flex: 0 0 10%;
@@ -34,6 +34,11 @@ $action_param = $use_standalone ? '?' : '&';
             flex: 0 0 90%;
             max-width: 90%;
         }
+    }
+    /* Pantallas menores a 14": suprimir navegador de mesas */
+    @media (max-width: 1365px) {
+        .registrar-resultados-wrap #sidebar-mesas { display: none !important; }
+        .registrar-resultados-wrap .col-form-registro { flex: 0 0 100% !important; max-width: 100% !important; }
     }
     
     .mesa-item {
@@ -181,13 +186,19 @@ $action_param = $use_standalone ? '?' : '&';
     .columna-nombre { width: 25%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-weight: 300; }
     .columna-puntos { width: 10%; }
     .columna-sancion { width: 5%; }
-    .columna-forfait { width: 8%; }
-    .columna-tarjeta { width: 15%; }
-    /* Estadísticas: una columna, formato "pos - gan - per - efect", no supera 10% del ancho */
-    .columna-estadisticas { width: 10%; max-width: 10%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .columna-forfait { width: 4%; }
+    .columna-tarjeta { width: 15%; overflow: hidden; }
+    /* Estadísticas: una columna, 9% del ancho */
+    .columna-estadisticas { width: 9%; max-width: 9%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .columna-estadisticas .estadisticas-valores { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .columna-tarjeta .tarjeta-btn { width: 5%; min-width: 2rem; box-sizing: border-box; }
+    .columna-tarjeta .tarjeta-btn { width: 33.33%; min-width: 1.5rem; max-width: 33.33%; box-sizing: border-box; flex-shrink: 0; }
     .estadisticas-valores { font-size: clamp(0.75rem, 1.5vw, 0.875rem); font-weight: 300; color: #111827; white-space: nowrap; line-height: 1.5; }
+    /* Títulos de columna (ID, nombre, puntos, etc.) en negrita */
+    #formResultados thead th { font-weight: bold !important; }
+    /* Contenedor de la información: reducir tamaño de letra y negrita */
+    .registrar-resultados-wrap #formResultados tbody td,
+    .registrar-resultados-wrap .estadisticas-valores,
+    .registrar-resultados-wrap .nombre-jugador-linea { font-size: 0.88em !important; font-weight: bold !important; }
     /* Suprimir incrementador en inputs numéricos */
     .registrar-resultados-wrap input[type="number"]::-webkit-outer-spin-button,
     .registrar-resultados-wrap input[type="number"]::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
@@ -358,8 +369,8 @@ $action_param = $use_standalone ? '?' : '&';
             max-width: 7.2rem;
         }
         .columna-forfait {
-            min-width: 2.2rem;
-            max-width: 2.5rem;
+            min-width: 1.8rem;
+            max-width: 2rem;
         }
         
         .columna-sancion {
@@ -435,8 +446,8 @@ $action_param = $use_standalone ? '?' : '&';
             max-width: 6rem;
         }
         .columna-forfait {
-            min-width: 2.3rem;
-            max-width: 2.5rem;
+            min-width: 1.6rem;
+            max-width: 2rem;
         }
         
         .columna-sancion {
@@ -450,7 +461,7 @@ $action_param = $use_standalone ? '?' : '&';
         }
         
         .columna-estadisticas {
-            min-width: 3.8rem;
+            min-width: 3.4rem;
         }
         
         .tarjeta-btn {

@@ -67,12 +67,21 @@ body {
 .registrar-resultados-wrap .form-control,
 .registrar-resultados-wrap input[type="number"],
 .registrar-resultados-wrap input[type="text"],
+.registrar-resultados-wrap #formResultados thead th {
+  font-weight: bold !important;
+}
 .registrar-resultados-wrap #formResultados th,
 .registrar-resultados-wrap #formResultados td {
   padding: 5px 10px !important;
   border: 1px solid #e0e0e0;
   font-weight: 300;
   line-height: 1.4;
+}
+.registrar-resultados-wrap #formResultados tbody td,
+.registrar-resultados-wrap #formResultados .estadisticas-valores,
+.registrar-resultados-wrap #formResultados .nombre-jugador-linea {
+  font-size: 0.88em !important;
+  font-weight: bold !important;
 }
 
 /* Columnas al ancho de pantalla sin truncar */
@@ -346,6 +355,12 @@ body {
   }
 }
 
+/* ========== Pantallas menores a 14": ocultar navegador de mesas ========== */
+@media (max-width: 1365px) {
+  .registrar-resultados-wrap #sidebar-mesas { display: none !important; }
+  .registrar-resultados-wrap .col-form-registro { flex: 0 0 100% !important; max-width: 100% !important; }
+}
+
 /* ========== DESKTOP (1024px): tabla multicolumna ========== */
 @media (min-width: 1024px) {
   .registrar-resultados-wrap {
@@ -388,17 +403,22 @@ body {
     vertical-align: middle;
     border: 1px solid #e0e0e0;
   }
+  .registrar-resultados-wrap #formResultados thead th { font-weight: bold !important; }
   .registrar-resultados-wrap #formResultados .columna-id { width: 5%; max-width: 5%; }
   .registrar-resultados-wrap #formResultados .columna-nombre { width: 25%; }
   .registrar-resultados-wrap #formResultados .columna-puntos { width: 10%; }
   .registrar-resultados-wrap #formResultados .columna-sancion { width: 5%; }
-  .registrar-resultados-wrap #formResultados .columna-forfait { width: 8%; }
-  .registrar-resultados-wrap #formResultados .columna-tarjeta { width: 15%; }
-  /* Estadísticas: una columna "pos - gan - per - efect", máximo 10% del ancho */
-  .registrar-resultados-wrap #formResultados .columna-estadisticas { width: 10%; max-width: 10%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .registrar-resultados-wrap #formResultados .columna-forfait { width: 4%; max-width: 4%; }
+  .registrar-resultados-wrap #formResultados .columna-tarjeta { width: 15%; overflow: hidden; min-width: 0; }
+  .registrar-resultados-wrap #formResultados .columna-tarjeta .d-flex { overflow: hidden; min-width: 0; }
+  /* Estadísticas: 9% del ancho */
+  .registrar-resultados-wrap #formResultados .columna-estadisticas { width: 9%; max-width: 9%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .registrar-resultados-wrap #formResultados .columna-estadisticas .estadisticas-valores { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .registrar-resultados-wrap #formResultados .columna-tarjeta .tarjeta-btn { width: 33.33%; min-width: 2rem; box-sizing: border-box; border: none; }
+  .registrar-resultados-wrap #formResultados .columna-tarjeta .tarjeta-btn { width: 33.33%; min-width: 1.5rem; max-width: 33.33%; box-sizing: border-box; flex-shrink: 0; border: none; }
   .registrar-resultados-wrap #formResultados .tarjeta-btn { border: none; }
+  .registrar-resultados-wrap #formResultados tbody td,
+  .registrar-resultados-wrap #formResultados .estadisticas-valores,
+  .registrar-resultados-wrap #formResultados .nombre-jugador-linea { font-size: 0.88em !important; font-weight: bold !important; }
 
   .registrar-resultados-wrap #formResultados tbody tr {
     border: 1px solid #e0e0e0;
