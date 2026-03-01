@@ -227,61 +227,6 @@ if ($entidad_param > 0) {
                 </div>
             </section>
 
-            <!-- Eventos por Entidad -->
-            <section v-if="data.entidades_con_eventos?.length" id="eventos-entidad" class="py-16 md:py-24 bg-gradient-to-br from-blue-50 to-indigo-100">
-                <div class="container mx-auto px-4 sm:px-6 lg:px-8">
-                    <div class="text-center mb-12">
-                        <h2 class="text-3xl md:text-4xl font-bold text-primary-700 mb-4"><i class="fas fa-map-marker-alt mr-3 text-accent"></i>Eventos por Entidad</h2>
-                        <p class="text-lg text-gray-600 mb-6">Selecciona una entidad para ver sus eventos y clubes disponibles</p>
-                    </div>
-                    <div v-if="!data.entidad_seleccionada" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 lg:gap-8 mb-12">
-                        <a v-for="ent in data.entidades_con_eventos" :key="ent.id" :href="baseUrl + 'landing-spa.php?entidad=' + ent.id + '#eventos-entidad'" class="group bg-white rounded-2xl shadow-lg hover:shadow-2xl transition-all overflow-hidden border-2 border-blue-200 hover:border-primary-500 transform hover:-translate-y-2 cursor-pointer">
-                            <div class="p-6">
-                                <div class="flex items-center justify-center w-16 h-16 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl mb-4 mx-auto group-hover:scale-110 transition-transform"><i class="fas fa-map-marker-alt text-white text-2xl"></i></div>
-                                <h3 class="text-xl font-bold text-gray-900 mb-3 text-center">{{ ent.nombre }}</h3>
-                                <div class="space-y-2 mt-4">
-                                    <div class="flex items-center justify-between p-2 bg-blue-50 rounded-lg"><span class="text-sm text-gray-600"><i class="fas fa-building mr-2 text-primary-500"></i>Clubes</span><span class="font-bold text-primary-700">{{ ent.total_clubes }}</span></div>
-                                    <div class="flex items-center justify-between p-2 bg-green-50 rounded-lg"><span class="text-sm text-gray-600"><i class="fas fa-calendar-check mr-2 text-green-500"></i>Próximos</span><span class="font-bold text-green-700">{{ ent.total_eventos_futuros }}</span></div>
-                                    <div class="flex items-center justify-between p-2 bg-gray-50 rounded-lg"><span class="text-sm text-gray-600"><i class="fas fa-trophy mr-2 text-yellow-500"></i>Total</span><span class="font-bold text-gray-700">{{ ent.total_eventos_todos }}</span></div>
-                                </div>
-                                <div class="mt-4 pt-4 border-t border-gray-200"><span class="text-primary-600 font-semibold text-sm flex items-center justify-center">Ver eventos <i class="fas fa-arrow-right ml-2"></i></span></div>
-                            </div>
-                        </a>
-                    </div>
-                    <div v-if="data.entidad_seleccionada" class="mb-8 text-center">
-                        <a :href="baseUrl + 'landing-spa.php#eventos-entidad'" class="inline-flex items-center px-6 py-3 bg-gray-500 text-white font-semibold rounded-xl hover:bg-gray-600 transition-all shadow-lg mb-6"><i class="fas fa-arrow-left mr-2"></i>Volver a todas las entidades</a>
-                        <p class="text-gray-700 text-lg font-semibold"><i class="fas fa-filter mr-2 text-primary-500"></i>Mostrando eventos {{ data.filtro_aplicado_entidad }}</p>
-                    </div>
-                    <div v-if="data.eventos_mi_entidad?.length" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 lg:gap-8">
-                        <div v-for="ev in data.eventos_mi_entidad" :key="ev.id" class="bg-white rounded-2xl shadow-lg hover:shadow-2xl transition-all overflow-hidden border border-blue-200 hover:border-primary-500 transform hover:-translate-y-2 text-center">
-                            <div class="w-full h-48 bg-gray-100 flex flex-col items-center justify-center p-4">
-                                <img v-if="ev.logo_url" :src="ev.logo_url" alt="" class="landing-logo-org object-contain mb-2" loading="lazy">
-                                <span class="text-gray-900 text-xl font-bold">{{ ev.organizacion_nombre || 'Organizador' }}</span>
-                            </div>
-                            <div class="p-6 text-center">
-                                <div class="inline-flex items-center px-3 py-1 bg-blue-500 text-white rounded-full text-sm font-semibold mb-4"><i class="fas fa-calendar mr-2"></i>{{ formatFecha(ev.fechator) }}</div>
-                                <h5 class="text-xl font-bold text-gray-900 mb-2">{{ ev.nombre }}</h5>
-                                <p class="text-gray-600 text-sm mb-4"><i class="fas fa-map-marker-alt mr-2 text-primary-500"></i>{{ ev.lugar || 'No especificado' }}</p>
-                                <div class="flex flex-wrap gap-2 mb-4 justify-center">
-                                    <span class="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-xs font-semibold">{{ CLASES[parseInt(ev.clase)||1] || 'Torneo' }}</span>
-                                    <span class="px-3 py-1 bg-cyan-100 text-cyan-700 rounded-full text-xs font-semibold">{{ MODALIDADES[parseInt(ev.modalidad)||1] || 'Individual' }}</span>
-                                    <span v-if="ev.costo > 0" class="px-3 py-1 bg-green-100 text-green-700 rounded-full text-xs font-semibold">${{ parseFloat(ev.costo).toFixed(2) }}</span>
-                                    <span class="px-3 py-1 bg-yellow-100 text-yellow-700 rounded-full text-xs font-semibold"><i class="fas fa-users mr-1"></i>{{ ev.total_inscritos||0 }} inscritos</span>
-                                </div>
-                                <a v-if="parseInt(ev.permite_inscripcion_linea||1)===1 && !esHoy(ev.fechator)" :href="baseUrl + 'inscribir_evento_masivo.php?torneo_id=' + ev.id" class="block w-full px-4 py-2 bg-green-500 text-white font-semibold rounded-lg hover:bg-green-600 transition-all text-center mb-2"><i class="fas fa-sign-in-alt mr-2"></i>Inscribirme</a>
-                                <p v-else-if="parseInt(ev.permite_inscripcion_linea||1)===1 && esHoy(ev.fechator)" class="text-xs text-gray-500 text-center mb-2">Inscripción deshabilitada el día del torneo.</p>
-                                <a v-else-if="ev.admin_celular || ev.club_telefono" :href="'tel:' + (ev.admin_celular || ev.club_telefono || '').replace(/\D/g,'')" class="block w-full px-4 py-2 bg-green-500 text-white font-semibold rounded-lg text-center mb-2"><i class="fas fa-phone mr-2"></i>Contactar</a>
-                                <a :href="baseUrl + 'consulta_credencial.php'" class="block w-full px-4 py-2 bg-primary-500 text-white font-semibold rounded-lg hover:bg-primary-600 transition-all text-center"><i class="fas fa-info-circle mr-2"></i>Ver Información</a>
-                            </div>
-                        </div>
-                    </div>
-                    <div v-else-if="data.entidad_seleccionada" class="text-center py-12 bg-white rounded-2xl shadow-lg">
-                        <i class="fas fa-calendar-times text-6xl text-gray-300 mb-4"></i>
-                        <p class="text-gray-600 text-lg font-semibold mb-2">No hay eventos programados para esta entidad</p>
-                    </div>
-                </div>
-            </section>
-
             <!-- Eventos (Futuros + Realizados) -->
             <section id="eventos" class="py-16 md:py-24 bg-gray-50">
                 <div class="container mx-auto px-4 sm:px-6 lg:px-8">

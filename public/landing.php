@@ -41,58 +41,6 @@ $eventos_privados = array_values(array_filter($eventos_todos_futuros, function($
     return (int)($e['es_evento_masivo'] ?? 0) === 4;
 }));
 
-// Entidades con eventos (LandingDataService)
-$entidades_con_eventos = $landingService->getEntidadesConEventos();
-
-// Eventos filtrados por entidad/club
-$eventos_mi_entidad = [];
-$filtro_aplicado_entidad = '';
-$entidad_seleccionada = isset($_GET['entidad']) ? (int)$_GET['entidad'] : 0;
-$entidad_nombre_usuario = '';
-$organizacion_nombre_usuario = '';
-$entidad_filtro = 0;
-
-if ($entidad_seleccionada > 0) {
-    $entidad_filtro = $entidad_seleccionada;
-} elseif ($user) {
-    $user_role = $user['role'] ?? 'usuario';
-    $user_entidad = (int)($user['entidad'] ?? 0);
-    $user_club_id = (int)($user['club_id'] ?? 0);
-    if ($user_role === 'admin_club' || $user_role === 'admin_torneo') {
-        $entidad_filtro = $user_entidad > 0 ? $user_entidad : 0;
-    } elseif ($user_club_id > 0) {
-        $org_id = $landingService->getOrgIdPorClub($user_club_id);
-        if ($org_id) {
-            $eventos_mi_entidad = $landingService->getProximosEventosPorOrganizaciones([$org_id], 12);
-            try {
-                $stmt = $pdo->prepare("SELECT nombre FROM clubes WHERE id = ? LIMIT 1");
-                $stmt->execute([$user_club_id]);
-                $club_data = $stmt->fetch(PDO::FETCH_ASSOC);
-                if ($club_data) {
-                    $organizacion_nombre_usuario = $club_data['nombre'];
-                    $filtro_aplicado_entidad = "de su club: " . $club_data['nombre'];
-                }
-            } catch (Exception $e) {}
-        }
-        $entidad_filtro = 0;
-    } elseif ($user_entidad > 0) {
-        $entidad_filtro = $user_entidad;
-    }
-}
-
-if ($entidad_filtro > 0 && empty($eventos_mi_entidad)) {
-    try {
-        $stmt = $pdo->prepare("SELECT nombre FROM entidad WHERE id = ? LIMIT 1");
-        $stmt->execute([$entidad_filtro]);
-        $ent_data = $stmt->fetch(PDO::FETCH_ASSOC);
-        if ($ent_data) {
-            $entidad_nombre_usuario = $ent_data['nombre'];
-            $filtro_aplicado_entidad = "de la entidad: " . $entidad_nombre_usuario;
-        }
-    } catch (Exception $e) {}
-    $eventos_mi_entidad = $landingService->getProximosEventosPorEntidad($entidad_filtro, 12);
-}
-
 // Calendario (LandingDataService)
 $eventos_calendario = $landingService->getEventosCalendario();
 
@@ -277,22 +225,29 @@ foreach ($eventos_calendario as $ev) {
             #grid-anual { grid-template-columns: repeat(3, 1fr); grid-template-rows: repeat(4, 1fr); }
             #calendario .cal-contenedor-anual { height: calc(100vh - 120px); }
         }
+        /* Cintillo de logos de clientes: dos filas, desplazamiento lento */
+        .logos-clientes-wrap { overflow: hidden; width: 100%; background: linear-gradient(to bottom, #f8fafc, #e2e8f0); padding: 1.5rem 0; }
+        .logos-clientes-row { display: flex; width: max-content; animation: marquee 45s linear infinite; }
+        .logos-clientes-row:hover { animation-play-state: paused; }
+        .logos-clientes-row .logo-item { flex-shrink: 0; display: flex; align-items: center; justify-content: center; width: 180px; height: 90px; margin: 0 2rem; padding: 0.75rem; background: #fff; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
+        .logos-clientes-row .logo-item img { max-width: 100%; max-height: 100%; object-fit: contain; }
+        @keyframes marquee { 0% { transform: translateX(0); } 100% { transform: translateX(-50%); } }
     </style>
 </head>
 <body class="bg-gray-50 antialiased">
 <?php include_once __DIR__ . '/components/header.php'; ?>
 <?php include_once __DIR__ . '/components/hero.php'; ?>
 
-    <!-- Sección de Registro -->
+    <!-- Sección de Registro (solo afiliación, centrada) -->
     <section id="registro" class="py-16 md:py-24 bg-white">
         <div class="container mx-auto px-4 sm:px-6 lg:px-8 flex flex-col items-center">
             <div class="text-center mb-12">
-                <h2 class="text-3xl md:text-4xl lg:text-5xl font-bold text-primary-700 mb-4">Únete a Nuestra Comunidad</h2>
-                <p class="text-lg text-gray-600 max-w-2xl mx-auto">Elige el tipo de registro que mejor se adapte a ti</p>
+                <h2 class="text-3xl md:text-4xl lg:text-5xl font-bold text-primary-700 mb-4">Solicitud de Afiliación</h2>
+                <p class="text-lg text-gray-600 max-w-2xl mx-auto">Para clubes y organizadores que desean ser parte del proyecto y administrar eventos</p>
             </div>
             
             <div class="w-full flex justify-center">
-                <div class="grid grid-cols-1 gap-6 lg:gap-8 max-w-md mx-auto">
+                <div class="grid grid-cols-1 gap-6 lg:gap-8 max-w-md mx-auto w-full justify-items-center">
                 <!-- Solicitud de Afiliación -->
                 <div class="group relative">
                     <div class="absolute inset-0 bg-gradient-to-br from-red-500 to-rose-600 rounded-2xl blur opacity-75 group-hover:opacity-100 transition-opacity duration-300"></div>
@@ -340,6 +295,35 @@ foreach ($eventos_calendario as $ev) {
                     Las solicitudes de afiliación serán revisadas por el administrador del sistema.
                 </p>
             </div>
+        </div>
+    </section>
+
+    <!-- Logos de clientes atendidos (dos filas, cintillo con desplazamiento lento) -->
+    <?php
+    $base_img = (function_exists('app_base_url') ? rtrim(app_base_url(), '/') : '') . '/view_image.php?path=';
+    $logos_fila1 = [
+        ['nombre' => 'FVD', 'path' => 'lib/Assets/clientes/fvd.png', 'url' => null],
+    ];
+    $logos_fila2 = [
+        ['nombre' => 'FVD', 'path' => 'lib/Assets/clientes/fvd.png', 'url' => null],
+    ];
+    ?>
+    <section id="logos-clientes" class="logos-clientes-wrap" aria-label="Clientes y entidades que nos respaldan">
+        <div class="logos-clientes-row mb-4">
+            <?php for ($r = 0; $r < 2; $r++): foreach ($logos_fila1 as $logo): ?>
+                <div class="logo-item">
+                    <img src="<?= htmlspecialchars($base_img . rawurlencode($logo['path'])) ?>" alt="<?= htmlspecialchars($logo['nombre']) ?>" loading="lazy" onerror="this.style.display='none'; this.nextElementSibling&&this.nextElementSibling.classList.remove('hidden');">
+                    <span class="hidden text-xl font-bold text-primary-600"><?= htmlspecialchars($logo['nombre']) ?></span>
+                </div>
+            <?php endforeach; endfor; ?>
+        </div>
+        <div class="logos-clientes-row">
+            <?php for ($r = 0; $r < 2; $r++): foreach ($logos_fila2 as $logo): ?>
+                <div class="logo-item">
+                    <img src="<?= htmlspecialchars($base_img . rawurlencode($logo['path'])) ?>" alt="<?= htmlspecialchars($logo['nombre']) ?>" loading="lazy" onerror="this.style.display='none'; this.nextElementSibling&&this.nextElementSibling.classList.remove('hidden');">
+                    <span class="hidden text-xl font-bold text-primary-600"><?= htmlspecialchars($logo['nombre']) ?></span>
+                </div>
+            <?php endforeach; endfor; ?>
         </div>
     </section>
 
