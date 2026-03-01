@@ -45,6 +45,9 @@ const LandingContent = {
         const commentErrors = ref([]);
         const commentForm = ref({ tipo: 'comentario', contenido: '', calificacion: null });
 
+        const logosFila1 = [{ nombre: 'FVD', path: 'lib/Assets/clientes/fvd.png' }];
+        const logosFila2 = [{ nombre: 'FVD', path: 'lib/Assets/clientes/fvd.png' }];
+
         const eventosPorFecha = computed(() => props.data?.eventos_por_fecha || {});
         const hoyStr = new Date().toISOString().slice(0, 10);
         const calendarioFuturo = computed(() => {
@@ -204,6 +207,8 @@ const LandingContent = {
             commentSending,
             commentSuccess,
             commentErrors,
+            logosFila1,
+            logosFila2,
             scrollToSection,
             renderTarjetaEvento,
             viewEventPhotos,

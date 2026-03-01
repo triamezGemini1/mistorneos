@@ -55,6 +55,12 @@ if ($entidad_param > 0) {
         .slide-enter-active, .slide-leave-active { transition: transform 0.3s ease; }
         .slide-enter-from { transform: translateY(-10px); opacity: 0; }
         .slide-leave-to { transform: translateY(10px); opacity: 0; }
+        .logos-clientes-wrap { overflow: hidden; width: 100%; background: linear-gradient(to bottom, #f8fafc, #e2e8f0); padding: 1.5rem 0; }
+        .logos-clientes-row { display: flex; width: max-content; animation: marquee 45s linear infinite; }
+        .logos-clientes-row:hover { animation-play-state: paused; }
+        .logos-clientes-row .logo-item { flex-shrink: 0; display: flex; align-items: center; justify-content: center; width: 180px; height: 90px; margin: 0 2rem; padding: 0.75rem; background: #fff; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
+        .logos-clientes-row .logo-item img { max-width: 100%; max-height: 100%; object-fit: contain; }
+        @keyframes marquee { 0% { transform: translateX(0); } 100% { transform: translateX(-50%); } }
     </style>
 </head>
 <body class="bg-gray-50 antialiased">
@@ -94,7 +100,7 @@ if ($entidad_param > 0) {
                         </a>
                         <div class="hidden md:flex items-center space-x-1">
                             <a href="#eventos-masivos" @click.prevent="scrollToSection('eventos-masivos')" class="px-4 py-2 text-white/90 hover:text-white hover:bg-white/10 rounded-lg transition-all font-medium">Eventos Nacionales</a>
-                            <a href="#eventos-entidad" @click.prevent="scrollToSection('eventos-entidad')" class="px-4 py-2 text-white/90 hover:text-white hover:bg-white/10 rounded-lg transition-all font-medium">Eventos por Entidad</a>
+                            <a href="#logos-clientes" @click.prevent="scrollToSection('logos-clientes')" class="px-4 py-2 text-white/90 hover:text-white hover:bg-white/10 rounded-lg transition-all font-medium">Clientes</a>
                             <a href="#eventos" @click.prevent="scrollToSection('eventos')" class="px-4 py-2 text-white/90 hover:text-white hover:bg-white/10 rounded-lg transition-all font-medium">Eventos</a>
                             <a href="#calendario" @click.prevent="scrollToSection('calendario')" class="px-4 py-2 text-white/90 hover:text-white hover:bg-white/10 rounded-lg transition-all font-medium">Calendario</a>
                             <a href="#registro" @click.prevent="scrollToSection('registro')" class="px-4 py-2 text-white/90 hover:text-white hover:bg-white/10 rounded-lg transition-all font-medium">Registro</a>
@@ -109,7 +115,7 @@ if ($entidad_param > 0) {
                     <div v-show="mobileMenuOpen" class="md:hidden pb-4">
                         <div class="flex flex-col space-y-2">
                             <a href="#" @click.prevent="scrollToSection('eventos-masivos')" class="px-4 py-2 text-white/90 hover:bg-white/10 rounded-lg">Eventos Nacionales</a>
-                            <a href="#" @click.prevent="scrollToSection('eventos-entidad')" class="px-4 py-2 text-white/90 hover:bg-white/10 rounded-lg">Eventos por Entidad</a>
+                            <a href="#" @click.prevent="scrollToSection('logos-clientes')" class="px-4 py-2 text-white/90 hover:bg-white/10 rounded-lg">Clientes</a>
                             <a href="#" @click.prevent="scrollToSection('eventos')" class="px-4 py-2 text-white/90 hover:bg-white/10 rounded-lg">Eventos</a>
                             <a href="#" @click.prevent="scrollToSection('calendario')" class="px-4 py-2 text-white/90 hover:bg-white/10 rounded-lg">Calendario</a>
                             <a href="#" @click.prevent="scrollToSection('registro')" class="px-4 py-2 text-white/90 hover:bg-white/10 rounded-lg">Registro</a>
@@ -132,7 +138,7 @@ if ($entidad_param > 0) {
                         <h1 class="text-4xl md:text-5xl lg:text-6xl font-bold mb-6 leading-tight">Bienvenido a<br><span class="text-accent">La Estación del Dominó</span></h1>
                         <p class="text-lg md:text-xl lg:text-2xl mb-8 text-white/90 leading-relaxed">La plataforma integral para la gestión de torneos de dominó en Venezuela.<br class="hidden md:block">Participa en eventos cerca de ti o únete como organizador.</p>
                         <div class="flex flex-col sm:flex-row gap-4 justify-center items-center">
-                            <a :href="baseUrl + '#registro'" @click.prevent="scrollToSection('registro')" class="w-full sm:w-auto px-8 py-4 bg-accent text-primary-700 font-semibold rounded-xl hover:bg-accentDark hover:text-white transition-all shadow-xl transform hover:-translate-y-1"><i class="fas fa-user-plus mr-2"></i>Registrarme</a>
+                            <a :href="baseUrl + '#registro'" @click.prevent="scrollToSection('registro')" class="w-full sm:w-auto px-8 py-4 bg-accent text-primary-700 font-semibold rounded-xl hover:bg-accentDark hover:text-white transition-all shadow-xl transform hover:-translate-y-1"><i class="fas fa-building mr-2"></i>Solicitar Afiliación</a>
                             <a :href="baseUrl + 'login.php'" class="w-full sm:w-auto px-8 py-4 bg-white/10 backdrop-blur-sm text-white font-semibold rounded-xl border-2 border-white/30 hover:bg-white hover:text-primary-700 transition-all shadow-lg"><i class="fas fa-sign-in-alt mr-2"></i>Ya tengo cuenta</a>
                         </div>
                     </div>
@@ -140,55 +146,57 @@ if ($entidad_param > 0) {
                 <div class="absolute bottom-0 left-0 right-0"><svg class="w-full h-12 md:h-20" viewBox="0 0 1200 120" preserveAspectRatio="none"><path d="M0,0 C150,80 350,80 600,40 C850,0 1050,0 1200,40 L1200,120 L0,120 Z" fill="#f9fafb"></path></svg></div>
             </section>
 
-            <!-- Registro -->
+            <!-- Registro (solo afiliación, centrada) -->
             <section id="registro" class="py-16 md:py-24 bg-white">
-                <div class="container mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="container mx-auto px-4 sm:px-6 lg:px-8 flex flex-col items-center">
                     <div class="text-center mb-12">
-                        <h2 class="text-3xl md:text-4xl lg:text-5xl font-bold text-primary-700 mb-4">Únete a Nuestra Comunidad</h2>
-                        <p class="text-lg text-gray-600 max-w-2xl mx-auto">Elige el tipo de registro que mejor se adapte a ti</p>
+                        <h2 class="text-3xl md:text-4xl lg:text-5xl font-bold text-primary-700 mb-4">Solicitud de Afiliación</h2>
+                        <p class="text-lg text-gray-600 max-w-2xl mx-auto">Para clubes y organizadores que desean ser parte del proyecto y administrar eventos</p>
                     </div>
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 lg:gap-8 max-w-5xl mx-auto">
-                        <div class="group relative">
-                            <div class="absolute inset-0 bg-gradient-to-br from-green-500 to-emerald-600 rounded-2xl blur opacity-75 group-hover:opacity-100 transition-opacity"></div>
-                            <div class="relative bg-gradient-to-br from-green-500 to-emerald-600 rounded-2xl p-8 text-white shadow-xl hover:shadow-2xl transition-all transform hover:-translate-y-2 h-full">
-                                <div class="text-center mb-6">
-                                    <div class="inline-flex items-center justify-center w-16 h-16 bg-white/20 rounded-xl mb-4"><i class="fas fa-user text-3xl"></i></div>
-                                    <h3 class="text-2xl font-bold mb-3">Registro de Jugador</h3>
-                                    <p class="text-white/90 mb-6">Para jugadores que desean participar en torneos de dominó en cualquier ubicación.</p>
+                    <div class="w-full flex justify-center">
+                        <div class="grid grid-cols-1 gap-6 lg:gap-8 max-w-md mx-auto w-full justify-items-center">
+                            <div class="group relative w-full">
+                                <div class="absolute inset-0 bg-gradient-to-br from-red-500 to-rose-600 rounded-2xl blur opacity-75 group-hover:opacity-100 transition-opacity"></div>
+                                <div class="relative bg-gradient-to-br from-red-500 to-rose-600 rounded-2xl p-8 text-white shadow-xl hover:shadow-2xl transition-all transform hover:-translate-y-2 h-full">
+                                    <div class="text-center mb-6">
+                                        <div class="inline-flex items-center justify-center w-16 h-16 bg-white/20 rounded-xl mb-4"><i class="fas fa-building text-3xl"></i></div>
+                                        <h3 class="text-2xl font-bold mb-3">Solicitud de Afiliación</h3>
+                                        <p class="text-white/90 mb-6">Para clubes y organizadores que desean ser parte del proyecto y administrar eventos.</p>
+                                    </div>
+                                    <ul class="space-y-3 mb-6 text-left">
+                                        <li class="flex items-center"><i class="fas fa-check-circle mr-3"></i><span>Administra tu propio club</span></li>
+                                        <li class="flex items-center"><i class="fas fa-check-circle mr-3"></i><span>Crea y gestiona torneos</span></li>
+                                        <li class="flex items-center"><i class="fas fa-check-circle mr-3"></i><span>Invita jugadores a eventos</span></li>
+                                        <li class="flex items-center"><i class="fas fa-check-circle mr-3"></i><span>Reportes y estadísticas</span></li>
+                                    </ul>
+                                    <a :href="baseUrl + 'affiliate_request.php'" class="block w-full px-6 py-3 bg-white text-rose-600 font-semibold rounded-xl hover:bg-gray-100 transition-all text-center shadow-lg"><i class="fas fa-paper-plane mr-2"></i>Solicitar Afiliación</a>
                                 </div>
-                                <ul class="space-y-3 mb-6 text-left">
-                                    <li class="flex items-center"><i class="fas fa-check-circle mr-3"></i><span>Elige tu club favorito</span></li>
-                                    <li class="flex items-center"><i class="fas fa-check-circle mr-3"></i><span>Participa en cualquier torneo</span></li>
-                                    <li class="flex items-center"><i class="fas fa-check-circle mr-3"></i><span>Sin restricciones geográficas</span></li>
-                                    <li class="flex items-center"><i class="fas fa-check-circle mr-3"></i><span>Credencial digital única</span></li>
-                                </ul>
-                                <div class="space-y-2">
-                                    <a :href="baseUrl + 'register_by_club.php'" class="block w-full px-6 py-3 bg-white text-emerald-600 font-semibold rounded-xl hover:bg-gray-100 transition-all text-center shadow-lg"><i class="fas fa-building mr-2"></i>Seleccionar Club y Registrarme</a>
-                                    <a :href="baseUrl + 'user_register.php'" class="block text-center text-white/80 hover:text-white text-sm"><i class="fas fa-user-plus mr-1"></i>Registro sin club</a>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="group relative">
-                            <div class="absolute inset-0 bg-gradient-to-br from-red-500 to-rose-600 rounded-2xl blur opacity-75 group-hover:opacity-100 transition-opacity"></div>
-                            <div class="relative bg-gradient-to-br from-red-500 to-rose-600 rounded-2xl p-8 text-white shadow-xl hover:shadow-2xl transition-all transform hover:-translate-y-2 h-full">
-                                <div class="text-center mb-6">
-                                    <div class="inline-flex items-center justify-center w-16 h-16 bg-white/20 rounded-xl mb-4"><i class="fas fa-building text-3xl"></i></div>
-                                    <h3 class="text-2xl font-bold mb-3">Solicitud de Afiliación</h3>
-                                    <p class="text-white/90 mb-6">Para clubes y organizadores que desean ser parte del proyecto y administrar eventos.</p>
-                                </div>
-                                <ul class="space-y-3 mb-6 text-left">
-                                    <li class="flex items-center"><i class="fas fa-check-circle mr-3"></i><span>Administra tu propio club</span></li>
-                                    <li class="flex items-center"><i class="fas fa-check-circle mr-3"></i><span>Crea y gestiona torneos</span></li>
-                                    <li class="flex items-center"><i class="fas fa-check-circle mr-3"></i><span>Invita jugadores a eventos</span></li>
-                                    <li class="flex items-center"><i class="fas fa-check-circle mr-3"></i><span>Reportes y estadísticas</span></li>
-                                </ul>
-                                <a :href="baseUrl + 'affiliate_request.php'" class="block w-full px-6 py-3 bg-white text-rose-600 font-semibold rounded-xl hover:bg-gray-100 transition-all text-center shadow-lg"><i class="fas fa-paper-plane mr-2"></i>Solicitar Afiliación</a>
                             </div>
                         </div>
                     </div>
                     <div class="text-center mt-10">
                         <p class="text-gray-600 flex items-center justify-center"><i class="fas fa-info-circle mr-2 text-primary-500"></i>Las solicitudes de afiliación serán revisadas por el administrador del sistema.</p>
                     </div>
+                </div>
+            </section>
+
+            <!-- Logos de clientes atendidos (cintillo, dos filas, desplazamiento lento) -->
+            <section id="logos-clientes" class="logos-clientes-wrap" aria-label="Clientes y entidades que nos respaldan">
+                <div class="logos-clientes-row mb-4">
+                    <template v-for="r in 2" :key="'r1-'+r">
+                        <div v-for="logo in logosFila1" :key="'1-'+r+'-'+logo.nombre" class="logo-item">
+                            <img :src="baseUrl + 'view_image.php?path=' + encodeURIComponent(logo.path)" :alt="logo.nombre" loading="lazy" @error="$event.target.style.display='none'; $event.target.nextElementSibling&&$event.target.nextElementSibling.classList.remove('hidden')">
+                            <span class="hidden text-xl font-bold text-primary-600">{{ logo.nombre }}</span>
+                        </div>
+                    </template>
+                </div>
+                <div class="logos-clientes-row">
+                    <template v-for="r in 2" :key="'r2-'+r">
+                        <div v-for="logo in logosFila2" :key="'2-'+r+'-'+logo.nombre" class="logo-item">
+                            <img :src="baseUrl + 'view_image.php?path=' + encodeURIComponent(logo.path)" :alt="logo.nombre" loading="lazy" @error="$event.target.style.display='none'; $event.target.nextElementSibling&&$event.target.nextElementSibling.classList.remove('hidden')">
+                            <span class="hidden text-xl font-bold text-primary-600">{{ logo.nombre }}</span>
+                        </div>
+                    </template>
                 </div>
             </section>
 
@@ -370,10 +378,10 @@ if ($entidad_param > 0) {
                     <div class="max-w-4xl mx-auto space-y-4">
                         <details class="group bg-white rounded-xl p-6 shadow-md hover:shadow-lg transition-all border border-gray-200">
                             <summary class="flex items-center justify-between cursor-pointer font-bold text-lg text-gray-900 list-none">
-                                <span><i class="fas fa-question-circle text-primary-500 mr-3"></i>¿Cómo me registro en la plataforma?</span>
+                                <span><i class="fas fa-question-circle text-primary-500 mr-3"></i>¿Cómo solicito la afiliación de mi club?</span>
                                 <i class="fas fa-chevron-down text-primary-500 group-open:rotate-180 transition-transform"></i>
                             </summary>
-                            <p class="mt-4 text-gray-600 pl-10 leading-relaxed">Haz clic en "Registrarme", elige si quieres registrarte como jugador o solicitar afiliación para tu club, completa el formulario y ¡listo!</p>
+                            <p class="mt-4 text-gray-600 pl-10 leading-relaxed">Haz clic en "Solicitar Afiliación", completa el formulario de solicitud de afiliación para tu club u organización y el equipo lo revisará.</p>
                         </details>
                         <details class="group bg-white rounded-xl p-6 shadow-md hover:shadow-lg transition-all border border-gray-200">
                             <summary class="flex items-center justify-between cursor-pointer font-bold text-lg text-gray-900 list-none">
