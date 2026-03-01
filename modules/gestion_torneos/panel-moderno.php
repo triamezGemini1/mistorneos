@@ -408,6 +408,34 @@ tailwind.config = {
             overlay.style.display='flex';
         };
         actualizarDisplayCron();
+        /* Arrastrar ventana del cronómetro por el encabezado (desvincular de la página) */
+        (function initDragCron() {
+            var header = overlayEl ? overlayEl.querySelector('.cron-header') : null;
+            if (!header) return;
+            var dragging = false, startX, startY, startLeft, startTop;
+            header.addEventListener('mousedown', function(e) {
+                if (e.target.closest('button')) return;
+                dragging = true;
+                var r = overlayEl.getBoundingClientRect();
+                startLeft = r.left;
+                startTop = r.top;
+                startX = e.clientX;
+                startY = e.clientY;
+                overlayEl.style.right = 'auto';
+                overlayEl.style.bottom = 'auto';
+                overlayEl.style.left = startLeft + 'px';
+                overlayEl.style.top = startTop + 'px';
+                e.preventDefault();
+            });
+            document.addEventListener('mousemove', function(e) {
+                if (!dragging) return;
+                var dx = e.clientX - startX, dy = e.clientY - startY;
+                overlayEl.style.left = (startLeft + dx) + 'px';
+                overlayEl.style.top = (startTop + dy) + 'px';
+                startLeft += dx; startTop += dy; startX = e.clientX; startY = e.clientY;
+            });
+            document.addEventListener('mouseup', function() { dragging = false; });
+        })();
     })();
     </script>
     
