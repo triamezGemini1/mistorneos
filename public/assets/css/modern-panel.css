@@ -947,16 +947,10 @@ html {
 }
 .tw-panel .tw-btn,
 .tw-panel a.tw-btn {
-  font-size: 0.907rem !important;
+  font-size: 0.91rem !important;
   padding: 0.5rem 0.7rem;
   font-weight: 700 !important;
-  background-color: #000 !important;
-  color: #fff !important;
-}
-.tw-panel .tw-btn:hover:not(:disabled),
-.tw-panel a.tw-btn:hover {
-  background-color: #1a1a1a !important;
-  color: #fff !important;
+  color: #000 !important;
 }
 .tw-panel .tw-btn i {
   display: none !important;
@@ -1003,24 +997,12 @@ html {
   font-weight: 700 !important;
 }
 .tw-panel div[class*="bg-gradient-to-r"] {
-  font-size: 0.616rem;
+  font-size: 0.862rem;
   padding: 0.55rem 0.75rem;
   font-weight: 700 !important;
 }
-/* Encabezados de columna (Gestión de Mesas, Operaciones, Resultados): +40% tamaño, color negro */
-.tw-panel div[class*="bg-gradient-to-r"],
-.tw-panel div[class*="from-emerald"],
-.tw-panel div[class*="from-blue"],
-.tw-panel div[class*="from-amber"] {
-  background: #e8e8e8 !important;
-  border: 1px solid #ccc;
-}
-.tw-panel div[class*="bg-gradient-to-r"] h3,
-.tw-panel div[class*="from-emerald"] h3,
-.tw-panel div[class*="from-blue"] h3,
-.tw-panel div[class*="from-amber"] h3 {
-  font-size: 1.58rem !important;
-  font-weight: 700 !important;
+.tw-panel div[class*="bg-gradient-to-r"] h3 {
+  font-size: 0.862rem !important;
   color: #000 !important;
 }
 .tw-panel .text-xs {
@@ -1040,37 +1022,20 @@ html {
   font-weight: 700 !important;
 }
 .tw-panel #btnCronometro {
-  font-size: 0.74rem !important;
+  font-size: 0.616rem !important;
   padding: 0.45rem 0.6rem;
   font-weight: 700 !important;
-  background-color: #000 !important;
-  color: #fff !important;
-}
-.tw-panel #btnCronometro:hover {
-  background-color: #1a1a1a !important;
-  color: #fff !important;
 }
 .tw-panel .mb-4 { margin-bottom: 0.55rem; }
 .tw-panel .mb-6 { margin-bottom: 0.85rem; }
-/* Botones: forzar negro en todas las variantes de color del panel */
-.tw-panel .tw-btn[class*="bg-"],
-.tw-panel a.tw-btn[class*="bg-"],
-.tw-panel .tw-btn.bg-gray-400,
-.tw-panel .tw-btn.bg-gray-500,
-.tw-panel .tw-btn.bg-gray-800 {
-  background-color: #000 !important;
-  color: #fff !important;
-}
-.tw-panel .tw-btn[class*="bg-"]:hover:not(:disabled),
-.tw-panel a.tw-btn[class*="bg-"]:hover,
-.tw-panel .tw-btn.bg-gray-400:hover,
-.tw-panel .tw-btn.bg-gray-800:hover:not(:disabled) {
-  background-color: #1a1a1a !important;
-  color: #fff !important;
-}
 /* Ocultar todos los iconos en el panel de control (solo esta página) */
 .tw-panel i.fas,
 .tw-panel i.far,
 .tw-panel i.fab {
   display: none !important;
+}
+/* Texto de botones en negro (los fondos conservan su color) */
+.tw-panel .tw-btn[class*="bg-"],
+.tw-panel a.tw-btn[class*="bg-"] {
+  color: #000 !important;
 }
