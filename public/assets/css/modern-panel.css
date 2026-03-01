@@ -790,31 +790,53 @@ html {
 .tw-panel .cronometro-finalizar-torneo .countdown-tiempo-restante { font-size: 2.5rem; font-weight: 800; letter-spacing: 0.05em; margin: 0.25rem 0; }
 .tw-panel .cronometro-finalizar-torneo .cron-finalizar-hint { font-size: 0.75rem; opacity: 0.9; margin-top: 0.25rem; }
 
+/* Cronómetro: ventana flotante persistente (no bloquea la página, siempre visible una vez abierta) */
 #cronometroOverlay {
-  position: fixed; top: 0; left: 0; right: 0; bottom: 0; z-index: 99999;
+  position: fixed;
+  right: 1rem;
+  bottom: 1rem;
+  width: 300px;
+  max-width: 95vw;
+  z-index: 99999;
   background: linear-gradient(135deg, #1e1b4b 0%, #4c1d95 50%, #831843 100%);
-  display: none; align-items: center; justify-content: center;
-  color: white; font-family: 'Segoe UI', system-ui, sans-serif;
+  display: none;
+  align-items: stretch;
+  justify-content: stretch;
+  color: white;
+  font-family: 'Segoe UI', system-ui, sans-serif;
+  border-radius: 12px;
+  box-shadow: 0 25px 50px rgba(0,0,0,0.4);
+  overflow: hidden;
+  pointer-events: auto;
 }
-#cronometroOverlay .cron-box { width: 90%; max-width: 805px; background: rgba(0,0,0,0.3); border-radius: 1.5rem; padding: 2rem; box-shadow: 0 25px 50px rgba(0,0,0,0.4); }
-#cronometroOverlay .cron-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; }
-#cronometroOverlay .cron-header h1 { font-size: 1.5rem; font-weight: 700; margin: 0; }
-#cronometroOverlay .btn-retornar { background: #3b82f6; color: white; padding: 0.6rem 1.2rem; border-radius: 0.5rem; border: none; font-weight: 600; cursor: pointer; }
+#cronometroOverlay .cron-box {
+  width: 100%;
+  background: rgba(0,0,0,0.2);
+  border-radius: 12px;
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+}
+#cronometroOverlay .cron-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem; flex-wrap: wrap; gap: 0.5rem; }
+#cronometroOverlay .cron-header h1 { font-size: 0.85rem; font-weight: 700; margin: 0; }
+#cronometroOverlay .btn-retornar { background: #3b82f6; color: white; padding: 0.35rem 0.6rem; border-radius: 0.5rem; border: none; font-weight: 600; cursor: pointer; font-size: 0.7rem; }
 #cronometroOverlay .btn-retornar:hover { background: #2563eb; }
-#cronometroOverlay #configPanelCron { background: rgba(255,255,255,0.1); border-radius: 1rem; padding: 1.5rem; margin-bottom: 1.5rem; display: none; }
-#cronometroOverlay .config-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem; }
-#cronometroOverlay .config-grid label { display: block; font-weight: 700; margin-bottom: 0.5rem; font-size: 1.25rem; }
-#cronometroOverlay .config-grid input { width: 100%; padding: 0.75rem; border-radius: 0.5rem; font-size: 1.5rem; font-weight: 700; text-align: center; background: rgba(255,255,255,0.2); color: white; border: 2px solid rgba(255,255,255,0.3); }
-#cronometroOverlay .cron-display { text-align: center; padding: 2rem 0; }
-#cronometroOverlay #tiempoDisplayCron { font-family: 'Arial Black', sans-serif; font-size: clamp(4.6rem, 17.25vw, 11.5rem); font-weight: 900; line-height: 1.1; text-shadow: 0 4px 20px rgba(0,0,0,0.5); }
-#cronometroOverlay #estadoDisplayCron { font-size: 1.725rem; opacity: 0.9; margin-top: 0.5rem; }
-#cronometroOverlay .cron-controles { display: flex; gap: 1rem; justify-content: center; margin-top: 2rem; }
-#cronometroOverlay .cron-controles button { padding: 1.15rem 1.725rem; border-radius: 0.75rem; border: none; font-size: 1.725rem; cursor: pointer; transition: all 0.2s; }
+#cronometroOverlay #configPanelCron { background: rgba(255,255,255,0.1); border-radius: 0.5rem; padding: 0.75rem; margin-bottom: 0.75rem; display: none; }
+#cronometroOverlay .config-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; margin-bottom: 0.5rem; }
+#cronometroOverlay .config-grid label { display: block; font-weight: 600; margin-bottom: 0.25rem; font-size: 0.7rem; }
+#cronometroOverlay .config-grid input { width: 100%; padding: 0.35rem; border-radius: 0.35rem; font-size: 0.85rem; font-weight: 600; text-align: center; background: rgba(255,255,255,0.2); color: white; border: 1px solid rgba(255,255,255,0.3); }
+#cronometroOverlay .cron-display { text-align: center; padding: 0.75rem 0; }
+#cronometroOverlay #tiempoDisplayCron { font-family: 'Arial Black', sans-serif; font-size: 2rem; font-weight: 900; line-height: 1.1; text-shadow: 0 2px 10px rgba(0,0,0,0.5); }
+#cronometroOverlay #estadoDisplayCron { font-size: 0.75rem; opacity: 0.9; margin-top: 0.25rem; }
+#cronometroOverlay .cron-controles { display: flex; gap: 0.5rem; justify-content: center; margin-top: 0.75rem; }
+#cronometroOverlay .cron-controles button { padding: 0.5rem 0.75rem; border-radius: 0.5rem; border: none; font-size: 0.85rem; cursor: pointer; transition: all 0.2s; }
 #cronometroOverlay .cron-controles #btnIniciarCron { background: #22c55e; color: white; }
 #cronometroOverlay .cron-controles #btnIniciarCron:hover:not(:disabled) { background: #16a34a; transform: scale(1.05); }
 #cronometroOverlay .cron-controles #btnDetenerCron { background: #ef4444; color: white; }
 #cronometroOverlay .cron-controles #btnDetenerCron:hover:not(:disabled) { background: #dc2626; transform: scale(1.05); }
 #cronometroOverlay .cron-controles button:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+#cronometroOverlay i.fas,
+#cronometroOverlay i.far { display: none !important; }
 @keyframes cronPulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:0.7;transform:scale(1.05)} }
 
 .tw-panel .alert-success { background: #dcfce7; border: 1px solid #22c55e; color: #166534; padding: 0.64rem 0.85rem; border-radius: 0.43rem; margin-bottom: 0.85rem; display: flex; align-items: center; justify-content: space-between; font-size: 0.9rem; }
@@ -903,72 +925,75 @@ html {
   .tw-panel .tw-column { width: 100% !important; margin-bottom: 1rem; }
 }
 
-/* ========== Panel de control: aumento 80% en tipografía (solo esta página) ========== */
+/* ========== Panel de control: reducción 40% tipografía + sin iconos (solo esta página) ========== */
 .tw-panel {
-  font-size: 1.8rem;
+  font-size: 0.6em;
 }
 .tw-panel .tw-btn,
 .tw-panel a.tw-btn {
-  font-size: 1.62rem !important;
-  padding: 0.9rem 1.2rem;
+  font-size: 0.54rem !important;
+  padding: 0.46rem 0.6rem;
 }
 .tw-panel .tw-btn i {
-  font-size: 1.62rem !important;
-  margin-right: 0.5rem;
+  display: none !important;
 }
 .tw-panel nav ol {
-  font-size: 1.33rem;
+  font-size: 0.44rem;
 }
 .tw-panel .panel-header .titulo-torneo {
-  font-size: 2.34rem !important;
+  font-size: 0.9rem !important;
 }
 .tw-panel .panel-header .meta {
-  font-size: 1.33rem !important;
+  font-size: 0.44rem !important;
 }
 .tw-panel .panel-header .torneo-id {
-  font-size: 3.44rem !important;
+  font-size: 1.15rem !important;
 }
 .tw-panel .text-xl {
-  font-size: 1.91rem !important;
+  font-size: 0.64rem !important;
 }
 .tw-panel .text-sm {
-  font-size: 1.33rem !important;
+  font-size: 0.44rem !important;
 }
 .tw-panel .alert-success,
 .tw-panel .alert-error {
-  font-size: 1.62rem !important;
-  padding: 0.85rem 1.1rem;
+  font-size: 0.54rem !important;
+  padding: 0.38rem 0.5rem;
 }
 .tw-panel .ronda-info {
-  font-size: 1.33rem;
-  padding: 0.5rem 0.75rem;
+  font-size: 0.44rem;
+  padding: 0.26rem 0.38rem;
 }
 .tw-panel .p-5,
 .tw-panel .space-y-4 {
-  font-size: 1.33rem;
-  padding: 0.85rem 1.1rem;
+  font-size: 0.44rem;
+  padding: 0.38rem 0.5rem;
 }
 .tw-panel div[class*="bg-gradient-to-r"] {
-  font-size: 1.33rem;
-  padding: 1rem 1.25rem;
+  font-size: 0.44rem;
+  padding: 0.5rem 0.64rem;
 }
 .tw-panel .text-xs {
-  font-size: 1.35rem !important;
+  font-size: 0.45rem !important;
 }
 .tw-panel .cronometro-finalizar-torneo .cron-finalizar-label {
-  font-size: 1.62rem !important;
+  font-size: 0.54rem !important;
 }
 .tw-panel .cronometro-finalizar-torneo .countdown-tiempo-restante {
-  font-size: 4.5rem !important;
+  font-size: 1.5rem !important;
 }
 .tw-panel .cronometro-finalizar-torneo .cron-finalizar-hint {
-  font-size: 1.35rem !important;
-}
-.tw-panel .panel-breadcrumb ol {
-  font-size: 1.35rem;
+  font-size: 0.45rem !important;
 }
 .tw-panel #btnCronometro {
-  font-size: 1.33rem;
+  font-size: 0.44rem !important;
+  padding: 0.35rem 0.5rem;
 }
-.tw-panel .mb-4 { margin-bottom: 1rem; }
-.tw-panel .mb-6 { margin-bottom: 1.5rem; }
+.tw-panel .mb-4 { margin-bottom: 0.5rem; }
+.tw-panel .mb-6 { margin-bottom: 0.75rem; }
+/* Ocultar todos los iconos en el panel de control (solo esta página) */
+.tw-panel i.fas,
+.tw-panel i.far,
+.tw-panel i.fab {
+  display: none !important;
+}
