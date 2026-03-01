@@ -21,18 +21,18 @@ $action_param = $use_standalone ? '?' : '&';
         margin-right: auto;
     }
     
-    /* Sidebar sticky en desktop; formulario ampliado 15% */
+    /* Navegación de partidas: 10% del ancho de pantalla */
     @media (min-width: 769px) {
         .registrar-resultados-wrap #sidebar-mesas {
-            flex: 0 0 8.9%;
-            max-width: 8.9%;
+            flex: 0 0 10%;
+            max-width: 10%;
         }
         .registrar-resultados-wrap #sidebar-mesas .card {
             max-width: 100%;
         }
         .registrar-resultados-wrap .col-form-registro {
-            flex: 0 0 91.1%;
-            max-width: 91.1%;
+            flex: 0 0 90%;
+            max-width: 90%;
         }
     }
     
@@ -173,64 +173,27 @@ $action_param = $use_standalone ? '?' : '&';
         z-index: 10;
     }
     
-    /* Columnas específicas */
-    /* Columna Puntos: ampliada 20% */
-    .columna-puntos {
-        width: auto;
-        min-width: 6rem;
-        max-width: 9rem;
+    /* Columnas en % del ancho de pantalla (tabla con table-layout: fixed) */
+    #formResultados .table {
+        table-layout: fixed;
+        width: 100%;
     }
-    
-    /* Columna ID Usuario: reducida 20% */
-    .columna-id {
-        width: 3.2rem;
-        min-width: 2.8rem;
-        max-width: 4rem;
-    }
-    
-    /* Columna Nombre: ampliada 15% */
-    .columna-nombre {
-        width: auto;
-        min-width: 9rem;
-        max-width: 16rem;
-    }
-    
-    /* Columna Sanción: ampliada 15% */
-    .columna-sancion {
-        width: auto;
-        min-width: 5rem;
-        max-width: 6.5rem;
-    }
-    
-    /* Columna Tarjeta: ampliada 15% */
-    .columna-tarjeta {
-        width: auto;
-        min-width: 10rem;
-        max-width: 11.5rem;
-    }
-    
-    /* Columna Forfait: ampliada 15% */
-    .columna-forfait {
-        width: 3.7rem;
-        min-width: 3.2rem;
-        max-width: 4rem;
-    }
-    
-    /* Columna Estadísticas: reducida 15% */
-    .columna-estadisticas {
-        width: auto;
-        min-width: 6.4rem;
-        max-width: 10rem;
-        white-space: nowrap;
-    }
-    
-    .estadisticas-valores {
-        font-size: clamp(0.75rem, 1.5vw, 0.875rem);
-        font-weight: bold;
-        color: #111827;
-        white-space: nowrap;
-        line-height: 1.5;
-    }
+    .columna-id { width: 5%; }
+    .columna-nombre { width: 25%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-weight: 300; }
+    .columna-puntos { width: 10%; }
+    .columna-sancion { width: 5%; }
+    .columna-forfait { width: 8%; }
+    .columna-tarjeta { width: 15%; }
+    .columna-pos { width: 2%; }
+    .columna-gan { width: 2%; }
+    .columna-per { width: 2%; }
+    .columna-efect { width: 4%; }
+    .columna-tarjeta .tarjeta-btn { width: 5%; min-width: 2rem; box-sizing: border-box; }
+    .estadisticas-valores { font-size: clamp(0.75rem, 1.5vw, 0.875rem); font-weight: 300; color: #111827; white-space: nowrap; line-height: 1.5; }
+    /* Suprimir incrementador en inputs numéricos */
+    .registrar-resultados-wrap input[type="number"]::-webkit-outer-spin-button,
+    .registrar-resultados-wrap input[type="number"]::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+    .registrar-resultados-wrap input[type="number"] { -moz-appearance: textfield; appearance: textfield; }
     
     /* Filas de jugadores: altura reducida y bordes sólidos */
     #formResultados tbody tr {
@@ -305,28 +268,10 @@ $action_param = $use_standalone ? '?' : '&';
         display: block;
     }
     
-    /* Responsive para tablets */
-    @media screen and (max-width: 1024px) and (min-width: 769px) {
-        .columna-puntos {
-            min-width: 6.6rem;
-            max-width: 9.6rem;
-        }
-        .columna-forfait {
-            min-width: 2.5rem;
-            max-width: 2.8rem;
-        }
-        .columna-sancion {
-            min-width: 4rem;
-            max-width: 5rem;
-        }
-        .columna-tarjeta {
-            min-width: 7.5rem;
-            max-width: 9rem;
-        }
-        .columna-estadisticas {
-            min-width: 5.5rem;
-        }
-    }
+    /* Fila Observaciones + Zap/Chan en una línea */
+    .row-observaciones-zapchan { margin-bottom: 1rem; }
+    .row-observaciones-zapchan .zapchan-linea { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: flex; align-items: center; gap: 0.5rem; flex-wrap: nowrap; }
+    .row-observaciones-zapchan .zapchan-jugador { display: inline-flex; align-items: center; gap: 0.25rem; }
     
     /* Responsive para móviles */
     @media screen and (max-width: 768px) {
@@ -773,15 +718,15 @@ $action_param = $use_standalone ? '?' : '&';
                                     <thead class="thead-dark">
                                         <tr>
                                             <th rowspan="2" class="text-center align-middle columna-id">ID</th>
-                                            <th rowspan="2" class="text-center align-middle columna-nombre">Nombre</th>
+                                            <th rowspan="2" class="text-center align-middle columna-nombre">NOMBRE</th>
                                             <th rowspan="2" class="text-center align-middle columna-puntos">Puntos</th>
                                             <th rowspan="2" class="text-center align-middle columna-sancion">Sanción</th>
                                             <th rowspan="2" class="text-center align-middle columna-forfait">Forfait</th>
                                             <th rowspan="2" class="text-center align-middle columna-tarjeta">Tarjeta</th>
-                                            <th colspan="4" class="text-center columna-estadisticas">Estadísticas</th>
-                                        </tr>
-                                        <tr>
-                                            <th class="text-center" style="font-size: 0.65rem; line-height: 1.2;">Pos | Gan | Per | Efect</th>
+                                            <th class="text-center columna-pos">Pos</th>
+                                            <th class="text-center columna-gan">Gan</th>
+                                            <th class="text-center columna-per">Per</th>
+                                            <th class="text-center columna-efect">Efect</th>
                                         </tr>
                                     </thead>
                                     <tbody>
@@ -814,7 +759,7 @@ $action_param = $use_standalone ? '?' : '&';
                                                 $tituloTarjeta = $tieneTarjetaPrevia ? '⚠️ Tiene tarjeta previa. Sanción 80 pts = siguiente tarjeta (Roja/Negra).' : '';
                                                 ?>
                                                 <td class="columna-nombre">
-                                                    <span class="font-weight-semibold <?php echo $tieneTarjetaPrevia ? 'jugador-tarjeta-previa' : ''; ?>" style="font-size: 1rem;" <?php echo $tituloTarjeta ? 'title="' . htmlspecialchars($tituloTarjeta) . '"' : ''; ?>><?php echo htmlspecialchars($jugador['nombre_completo'] ?? $jugador['nombre'] ?? 'N/A'); ?></span>
+                                                    <span class="nombre-jugador-linea <?php echo $tieneTarjetaPrevia ? 'jugador-tarjeta-previa' : ''; ?>" <?php echo $tituloTarjeta ? 'title="' . htmlspecialchars($tituloTarjeta) . '"' : ''; ?>><?php echo htmlspecialchars($jugador['nombre_completo'] ?? $jugador['nombre'] ?? 'N/A'); ?></span>
                                                 </td>
                                                 
                                                 <!-- Puntos -->
@@ -886,23 +831,13 @@ $action_param = $use_standalone ? '?' : '&';
                                                     </div>
                                                 </td>
                                                 
-                                                <!-- Estadísticas -->
-                                                <td class="text-center bg-light columna-estadisticas">
-                                                    <div class="estadisticas-valores">
-                                                        <?php echo (int)($jugador['inscrito']['posicion'] ?? 0); ?> | 
-                                                        <?php echo (int)($jugador['inscrito']['ganados'] ?? 0); ?> | 
-                                                        <?php echo (int)($jugador['inscrito']['perdidos'] ?? 0); ?> | 
-                                                        <?php echo (int)($jugador['inscrito']['efectividad'] ?? 0); ?>
-                                                    </div>
-                                                </td>
+                                                <!-- Estadísticas: Pos, Gan, Per, Efect en columnas respectivas -->
+                                                <td class="text-center bg-light columna-pos"><span class="estadisticas-valores"><?php echo (int)($jugador['inscrito']['posicion'] ?? 0); ?></span></td>
+                                                <td class="text-center bg-light columna-gan"><span class="estadisticas-valores"><?php echo (int)($jugador['inscrito']['ganados'] ?? 0); ?></span></td>
+                                                <td class="text-center bg-light columna-per"><span class="estadisticas-valores"><?php echo (int)($jugador['inscrito']['perdidos'] ?? 0); ?></span></td>
+                                                <td class="text-center bg-light columna-efect"><span class="estadisticas-valores"><?php echo (int)($jugador['inscrito']['efectividad'] ?? 0); ?></span></td>
                                                 
-                                                <!-- Campos Hidden (Zap/Chan se reubica en fila Observaciones) -->
-                                                <input type="hidden" name="jugadores[<?php echo $indiceArray; ?>][chancleta]" 
-                                                       id="chancleta_<?php echo $indiceArray; ?>" 
-                                                       value="<?php echo $jugador['chancleta'] ?? 0; ?>">
-                                                <input type="hidden" name="jugadores[<?php echo $indiceArray; ?>][zapato]" 
-                                                       id="zapato_<?php echo $indiceArray; ?>" 
-                                                       value="<?php echo $jugador['zapato'] ?? 0; ?>">
+                                                <!-- Campos Hidden -->
                                                 <input type="hidden" name="jugadores[<?php echo $indiceArray; ?>][id]" 
                                                        value="<?php echo $jugador['id']; ?>">
                                                 <input type="hidden" name="jugadores[<?php echo $indiceArray; ?>][id_usuario]" 
@@ -937,7 +872,7 @@ $action_param = $use_standalone ? '?' : '&';
                                                 $tituloTarjeta = $tieneTarjetaPrevia ? '⚠️ Tiene tarjeta previa. Sanción 80 pts = siguiente tarjeta (Roja/Negra).' : '';
                                                 ?>
                                                 <td class="columna-nombre">
-                                                    <span class="font-weight-semibold <?php echo $tieneTarjetaPrevia ? 'jugador-tarjeta-previa' : ''; ?>" style="font-size: 1rem;" <?php echo $tituloTarjeta ? 'title="' . htmlspecialchars($tituloTarjeta) . '"' : ''; ?>><?php echo htmlspecialchars($jugador['nombre_completo'] ?? $jugador['nombre'] ?? 'N/A'); ?></span>
+                                                    <span class="nombre-jugador-linea <?php echo $tieneTarjetaPrevia ? 'jugador-tarjeta-previa' : ''; ?>" <?php echo $tituloTarjeta ? 'title="' . htmlspecialchars($tituloTarjeta) . '"' : ''; ?>><?php echo htmlspecialchars($jugador['nombre_completo'] ?? $jugador['nombre'] ?? 'N/A'); ?></span>
                                                 </td>
                                                 
                                                 <!-- Puntos -->
@@ -1009,23 +944,13 @@ $action_param = $use_standalone ? '?' : '&';
                                                     </div>
                                                 </td>
                                                 
-                                                <!-- Estadísticas -->
-                                                <td class="text-center bg-light columna-estadisticas">
-                                                    <div class="estadisticas-valores">
-                                                        <?php echo (int)($jugador['inscrito']['posicion'] ?? 0); ?> | 
-                                                        <?php echo (int)($jugador['inscrito']['ganados'] ?? 0); ?> | 
-                                                        <?php echo (int)($jugador['inscrito']['perdidos'] ?? 0); ?> | 
-                                                        <?php echo (int)($jugador['inscrito']['efectividad'] ?? 0); ?>
-                                                    </div>
-                                                </td>
+                                                <!-- Estadísticas: Pos, Gan, Per, Efect -->
+                                                <td class="text-center bg-light columna-pos"><span class="estadisticas-valores"><?php echo (int)($jugador['inscrito']['posicion'] ?? 0); ?></span></td>
+                                                <td class="text-center bg-light columna-gan"><span class="estadisticas-valores"><?php echo (int)($jugador['inscrito']['ganados'] ?? 0); ?></span></td>
+                                                <td class="text-center bg-light columna-per"><span class="estadisticas-valores"><?php echo (int)($jugador['inscrito']['perdidos'] ?? 0); ?></span></td>
+                                                <td class="text-center bg-light columna-efect"><span class="estadisticas-valores"><?php echo (int)($jugador['inscrito']['efectividad'] ?? 0); ?></span></td>
                                                 
-                                                <!-- Campos Hidden (Zap/Chan reubicado en fila Observaciones) -->
-                                                <input type="hidden" name="jugadores[<?php echo $indiceArray; ?>][chancleta]" 
-                                                       id="chancleta_<?php echo $indiceArray; ?>" 
-                                                       value="<?php echo $jugador['chancleta'] ?? 0; ?>">
-                                                <input type="hidden" name="jugadores[<?php echo $indiceArray; ?>][zapato]" 
-                                                       id="zapato_<?php echo $indiceArray; ?>" 
-                                                       value="<?php echo $jugador['zapato'] ?? 0; ?>">
+                                                <!-- Campos Hidden -->
                                                 <input type="hidden" name="jugadores[<?php echo $indiceArray; ?>][id]" 
                                                        value="<?php echo $jugador['id']; ?>">
                                                 <input type="hidden" name="jugadores[<?php echo $indiceArray; ?>][id_usuario]" 
@@ -1044,37 +969,35 @@ $action_param = $use_standalone ? '?' : '&';
                                 </table>
                             </div>
 
-                            <!-- Observaciones y Zap/Chan en la misma fila -->
-                            <div class="fila-observaciones-zapchan mb-4">
-                                <div class="observaciones-col">
-                                    <label class="font-weight-bold mb-2">
+                            <!-- Observaciones + Zap/Chan en la misma fila, una sola línea -->
+                            <div class="row-observaciones-zapchan mb-4">
+                                <div class="d-flex align-items-center flex-wrap gap-2 mb-2">
+                                    <label class="font-weight-bold mb-0">
                                         <i class="fas fa-comment-alt mr-1"></i>Observaciones
                                     </label>
-                                    <textarea name="observaciones" 
-                                              rows="3"
-                                              class="form-control"
-                                              placeholder="Observaciones sobre la partida (opcional)"><?php echo htmlspecialchars($observacionesMesa ?? ''); ?></textarea>
-                                </div>
-                                <div class="zapchan-col">
-                                    <label class="font-weight-bold mb-2 d-block">
-                                        <i class="fas fa-shoe-prints mr-1"></i>Zap/Chan
-                                    </label>
-                                    <?php foreach ($jugadores as $idx => $jug): $ind = $idx; ?>
-                                    <div class="d-flex justify-content-between align-items-center gap-2 small mb-2">
-                                        <span class="text-truncate" style="max-width: 6rem;" title="<?php echo htmlspecialchars($jug['nombre_completo'] ?? $jug['nombre'] ?? ''); ?>">J<?php echo $ind + 1; ?></span>
-                                        <div class="d-flex gap-2">
-                                            <label class="mb-0 cursor-pointer">
-                                                <input type="radio" name="pena_<?php echo $ind; ?>" value="chancleta" class="form-check-input" <?php echo (isset($jug['chancleta']) && $jug['chancleta'] > 0) ? 'checked' : ''; ?>>
+                                    <span class="text-muted small">Observaciones sobre la partida (opcional)</span>
+                                    <div class="zapchan-linea d-flex align-items-center gap-3 flex-nowrap">
+                                        <?php foreach ($jugadores as $indiceZap => $jugadorZap): ?>
+                                        <span class="zapchan-jugador">
+                                            J<?php echo $indiceZap + 1; ?>:
+                                            <label class="mb-0 cursor-pointer d-inline">
+                                                <input type="radio" name="pena_<?php echo $indiceZap; ?>" value="chancleta" class="form-check-input" <?php echo (isset($jugadorZap['chancleta']) && $jugadorZap['chancleta'] > 0) ? 'checked' : ''; ?>>
                                                 <span class="ml-1">🥿</span>
                                             </label>
-                                            <label class="mb-0 cursor-pointer">
-                                                <input type="radio" name="pena_<?php echo $ind; ?>" value="zapato" class="form-check-input" <?php echo (isset($jug['zapato']) && $jug['zapato'] > 0) ? 'checked' : ''; ?>>
+                                            <label class="mb-0 cursor-pointer d-inline">
+                                                <input type="radio" name="pena_<?php echo $indiceZap; ?>" value="zapato" class="form-check-input" <?php echo (isset($jugadorZap['zapato']) && $jugadorZap['zapato'] > 0) ? 'checked' : ''; ?>>
                                                 <span class="ml-1">👞</span>
                                             </label>
-                                        </div>
+                                            <input type="hidden" name="jugadores[<?php echo $indiceZap; ?>][chancleta]" id="chancleta_<?php echo $indiceZap; ?>" value="<?php echo $jugadorZap['chancleta'] ?? 0; ?>">
+                                            <input type="hidden" name="jugadores[<?php echo $indiceZap; ?>][zapato]" id="zapato_<?php echo $indiceZap; ?>" value="<?php echo $jugadorZap['zapato'] ?? 0; ?>">
+                                        </span>
+                                        <?php endforeach; ?>
                                     </div>
-                                    <?php endforeach; ?>
                                 </div>
+                                <textarea name="observaciones" 
+                                          rows="3"
+                                          class="form-control"
+                                          placeholder="Observaciones sobre la partida (opcional)"><?php echo htmlspecialchars($observacionesMesa ?? ''); ?></textarea>
                             </div>
 
                             <!-- Botones de Acción -->
