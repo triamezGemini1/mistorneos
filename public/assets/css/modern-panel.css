@@ -1,39 +1,27 @@
 /**
- * Panel de Control - Diseño moderno UI/UX
- * Tarjetas de gestión, Inter, botones táctiles 44px, micro-interacciones
- * Responsivo: tipografía fluida (rem/vw), sin truncamiento, contenedores dinámicos.
+ * Panel de Control - Mobile-First, sin unidades fijas (px)
+ * Base: móvil (hasta 480px). Complejidad añadida con min-width: 768px.
+ * Tipografía y espaciados en rem; texto fluido con clamp().
  */
 
-/* ---- Escala tipográfica: 14px móvil, 16px desktop. Sin ellipsis. ---- */
+/* ========== BASE: MÓVIL (dispositivo por defecto) ========== */
 html {
-  font-size: 16px;
-}
-
-@media (max-width: 767px) {
-  html {
-    font-size: 14px;
-  }
-}
-
-@media (max-width: 374px) {
-  html {
-    font-size: clamp(14px, 4vw, 16px);
-  }
+  font-size: clamp(0.875rem, 2.5vw, 1rem);
 }
 
 .tw-panel {
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   box-sizing: border-box;
+  width: 100%;
   max-width: 100%;
-  padding-left: 15px;
-  padding-right: 15px;
+  padding-left: 0.9375rem;
+  padding-right: 0.9375rem;
 }
 
 .tw-panel * {
   box-sizing: border-box;
 }
 
-/* Títulos con clamp; no truncar contenido */
 .tw-panel .panel-card-title,
 .tw-panel h2,
 .tw-panel h3,
@@ -51,16 +39,16 @@ html {
 .tw-panel .panel-meta,
 .tw-panel .panel-secondary {
   color: #6b7280;
-  font-size: 0.875rem;
+  font-size: clamp(0.8125rem, 1.5vw, 0.875rem);
   font-weight: 400;
 }
 
-/* ---- Contenedores: Tarjetas de Gestión (sin overflow que trunque datos) ---- */
+/* Contenedores: tarjetas sin anchos fijos */
 .tw-panel .panel-card {
   background: #fff;
-  border-radius: 12px;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
-  border: 1px solid #e5e7eb;
+  border-radius: 0.75rem;
+  box-shadow: 0 0.25rem 0.375rem rgba(0, 0, 0, 0.05);
+  border: 0.0625rem solid #e5e7eb;
   overflow: visible;
   min-height: 100%;
   max-width: 100%;
@@ -68,7 +56,7 @@ html {
 }
 
 .tw-panel .panel-card:hover {
-  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.08);
+  box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.08);
 }
 
 .tw-panel .panel-card-header {
@@ -79,7 +67,7 @@ html {
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  border-radius: 12px 12px 0 0;
+  border-radius: 0.75rem 0.75rem 0 0;
 }
 
 .tw-panel .panel-card-header i {
@@ -93,7 +81,6 @@ html {
   gap: 0.75rem;
 }
 
-/* Encabezados de columna por tipo */
 .tw-panel .panel-card-header--mesas {
   background: linear-gradient(135deg, #10b981 0%, #14b8a6 100%);
 }
@@ -106,59 +93,34 @@ html {
   background: linear-gradient(135deg, #f59e0b 0%, #f97316 100%);
 }
 
-/* ---- Rejilla responsiva: cuadrícula de mesas con auto-fit ---- */
+/* Grid: móvil = 1 columna (stacking) */
 .tw-panel .panel-grid {
   display: grid;
+  grid-template-columns: 1fr;
   gap: 1.25rem;
   width: 100%;
   max-width: 100%;
 }
 
-@media (min-width: 1024px) {
-  .tw-panel .panel-grid {
-    grid-template-columns: repeat(3, 1fr);
-  }
-}
-
-@media (min-width: 768px) and (max-width: 1023px) {
-  .tw-panel .panel-grid {
-    grid-template-columns: repeat(2, 1fr);
-  }
-}
-
-@media (max-width: 767px) {
-  .tw-panel .panel-grid {
-    grid-template-columns: 1fr;
-  }
-}
-
-/* Cuadrícula de mesas (si se usa): auto-fit para acomodar según espacio */
 .tw-panel .panel-grid-mesas {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(17.5rem, 1fr));
   gap: 1rem;
   max-width: 100%;
 }
 
-/* Opcional: 4 columnas en pantallas muy anchas */
-@media (min-width: 1280px) {
-  .tw-panel .panel-grid.panel-grid--wide {
-    grid-template-columns: repeat(4, 1fr);
-  }
-}
-
-/* ---- Botones: mínimo 44px alto, iconos, colores sólidos ---- */
+/* Botones: min-height táctil, rem */
 .tw-panel .tw-btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   width: 100%;
-  min-height: 44px;
+  min-height: 2.75rem;
   padding: 0.75rem 1rem;
   font-family: inherit;
-  font-size: 0.9375rem;
+  font-size: clamp(0.875rem, 1.5vw, 0.9375rem);
   font-weight: 600;
-  border-radius: 10px;
+  border-radius: 0.625rem;
   text-decoration: none;
   transition: transform 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease, color 0.2s ease;
   border: none;
@@ -171,15 +133,14 @@ html {
   flex-shrink: 0;
 }
 
-/* Micro-interacciones: elevación y color al hover */
 .tw-panel .tw-btn:hover:not(:disabled) {
-  transform: translateY(-2px);
-  box-shadow: 0 6px 14px rgba(0, 0, 0, 0.12);
+  transform: translateY(-0.125rem);
+  box-shadow: 0 0.375rem 0.875rem rgba(0, 0, 0, 0.12);
 }
 
 .tw-panel .tw-btn:active:not(:disabled) {
   transform: translateY(0);
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+  box-shadow: 0 0.125rem 0.375rem rgba(0, 0, 0, 0.08);
 }
 
 .tw-panel .tw-btn:disabled {
@@ -189,114 +150,38 @@ html {
   box-shadow: none !important;
 }
 
-/* Colores sólidos de marca por tipo */
-.tw-panel .tw-btn--cyan {
-  background-color: #06b6d4;
-  color: #fff;
-}
+.tw-panel .tw-btn--cyan { background-color: #06b6d4; color: #fff; }
+.tw-panel .tw-btn--cyan:hover:not(:disabled) { background-color: #0891b2; }
+.tw-panel .tw-btn--blue { background-color: #3b82f6; color: #fff; }
+.tw-panel .tw-btn--blue:hover:not(:disabled) { background-color: #2563eb; }
+.tw-panel .tw-btn--amber { background-color: #f59e0b; color: #fff; }
+.tw-panel .tw-btn--amber:hover:not(:disabled) { background-color: #d97706; }
+.tw-panel .tw-btn--emerald { background-color: #10b981; color: #fff; }
+.tw-panel .tw-btn--emerald:hover:not(:disabled) { background-color: #059669; }
+.tw-panel .tw-btn--teal { background-color: #14b8a6; color: #fff; }
+.tw-panel .tw-btn--teal:hover:not(:disabled) { background-color: #0d9488; }
+.tw-panel .tw-btn--red { background-color: #ef4444; color: #fff; }
+.tw-panel .tw-btn--red:hover:not(:disabled) { background-color: #dc2626; }
+.tw-panel .tw-btn--purple { background-color: #a855f7; color: #fff; }
+.tw-panel .tw-btn--purple:hover:not(:disabled) { background-color: #9333ea; }
+.tw-panel .tw-btn--indigo { background-color: #6366f1; color: #fff; }
+.tw-panel .tw-btn--indigo:hover:not(:disabled) { background-color: #4f46e5; }
+.tw-panel .tw-btn--rose { background-color: #f43f5e; color: #fff; }
+.tw-panel .tw-btn--rose:hover:not(:disabled) { background-color: #e11d48; }
+.tw-panel .tw-btn--gray { background-color: #9ca3af; color: #fff; }
+.tw-panel .tw-btn--dark { background-color: #111827; color: #fff; }
+.tw-panel .tw-btn--dark:hover:not(:disabled) { background-color: #1f2937; }
 
-.tw-panel .tw-btn--cyan:hover:not(:disabled) {
-  background-color: #0891b2;
-}
-
-.tw-panel .tw-btn--blue {
-  background-color: #3b82f6;
-  color: #fff;
-}
-
-.tw-panel .tw-btn--blue:hover:not(:disabled) {
-  background-color: #2563eb;
-}
-
-.tw-panel .tw-btn--amber {
-  background-color: #f59e0b;
-  color: #fff;
-}
-
-.tw-panel .tw-btn--amber:hover:not(:disabled) {
-  background-color: #d97706;
-}
-
-.tw-panel .tw-btn--emerald {
-  background-color: #10b981;
-  color: #fff;
-}
-
-.tw-panel .tw-btn--emerald:hover:not(:disabled) {
-  background-color: #059669;
-}
-
-.tw-panel .tw-btn--teal {
-  background-color: #14b8a6;
-  color: #fff;
-}
-
-.tw-panel .tw-btn--teal:hover:not(:disabled) {
-  background-color: #0d9488;
-}
-
-.tw-panel .tw-btn--red {
-  background-color: #ef4444;
-  color: #fff;
-}
-
-.tw-panel .tw-btn--red:hover:not(:disabled) {
-  background-color: #dc2626;
-}
-
-.tw-panel .tw-btn--purple {
-  background-color: #a855f7;
-  color: #fff;
-}
-
-.tw-panel .tw-btn--purple:hover:not(:disabled) {
-  background-color: #9333ea;
-}
-
-.tw-panel .tw-btn--indigo {
-  background-color: #6366f1;
-  color: #fff;
-}
-
-.tw-panel .tw-btn--indigo:hover:not(:disabled) {
-  background-color: #4f46e5;
-}
-
-.tw-panel .tw-btn--rose {
-  background-color: #f43f5e;
-  color: #fff;
-}
-
-.tw-panel .tw-btn--rose:hover:not(:disabled) {
-  background-color: #e11d48;
-}
-
-.tw-panel .tw-btn--gray {
-  background-color: #9ca3af;
-  color: #fff;
-}
-
-.tw-panel .tw-btn--dark {
-  background-color: #111827;
-  color: #fff;
-}
-
-.tw-panel .tw-btn--dark:hover:not(:disabled) {
-  background-color: #1f2937;
-}
-
-/* Grupo de botones en columna */
 .tw-panel .panel-btn-group {
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
 }
 
-/* ---- Header del torneo ---- */
 .tw-panel .panel-header {
   background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
-  border-radius: 12px;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+  border-radius: 0.75rem;
+  box-shadow: 0 0.25rem 0.375rem rgba(0, 0, 0, 0.05);
   padding: 1rem 1.25rem;
   margin-bottom: 1rem;
   color: #fff;
@@ -311,7 +196,7 @@ html {
 }
 
 .tw-panel .panel-header .titulo-torneo {
-  font-size: 1.5rem;
+  font-size: clamp(1.25rem, 3vw, 1.5rem);
   font-weight: 700;
   margin: 0 0 0.25rem 0;
   text-align: center;
@@ -324,11 +209,11 @@ html {
   flex-wrap: wrap;
   justify-content: center;
   gap: 1rem;
-  font-size: 0.8125rem;
+  font-size: clamp(0.75rem, 1.5vw, 0.8125rem);
   font-weight: 600;
   opacity: 0.95;
   padding-top: 0.5rem;
-  border-top: 2px solid rgba(255, 255, 255, 0.5);
+  border-top: 0.125rem solid rgba(255, 255, 255, 0.5);
 }
 
 .tw-panel .panel-header .meta i {
@@ -336,7 +221,7 @@ html {
 }
 
 .tw-panel .panel-header .torneo-id {
-  font-size: 2rem;
+  font-size: clamp(1.5rem, 4vw, 2rem);
   font-weight: 800;
   opacity: 0.9;
   text-align: right;
@@ -357,7 +242,6 @@ html {
   background: rgba(255, 255, 255, 0.35);
 }
 
-/* ---- Breadcrumb ---- */
 .tw-panel .panel-breadcrumb {
   margin-bottom: 0.75rem;
 }
@@ -366,7 +250,7 @@ html {
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  font-size: 0.8125rem;
+  font-size: clamp(0.75rem, 1.5vw, 0.8125rem);
   color: #6b7280;
   margin: 0;
   padding: 0;
@@ -388,54 +272,52 @@ html {
   font-weight: 500;
 }
 
-/* ---- Cronómetro principal ---- */
 .tw-panel #btnCronometro {
-  min-height: 44px;
+  min-height: 2.75rem;
   padding: 0.75rem 1.5rem;
   background: linear-gradient(135deg, #0f766e 0%, #0d9488 50%, #14b8a6 100%) !important;
   color: #fff !important;
   border: none;
-  border-radius: 10px;
+  border-radius: 0.625rem;
   font-weight: 600;
   cursor: pointer;
   transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 
 .tw-panel #btnCronometro:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2);
+  transform: translateY(-0.125rem);
+  box-shadow: 0 0.5rem 1.25rem rgba(0, 0, 0, 0.2);
 }
 
 .tw-panel #btnCronometro i {
   margin-right: 0.5rem;
 }
 
-/* Cronómetro finalizar torneo ---- */
 .tw-panel .cronometro-finalizar-torneo {
   background: linear-gradient(135deg, #0f766e 0%, #0d9488 50%, #14b8a6 100%) !important;
   color: #fff !important;
   border: none;
-  border-radius: 12px;
+  border-radius: 0.75rem;
   padding: 1.25rem 1.5rem;
   margin-bottom: 0.75rem;
   text-align: center;
-  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 0.25rem 0.875rem rgba(0, 0, 0, 0.1);
   transition: box-shadow 0.2s ease;
 }
 
 .tw-panel .cronometro-finalizar-torneo:hover {
-  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
+  box-shadow: 0 0.5rem 1.25rem rgba(0, 0, 0, 0.15);
 }
 
 .tw-panel .cronometro-finalizar-torneo .cron-finalizar-label {
-  font-size: 0.9375rem;
+  font-size: clamp(0.875rem, 1.5vw, 0.9375rem);
   font-weight: 600;
   opacity: 0.95;
   margin-bottom: 0.35rem;
 }
 
 .tw-panel .cronometro-finalizar-torneo .countdown-tiempo-restante {
-  font-size: 2.25rem;
+  font-size: clamp(1.75rem, 5vw, 2.25rem);
   font-weight: 800;
   letter-spacing: 0.05em;
   margin: 0.25rem 0;
@@ -447,13 +329,9 @@ html {
   margin-top: 0.25rem;
 }
 
-/* ---- Overlay cronómetro ---- */
 #cronometroOverlay {
   position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
+  inset: 0;
   z-index: 99999;
   background: linear-gradient(135deg, #1e1b4b 0%, #4c1d95 50%, #831843 100%);
   display: none;
@@ -465,11 +343,11 @@ html {
 
 #cronometroOverlay .cron-box {
   width: 90%;
-  max-width: 520px;
+  max-width: 32.5rem;
   background: rgba(0, 0, 0, 0.35);
-  border-radius: 16px;
+  border-radius: 1rem;
   padding: 2rem;
-  box-shadow: 0 25px 50px rgba(0, 0, 0, 0.4);
+  box-shadow: 0 1.5625rem 3.125rem rgba(0, 0, 0, 0.4);
 }
 
 #cronometroOverlay .cron-header {
@@ -503,7 +381,7 @@ html {
 }
 
 #cronometroOverlay .cron-header h1 {
-  font-size: 1.25rem;
+  font-size: clamp(1.1rem, 2vw, 1.25rem);
   font-weight: 700;
   margin: 0;
 }
@@ -512,7 +390,7 @@ html {
   background: #3b82f6;
   color: #fff;
   padding: 0.6rem 1.2rem;
-  border-radius: 10px;
+  border-radius: 0.625rem;
   border: none;
   font-weight: 600;
   cursor: pointer;
@@ -525,7 +403,7 @@ html {
 
 #cronometroOverlay #configPanelCron {
   background: rgba(255, 255, 255, 0.1);
-  border-radius: 12px;
+  border-radius: 0.75rem;
   padding: 1.25rem;
   margin-bottom: 1.25rem;
   display: none;
@@ -548,13 +426,13 @@ html {
 #cronometroOverlay .config-grid input {
   width: 100%;
   padding: 0.75rem;
-  border-radius: 10px;
-  font-size: 1.25rem;
+  border-radius: 0.625rem;
+  font-size: clamp(1rem, 2vw, 1.25rem);
   font-weight: 700;
   text-align: center;
   background: rgba(255, 255, 255, 0.2);
   color: #fff;
-  border: 2px solid rgba(255, 255, 255, 0.3);
+  border: 0.125rem solid rgba(255, 255, 255, 0.3);
 }
 
 #cronometroOverlay .cron-display {
@@ -563,14 +441,14 @@ html {
 }
 
 #cronometroOverlay #tiempoDisplayCron {
-  font-size: clamp(3.5rem, 12vw, 6rem);
+  font-size: clamp(2.5rem, 12vw, 6rem);
   font-weight: 900;
   line-height: 1.1;
-  text-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+  text-shadow: 0 0.25rem 1.25rem rgba(0, 0, 0, 0.4);
 }
 
 #cronometroOverlay #estadoDisplayCron {
-  font-size: 1.25rem;
+  font-size: clamp(1rem, 2vw, 1.25rem);
   opacity: 0.9;
   margin-top: 0.5rem;
 }
@@ -583,11 +461,11 @@ html {
 }
 
 #cronometroOverlay .cron-controles button {
-  min-height: 44px;
+  min-height: 2.75rem;
   padding: 0.75rem 1.5rem;
-  border-radius: 10px;
+  border-radius: 0.625rem;
   border: none;
-  font-size: 1.25rem;
+  font-size: clamp(1rem, 2vw, 1.25rem);
   cursor: pointer;
   transition: transform 0.2s ease, background-color 0.2s ease;
 }
@@ -599,7 +477,7 @@ html {
 
 #cronometroOverlay .cron-controles #btnIniciarCron:hover:not(:disabled) {
   background: #16a34a;
-  transform: translateY(-2px);
+  transform: translateY(-0.125rem);
 }
 
 #cronometroOverlay .cron-controles #btnDetenerCron {
@@ -609,7 +487,7 @@ html {
 
 #cronometroOverlay .cron-controles #btnDetenerCron:hover:not(:disabled) {
   background: #dc2626;
-  transform: translateY(-2px);
+  transform: translateY(-0.125rem);
 }
 
 #cronometroOverlay .cron-controles button:disabled {
@@ -623,38 +501,35 @@ html {
   50% { opacity: 0.8; transform: scale(1.02); }
 }
 
-/* ---- Alertas ---- */
-.tw-panel .alert-success {
-  background: #dcfce7;
-  border: 1px solid #22c55e;
-  color: #166534;
+.tw-panel .alert-success,
+.tw-panel .alert-error {
   padding: 0.75rem 1rem;
-  border-radius: 12px;
+  border-radius: 0.75rem;
   margin-bottom: 1rem;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  font-size: 0.9375rem;
+  font-size: clamp(0.875rem, 1.5vw, 0.9375rem);
+  border-width: 0.0625rem;
+  border-style: solid;
+}
+
+.tw-panel .alert-success {
+  background: #dcfce7;
+  border-color: #22c55e;
+  color: #166534;
 }
 
 .tw-panel .alert-error {
   background: #fee2e2;
-  border: 1px solid #ef4444;
+  border-color: #ef4444;
   color: #991b1b;
-  padding: 0.75rem 1rem;
-  border-radius: 12px;
-  margin-bottom: 1rem;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  font-size: 0.9375rem;
 }
 
-/* ---- Estado ronda ---- */
 .tw-panel .ronda-info {
   background: #eff6ff;
-  border-left: 4px solid #3b82f6;
-  border-radius: 12px;
+  border-left: 0.25rem solid #3b82f6;
+  border-radius: 0.75rem;
   padding: 0.75rem 1rem;
   margin-bottom: 1rem;
 }
@@ -663,20 +538,19 @@ html {
   color: #4b5563;
 }
 
-/* ---- Bloque sin rondas / mensajes informativos ---- */
 .tw-panel .panel-empty-hint {
   background: #f9fafb;
-  border-radius: 12px;
+  border-radius: 0.75rem;
   padding: 1rem;
   text-align: center;
   color: #6b7280;
-  font-size: 0.875rem;
+  font-size: clamp(0.8125rem, 1.5vw, 0.875rem);
 }
 
 .tw-panel .panel-success-badge {
   background: #dcfce7;
   color: #15803d;
-  border-radius: 12px;
+  border-radius: 0.75rem;
   padding: 0.75rem 1rem;
   text-align: center;
   font-weight: 600;
@@ -684,31 +558,28 @@ html {
 
 .tw-panel .panel-alert-locked {
   background: #f3f4f6;
-  border-left: 4px solid #6b7280;
-  border-radius: 12px;
+  border-left: 0.25rem solid #6b7280;
+  border-radius: 0.75rem;
   padding: 0.75rem 1rem;
   color: #374151;
 }
 
-/* ---- Separador en card ---- */
 .tw-panel .panel-card hr {
   border: 0;
-  border-top: 1px solid #e5e7eb;
+  border-top: 0.0625rem solid #e5e7eb;
   margin: 0.5rem 0;
 }
 
-/* Badge en botón (ej. contador Verificar Mesas) */
 .tw-panel .panel-btn-badge {
   background-color: rgba(255, 255, 255, 0.3);
-  font-size: 0.875rem;
+  font-size: clamp(0.8125rem, 1.5vw, 0.875rem);
   font-weight: 600;
 }
 
-/* Countdown cierre torneo (dentro de card Resultados) */
 .tw-panel .panel-countdown-box {
   background-color: #fce7f3;
-  border: 2px solid #c026d3;
-  border-radius: 12px;
+  border: 0.125rem solid #c026d3;
+  border-radius: 0.75rem;
   padding: 0.75rem 1rem;
 }
 
@@ -725,9 +596,10 @@ html {
 .tw-panel .panel-countdown-hint {
   color: #701a75;
   margin-top: 0.25rem;
+  font-size: 0.75rem;
 }
 
-/* ---- Compatibilidad con clases Tailwind usadas en el HTML (fallback) ---- */
+/* Utilidades (rem) */
 .tw-panel .mb-2 { margin-bottom: 0.5rem; }
 .tw-panel .mb-3 { margin-bottom: 0.75rem; }
 .tw-panel .mb-4 { margin-bottom: 1rem; }
@@ -740,8 +612,8 @@ html {
 .tw-panel .gap-2 { gap: 0.5rem; }
 .tw-panel .gap-4 { gap: 1rem; }
 .tw-panel .text-center { text-align: center; }
-.tw-panel .text-sm { font-size: 0.875rem; }
-.tw-panel .text-xl { font-size: 1.25rem; }
+.tw-panel .text-sm { font-size: clamp(0.8125rem, 1.5vw, 0.875rem); }
+.tw-panel .text-xl { font-size: clamp(1.125rem, 2vw, 1.25rem); }
 .tw-panel .font-bold { font-weight: 700; }
 .tw-panel .font-semibold { font-weight: 600; }
 .tw-panel .text-white { color: #fff !important; }
@@ -749,7 +621,7 @@ html {
 .tw-panel .text-gray-600 { color: #4b5563; }
 .tw-panel .text-gray-700 { color: #374151; }
 .tw-panel .inline-flex { display: inline-flex; }
-.tw-panel .rounded-full { border-radius: 9999px; }
+.tw-panel .rounded-full { border-radius: 50rem; }
 .tw-panel .px-3 { padding-left: 0.75rem; padding-right: 0.75rem; }
 .tw-panel .py-1 { padding-top: 0.25rem; padding-bottom: 0.25rem; }
 .tw-panel .px-4 { padding-left: 1rem; padding-right: 1rem; }
@@ -766,9 +638,9 @@ html {
 .tw-panel .text-xs { font-size: 0.75rem; }
 .tw-panel .opacity-70 { opacity: 0.7; }
 .tw-panel .opacity-75 { opacity: 0.75; }
-.tw-panel .border { border-width: 1px; }
-.tw-panel .border-2 { border-width: 2px; }
-.tw-panel .rounded-lg { border-radius: 12px; }
+.tw-panel .border { border-width: 0.0625rem; }
+.tw-panel .border-2 { border-width: 0.125rem; }
+.tw-panel .rounded-lg { border-radius: 0.75rem; }
 .tw-panel .tabular-nums { font-variant-numeric: tabular-nums; }
 .tw-panel .d-flex { display: flex; }
 .tw-panel .flex-column { flex-direction: column; }
@@ -776,7 +648,6 @@ html {
 .tw-panel .inline { display: inline; }
 .tw-panel .w-full { width: 100%; }
 
-/* Sin truncamiento de contenido crítico */
 .tw-panel,
 .tw-panel .panel-card,
 .tw-panel .panel-card-body,
@@ -784,4 +655,23 @@ html {
   text-overflow: clip;
   overflow-wrap: break-word;
   word-wrap: break-word;
+}
+
+/* ========== TABLET Y ESCRITORIO: añadir columnas ========== */
+@media (min-width: 768px) {
+  .tw-panel .panel-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (min-width: 1024px) {
+  .tw-panel .panel-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+@media (min-width: 80rem) {
+  .tw-panel .panel-grid.panel-grid--wide {
+    grid-template-columns: repeat(4, 1fr);
+  }
 }
