@@ -160,7 +160,7 @@ try {
         ")->fetchAll(PDO::FETCH_ASSOC);
     } catch (Exception $e) {}
 
-    // Logos de clientes: desde carpeta de logos de clubes (tabla clubes, columna logo = upload/logos/...)
+    // Logos de clientes: desde clubes + upload/logos (fallback) + upload/logos_clientes/
     $logos_clientes = [];
     try {
         $stmt = $pdo->prepare("SELECT id, nombre, logo FROM clubes WHERE logo IS NOT NULL AND logo != '' AND (estatus = 1 OR estatus = '1') ORDER BY nombre ASC");
@@ -172,7 +172,6 @@ try {
             }
         }
     } catch (Exception $e) {}
-    // Fallback: si no hay clubes con logo, usar imágenes de la carpeta upload/logos/
     if (empty($logos_clientes)) {
         $upload_logos_dir = dirname(__DIR__, 2) . DIRECTORY_SEPARATOR . 'upload' . DIRECTORY_SEPARATOR . 'logos';
         $extensions = ['png', 'jpg', 'jpeg', 'gif', 'webp', 'svg'];
@@ -181,9 +180,47 @@ try {
                 if ($f->isDot() || !$f->isFile()) continue;
                 $ext = strtolower($f->getExtension());
                 if (in_array($ext, $extensions, true)) {
-                    $path = 'upload/logos/' . $f->getFilename();
-                    $logos_clientes[] = ['nombre' => pathinfo($f->getFilename(), PATHINFO_FILENAME), 'path' => $path];
+                    $logos_clientes[] = ['nombre' => pathinfo($f->getFilename(), PATHINFO_FILENAME), 'path' => 'upload/logos/' . $f->getFilename()];
                 }
+            }
+        }
+    }
+    $logos_clientes_dir = dirname(__DIR__, 2) . DIRECTORY_SEPARATOR . 'upload' . DIRECTORY_SEPARATOR . 'logos_clientes';
+    if (is_dir($logos_clientes_dir)) {
+        foreach (new DirectoryIterator($logos_clientes_dir) as $f) {
+            if ($f->isDot() || !$f->isFile()) continue;
+            $ext = strtolower($f->getExtension());
+            if (in_array($ext, ['png', 'jpg', 'jpeg', 'gif', 'webp', 'svg'], true)) {
+                $logos_clientes[] = ['nombre' => pathinfo($f->getFilename(), PATHINFO_FILENAME), 'path' => 'upload/logos_clientes/' . $f->getFilename()];
+            }
+        }
+    }
+
+    // Documentos oficiales de dominó (upload/documentos_oficiales/)
+    $documentos_oficiales = [];
+    $doc_dir = dirname(__DIR__, 2) . DIRECTORY_SEPARATOR . 'upload' . DIRECTORY_SEPARATOR . 'documentos_oficiales';
+    $doc_extensions = ['pdf', 'doc', 'docx'];
+    if (is_dir($doc_dir)) {
+        foreach (new DirectoryIterator($doc_dir) as $f) {
+            if ($f->isDot() || !$f->isFile()) continue;
+            $ext = strtolower($f->getExtension());
+            if (in_array($ext, $doc_extensions, true)) {
+                $nombre = pathinfo($f->getFilename(), PATHINFO_FILENAME);
+                $path_rel = 'upload/documentos_oficiales/' . $f->getFilename();
+                $documentos_oficiales[] = ['titulo' => $nombre, 'path' => $path_rel, 'archivo' => $f->getFilename()];
+            }
+        }
+    }
+
+    $invitaciones_fvd = [];
+    $inv_dir = dirname(__DIR__, 2) . DIRECTORY_SEPARATOR . 'upload' . DIRECTORY_SEPARATOR . 'invitaciones_fvd';
+    $inv_extensions = ['pdf', 'png', 'jpg', 'jpeg', 'doc', 'docx'];
+    if (is_dir($inv_dir)) {
+        foreach (new DirectoryIterator($inv_dir) as $f) {
+            if ($f->isDot() || !$f->isFile()) continue;
+            $ext = strtolower($f->getExtension());
+            if (in_array($ext, $inv_extensions, true)) {
+                $invitaciones_fvd[] = ['titulo' => pathinfo($f->getFilename(), PATHINFO_FILENAME), 'path' => 'upload/invitaciones_fvd/' . $f->getFilename()];
             }
         }
     }
@@ -212,6 +249,8 @@ try {
         'filtro_aplicado_entidad' => $filtro_aplicado_entidad,
         'entidad_nombre_usuario' => $entidad_nombre_usuario,
         'logos_clientes' => $logos_clientes,
+        'documentos_oficiales' => $documentos_oficiales,
+        'invitaciones_fvd' => $invitaciones_fvd,
     ], JSON_UNESCAPED_UNICODE);
 
 } catch (Exception $e) {

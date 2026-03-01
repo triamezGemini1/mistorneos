@@ -15,6 +15,7 @@ $logo_url = class_exists('AppHelpers') ? AppHelpers::getAppLogo() : (rtrim(app_b
                 </a>
                 
                 <div class="hidden md:flex items-center space-x-1">
+                    <a href="#documentos" class="px-4 py-2 text-white/90 hover:text-white hover:bg-white/10 rounded-lg transition-all duration-200 font-medium">Documentos</a>
                     <a href="#eventos-masivos" class="px-4 py-2 text-white/90 hover:text-white hover:bg-white/10 rounded-lg transition-all duration-200 font-medium">Eventos Nacionales</a>
                     <a href="#eventos" class="px-4 py-2 text-white/90 hover:text-white hover:bg-white/10 rounded-lg transition-all duration-200 font-medium">Eventos</a>
                     <a href="#calendario" class="px-4 py-2 text-white/90 hover:text-white hover:bg-white/10 rounded-lg transition-all duration-200 font-medium">Calendario</a>
@@ -36,6 +37,7 @@ $logo_url = class_exists('AppHelpers') ? AppHelpers::getAppLogo() : (rtrim(app_b
             
             <div id="mobile-menu" class="hidden md:hidden pb-4">
                 <div class="flex flex-col space-y-2">
+                    <a href="#documentos" class="px-4 py-2 text-white/90 hover:text-white hover:bg-white/10 rounded-lg transition-all">Documentos</a>
                     <a href="#eventos-masivos" class="px-4 py-2 text-white/90 hover:text-white hover:bg-white/10 rounded-lg transition-all">Eventos Nacionales</a>
                     <a href="#eventos" class="px-4 py-2 text-white/90 hover:text-white hover:bg-white/10 rounded-lg transition-all">Eventos</a>
                     <a href="#calendario" class="px-4 py-2 text-white/90 hover:text-white hover:bg-white/10 rounded-lg transition-all">Calendario</a>

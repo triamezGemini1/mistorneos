@@ -58,7 +58,7 @@ if ($entidad_param > 0) {
         .logos-clientes-wrap { overflow: hidden; width: 100%; min-height: 120px; background: linear-gradient(to bottom, #f8fafc, #e2e8f0); padding: 1.5rem 0; }
         .logos-clientes-row { display: flex; width: max-content; animation: marquee 45s linear infinite; }
         .logos-clientes-row:hover { animation-play-state: paused; }
-        .logos-clientes-row .logo-item { flex-shrink: 0; display: flex; align-items: center; justify-content: center; width: 180px; height: 90px; margin: 0 2rem; padding: 0.75rem; background: #fff; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
+        .logos-clientes-row .logo-item { flex-shrink: 0; display: flex; align-items: center; justify-content: center; width: 360px; height: 180px; margin: 0 2rem; padding: 1rem; background: #fff; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
         .logos-clientes-row .logo-item img { max-width: 100%; max-height: 100%; object-fit: contain; }
         @keyframes marquee { 0% { transform: translateX(0); } 100% { transform: translateX(-50%); } }
     </style>
@@ -99,6 +99,7 @@ if ($entidad_param > 0) {
                             <span>La Estación del Dominó</span>
                         </a>
                         <div class="hidden md:flex items-center space-x-1">
+                            <a href="#documentos" @click.prevent="scrollToSection('documentos')" class="px-4 py-2 text-white/90 hover:text-white hover:bg-white/10 rounded-lg transition-all font-medium">Documentos</a>
                             <a href="#eventos-masivos" @click.prevent="scrollToSection('eventos-masivos')" class="px-4 py-2 text-white/90 hover:text-white hover:bg-white/10 rounded-lg transition-all font-medium">Eventos Nacionales</a>
                             <a href="#logos-clientes" @click.prevent="scrollToSection('logos-clientes')" class="px-4 py-2 text-white/90 hover:text-white hover:bg-white/10 rounded-lg transition-all font-medium">Clientes</a>
                             <a href="#eventos" @click.prevent="scrollToSection('eventos')" class="px-4 py-2 text-white/90 hover:text-white hover:bg-white/10 rounded-lg transition-all font-medium">Eventos</a>
@@ -114,6 +115,7 @@ if ($entidad_param > 0) {
                     </div>
                     <div v-show="mobileMenuOpen" class="md:hidden pb-4">
                         <div class="flex flex-col space-y-2">
+                            <a href="#" @click.prevent="scrollToSection('documentos')" class="px-4 py-2 text-white/90 hover:bg-white/10 rounded-lg">Documentos</a>
                             <a href="#" @click.prevent="scrollToSection('eventos-masivos')" class="px-4 py-2 text-white/90 hover:bg-white/10 rounded-lg">Eventos Nacionales</a>
                             <a href="#" @click.prevent="scrollToSection('logos-clientes')" class="px-4 py-2 text-white/90 hover:bg-white/10 rounded-lg">Clientes</a>
                             <a href="#" @click.prevent="scrollToSection('eventos')" class="px-4 py-2 text-white/90 hover:bg-white/10 rounded-lg">Eventos</a>
@@ -144,6 +146,47 @@ if ($entidad_param > 0) {
                     </div>
                 </div>
                 <div class="absolute bottom-0 left-0 right-0"><svg class="w-full h-12 md:h-20" viewBox="0 0 1200 120" preserveAspectRatio="none"><path d="M0,0 C150,80 350,80 600,40 C850,0 1050,0 1200,40 L1200,120 L0,120 Z" fill="#f9fafb"></path></svg></div>
+            </section>
+
+            <!-- Documentos oficiales de dominó -->
+            <section id="documentos" class="py-16 md:py-24 bg-gradient-to-br from-slate-50 to-blue-50">
+                <div class="container mx-auto px-4 sm:px-6 lg:px-8">
+                    <div class="text-center mb-12">
+                        <h2 class="text-3xl md:text-4xl lg:text-5xl font-bold text-primary-700 mb-4"><i class="fas fa-file-alt mr-3 text-accent"></i>Documentos oficiales de dominó</h2>
+                        <p class="text-lg text-gray-600 max-w-2xl mx-auto">Consulte en línea, lea o descargue reglamentos, normas y documentos oficiales del dominó.</p>
+                    </div>
+                    <div v-if="data.documentos_oficiales?.length" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 lg:gap-8 max-w-5xl mx-auto">
+                        <div v-for="doc in data.documentos_oficiales" :key="doc.path" class="bg-white rounded-2xl shadow-lg hover:shadow-xl transition-all border border-gray-100 overflow-hidden">
+                            <div class="p-6">
+                                <div class="flex items-center justify-center w-14 h-14 bg-primary-100 rounded-xl mb-4"><i class="fas fa-file-pdf text-2xl text-primary-600"></i></div>
+                                <h3 class="text-xl font-bold text-gray-900 mb-3">{{ doc.titulo }}</h3>
+                                <div class="flex flex-wrap gap-2">
+                                    <a :href="baseUrl + 'view_documento.php?path=' + encodeURIComponent(doc.path)" target="_blank" rel="noopener noreferrer" class="inline-flex items-center px-4 py-2 bg-primary-500 text-white font-semibold rounded-lg hover:bg-primary-600 transition-all text-sm"><i class="fas fa-external-link-alt mr-2"></i>Ver en línea</a>
+                                    <a :href="baseUrl + 'view_documento.php?path=' + encodeURIComponent(doc.path) + '&download=1'" class="inline-flex items-center px-4 py-2 bg-gray-600 text-white font-semibold rounded-lg hover:bg-gray-700 transition-all text-sm" download><i class="fas fa-download mr-2"></i>Descargar</a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div v-else class="text-center py-12 bg-white/60 rounded-2xl max-w-xl mx-auto">
+                        <i class="fas fa-folder-open text-5xl text-gray-300 mb-4"></i>
+                        <p class="text-gray-600">Próximamente se publicarán aquí los documentos oficiales. Los archivos se colocan en <code class="text-sm bg-gray-100 px-2 py-1 rounded">upload/documentos_oficiales/</code>.</p>
+                    </div>
+                    <div v-if="data.invitaciones_fvd?.length" class="mt-16 pt-12 border-t border-gray-200">
+                        <h3 class="text-2xl font-bold text-primary-700 mb-6 text-center"><i class="fas fa-envelope-open-text mr-2 text-accent"></i>Invitaciones FVD</h3>
+                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 lg:gap-8 max-w-5xl mx-auto">
+                            <div v-for="doc in data.invitaciones_fvd" :key="doc.path" class="bg-white rounded-2xl shadow-lg hover:shadow-xl transition-all border border-gray-100 overflow-hidden">
+                                <div class="p-6">
+                                    <div class="flex items-center justify-center w-14 h-14 bg-green-100 rounded-xl mb-4"><i class="fas fa-file-pdf text-2xl text-green-600"></i></div>
+                                    <h4 class="text-lg font-bold text-gray-900 mb-3">{{ doc.titulo }}</h4>
+                                    <div class="flex flex-wrap gap-2">
+                                        <a :href="baseUrl + 'view_documento.php?path=' + encodeURIComponent(doc.path)" target="_blank" rel="noopener noreferrer" class="inline-flex items-center px-4 py-2 bg-primary-500 text-white font-semibold rounded-lg hover:bg-primary-600 transition-all text-sm"><i class="fas fa-external-link-alt mr-2"></i>Ver en línea</a>
+                                        <a :href="baseUrl + 'view_documento.php?path=' + encodeURIComponent(doc.path) + '&download=1'" class="inline-flex items-center px-4 py-2 bg-gray-600 text-white font-semibold rounded-lg hover:bg-gray-700 transition-all text-sm" download><i class="fas fa-download mr-2"></i>Descargar</a>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </section>
 
             <!-- Registro (solo afiliación, centrada) -->

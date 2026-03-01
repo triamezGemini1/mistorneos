@@ -367,6 +367,13 @@ if (in_array($user['role'], ['admin_club', 'admin_general', 'admin_torneo'], tru
           </a>
         </li>
         <?php if (($user['role'] ?? '') === 'admin_general'): ?>
+        <!-- Contenido web: documentos, logos clientes, invitaciones FVD -->
+        <li class="mb-2">
+          <a href="<?= htmlspecialchars($dashboard_href('archivos_web')) ?>" class="nav-link <?= $current_page === 'archivos_web' ? 'active' : '' ?>">
+            <i class="fas fa-folder-open me-3"></i>
+            <span class="nav-text">Contenido web</span>
+          </a>
+        </li>
         <!-- Reporte de actividad (Auditoría) - Solo Super Admin -->
         <li class="mb-2">
           <a href="<?= htmlspecialchars($dashboard_href('auditoria')) ?>" class="nav-link <?= $current_page === 'auditoria' ? 'active' : '' ?>">

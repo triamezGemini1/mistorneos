@@ -73,9 +73,48 @@ if (empty($logos_clientes_clubes)) {
         }
     }
 }
+// Añadir logos subidos por admin en upload/logos_clientes/ (FVD, etc.)
+$logos_clientes_dir = dirname(__DIR__) . DIRECTORY_SEPARATOR . 'upload' . DIRECTORY_SEPARATOR . 'logos_clientes';
+if (is_dir($logos_clientes_dir)) {
+    foreach (new DirectoryIterator($logos_clientes_dir) as $f) {
+        if ($f->isDot() || !$f->isFile()) continue;
+        $ext = strtolower($f->getExtension());
+        if (in_array($ext, ['png', 'jpg', 'jpeg', 'gif', 'webp', 'svg'], true)) {
+            $logos_clientes_clubes[] = ['nombre' => pathinfo($f->getFilename(), PATHINFO_FILENAME), 'path' => 'upload/logos_clientes/' . $f->getFilename()];
+        }
+    }
+}
 $mitad = (int) ceil(count($logos_clientes_clubes) / 2);
 $logos_fila1 = array_slice($logos_clientes_clubes, 0, $mitad);
 $logos_fila2 = array_slice($logos_clientes_clubes, $mitad);
+
+// Documentos oficiales de dominó (upload/documentos_oficiales/)
+$documentos_oficiales = [];
+$doc_dir = dirname(__DIR__) . DIRECTORY_SEPARATOR . 'upload' . DIRECTORY_SEPARATOR . 'documentos_oficiales';
+$doc_extensions = ['pdf', 'doc', 'docx'];
+if (is_dir($doc_dir)) {
+    foreach (new DirectoryIterator($doc_dir) as $f) {
+        if ($f->isDot() || !$f->isFile()) continue;
+        $ext = strtolower($f->getExtension());
+        if (in_array($ext, $doc_extensions, true)) {
+            $nombre = pathinfo($f->getFilename(), PATHINFO_FILENAME);
+            $path_rel = 'upload/documentos_oficiales/' . $f->getFilename();
+            $documentos_oficiales[] = ['titulo' => $nombre, 'path' => $path_rel, 'archivo' => $f->getFilename()];
+        }
+    }
+}
+
+$invitaciones_fvd = [];
+$inv_dir = dirname(__DIR__) . DIRECTORY_SEPARATOR . 'upload' . DIRECTORY_SEPARATOR . 'invitaciones_fvd';
+if (is_dir($inv_dir)) {
+    foreach (new DirectoryIterator($inv_dir) as $f) {
+        if ($f->isDot() || !$f->isFile()) continue;
+        $ext = strtolower($f->getExtension());
+        if (in_array($ext, ['pdf', 'png', 'jpg', 'jpeg', 'doc', 'docx'], true)) {
+            $invitaciones_fvd[] = ['titulo' => pathinfo($f->getFilename(), PATHINFO_FILENAME), 'path' => 'upload/invitaciones_fvd/' . $f->getFilename()];
+        }
+    }
+}
 
 // Función helper para obtener URL de afiche (compatible con view_tournament_file.php)
 function getAficheUrl($torneo) {
@@ -262,7 +301,7 @@ foreach ($eventos_calendario as $ev) {
         .logos-clientes-wrap { overflow: hidden; width: 100%; min-height: 120px; background: linear-gradient(to bottom, #f8fafc, #e2e8f0); padding: 1.5rem 0; }
         .logos-clientes-row { display: flex; width: max-content; animation: marquee 45s linear infinite; }
         .logos-clientes-row:hover { animation-play-state: paused; }
-        .logos-clientes-row .logo-item { flex-shrink: 0; display: flex; align-items: center; justify-content: center; width: 180px; height: 90px; margin: 0 2rem; padding: 0.75rem; background: #fff; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
+        .logos-clientes-row .logo-item { flex-shrink: 0; display: flex; align-items: center; justify-content: center; width: 360px; height: 180px; margin: 0 2rem; padding: 1rem; background: #fff; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
         .logos-clientes-row .logo-item img { max-width: 100%; max-height: 100%; object-fit: contain; }
         @keyframes marquee { 0% { transform: translateX(0); } 100% { transform: translateX(-50%); } }
     </style>
@@ -270,6 +309,71 @@ foreach ($eventos_calendario as $ev) {
 <body class="bg-gray-50 antialiased">
 <?php include_once __DIR__ . '/components/header.php'; ?>
 <?php include_once __DIR__ . '/components/hero.php'; ?>
+
+    <!-- Documentos oficiales de dominó -->
+    <section id="documentos" class="py-16 md:py-24 bg-gradient-to-br from-slate-50 to-blue-50">
+        <div class="container mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="text-center mb-12">
+                <h2 class="text-3xl md:text-4xl lg:text-5xl font-bold text-primary-700 mb-4">
+                    <i class="fas fa-file-alt mr-3 text-accent"></i>Documentos oficiales de dominó
+                </h2>
+                <p class="text-lg text-gray-600 max-w-2xl mx-auto">Consulte en línea, lea o descargue reglamentos, normas y documentos oficiales del dominó.</p>
+            </div>
+            <?php if (!empty($documentos_oficiales)): ?>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 lg:gap-8 max-w-5xl mx-auto">
+                <?php foreach ($documentos_oficiales as $doc): ?>
+                <?php
+                    $url_base = 'view_documento.php?path=' . rawurlencode($doc['path']);
+                    $url_ver = $url_base;
+                    $url_descarga = $url_base . '&download=1';
+                ?>
+                <div class="bg-white rounded-2xl shadow-lg hover:shadow-xl transition-all border border-gray-100 overflow-hidden">
+                    <div class="p-6">
+                        <div class="flex items-center justify-center w-14 h-14 bg-primary-100 rounded-xl mb-4">
+                            <i class="fas fa-file-pdf text-2xl text-primary-600"></i>
+                        </div>
+                        <h3 class="text-xl font-bold text-gray-900 mb-3"><?= htmlspecialchars($doc['titulo']) ?></h3>
+                        <div class="flex flex-wrap gap-2">
+                            <a href="<?= htmlspecialchars($url_ver) ?>" target="_blank" rel="noopener noreferrer" class="inline-flex items-center px-4 py-2 bg-primary-500 text-white font-semibold rounded-lg hover:bg-primary-600 transition-all text-sm">
+                                <i class="fas fa-external-link-alt mr-2"></i>Ver en línea
+                            </a>
+                            <a href="<?= htmlspecialchars($url_descarga) ?>" class="inline-flex items-center px-4 py-2 bg-gray-600 text-white font-semibold rounded-lg hover:bg-gray-700 transition-all text-sm" download>
+                                <i class="fas fa-download mr-2"></i>Descargar
+                            </a>
+                        </div>
+                    </div>
+                </div>
+                <?php endforeach; ?>
+            </div>
+            <?php else: ?>
+            <div class="text-center py-12 bg-white/60 rounded-2xl max-w-xl mx-auto">
+                <i class="fas fa-folder-open text-5xl text-gray-300 mb-4"></i>
+                <p class="text-gray-600">Próximamente se publicarán aquí los documentos oficiales. Los archivos se colocan en <code class="text-sm bg-gray-100 px-2 py-1 rounded">upload/documentos_oficiales/</code>.</p>
+            </div>
+            <?php endif; ?>
+
+            <?php if (!empty($invitaciones_fvd)): ?>
+            <div class="mt-16 pt-12 border-t border-gray-200">
+                <h3 class="text-2xl font-bold text-primary-700 mb-6 text-center"><i class="fas fa-envelope-open-text mr-2 text-accent"></i>Invitaciones FVD</h3>
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 lg:gap-8 max-w-5xl mx-auto">
+                    <?php foreach ($invitaciones_fvd as $doc): ?>
+                    <?php $url_ver = 'view_documento.php?path=' . rawurlencode($doc['path']); $url_descarga = $url_ver . '&download=1'; ?>
+                    <div class="bg-white rounded-2xl shadow-lg hover:shadow-xl transition-all border border-gray-100 overflow-hidden">
+                        <div class="p-6">
+                            <div class="flex items-center justify-center w-14 h-14 bg-green-100 rounded-xl mb-4"><i class="fas fa-file-pdf text-2xl text-green-600"></i></div>
+                            <h4 class="text-lg font-bold text-gray-900 mb-3"><?= htmlspecialchars($doc['titulo']) ?></h4>
+                            <div class="flex flex-wrap gap-2">
+                                <a href="<?= htmlspecialchars($url_ver) ?>" target="_blank" rel="noopener noreferrer" class="inline-flex items-center px-4 py-2 bg-primary-500 text-white font-semibold rounded-lg hover:bg-primary-600 transition-all text-sm"><i class="fas fa-external-link-alt mr-2"></i>Ver en línea</a>
+                                <a href="<?= htmlspecialchars($url_descarga) ?>" class="inline-flex items-center px-4 py-2 bg-gray-600 text-white font-semibold rounded-lg hover:bg-gray-700 transition-all text-sm" download><i class="fas fa-download mr-2"></i>Descargar</a>
+                            </div>
+                        </div>
+                    </div>
+                    <?php endforeach; ?>
+                </div>
+            </div>
+            <?php endif; ?>
+        </div>
+    </section>
 
     <!-- Sección de Registro (solo afiliación, centrada) -->
     <section id="registro" class="py-16 md:py-24 bg-white">
