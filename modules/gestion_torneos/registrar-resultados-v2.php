@@ -538,6 +538,9 @@ $action_param = $use_standalone ? '?' : '&';
         }
     }
 </style>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Lato:wght@400;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="assets/css/modern-registro-resultados.css">
 
 <div class="container-fluid registrar-resultados-wrap">

@@ -1,30 +1,32 @@
 /**
- * Registro de Resultados - Alta Gama
- * Inter, peso base 300. Títulos 400/500. Móvil 12px, escritorio 13px. line-height 1.4.
- * Labels 11px. Inputs/botones con padding proporcional. Nitidez: antialiased.
+ * Registro de Resultados - Light y Compacto
+ * Calibri, Lato. Peso base 300. Resalte máximo 500. Móvil 11.5px, escritorio 12.5px.
+ * letter-spacing 0.015em, line-height 1.3. Bordes inputs #ddd.
  */
 
 body {
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-family: Calibri, 'Lato', sans-serif;
   font-weight: 300;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  letter-spacing: 0.02em;
-  line-height: 1.4;
+  letter-spacing: 0.015em;
+  line-height: 1.3;
+  color: #2d2d2d;
 }
 
-/* ========== BASE: MÓVIL (12px) ========== */
+/* ========== BASE: MÓVIL (11.5px) ========== */
 .registrar-resultados-wrap {
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-family: Calibri, 'Lato', sans-serif;
   font-weight: 300;
+  color: #2d2d2d;
   width: 100% !important;
   max-width: 100%;
   margin-left: auto;
   margin-right: auto;
   padding: 0.5rem;
-  font-size: 12px;
-  letter-spacing: 0.02em;
-  line-height: 1.4;
+  font-size: 11.5px;
+  letter-spacing: 0.015em;
+  line-height: 1.3;
 }
 
 .registrar-resultados-wrap .container-fluid {
@@ -48,20 +50,21 @@ body {
 
 .registrar-resultados-wrap h4,
 .registrar-resultados-wrap .card-header h4 {
-  font-size: 1.15em;
-  font-weight: 400;
+  font-size: 1.1em;
+  font-weight: 300;
+  color: #2d2d2d;
   word-wrap: break-word;
   overflow-wrap: break-word;
-  line-height: 1.4;
+  line-height: 1.3;
 }
 
 .registrar-resultados-wrap label {
-  font-size: 11px;
+  font-size: 10.5px;
   text-transform: uppercase;
-  letter-spacing: 0.02em;
-  color: #6b7280;
-  font-weight: 500;
-  line-height: 1.4;
+  letter-spacing: 0.015em;
+  color: #5a5a5a;
+  font-weight: 300;
+  line-height: 1.3;
 }
 
 .registrar-resultados-wrap .form-control,
@@ -69,10 +72,11 @@ body {
 .registrar-resultados-wrap input[type="text"],
 .registrar-resultados-wrap #formResultados th,
 .registrar-resultados-wrap #formResultados td {
-  padding: 5px 10px !important;
-  border: 1px solid #e0e0e0;
+  padding: 3px 6px !important;
+  border: 1px solid #ddd;
   font-weight: 300;
-  line-height: 1.4;
+  line-height: 1.3;
+  color: #2d2d2d;
 }
 
 /* Columnas al ancho de pantalla sin truncar */
@@ -144,11 +148,11 @@ body {
 }
 
 .registrar-resultados-wrap #formResultados tbody tr {
-  border: 1px solid #e0e0e0;
+  border: 1px solid #ddd;
   border-radius: 0.35rem;
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
   margin-bottom: 0;
-  padding: 5px 10px;
+  padding: 3px 6px;
   background: #fff;
   page-break-inside: avoid;
 }
@@ -177,14 +181,14 @@ body {
 }
 
 .registrar-resultados-wrap #formResultados tbody td::before {
-  font-size: 11px;
+  font-size: 10.5px;
   text-transform: uppercase;
-  letter-spacing: 0.02em;
-  color: #6b7280;
-  font-weight: 500;
+  letter-spacing: 0.015em;
+  color: #5a5a5a;
+  font-weight: 300;
   display: inline-block;
   min-width: 7rem;
-  line-height: 1.4;
+  line-height: 1.3;
 }
 
 .registrar-resultados-wrap #formResultados tbody td.columna-id::before { content: "ID"; }
@@ -242,35 +246,43 @@ body {
 .registrar-resultados-wrap #formResultados #btn-guardar,
 .registrar-resultados-wrap #formResultados .btn.btn-success.btn-lg {
   width: 100%;
-  min-height: 2.25rem;
+  min-height: 1.85rem;
   font-size: 1em;
-  padding: 0.5rem 1rem;
+  padding: 3px 6px;
   margin-top: 0.5rem;
   order: 99;
   white-space: normal;
   text-align: center;
-  line-height: 1.4;
+  line-height: 1.3;
+  font-weight: 400;
 }
 
 .registrar-resultados-wrap #formResultados .btn.btn-warning#btn-limpiar {
   width: 100%;
-  min-height: 2.25rem;
-  padding: 0.5rem 1rem;
-  line-height: 1.4;
+  min-height: 1.85rem;
+  padding: 3px 6px;
+  line-height: 1.3;
+  font-weight: 400;
 }
 
 .registrar-resultados-wrap #formResultados .d-flex.gap-2 a.btn {
   flex: 1 1 100%;
   min-width: 0;
-  min-height: 2.25rem;
-  padding: 0.5rem 1rem;
+  min-height: 1.85rem;
+  padding: 3px 6px;
   white-space: normal;
-  line-height: 1.4;
+  line-height: 1.3;
+  font-weight: 400;
 }
 
 .registrar-resultados-wrap #formResultados .d-flex.gap-2:first-of-type a {
   flex: 1 1 100%;
-  min-height: 2.25rem;
+  min-height: 1.85rem;
+}
+
+/* Resalte máximo 500 para datos críticos (puntuación, totales) */
+.registrar-resultados-wrap .text-critical {
+  font-weight: 500;
 }
 
 /* Columnas: sin anchos fijos en móvil */
@@ -301,20 +313,20 @@ body {
   }
 }
 
-/* ========== ESCRITORIO (768px): 13px, tablet 10" espacioso ========== */
+/* ========== ESCRITORIO / TABLET 10" (768px): 12.5px ========== */
 @media (min-width: 768px) {
   .registrar-resultados-wrap {
-    font-size: 13px;
-    padding: 0.6rem;
+    font-size: 12.5px;
+    padding: 0.5rem 0.6rem;
   }
 
   .registrar-resultados-wrap h4,
   .registrar-resultados-wrap .card-header h4 {
-    font-size: 1.15em;
+    font-size: 1.1em;
   }
 
   .registrar-resultados-wrap #formResultados .table-responsive {
-    gap: 6px;
+    gap: 5px;
   }
 
   .registrar-resultados-wrap .form-control,
@@ -322,7 +334,8 @@ body {
   .registrar-resultados-wrap input[type="text"],
   .registrar-resultados-wrap #formResultados th,
   .registrar-resultados-wrap #formResultados td {
-    padding: 5px 10px !important;
+    padding: 3px 6px !important;
+    border: 1px solid #ddd;
   }
 }
 
@@ -366,13 +379,13 @@ body {
     width: auto;
     max-width: none;
     text-align: center;
-    padding: 5px 10px;
+    padding: 3px 6px;
     vertical-align: middle;
-    border: 1px solid #e0e0e0;
+    border: 1px solid #ddd;
   }
 
   .registrar-resultados-wrap #formResultados tbody tr {
-    border: 1px solid #e0e0e0;
+    border: 1px solid #ddd;
     border-radius: 0;
     box-shadow: none;
     margin-bottom: 0;
@@ -394,8 +407,8 @@ body {
   .registrar-resultados-wrap #formResultados #btn-guardar,
   .registrar-resultados-wrap #formResultados .btn.btn-success.btn-lg {
     width: auto;
-    min-height: 2.25rem;
-    padding: 0.5rem 1rem;
+    min-height: 1.85rem;
+    padding: 3px 6px;
     order: 0;
   }
 

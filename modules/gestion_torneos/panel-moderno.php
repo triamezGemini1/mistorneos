@@ -123,10 +123,10 @@ tailwind.config = {
 }
 </script>
 <?php endif; ?>
-<!-- Tipografía Inter y estilos modernos del panel (Cards, Grid, botones 44px) -->
+<!-- Tipografía Calibri / Lato (Light 300, resalte 400) -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Lato:wght@300;400;500&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="assets/css/modern-panel.css">
 
 <div class="tw-panel">
