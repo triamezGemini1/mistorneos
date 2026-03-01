@@ -105,8 +105,9 @@ if ($action === 'list') {
     }
 }
 ?>
-
-<div class="container-fluid">
+<link rel="stylesheet" href="assets/css/design-system.css">
+<link rel="stylesheet" href="assets/css/directorio-invitacion.css">
+<div class="ds-directorio container-fluid">
     <div class="row">
         <div class="col-12">
             <div class="d-flex justify-content-between align-items-center mb-4">
@@ -161,34 +162,34 @@ if ($action === 'list') {
                             <table class="table table-hover align-middle table-sm">
                                 <thead class="table-light">
                                     <tr>
-                                        <th style="width: 50px;">Logo</th>
-                                        <th style="width: 22%; max-width: 200px;">Nombre</th>
-                                        <th style="width: 14%; max-width: 120px;">Delegado</th>
-                                        <th style="width: 12%; max-width: 110px;">Teléfono</th>
-                                        <th class="text-center" style="width: 70px;">Estado</th>
-                                        <?php if (!empty($has_id_usuario)): ?><th class="text-center" style="width: 140px;">Usuario invitaciones</th><?php endif; ?>
-                                        <th class="text-center" style="width: 180px;">Acciones</th>
+                                        <th class="dc-col-logo">Logo</th>
+                                        <th class="dc-col-nombre">Nombre</th>
+                                        <th class="dc-col-delegado">Delegado</th>
+                                        <th class="dc-col-telefono">Teléfono</th>
+                                        <th class="dc-col-estado text-center">Estado</th>
+                                        <?php if (!empty($has_id_usuario)): ?><th class="dc-col-usuario text-center">Usuario invitaciones</th><?php endif; ?>
+                                        <th class="dc-col-acciones text-center">Acciones</th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     <?php foreach ($clubs_list as $row): ?>
                                         <tr>
-                                            <td class="align-middle" style="line-height: 1.2;"><?= displayClubLogoTable($row) ?></td>
-                                            <td class="align-middle small" style="max-width: 200px; line-height: 1.25;">
+                                            <td class="align-middle dc-col-logo"><?= displayClubLogoTable($row) ?></td>
+                                            <td class="align-middle small dc-col-nombre">
                                                 <strong class="d-block text-truncate" title="<?= htmlspecialchars($row['nombre'] ?? '') ?>"><?= htmlspecialchars($row['nombre'] ?? '') ?></strong>
                                                 <?php if (!empty($row['direccion'])): ?>
                                                     <small class="text-muted d-block text-truncate" title="<?= htmlspecialchars($row['direccion']) ?>"><?= htmlspecialchars($row['direccion']) ?></small>
                                                 <?php endif; ?>
                                             </td>
-                                            <td class="align-middle small text-truncate" style="max-width: 120px;" title="<?= htmlspecialchars($row['delegado'] ?? '') ?>"><?= htmlspecialchars($row['delegado'] ?? '—') ?></td>
-                                            <td class="align-middle small text-truncate" style="max-width: 110px;" title="<?= htmlspecialchars($row['telefono'] ?? '') ?>"><?= htmlspecialchars($row['telefono'] ?? '—') ?></td>
-                                            <td class="text-center align-middle">
+                                            <td class="align-middle small text-truncate dc-col-delegado" title="<?= htmlspecialchars($row['delegado'] ?? '') ?>"><?= htmlspecialchars($row['delegado'] ?? '—') ?></td>
+                                            <td class="align-middle small text-truncate dc-col-telefono" title="<?= htmlspecialchars($row['telefono'] ?? '') ?>"><?= htmlspecialchars($row['telefono'] ?? '—') ?></td>
+                                            <td class="text-center align-middle dc-col-estado">
                                                 <span class="badge bg-<?= $row['estatus'] ? 'success' : 'secondary' ?>">
                                                     <?= $row['estatus'] ? 'Activo' : 'Inactivo' ?>
                                                 </span>
                                             </td>
                                             <?php if (!empty($has_id_usuario)): ?>
-                                            <td class="text-center align-middle small">
+                                            <td class="text-center align-middle small dc-col-usuario">
                                                 <?php if (!empty($row['id_usuario']) && !empty($row['usuario_vinculado_nombre'])): ?>
                                                     <span class="badge bg-success" title="ID: <?= (int)$row['id_usuario'] ?>"><?= htmlspecialchars($row['usuario_vinculado_nombre']) ?></span>
                                                 <?php else: ?>
@@ -196,7 +197,7 @@ if ($action === 'list') {
                                                 <?php endif; ?>
                                             </td>
                                             <?php endif; ?>
-                                            <td class="align-middle" style="white-space: nowrap;">
+                                            <td class="align-middle dc-col-acciones">
                                                 <a href="<?= htmlspecialchars(AppHelpers::dashboard('directorio_clubes', ['action' => 'view', 'id' => $row['id']])) ?>" class="btn btn-info btn-sm">Ver</a>
                                                 <?php if ($is_admin_gral): ?>
                                                     <a href="<?= htmlspecialchars(AppHelpers::dashboard('directorio_clubes', ['action' => 'edit', 'id' => $row['id']])) ?>" class="btn btn-warning btn-sm">Editar</a>

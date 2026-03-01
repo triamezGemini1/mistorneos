@@ -17,8 +17,9 @@ if (!isset($torneo) || !isset($usuarios_disponibles) || !isset($usuarios_inscrit
 
 require_once __DIR__ . '/../../lib/InscritosHelper.php';
 ?>
-
-<div class="container-fluid">
+<link rel="stylesheet" href="assets/css/design-system.css">
+<link rel="stylesheet" href="assets/css/inscripcion.css">
+<div class="ds-inscripcion container-fluid">
     <div class="row mb-4">
         <div class="col-12">
             <h1 class="h3 mb-2">

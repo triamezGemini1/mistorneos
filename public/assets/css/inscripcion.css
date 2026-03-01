@@ -1,0 +1,83 @@
+/**
+ * Formulario de Inscripción (Inscribir en Sitio, etc.)
+ * Design System: cards 12px, sombras suaves, mobile-first.
+ * No se modifican id/name de inputs.
+ */
+
+.ds-inscripcion .container-fluid {
+  max-width: 100%;
+  padding-left: 1rem;
+  padding-right: 1rem;
+}
+
+.ds-inscripcion .card {
+  border: 1px solid var(--ds-gray-200, #e5e7eb);
+  border-radius: 12px;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -2px rgba(0, 0, 0, 0.05);
+  overflow: hidden;
+  transition: box-shadow 0.2s ease;
+}
+.ds-inscripcion .card:hover {
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.08), 0 4px 6px -4px rgba(0, 0, 0, 0.05);
+}
+
+.ds-inscripcion .card-header {
+  border-radius: 12px 12px 0 0;
+  font-weight: 600;
+  padding: 1rem 1.25rem;
+}
+
+.ds-inscripcion .card-body {
+  padding: 1.25rem;
+}
+
+/* Mobile-first: formularios en columna, inputs anchos */
+.ds-inscripcion .form-control,
+.ds-inscripcion .form-select {
+  border-radius: 8px;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+.ds-inscripcion .form-control:focus,
+.ds-inscripcion .form-select:focus {
+  border-color: var(--ds-primary, #4f46e5);
+  box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.15);
+}
+
+@media (max-width: 768px) {
+  .ds-inscripcion .form-control,
+  .ds-inscripcion .form-select {
+    width: 100%;
+    max-width: 100%;
+    min-height: 44px;
+  }
+  .ds-inscripcion .btn {
+    width: 100%;
+    min-height: 44px;
+    margin-bottom: 0.5rem;
+  }
+  .ds-inscripcion .nav-tabs {
+    flex-direction: column;
+  }
+  .ds-inscripcion .nav-tabs .nav-link {
+    border-radius: 8px;
+    margin-bottom: 0.25rem;
+  }
+}
+
+.ds-inscripcion .btn {
+  border-radius: 8px;
+  font-weight: 500;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+.ds-inscripcion .btn:hover {
+  transform: translateY(-1px);
+}
+
+.ds-inscripcion .alert {
+  border-radius: 12px;
+}
+
+.ds-inscripcion h1.h3 {
+  font-weight: 600;
+  color: var(--ds-gray-900, #111827);
+}
