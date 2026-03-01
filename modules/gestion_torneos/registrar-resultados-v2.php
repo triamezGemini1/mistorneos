@@ -122,14 +122,14 @@ $action_param = $use_standalone ? '?' : '&';
         border-radius: 4px;
     }
     
-    /* Tarjetas */
+    /* Tarjetas: sin borde */
     .tarjeta-btn {
         width: clamp(2rem, 5vw, 2.5rem);
         height: clamp(2rem, 5vw, 2.5rem);
         min-width: 2rem;
         min-height: 2rem;
         border-radius: 0.5rem;
-        border: 0.125rem solid #666;
+        border: none;
         cursor: pointer;
         transition: all 0.2s;
         display: inline-flex;
@@ -149,7 +149,6 @@ $action_param = $use_standalone ? '?' : '&';
         transform: scale(0.95);
     }
     .tarjeta-btn.activo {
-        border: 0.25rem solid #000;
         box-shadow: 0 0 0.75rem rgba(0,0,0,0.6);
         background-color: transparent !important;
     }
@@ -184,10 +183,11 @@ $action_param = $use_standalone ? '?' : '&';
     .columna-sancion { width: 5%; }
     .columna-forfait { width: 8%; }
     .columna-tarjeta { width: 15%; }
-    .columna-pos { width: 2%; }
-    .columna-gan { width: 2%; }
-    .columna-per { width: 2%; }
-    .columna-efect { width: 4%; }
+    /* Estadísticas en conjunto no superan 10%: pos 2%, gan 2%, per 2%, efect 4% */
+    .columna-pos { width: 2%; max-width: 2%; }
+    .columna-gan { width: 2%; max-width: 2%; }
+    .columna-per { width: 2%; max-width: 2%; }
+    .columna-efect { width: 4%; max-width: 4%; }
     .columna-tarjeta .tarjeta-btn { width: 5%; min-width: 2rem; box-sizing: border-box; }
     .estadisticas-valores { font-size: clamp(0.75rem, 1.5vw, 0.875rem); font-weight: 300; color: #111827; white-space: nowrap; line-height: 1.5; }
     /* Suprimir incrementador en inputs numéricos */
@@ -461,6 +461,7 @@ $action_param = $use_standalone ? '?' : '&';
             min-width: 1.75rem;
             min-height: 1.75rem;
             font-size: 0.9rem;
+            border: none;
         }
         
         .d-flex.gap-2 {
@@ -969,28 +970,30 @@ $action_param = $use_standalone ? '?' : '&';
                                 </table>
                             </div>
 
-                            <!-- Observaciones + Zap/Chan en la misma fila, una sola línea -->
+                            <!-- Observaciones + Zap/Chan (un solo indicador por mesa, aplica a todos los jugadores) -->
                             <div class="row-observaciones-zapchan mb-4">
                                 <div class="d-flex align-items-center flex-wrap gap-2 mb-2">
                                     <label class="font-weight-bold mb-0">
                                         <i class="fas fa-comment-alt mr-1"></i>Observaciones
                                     </label>
                                     <span class="text-muted small">Observaciones sobre la partida (opcional)</span>
-                                    <div class="zapchan-linea d-flex align-items-center gap-3 flex-nowrap">
+                                    <div class="zapchan-linea d-flex align-items-center gap-2 flex-nowrap">
+                                        <span class="text-muted small">Mesa:</span>
+                                        <?php 
+                                        $mesa_tiene_chancleta = !empty(array_filter($jugadores, function($j) { return !empty($j['chancleta']) && (int)$j['chancleta'] > 0; }));
+                                        $mesa_tiene_zapato = !empty(array_filter($jugadores, function($j) { return !empty($j['zapato']) && (int)$j['zapato'] > 0; }));
+                                        ?>
+                                        <label class="mb-0 cursor-pointer d-inline">
+                                            <input type="radio" name="pena_mesa" id="pena_mesa_chancleta" value="chancleta" class="form-check-input" <?php echo $mesa_tiene_chancleta ? 'checked' : ''; ?>>
+                                            <span class="ml-1">🥿</span>
+                                        </label>
+                                        <label class="mb-0 cursor-pointer d-inline">
+                                            <input type="radio" name="pena_mesa" id="pena_mesa_zapato" value="zapato" class="form-check-input" <?php echo $mesa_tiene_zapato ? 'checked' : ''; ?>>
+                                            <span class="ml-1">👞</span>
+                                        </label>
                                         <?php foreach ($jugadores as $indiceZap => $jugadorZap): ?>
-                                        <span class="zapchan-jugador">
-                                            J<?php echo $indiceZap + 1; ?>:
-                                            <label class="mb-0 cursor-pointer d-inline">
-                                                <input type="radio" name="pena_<?php echo $indiceZap; ?>" value="chancleta" class="form-check-input" <?php echo (isset($jugadorZap['chancleta']) && $jugadorZap['chancleta'] > 0) ? 'checked' : ''; ?>>
-                                                <span class="ml-1">🥿</span>
-                                            </label>
-                                            <label class="mb-0 cursor-pointer d-inline">
-                                                <input type="radio" name="pena_<?php echo $indiceZap; ?>" value="zapato" class="form-check-input" <?php echo (isset($jugadorZap['zapato']) && $jugadorZap['zapato'] > 0) ? 'checked' : ''; ?>>
-                                                <span class="ml-1">👞</span>
-                                            </label>
-                                            <input type="hidden" name="jugadores[<?php echo $indiceZap; ?>][chancleta]" id="chancleta_<?php echo $indiceZap; ?>" value="<?php echo $jugadorZap['chancleta'] ?? 0; ?>">
-                                            <input type="hidden" name="jugadores[<?php echo $indiceZap; ?>][zapato]" id="zapato_<?php echo $indiceZap; ?>" value="<?php echo $jugadorZap['zapato'] ?? 0; ?>">
-                                        </span>
+                                        <input type="hidden" name="jugadores[<?php echo $indiceZap; ?>][chancleta]" id="chancleta_<?php echo $indiceZap; ?>" value="<?php echo $jugadorZap['chancleta'] ?? 0; ?>">
+                                        <input type="hidden" name="jugadores[<?php echo $indiceZap; ?>][zapato]" id="zapato_<?php echo $indiceZap; ?>" value="<?php echo $jugadorZap['zapato'] ?? 0; ?>">
                                         <?php endforeach; ?>
                                     </div>
                                 </div>
@@ -1350,9 +1353,11 @@ function actualizarEstadoPorMesa() {
         if (ff) ff.disabled = !habilitado;
         const tarjetas = document.querySelectorAll('[data-index="' + i + '"].tarjeta-btn');
         tarjetas.forEach(btn => { btn.disabled = !habilitado; });
-        const penas = document.querySelectorAll('input[name="pena_' + i + '"]');
-        penas.forEach(p => { p.disabled = !habilitado; });
     }
+    const penaMesaC = document.getElementById('pena_mesa_chancleta');
+    const penaMesaZ = document.getElementById('pena_mesa_zapato');
+    if (penaMesaC) penaMesaC.disabled = !habilitado;
+    if (penaMesaZ) penaMesaZ.disabled = !habilitado;
     
     actualizarEstadoBotonGuardar();
 }
@@ -1491,23 +1496,17 @@ function seleccionarTarjeta(index, tarjeta) {
     actualizarEstadoBotonGuardar();
 }
 
-// Función para procesar radio buttons de pena antes de enviar
+// Un solo indicador por mesa: sincroniza pena_mesa con los 4 hidden chancleta/zapato
 function procesarPena() {
+    const radioChancleta = document.getElementById('pena_mesa_chancleta');
+    const radioZapato = document.getElementById('pena_mesa_zapato');
+    const esChancleta = radioChancleta && radioChancleta.checked;
+    const esZapato = radioZapato && radioZapato.checked;
     for (let i = 0; i < 4; i++) {
-        const radioChancleta = document.querySelector('input[name="pena_' + i + '"][value="chancleta"]');
-        const radioZapato = document.querySelector('input[name="pena_' + i + '"][value="zapato"]');
-        
-        // Limpiar valores
-        document.getElementById('chancleta_' + i).value = '0';
-        document.getElementById('zapato_' + i).value = '0';
-        
-        // Asignar según radio seleccionado
-        if (radioChancleta && radioChancleta.checked) {
-            document.getElementById('chancleta_' + i).value = '1';
-        }
-        if (radioZapato && radioZapato.checked) {
-            document.getElementById('zapato_' + i).value = '1';
-        }
+        const ch = document.getElementById('chancleta_' + i);
+        const zp = document.getElementById('zapato_' + i);
+        if (ch) ch.value = esChancleta ? '1' : '0';
+        if (zp) zp.value = esZapato ? '1' : '0';
     }
 }
 
@@ -1554,9 +1553,11 @@ function limpiarFormularioSilencioso() {
         if (sancion) sancion.value = '0';
         const ff = document.getElementById('ff_' + i);
         if (ff) ff.checked = false;
-        const penas = document.querySelectorAll('input[name="pena_' + i + '"]');
-        penas.forEach(pena => pena.checked = false);
     }
+    const penaMesaC = document.getElementById('pena_mesa_chancleta');
+    const penaMesaZ = document.getElementById('pena_mesa_zapato');
+    if (penaMesaC) penaMesaC.checked = false;
+    if (penaMesaZ) penaMesaZ.checked = false;
     
     procesarPena();
     const observaciones = document.querySelector('textarea[name="observaciones"]');
@@ -1945,20 +1946,23 @@ document.addEventListener('DOMContentLoaded', function() {
     actualizarEstadoBotonGuardar();
     
     
-    // Procesar penas cuando cambian los radio buttons
-    for (let i = 0; i < 4; i++) {
-        const radios = document.querySelectorAll('input[name="pena_' + i + '"]');
-        radios.forEach(radio => {
-            radio.addEventListener('change', function() {
-                if (this.value === 'chancleta') {
-                    document.getElementById('chancleta_' + i).value = this.checked ? '1' : '0';
-                    document.getElementById('zapato_' + i).value = '0';
-                } else if (this.value === 'zapato') {
-                    document.getElementById('zapato_' + i).value = this.checked ? '1' : '0';
-                    document.getElementById('chancleta_' + i).value = '0';
-                }
-            });
-        });
+    // Un solo indicador Zap/Chan por mesa: al cambiar, actualiza todos los jugadores
+    const penaMesaChancleta = document.getElementById('pena_mesa_chancleta');
+    const penaMesaZapato = document.getElementById('pena_mesa_zapato');
+    if (penaMesaChancleta && penaMesaZapato) {
+        function actualizarPenaMesaTodos() {
+            const esChancleta = penaMesaChancleta.checked;
+            const esZapato = penaMesaZapato.checked;
+            for (let i = 0; i < 4; i++) {
+                const ch = document.getElementById('chancleta_' + i);
+                const zp = document.getElementById('zapato_' + i);
+                if (ch) ch.value = esChancleta ? '1' : '0';
+                if (zp) zp.value = esZapato ? '1' : '0';
+            }
+        }
+        penaMesaChancleta.addEventListener('change', actualizarPenaMesaTodos);
+        penaMesaZapato.addEventListener('change', actualizarPenaMesaTodos);
+        actualizarPenaMesaTodos();
     }
 });
 </script>

@@ -394,17 +394,19 @@ body {
     vertical-align: middle;
     border: 1px solid #e0e0e0;
   }
-  .registrar-resultados-wrap #formResultados .columna-id { width: 5%; }
+  .registrar-resultados-wrap #formResultados .columna-id { width: 5%; max-width: 5%; }
   .registrar-resultados-wrap #formResultados .columna-nombre { width: 25%; }
   .registrar-resultados-wrap #formResultados .columna-puntos { width: 10%; }
   .registrar-resultados-wrap #formResultados .columna-sancion { width: 5%; }
   .registrar-resultados-wrap #formResultados .columna-forfait { width: 8%; }
   .registrar-resultados-wrap #formResultados .columna-tarjeta { width: 15%; }
-  .registrar-resultados-wrap #formResultados .columna-pos { width: 2%; }
-  .registrar-resultados-wrap #formResultados .columna-gan { width: 2%; }
-  .registrar-resultados-wrap #formResultados .columna-per { width: 2%; }
-  .registrar-resultados-wrap #formResultados .columna-efect { width: 4%; }
-  .registrar-resultados-wrap #formResultados .columna-tarjeta .tarjeta-btn { width: 33.33%; min-width: 2rem; box-sizing: border-box; }
+  /* Estadísticas en conjunto 10%: pos 2%, gan 2%, per 2%, efect 4% */
+  .registrar-resultados-wrap #formResultados .columna-pos { width: 2%; max-width: 2%; }
+  .registrar-resultados-wrap #formResultados .columna-gan { width: 2%; max-width: 2%; }
+  .registrar-resultados-wrap #formResultados .columna-per { width: 2%; max-width: 2%; }
+  .registrar-resultados-wrap #formResultados .columna-efect { width: 4%; max-width: 4%; }
+  .registrar-resultados-wrap #formResultados .columna-tarjeta .tarjeta-btn { width: 33.33%; min-width: 2rem; box-sizing: border-box; border: none; }
+  .registrar-resultados-wrap #formResultados .tarjeta-btn { border: none; }
 
   .registrar-resultados-wrap #formResultados tbody tr {
     border: 1px solid #e0e0e0;
