@@ -902,3 +902,73 @@ html {
   .tw-panel .tw-columns { flex-direction: column !important; }
   .tw-panel .tw-column { width: 100% !important; margin-bottom: 1rem; }
 }
+
+/* ========== Panel de control: aumento 80% en tipografía (solo esta página) ========== */
+.tw-panel {
+  font-size: 1.8rem;
+}
+.tw-panel .tw-btn,
+.tw-panel a.tw-btn {
+  font-size: 1.62rem !important;
+  padding: 0.9rem 1.2rem;
+}
+.tw-panel .tw-btn i {
+  font-size: 1.62rem !important;
+  margin-right: 0.5rem;
+}
+.tw-panel nav ol {
+  font-size: 1.33rem;
+}
+.tw-panel .panel-header .titulo-torneo {
+  font-size: 2.34rem !important;
+}
+.tw-panel .panel-header .meta {
+  font-size: 1.33rem !important;
+}
+.tw-panel .panel-header .torneo-id {
+  font-size: 3.44rem !important;
+}
+.tw-panel .text-xl {
+  font-size: 1.91rem !important;
+}
+.tw-panel .text-sm {
+  font-size: 1.33rem !important;
+}
+.tw-panel .alert-success,
+.tw-panel .alert-error {
+  font-size: 1.62rem !important;
+  padding: 0.85rem 1.1rem;
+}
+.tw-panel .ronda-info {
+  font-size: 1.33rem;
+  padding: 0.5rem 0.75rem;
+}
+.tw-panel .p-5,
+.tw-panel .space-y-4 {
+  font-size: 1.33rem;
+  padding: 0.85rem 1.1rem;
+}
+.tw-panel div[class*="bg-gradient-to-r"] {
+  font-size: 1.33rem;
+  padding: 1rem 1.25rem;
+}
+.tw-panel .text-xs {
+  font-size: 1.35rem !important;
+}
+.tw-panel .cronometro-finalizar-torneo .cron-finalizar-label {
+  font-size: 1.62rem !important;
+}
+.tw-panel .cronometro-finalizar-torneo .countdown-tiempo-restante {
+  font-size: 4.5rem !important;
+}
+.tw-panel .cronometro-finalizar-torneo .cron-finalizar-hint {
+  font-size: 1.35rem !important;
+}
+.tw-panel .panel-breadcrumb ol {
+  font-size: 1.35rem;
+}
+.tw-panel #btnCronometro {
+  font-size: 1.33rem;
+}
+.tw-panel .mb-4 { margin-bottom: 1rem; }
+.tw-panel .mb-6 { margin-bottom: 1.5rem; }
