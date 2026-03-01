@@ -1,0 +1,739 @@
+/**
+ * Panel de Control - Diseño moderno UI/UX
+ * Tarjetas de gestión, Inter, botones táctiles 44px, micro-interacciones
+ * Sin estilos inline; solo clases en este archivo.
+ */
+
+/* ---- Tipografía: Inter (Google Fonts) ---- */
+.tw-panel {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  box-sizing: border-box;
+}
+
+.tw-panel * {
+  box-sizing: border-box;
+}
+
+/* Títulos semibold; datos secundarios gris suave */
+.tw-panel .panel-card-title {
+  font-weight: 600;
+  font-size: 1.125rem;
+  color: #111827;
+}
+
+.tw-panel .panel-meta,
+.tw-panel .panel-secondary {
+  color: #6b7280;
+  font-size: 0.875rem;
+  font-weight: 400;
+}
+
+/* ---- Contenedores: Tarjetas de Gestión ---- */
+.tw-panel .panel-card {
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+  border: 1px solid #e5e7eb;
+  overflow: hidden;
+  min-height: 100%;
+  transition: box-shadow 0.25s ease, transform 0.2s ease;
+}
+
+.tw-panel .panel-card:hover {
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.08);
+}
+
+.tw-panel .panel-card-header {
+  padding: 1rem 1.25rem;
+  color: #fff;
+  font-weight: 600;
+  font-size: 1.0625rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.tw-panel .panel-card-header i {
+  opacity: 0.95;
+}
+
+.tw-panel .panel-card-body {
+  padding: 1rem 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+/* Encabezados de columna por tipo */
+.tw-panel .panel-card-header--mesas {
+  background: linear-gradient(135deg, #10b981 0%, #14b8a6 100%);
+}
+
+.tw-panel .panel-card-header--operaciones {
+  background: linear-gradient(135deg, #3b82f6 0%, #6366f1 100%);
+}
+
+.tw-panel .panel-card-header--resultados {
+  background: linear-gradient(135deg, #f59e0b 0%, #f97316 100%);
+}
+
+/* ---- Rejilla responsiva ---- */
+.tw-panel .panel-grid {
+  display: grid;
+  gap: 1.25rem;
+  width: 100%;
+}
+
+@media (min-width: 1024px) {
+  .tw-panel .panel-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+@media (min-width: 768px) and (max-width: 1023px) {
+  .tw-panel .panel-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 767px) {
+  .tw-panel .panel-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Opcional: 4 columnas en pantallas muy anchas */
+@media (min-width: 1280px) {
+  .tw-panel .panel-grid.panel-grid--wide {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+
+/* ---- Botones: mínimo 44px alto, iconos, colores sólidos ---- */
+.tw-panel .tw-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  min-height: 44px;
+  padding: 0.75rem 1rem;
+  font-family: inherit;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  border-radius: 10px;
+  text-decoration: none;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease, color 0.2s ease;
+  border: none;
+  cursor: pointer;
+  gap: 0.5rem;
+}
+
+.tw-panel .tw-btn i {
+  font-size: 1rem;
+  flex-shrink: 0;
+}
+
+/* Micro-interacciones: elevación y color al hover */
+.tw-panel .tw-btn:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 14px rgba(0, 0, 0, 0.12);
+}
+
+.tw-panel .tw-btn:active:not(:disabled) {
+  transform: translateY(0);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+}
+
+.tw-panel .tw-btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  transform: none !important;
+  box-shadow: none !important;
+}
+
+/* Colores sólidos de marca por tipo */
+.tw-panel .tw-btn--cyan {
+  background-color: #06b6d4;
+  color: #fff;
+}
+
+.tw-panel .tw-btn--cyan:hover:not(:disabled) {
+  background-color: #0891b2;
+}
+
+.tw-panel .tw-btn--blue {
+  background-color: #3b82f6;
+  color: #fff;
+}
+
+.tw-panel .tw-btn--blue:hover:not(:disabled) {
+  background-color: #2563eb;
+}
+
+.tw-panel .tw-btn--amber {
+  background-color: #f59e0b;
+  color: #fff;
+}
+
+.tw-panel .tw-btn--amber:hover:not(:disabled) {
+  background-color: #d97706;
+}
+
+.tw-panel .tw-btn--emerald {
+  background-color: #10b981;
+  color: #fff;
+}
+
+.tw-panel .tw-btn--emerald:hover:not(:disabled) {
+  background-color: #059669;
+}
+
+.tw-panel .tw-btn--teal {
+  background-color: #14b8a6;
+  color: #fff;
+}
+
+.tw-panel .tw-btn--teal:hover:not(:disabled) {
+  background-color: #0d9488;
+}
+
+.tw-panel .tw-btn--red {
+  background-color: #ef4444;
+  color: #fff;
+}
+
+.tw-panel .tw-btn--red:hover:not(:disabled) {
+  background-color: #dc2626;
+}
+
+.tw-panel .tw-btn--purple {
+  background-color: #a855f7;
+  color: #fff;
+}
+
+.tw-panel .tw-btn--purple:hover:not(:disabled) {
+  background-color: #9333ea;
+}
+
+.tw-panel .tw-btn--indigo {
+  background-color: #6366f1;
+  color: #fff;
+}
+
+.tw-panel .tw-btn--indigo:hover:not(:disabled) {
+  background-color: #4f46e5;
+}
+
+.tw-panel .tw-btn--rose {
+  background-color: #f43f5e;
+  color: #fff;
+}
+
+.tw-panel .tw-btn--rose:hover:not(:disabled) {
+  background-color: #e11d48;
+}
+
+.tw-panel .tw-btn--gray {
+  background-color: #9ca3af;
+  color: #fff;
+}
+
+.tw-panel .tw-btn--dark {
+  background-color: #111827;
+  color: #fff;
+}
+
+.tw-panel .tw-btn--dark:hover:not(:disabled) {
+  background-color: #1f2937;
+}
+
+/* Grupo de botones en columna */
+.tw-panel .panel-btn-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+/* ---- Header del torneo ---- */
+.tw-panel .panel-header {
+  background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+  border-radius: 12px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+  padding: 1rem 1.25rem;
+  margin-bottom: 1rem;
+  color: #fff;
+}
+
+.tw-panel .panel-header-inner {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.tw-panel .panel-header .titulo-torneo {
+  font-size: 1.5rem;
+  font-weight: 700;
+  margin: 0 0 0.25rem 0;
+  text-align: center;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+.tw-panel .panel-header .meta {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 1rem;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  opacity: 0.95;
+  padding-top: 0.5rem;
+  border-top: 2px solid rgba(255, 255, 255, 0.5);
+}
+
+.tw-panel .panel-header .meta i {
+  margin-right: 0.25rem;
+}
+
+.tw-panel .panel-header .torneo-id {
+  font-size: 2rem;
+  font-weight: 800;
+  opacity: 0.9;
+  text-align: right;
+}
+
+.tw-panel .panel-header-grow {
+  flex: 1;
+  min-width: 0;
+}
+
+.tw-panel .tw-btn--ghost-white {
+  background: rgba(255, 255, 255, 0.25);
+  color: #fff;
+  cursor: pointer;
+}
+
+.tw-panel .tw-btn--ghost-white:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.35);
+}
+
+/* ---- Breadcrumb ---- */
+.tw-panel .panel-breadcrumb {
+  margin-bottom: 0.75rem;
+}
+
+.tw-panel .panel-breadcrumb ol {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.8125rem;
+  color: #6b7280;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.tw-panel .panel-breadcrumb a {
+  color: #4b5563;
+  text-decoration: none;
+  transition: color 0.2s ease;
+}
+
+.tw-panel .panel-breadcrumb a:hover {
+  color: #2563eb;
+}
+
+.tw-panel .panel-breadcrumb .panel-breadcrumb-current {
+  color: #374151;
+  font-weight: 500;
+}
+
+/* ---- Cronómetro principal ---- */
+.tw-panel #btnCronometro {
+  min-height: 44px;
+  padding: 0.75rem 1.5rem;
+  background: linear-gradient(135deg, #0f766e 0%, #0d9488 50%, #14b8a6 100%) !important;
+  color: #fff !important;
+  border: none;
+  border-radius: 10px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.tw-panel #btnCronometro:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2);
+}
+
+.tw-panel #btnCronometro i {
+  margin-right: 0.5rem;
+}
+
+/* Cronómetro finalizar torneo ---- */
+.tw-panel .cronometro-finalizar-torneo {
+  background: linear-gradient(135deg, #0f766e 0%, #0d9488 50%, #14b8a6 100%) !important;
+  color: #fff !important;
+  border: none;
+  border-radius: 12px;
+  padding: 1.25rem 1.5rem;
+  margin-bottom: 0.75rem;
+  text-align: center;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.1);
+  transition: box-shadow 0.2s ease;
+}
+
+.tw-panel .cronometro-finalizar-torneo:hover {
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
+}
+
+.tw-panel .cronometro-finalizar-torneo .cron-finalizar-label {
+  font-size: 0.9375rem;
+  font-weight: 600;
+  opacity: 0.95;
+  margin-bottom: 0.35rem;
+}
+
+.tw-panel .cronometro-finalizar-torneo .countdown-tiempo-restante {
+  font-size: 2.25rem;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  margin: 0.25rem 0;
+}
+
+.tw-panel .cronometro-finalizar-torneo .cron-finalizar-hint {
+  font-size: 0.75rem;
+  opacity: 0.9;
+  margin-top: 0.25rem;
+}
+
+/* ---- Overlay cronómetro ---- */
+#cronometroOverlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 99999;
+  background: linear-gradient(135deg, #1e1b4b 0%, #4c1d95 50%, #831843 100%);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  font-family: 'Inter', system-ui, sans-serif;
+}
+
+#cronometroOverlay .cron-box {
+  width: 90%;
+  max-width: 520px;
+  background: rgba(0, 0, 0, 0.35);
+  border-radius: 16px;
+  padding: 2rem;
+  box-shadow: 0 25px 50px rgba(0, 0, 0, 0.4);
+}
+
+#cronometroOverlay .cron-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+}
+
+#cronometroOverlay .cron-header-actions {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+#cronometroOverlay .btn-retornar-secondary {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+#cronometroOverlay .btn-retornar-secondary:hover {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+#cronometroOverlay .btn-retornar-success {
+  width: 100%;
+  background: #22c55e;
+}
+
+#cronometroOverlay .btn-retornar-success:hover {
+  background: #16a34a;
+}
+
+#cronometroOverlay .cron-header h1 {
+  font-size: 1.25rem;
+  font-weight: 700;
+  margin: 0;
+}
+
+#cronometroOverlay .btn-retornar {
+  background: #3b82f6;
+  color: #fff;
+  padding: 0.6rem 1.2rem;
+  border-radius: 10px;
+  border: none;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+#cronometroOverlay .btn-retornar:hover {
+  background: #2563eb;
+}
+
+#cronometroOverlay #configPanelCron {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  padding: 1.25rem;
+  margin-bottom: 1.25rem;
+  display: none;
+}
+
+#cronometroOverlay .config-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+#cronometroOverlay .config-grid label {
+  display: block;
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+  font-size: 1rem;
+}
+
+#cronometroOverlay .config-grid input {
+  width: 100%;
+  padding: 0.75rem;
+  border-radius: 10px;
+  font-size: 1.25rem;
+  font-weight: 700;
+  text-align: center;
+  background: rgba(255, 255, 255, 0.2);
+  color: #fff;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+}
+
+#cronometroOverlay .cron-display {
+  text-align: center;
+  padding: 1.5rem 0;
+}
+
+#cronometroOverlay #tiempoDisplayCron {
+  font-size: clamp(3.5rem, 12vw, 6rem);
+  font-weight: 900;
+  line-height: 1.1;
+  text-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+}
+
+#cronometroOverlay #estadoDisplayCron {
+  font-size: 1.25rem;
+  opacity: 0.9;
+  margin-top: 0.5rem;
+}
+
+#cronometroOverlay .cron-controles {
+  display: flex;
+  gap: 1rem;
+  justify-content: center;
+  margin-top: 1.5rem;
+}
+
+#cronometroOverlay .cron-controles button {
+  min-height: 44px;
+  padding: 0.75rem 1.5rem;
+  border-radius: 10px;
+  border: none;
+  font-size: 1.25rem;
+  cursor: pointer;
+  transition: transform 0.2s ease, background-color 0.2s ease;
+}
+
+#cronometroOverlay .cron-controles #btnIniciarCron {
+  background: #22c55e;
+  color: #fff;
+}
+
+#cronometroOverlay .cron-controles #btnIniciarCron:hover:not(:disabled) {
+  background: #16a34a;
+  transform: translateY(-2px);
+}
+
+#cronometroOverlay .cron-controles #btnDetenerCron {
+  background: #ef4444;
+  color: #fff;
+}
+
+#cronometroOverlay .cron-controles #btnDetenerCron:hover:not(:disabled) {
+  background: #dc2626;
+  transform: translateY(-2px);
+}
+
+#cronometroOverlay .cron-controles button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+}
+
+@keyframes cronPulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.8; transform: scale(1.02); }
+}
+
+/* ---- Alertas ---- */
+.tw-panel .alert-success {
+  background: #dcfce7;
+  border: 1px solid #22c55e;
+  color: #166534;
+  padding: 0.75rem 1rem;
+  border-radius: 12px;
+  margin-bottom: 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 0.9375rem;
+}
+
+.tw-panel .alert-error {
+  background: #fee2e2;
+  border: 1px solid #ef4444;
+  color: #991b1b;
+  padding: 0.75rem 1rem;
+  border-radius: 12px;
+  margin-bottom: 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 0.9375rem;
+}
+
+/* ---- Estado ronda ---- */
+.tw-panel .ronda-info {
+  background: #eff6ff;
+  border-left: 4px solid #3b82f6;
+  border-radius: 12px;
+  padding: 0.75rem 1rem;
+  margin-bottom: 1rem;
+}
+
+.tw-panel .ronda-info .text-gray-600 {
+  color: #4b5563;
+}
+
+/* ---- Bloque sin rondas / mensajes informativos ---- */
+.tw-panel .panel-empty-hint {
+  background: #f9fafb;
+  border-radius: 12px;
+  padding: 1rem;
+  text-align: center;
+  color: #6b7280;
+  font-size: 0.875rem;
+}
+
+.tw-panel .panel-success-badge {
+  background: #dcfce7;
+  color: #15803d;
+  border-radius: 12px;
+  padding: 0.75rem 1rem;
+  text-align: center;
+  font-weight: 600;
+}
+
+.tw-panel .panel-alert-locked {
+  background: #f3f4f6;
+  border-left: 4px solid #6b7280;
+  border-radius: 12px;
+  padding: 0.75rem 1rem;
+  color: #374151;
+}
+
+/* ---- Separador en card ---- */
+.tw-panel .panel-card hr {
+  border: 0;
+  border-top: 1px solid #e5e7eb;
+  margin: 0.5rem 0;
+}
+
+/* Badge en botón (ej. contador Verificar Mesas) */
+.tw-panel .panel-btn-badge {
+  background-color: rgba(255, 255, 255, 0.3);
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+/* Countdown cierre torneo (dentro de card Resultados) */
+.tw-panel .panel-countdown-box {
+  background-color: #fce7f3;
+  border: 2px solid #c026d3;
+  border-radius: 12px;
+  padding: 0.75rem 1rem;
+}
+
+.tw-panel .panel-countdown-label {
+  color: #86198f;
+  font-weight: 500;
+  margin-bottom: 0.25rem;
+}
+
+.tw-panel .panel-countdown-time {
+  color: #86198f;
+}
+
+.tw-panel .panel-countdown-hint {
+  color: #701a75;
+  margin-top: 0.25rem;
+}
+
+/* ---- Compatibilidad con clases Tailwind usadas en el HTML (fallback) ---- */
+.tw-panel .mb-2 { margin-bottom: 0.5rem; }
+.tw-panel .mb-3 { margin-bottom: 0.75rem; }
+.tw-panel .mb-4 { margin-bottom: 1rem; }
+.tw-panel .mb-6 { margin-bottom: 1.5rem; }
+.tw-panel .mt-2 { margin-top: 0.5rem; }
+.tw-panel .flex { display: flex; }
+.tw-panel .items-center { align-items: center; }
+.tw-panel .justify-between { justify-content: space-between; }
+.tw-panel .flex-wrap { flex-wrap: wrap; }
+.tw-panel .gap-2 { gap: 0.5rem; }
+.tw-panel .gap-4 { gap: 1rem; }
+.tw-panel .text-center { text-align: center; }
+.tw-panel .text-sm { font-size: 0.875rem; }
+.tw-panel .text-xl { font-size: 1.25rem; }
+.tw-panel .font-bold { font-weight: 700; }
+.tw-panel .font-semibold { font-weight: 600; }
+.tw-panel .text-white { color: #fff !important; }
+.tw-panel .text-gray-500 { color: #6b7280; }
+.tw-panel .text-gray-600 { color: #4b5563; }
+.tw-panel .text-gray-700 { color: #374151; }
+.tw-panel .inline-flex { display: inline-flex; }
+.tw-panel .rounded-full { border-radius: 9999px; }
+.tw-panel .px-3 { padding-left: 0.75rem; padding-right: 0.75rem; }
+.tw-panel .py-1 { padding-top: 0.25rem; padding-bottom: 0.25rem; }
+.tw-panel .px-4 { padding-left: 1rem; padding-right: 1rem; }
+.tw-panel .py-2 { padding-top: 0.5rem; padding-bottom: 0.5rem; }
+.tw-panel .py-3 { padding-top: 0.75rem; padding-bottom: 0.75rem; }
+.tw-panel .ml-1 { margin-left: 0.25rem; }
+.tw-panel .ml-2 { margin-left: 0.5rem; }
+.tw-panel .ml-4 { margin-left: 1rem; }
+.tw-panel .mr-1 { margin-right: 0.25rem; }
+.tw-panel .mr-2 { margin-right: 0.5rem; }
+.tw-panel .me-1 { margin-inline-end: 0.25rem; }
+.tw-panel .me-2 { margin-inline-end: 0.5rem; }
+.tw-panel .mx-2 { margin-left: 0.5rem; margin-right: 0.5rem; }
+.tw-panel .text-xs { font-size: 0.75rem; }
+.tw-panel .opacity-70 { opacity: 0.7; }
+.tw-panel .opacity-75 { opacity: 0.75; }
+.tw-panel .border { border-width: 1px; }
+.tw-panel .border-2 { border-width: 2px; }
+.tw-panel .rounded-lg { border-radius: 12px; }
+.tw-panel .tabular-nums { font-variant-numeric: tabular-nums; }
+.tw-panel .d-flex { display: flex; }
+.tw-panel .flex-column { flex-direction: column; }
+.tw-panel .d-inline-block { display: inline-block; }
+.tw-panel .inline { display: inline; }
+.tw-panel .w-full { width: 100%; }

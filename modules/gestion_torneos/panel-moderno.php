@@ -123,217 +123,26 @@ tailwind.config = {
 }
 </script>
 <?php endif; ?>
-
-<style>
-    /* Reset y base - 15% más compacto para caber en pantalla */
-    .tw-panel * { box-sizing: border-box; }
-    .tw-panel .tw-btn {
-        display: flex; align-items: center; justify-content: center; width: 100%;
-        padding: 0.77rem 1rem; font-size: 0.9rem; font-weight: 600;
-        border-radius: 0.5rem; text-decoration: none; transition: all 0.2s ease;
-        border: none; cursor: pointer;
-    }
-    .tw-panel .tw-btn:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.2); }
-    .tw-panel .tw-btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none !important; }
-    .tw-panel .tw-btn i { margin-right: 0.5rem; font-size: 0.9rem; }
-    
-    /* Fallback CSS - colores y fuentes sin depender de Tailwind CDN */
-    .tw-panel .mb-4 { margin-bottom: 0.85rem; }
-    .tw-panel .mb-6 { margin-bottom: 1.28rem; }
-    .tw-panel nav ol { display: flex; align-items: center; gap: 0.43rem; font-size: 0.74rem; color: #6b7280; margin: 0; padding: 0; list-style: none; }
-    .tw-panel nav a { color: #4b5563; text-decoration: none; }
-    .tw-panel nav a:hover { color: #2563eb; }
-    .tw-panel nav .text-gray-700 { color: #374151; font-weight: 500; }
-    
-    /* Header del torneo - gradiente índigo/púrpura (compacto) */
-    .tw-panel .panel-header {
-        background: linear-gradient(to right, #4f46e5, #7c3aed);
-        border-radius: 0.43rem; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);
-        padding: 0.64rem 0.85rem; margin-bottom: 0.64rem; color: white;
-    }
-    .tw-panel .panel-header-inner { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.85rem; }
-    .tw-panel .panel-header .titulo-torneo { font-size: calc(1.5rem * 1.3); font-weight: 700; margin: 0 0 0.35rem 0; text-align: center; text-transform: uppercase; }
-    .tw-panel .panel-header .meta { display: flex; flex-wrap: wrap; justify-content: center; gap: 0.85rem; font-size: calc(0.74rem + 1px); font-weight: bold; opacity: 0.95; padding-top: 0.35rem; border-top: 2px solid rgba(255,255,255,0.6); }
-    .tw-panel .panel-header .meta i { margin-right: 0.21rem; }
-    .tw-panel .panel-header .torneo-id { font-size: 1.91rem; font-weight: 800; opacity: 0.8; text-align: right; }
-    
-    /* Botón activar/retornar cronómetro - fondo y texto diferenciados */
-    .tw-panel #btnCronometro {
-        background: linear-gradient(135deg, #0f766e 0%, #0d9488 50%, #14b8a6 100%) !important;
-        color: #ffffff !important;
-        border: none;
-    }
-    .tw-panel #btnCronometro:hover {
-        background: linear-gradient(135deg, #0d5d56 0%, #0f766e 50%, #0d9488 100%) !important;
-        color: #ffffff !important;
-        transform: scale(1.02);
-        box-shadow: 0 20px 25px -5px rgba(0,0,0,0.25);
-    }
-    .tw-panel #btnCronometro i { margin-right: 0.75rem; }
-    
-    /* Cronómetro finalizar torneo: mismo diseño que botón cronómetro de ronda */
-    .tw-panel .cronometro-finalizar-torneo {
-        background: linear-gradient(135deg, #0f766e 0%, #0d9488 50%, #14b8a6 100%) !important;
-        color: #ffffff !important;
-        border: none;
-        border-radius: 0.5rem;
-        padding: 1rem 1.25rem;
-        margin-bottom: 0.5rem;
-        text-align: center;
-        box-shadow: 0 4px 14px rgba(0,0,0,0.2);
-        transition: transform 0.2s, box-shadow 0.2s;
-    }
-    .tw-panel .cronometro-finalizar-torneo:hover { box-shadow: 0 20px 25px -5px rgba(0,0,0,0.25); }
-    .tw-panel .cronometro-finalizar-torneo .cron-finalizar-label { font-size: 0.9rem; font-weight: 600; opacity: 0.95; margin-bottom: 0.35rem; }
-    .tw-panel .cronometro-finalizar-torneo .countdown-tiempo-restante { font-size: 2.5rem; font-weight: 800; letter-spacing: 0.05em; margin: 0.25rem 0; }
-    .tw-panel .cronometro-finalizar-torneo .cron-finalizar-hint { font-size: 0.75rem; opacity: 0.9; margin-top: 0.25rem; }
-    
-    /* Overlay cronómetro - pantalla completa en la misma página */
-    #cronometroOverlay {
-        position: fixed; top: 0; left: 0; right: 0; bottom: 0;
-        z-index: 99999;
-        background: linear-gradient(135deg, #1e1b4b 0%, #4c1d95 50%, #831843 100%);
-        display: none; align-items: center; justify-content: center;
-        color: white; font-family: 'Segoe UI', system-ui, sans-serif;
-    }
-    #cronometroOverlay .cron-box {
-        width: 90%; max-width: 805px;
-        background: rgba(0,0,0,0.3); border-radius: 1.5rem; padding: 2rem;
-        box-shadow: 0 25px 50px rgba(0,0,0,0.4);
-    }
-    #cronometroOverlay .cron-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; }
-    #cronometroOverlay .cron-header h1 { font-size: 1.5rem; font-weight: 700; margin: 0; }
-    #cronometroOverlay .btn-retornar { background: #3b82f6; color: white; padding: 0.6rem 1.2rem; border-radius: 0.5rem; border: none; font-weight: 600; cursor: pointer; }
-    #cronometroOverlay .btn-retornar:hover { background: #2563eb; }
-    #cronometroOverlay #configPanelCron { background: rgba(255,255,255,0.1); border-radius: 1rem; padding: 1.5rem; margin-bottom: 1.5rem; display: none; }
-    #cronometroOverlay .config-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem; }
-    #cronometroOverlay .config-grid label { display: block; font-weight: 700; margin-bottom: 0.5rem; font-size: 1.25rem; }
-    #cronometroOverlay .config-grid input { width: 100%; padding: 0.75rem; border-radius: 0.5rem; font-size: 1.5rem; font-weight: 700; text-align: center; background: rgba(255,255,255,0.2); color: white; border: 2px solid rgba(255,255,255,0.3); }
-    #cronometroOverlay .cron-display { text-align: center; padding: 2rem 0; }
-    #cronometroOverlay #tiempoDisplayCron { font-family: 'Arial Black', sans-serif; font-size: clamp(4.6rem, 17.25vw, 11.5rem); font-weight: 900; line-height: 1.1; text-shadow: 0 4px 20px rgba(0,0,0,0.5); }
-    #cronometroOverlay #estadoDisplayCron { font-size: 1.725rem; opacity: 0.9; margin-top: 0.5rem; }
-    #cronometroOverlay .cron-controles { display: flex; gap: 1rem; justify-content: center; margin-top: 2rem; }
-    #cronometroOverlay .cron-controles button { padding: 1.15rem 1.725rem; border-radius: 0.75rem; border: none; font-size: 1.725rem; cursor: pointer; transition: all 0.2s; }
-    #cronometroOverlay .cron-controles #btnIniciarCron { background: #22c55e; color: white; }
-    #cronometroOverlay .cron-controles #btnIniciarCron:hover:not(:disabled) { background: #16a34a; transform: scale(1.05); }
-    #cronometroOverlay .cron-controles #btnDetenerCron { background: #ef4444; color: white; }
-    #cronometroOverlay .cron-controles #btnDetenerCron:hover:not(:disabled) { background: #dc2626; transform: scale(1.05); }
-    #cronometroOverlay .cron-controles button:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
-    @keyframes cronPulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:0.7;transform:scale(1.05)} }
-    
-    /* Mensajes éxito/error */
-    .tw-panel .alert-success { background: #dcfce7; border: 1px solid #22c55e; color: #166534; padding: 0.64rem 0.85rem; border-radius: 0.43rem; margin-bottom: 0.85rem; display: flex; align-items: center; justify-content: space-between; font-size: 0.9rem; }
-    .tw-panel .alert-error { background: #fee2e2; border: 1px solid #ef4444; color: #991b1b; padding: 0.64rem 0.85rem; border-radius: 0.43rem; margin-bottom: 0.85rem; display: flex; align-items: center; justify-content: space-between; font-size: 0.9rem; }
-    
-    /* Estado ronda (compacto) */
-    .tw-panel .ronda-info { background: #eff6ff; border-left: 4px solid #3b82f6; border-radius: 0.43rem; padding: 0.43rem 0.64rem; margin-bottom: 0.64rem; }
-    
-    /* FALLBACK: Layout 3 columnas - funciona sin Tailwind (Chrome/Edge) */
-    .tw-panel .tw-columns { display: flex; gap: 0.85rem; flex-wrap: wrap; }
-    .tw-panel .tw-column { flex: 1; min-width: 238px; }
-    .tw-panel .w-1\/3 { width: 33.333%; min-width: 238px; }
-    
-    /* FALLBACK: Cards y contenedores */
-    .tw-panel .bg-white { background-color: #fff; }
-    .tw-panel .rounded-xl { border-radius: 0.64rem; }
-    .tw-panel .shadow-md { box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -2px rgba(0,0,0,0.1); }
-    .tw-panel .border-gray-200 { border: 1px solid #e5e7eb; }
-    .tw-panel .overflow-hidden { overflow: hidden; }
-    .tw-panel .h-full { min-height: 100%; }
-    .tw-panel .p-5 { padding: 0.64rem 0.85rem; }
-    .tw-panel .space-y-4 > * + * { margin-top: 0.43rem; }
-    .tw-panel .space-y-4 { display: flex; flex-direction: column; gap: 0.43rem; }
-    
-    /* FALLBACK: Encabezados de columnas con gradientes */
-    .tw-panel .from-emerald-500 { background: linear-gradient(to right, #10b981, #14b8a6); }
-    .tw-panel .from-blue-500 { background: linear-gradient(to right, #3b82f6, #6366f1); }
-    .tw-panel .from-amber-500 { background: linear-gradient(to right, #f59e0b, #f97316); }
-    .tw-panel [class*="from-emerald"] { background: linear-gradient(to right, #10b981, #14b8a6) !important; }
-    .tw-panel [class*="from-blue"] { background: linear-gradient(to right, #3b82f6, #6366f1) !important; }
-    .tw-panel [class*="from-amber"] { background: linear-gradient(to right, #f59e0b, #f97316) !important; }
-    .tw-panel div[class*="bg-gradient-to-r"] { padding: 0.85rem 1.06rem; color: white; }
-    .tw-panel .text-white { color: white !important; }
-    .tw-panel .text-xl { font-size: 1.06rem; }
-    .tw-panel .font-bold { font-weight: 700; }
-    .tw-panel .flex { display: flex; }
-    .tw-panel .items-center { align-items: center; }
-    .tw-panel .mr-3 { margin-right: 0.75rem; }
-    
-    /* FALLBACK: Colores de botones .tw-btn */
-    .tw-panel .tw-btn.bg-blue-500,
-    .tw-panel a.tw-btn[class*="bg-blue"] { background-color: #3b82f6 !important; color: white !important; }
-    .tw-panel .tw-btn.bg-blue-500:hover,
-    .tw-panel a.tw-btn[class*="bg-blue"]:hover { background-color: #2563eb !important; }
-    .tw-panel .tw-btn.bg-amber-500,
-    .tw-panel a.tw-btn[class*="bg-amber"] { background-color: #f59e0b !important; color: white !important; }
-    .tw-panel .tw-btn.bg-amber-500:hover,
-    .tw-panel a.tw-btn[class*="bg-amber"]:hover { background-color: #d97706 !important; }
-    .tw-panel .tw-btn.bg-emerald-500,
-    .tw-panel a.tw-btn[class*="bg-emerald"] { background-color: #10b981 !important; color: white !important; }
-    .tw-panel .tw-btn.bg-emerald-500:hover,
-    .tw-panel a.tw-btn[class*="bg-emerald"]:hover { background-color: #059669 !important; }
-    .tw-panel .tw-btn.bg-cyan-500,
-    .tw-panel a.tw-btn[class*="bg-cyan"] { background-color: #06b6d4 !important; color: white !important; }
-    .tw-panel .tw-btn.bg-cyan-500:hover,
-    .tw-panel a.tw-btn[class*="bg-cyan"]:hover { background-color: #0891b2 !important; }
-    .tw-panel .tw-btn.bg-red-500,
-    .tw-panel a.tw-btn[class*="bg-red"] { background-color: #ef4444 !important; color: white !important; }
-    .tw-panel .tw-btn.bg-red-500:hover,
-    .tw-panel a.tw-btn[class*="bg-red"]:hover { background-color: #dc2626 !important; }
-    .tw-panel .tw-btn.bg-gray-400 { background-color: #9ca3af !important; color: white !important; }
-    .tw-panel .tw-btn.bg-purple-500,
-    .tw-panel a.tw-btn[class*="bg-purple"] { background-color: #a855f7 !important; color: white !important; }
-    .tw-panel .tw-btn.bg-purple-500:hover,
-    .tw-panel a.tw-btn[class*="bg-purple"]:hover { background-color: #9333ea !important; }
-    .tw-panel .tw-btn.bg-indigo-500,
-    .tw-panel a.tw-btn[class*="bg-indigo"] { background-color: #6366f1 !important; color: white !important; }
-    .tw-panel .tw-btn.bg-indigo-500:hover,
-    .tw-panel a.tw-btn[class*="bg-indigo"]:hover { background-color: #4f46e5 !important; }
-    .tw-panel .tw-btn.bg-teal-500,
-    .tw-panel a.tw-btn[class*="bg-teal"] { background-color: #14b8a6 !important; color: white !important; }
-    .tw-panel .tw-btn.bg-teal-500:hover,
-    .tw-panel a.tw-btn[class*="bg-teal"]:hover { background-color: #0d9488 !important; }
-    .tw-panel .tw-btn.bg-rose-500,
-    .tw-panel a.tw-btn[class*="bg-rose"] { background-color: #f43f5e !important; color: white !important; }
-    .tw-panel .tw-btn.bg-rose-500:hover,
-    .tw-panel a.tw-btn[class*="bg-rose"]:hover { background-color: #e11d48 !important; }
-    
-    /* FALLBACK: Alerta torneo cerrado */
-    .tw-panel .bg-gray-100 { background-color: #f3f4f6; }
-    .tw-panel .border-l-4 { border-left-width: 4px; }
-    .tw-panel .border-gray-500 { border-color: #6b7280; }
-    .tw-panel .text-gray-700 { color: #374151; }
-    .tw-panel .font-semibold { font-weight: 600; }
-    
-    /* FALLBACK: Todas las rondas generadas */
-    .tw-panel .bg-green-100 { background-color: #dcfce7; }
-    .tw-panel .text-green-700 { color: #15803d; }
-    
-    /* FALLBACK: Sin rondas */
-    .tw-panel .bg-gray-50 { background-color: #f9fafb; }
-    .tw-panel .text-gray-500 { color: #6b7280; }
-    .tw-panel .text-sm { font-size: 0.74rem; }
-    
-    @media (max-width: 1024px) {
-        .tw-panel .tw-columns { flex-direction: column !important; }
-        .tw-panel .tw-column { width: 100% !important; margin-bottom: 1rem; }
-    }
-</style>
+<!-- Tipografía Inter y estilos modernos del panel (Cards, Grid, botones 44px) -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/css/modern-panel.css">
 
 <div class="tw-panel">
-    <!-- Breadcrumb (compacto) -->
-    <nav aria-label="breadcrumb" class="mb-2">
-        <ol class="flex items-center space-x-2 text-sm text-gray-500">
+    <!-- Breadcrumb -->
+    <nav aria-label="breadcrumb" class="panel-breadcrumb mb-2">
+        <ol class="flex items-center text-sm text-gray-500">
             <li><a href="<?php echo $base_url . ($use_standalone ? '?' : '&'); ?>action=index" class="hover:text-blue-600">Gestión de Torneos</a></li>
             <li><i class="fas fa-chevron-right text-xs mx-2"></i></li>
-            <li class="text-gray-700 font-medium"><?php echo htmlspecialchars($torneo['nombre'] ?? 'Panel'); ?></li>
+            <li class="panel-breadcrumb-current"><?php echo htmlspecialchars($torneo['nombre'] ?? 'Panel'); ?></li>
         </ol>
     </nav>
 
     <!-- Header del Torneo (compacto) -->
     <div class="panel-header bg-gradient-to-r from-indigo-600 to-purple-600 rounded-xl shadow-lg p-4 mb-3 text-white">
         <div class="panel-header-inner flex justify-between items-center flex-wrap gap-4">
-            <div class="flex-grow-1" style="flex: 1; min-width: 0;">
+            <div class="panel-header-grow flex-grow-1">
                 <h2 class="titulo-torneo">
                     <?php echo htmlspecialchars($torneo['nombre'] ?? 'Torneo'); ?>
                 </h2>
@@ -459,7 +268,7 @@ tailwind.config = {
             <input type="hidden" name="action" value="cerrar_torneo">
             <input type="hidden" name="csrf_token" value="<?php echo CSRF::token(); ?>">
             <input type="hidden" name="torneo_id" value="<?php echo $torneo['id']; ?>">
-            <button type="submit" class="d-inline-block font-bold py-2 px-5 rounded-lg text-lg border-0 shadow" style="background: rgba(255,255,255,0.25); color: #fff; cursor: pointer;">
+            <button type="submit" class="tw-btn tw-btn--ghost-white d-inline-block font-bold py-2 px-5 rounded-lg text-lg border-0 shadow">
                 <i class="fas fa-lock mr-2"></i>Finalizar torneo
             </button>
         </form>
@@ -469,7 +278,7 @@ tailwind.config = {
     <!-- Botón Activar/Retornar Cronómetro (compacto) -->
     <div class="mb-2 text-center">
         <button type="button" id="btnCronometro"
-           class="d-inline-block font-bold py-2 px-5 rounded-lg text-lg transition-all transform shadow border-0" style="cursor: pointer;">
+           class="d-inline-block font-bold py-2 px-5 rounded-lg text-lg transition-all transform shadow border-0">
             <i class="fas fa-clock mr-2"></i><span id="lblCronometro">ACTIVAR CRONÓMETRO DE RONDA</span>
         </button>
     </div>
@@ -480,11 +289,11 @@ tailwind.config = {
         <div class="cron-box">
             <div class="cron-header">
                 <h1><i class="fas fa-clock me-2"></i>Cronómetro - <?= htmlspecialchars($torneo['nombre'] ?? 'Ronda') ?></h1>
-                <div style="display:flex;gap:0.5rem;align-items:center;">
+                <div class="cron-header-actions">
                     <button type="button" class="btn-retornar" onclick="ocultarCronometroOverlay()">
                         <i class="fas fa-arrow-left me-1"></i> Retornar al Panel
                     </button>
-                    <button type="button" class="btn-retornar" style="background:rgba(255,255,255,0.2)" onclick="toggleConfigCron()"><i class="fas fa-cog me-1"></i>Configurar</button>
+                    <button type="button" class="btn-retornar btn-retornar-secondary" onclick="toggleConfigCron()"><i class="fas fa-cog me-1"></i>Configurar</button>
                 </div>
             </div>
             <div id="configPanelCron">
@@ -492,7 +301,7 @@ tailwind.config = {
                     <div><label>Minutos</label><input type="number" id="configMinutosCron" min="1" max="99" value="<?php echo $tiempo_ronda_min; ?>"></div>
                     <div><label>Segundos</label><input type="number" id="configSegundosCron" min="0" max="59" value="0"></div>
                 </div>
-                <button type="button" class="btn-retornar" style="width:100%;background:#22c55e" onclick="aplicarConfigCron()"><i class="fas fa-check me-1"></i>APLICAR</button>
+                <button type="button" class="btn-retornar btn-retornar-success" onclick="aplicarConfigCron()"><i class="fas fa-check me-1"></i>APLICAR</button>
             </div>
             <div class="cron-display">
                 <div id="tiempoDisplayCron"><?php echo str_pad((string)$tiempo_ronda_min, 2, '0', STR_PAD_LEFT); ?>:00</div>
@@ -614,77 +423,72 @@ tailwind.config = {
         </div>
     <?php endif; ?>
 
-    <!-- Panel de Control - 3 Columnas (compacto) -->
-    <div class="tw-columns flex gap-3">
-            <!-- COLUMNA IZQUIERDA: Gestión de Mesas -->
-            <div class="tw-column w-1/3">
-                <div class="bg-white rounded-xl shadow-md border border-gray-200 overflow-hidden h-full">
-                    <div class="bg-gradient-to-r from-emerald-500 to-teal-500 px-4 py-2">
-                        <h3 class="text-white font-bold text-lg flex items-center mb-0">
-                            <i class="fas fa-table mr-2"></i> Gestión de Mesas
-                        </h3>
-                    </div>
-                    <div class="p-5 space-y-4">
+    <!-- Panel de Control: Grid de Tarjetas (1 col móvil, 2 tablet, 3 desktop) -->
+    <div class="panel-grid">
+            <!-- Tarjeta: Gestión de Mesas -->
+            <article class="panel-card">
+                <div class="panel-card-header panel-card-header--mesas">
+                    <i class="fas fa-table"></i>
+                    <span class="panel-card-title">Gestión de Mesas</span>
+                </div>
+                <div class="panel-card-body">
                         <!-- Invitar Clubes (listado directorio + envío por WhatsApp/Telegram) -->
-                        <a href="index.php?page=invitacion_clubes&torneo_id=<?= (int)($torneo['id'] ?? 0) ?>" class="tw-btn bg-cyan-500 hover:bg-cyan-600 text-white w-full text-center">
-                            <i class="fas fa-paper-plane mr-2"></i> Invitar Clubes
+                        <a href="index.php?page=invitacion_clubes&torneo_id=<?= (int)($torneo['id'] ?? 0) ?>" class="tw-btn tw-btn--cyan w-full text-center">
+                            <i class="fas fa-paper-plane"></i> Invitar Clubes
                         </a>
                         <!-- Inscripciones: un solo bloque (Gestionar + Inscribir en sitio) -->
                         <?php if ($isLocked || $torneo_bloqueado_inscripciones): ?>
-                            <button type="button" disabled class="tw-btn bg-gray-400 text-white">
+                            <button type="button" disabled class="tw-btn tw-btn--gray">
                                 <i class="fas fa-lock"></i> Inscripciones (Cerrado)
                             </button>
                         <?php else: ?>
-                            <div class="d-flex flex-column gap-1">
+                            <div class="panel-btn-group">
                                 <?php if ($es_modalidad_equipos): ?>
-                                    <a href="<?php echo $base_url . ($use_standalone ? '?' : '&'); ?>action=gestionar_inscripciones_equipos&torneo_id=<?php echo $torneo['id']; ?>" class="tw-btn bg-blue-500 hover:bg-blue-600 text-white"><i class="fas fa-clipboard-list"></i> Gestionar Inscripciones</a>
-                                    <a href="<?php echo $base_url . ($use_standalone ? '?' : '&'); ?>action=inscribir_equipo_sitio&torneo_id=<?php echo $torneo['id']; ?>" class="tw-btn bg-amber-500 hover:bg-amber-600 text-white"><i class="fas fa-user-plus"></i> Inscribir en Sitio</a>
+                                    <a href="<?php echo $base_url . ($use_standalone ? '?' : '&'); ?>action=gestionar_inscripciones_equipos&torneo_id=<?php echo $torneo['id']; ?>" class="tw-btn tw-btn--blue"><i class="fas fa-clipboard-list"></i> Gestionar Inscripciones</a>
+                                    <a href="<?php echo $base_url . ($use_standalone ? '?' : '&'); ?>action=inscribir_equipo_sitio&torneo_id=<?php echo $torneo['id']; ?>" class="tw-btn tw-btn--amber"><i class="fas fa-user-plus"></i> Inscribir en Sitio</a>
                                 <?php elseif ($es_modalidad_parejas_fijas): ?>
-                                    <a href="<?php echo $base_url . ($use_standalone ? '?' : '&'); ?>action=gestionar_inscripciones_parejas_fijas&torneo_id=<?php echo $torneo['id']; ?>" class="tw-btn bg-blue-500 hover:bg-blue-600 text-white"><i class="fas fa-clipboard-list"></i> Gestionar Inscripciones</a>
-                                    <a href="<?php echo $base_url . ($use_standalone ? '?' : '&'); ?>action=inscribir_pareja_sitio&torneo_id=<?php echo $torneo['id']; ?>" class="tw-btn bg-amber-500 hover:bg-amber-600 text-white"><i class="fas fa-user-plus"></i> Inscribir Pareja en Sitio</a>
+                                    <a href="<?php echo $base_url . ($use_standalone ? '?' : '&'); ?>action=gestionar_inscripciones_parejas_fijas&torneo_id=<?php echo $torneo['id']; ?>" class="tw-btn tw-btn--blue"><i class="fas fa-clipboard-list"></i> Gestionar Inscripciones</a>
+                                    <a href="<?php echo $base_url . ($use_standalone ? '?' : '&'); ?>action=inscribir_pareja_sitio&torneo_id=<?php echo $torneo['id']; ?>" class="tw-btn tw-btn--amber"><i class="fas fa-user-plus"></i> Inscribir Pareja en Sitio</a>
                                 <?php else: ?>
-                                    <a href="index.php?page=registrants&torneo_id=<?php echo $torneo['id']; ?><?php echo $use_standalone ? '&return_to=panel_torneo' : ''; ?>" class="tw-btn bg-blue-500 hover:bg-blue-600 text-white"><i class="fas fa-clipboard-list"></i> Gestionar Inscripciones</a>
-                                    <a href="<?php echo $base_url . ($use_standalone ? '?' : '&'); ?>action=inscribir_sitio&torneo_id=<?php echo $torneo['id']; ?>" class="tw-btn bg-amber-500 hover:bg-amber-600 text-white"><i class="fas fa-user-check"></i> Inscripción en Sitio</a>
+                                    <a href="index.php?page=registrants&torneo_id=<?php echo $torneo['id']; ?><?php echo $use_standalone ? '&return_to=panel_torneo' : ''; ?>" class="tw-btn tw-btn--blue"><i class="fas fa-clipboard-list"></i> Gestionar Inscripciones</a>
+                                    <a href="<?php echo $base_url . ($use_standalone ? '?' : '&'); ?>action=inscribir_sitio&torneo_id=<?php echo $torneo['id']; ?>" class="tw-btn tw-btn--amber"><i class="fas fa-user-check"></i> Inscripción en Sitio</a>
                                 <?php endif; ?>
-                                <a href="index.php?page=tournament_admin&torneo_id=<?php echo (int)$torneo['id']; ?>&action=activar_participantes" class="tw-btn bg-green-500 hover:bg-green-600 text-white"><i class="fas fa-user-check"></i> Activar participantes</a>
+                                <a href="index.php?page=tournament_admin&torneo_id=<?php echo (int)$torneo['id']; ?>&action=activar_participantes" class="tw-btn tw-btn--emerald"><i class="fas fa-user-check"></i> Activar participantes</a>
                             </div>
                         <?php endif; ?>
                         <?php if ($isLocked || $torneo_bloqueado_inscripciones): ?>
-                        <div class="d-flex flex-column gap-1 mt-2">
-                            <a href="index.php?page=tournament_admin&torneo_id=<?php echo (int)$torneo['id']; ?>&action=activar_participantes" class="tw-btn bg-green-500 hover:bg-green-600 text-white"><i class="fas fa-user-check"></i> Activar participantes</a>
+                        <div class="panel-btn-group mt-2">
+                            <a href="index.php?page=tournament_admin&torneo_id=<?php echo (int)$torneo['id']; ?>&action=activar_participantes" class="tw-btn tw-btn--emerald"><i class="fas fa-user-check"></i> Activar participantes</a>
                         </div>
                         <?php endif; ?>
                         
                         <!-- Mostrar Asignaciones (solo si hay rondas generadas) -->
                         <?php if ($ultima_ronda > 0): ?>
                             <a href="<?php echo $base_url . ($use_standalone ? '?' : '&'); ?>action=mesas&torneo_id=<?php echo $torneo['id']; ?>&ronda=<?php echo $ultima_ronda; ?>" 
-                               class="tw-btn bg-emerald-500 hover:bg-emerald-600 text-white">
+                               class="tw-btn tw-btn--emerald">
                                 <i class="fas fa-eye"></i> Mostrar Asignaciones
                             </a>
                             
-                            <!-- Asignar mesas al operador -->
                             <a href="<?php echo $base_url . ($use_standalone ? '?' : '&'); ?>action=asignar_mesas_operador&torneo_id=<?php echo $torneo['id']; ?>&ronda=<?php echo $ultima_ronda; ?>" 
-                               class="tw-btn bg-teal-500 hover:bg-teal-600 text-white">
+                               class="tw-btn tw-btn--teal">
                                 <i class="fas fa-user-cog"></i> Asignar mesas al operador
                             </a>
                             
-                            <!-- Agregar Mesa: solo habilitado en ronda 1 -->
                             <?php if ($isLocked): ?>
-                                <button type="button" disabled class="tw-btn bg-gray-400 text-white">
+                                <button type="button" disabled class="tw-btn tw-btn--gray">
                                     <i class="fas fa-lock"></i> Agregar Mesa (Cerrado)
                                 </button>
                             <?php elseif ($ultima_ronda >= 2): ?>
-                                <button type="button" disabled class="tw-btn bg-gray-400 text-white" title="Solo disponible en la ronda 1">
+                                <button type="button" disabled class="tw-btn tw-btn--gray" title="Solo disponible en la ronda 1">
                                     <i class="fas fa-plus-circle"></i> Agregar Mesa (solo ronda 1)
                                 </button>
                             <?php else: ?>
                                 <a href="<?php echo $base_url . ($use_standalone ? '?' : '&'); ?>action=agregar_mesa&torneo_id=<?php echo $torneo['id']; ?>&ronda=<?php echo $ultima_ronda; ?>" 
-                                   class="tw-btn bg-cyan-500 hover:bg-cyan-600 text-white">
+                                   class="tw-btn tw-btn--cyan">
                                     <i class="fas fa-plus-circle"></i> Agregar Mesa
                                 </a>
                             <?php endif; ?>
                             
-                            <!-- Eliminar Ronda: siempre habilitado si el torneo no está cerrado. Con resultados en mesas exige confirmación estricta. -->
                             <form method="POST" action="<?php echo $use_standalone ? $base_url : 'index.php?page=torneo_gestion'; ?>" 
                                   onsubmit="event.preventDefault(); eliminarRondaConfirmar(event, <?php echo $ultima_ronda; ?>, <?php echo $ultima_ronda_tiene_resultados ? 'true' : 'false'; ?>);">
                                 <input type="hidden" name="action" value="eliminar_ultima_ronda">
@@ -692,58 +496,51 @@ tailwind.config = {
                                 <input type="hidden" name="torneo_id" value="<?php echo $torneo['id']; ?>">
                                 <input type="hidden" name="confirmar_eliminar_con_resultados" id="confirmar_eliminar_con_resultados" value="">
                                 <button type="submit" <?php echo $isLocked ? 'disabled' : ''; ?>
-                                        class="tw-btn <?php echo $isLocked ? 'bg-gray-400' : 'bg-red-500 hover:bg-red-600'; ?> text-white"
+                                        class="tw-btn <?php echo $isLocked ? 'tw-btn--gray' : 'tw-btn--red'; ?>"
                                         title="<?php echo $isLocked ? 'Torneo cerrado.' : ($ultima_ronda_tiene_resultados ? 'Eliminar ronda (la ronda tiene resultados en mesas; se pedirá confirmación estricta).' : 'Eliminar la última ronda.'); ?>">
                                     <i class="fas fa-trash-alt"></i> Eliminar Ronda
                                 </button>
                             </form>
                         <?php else: ?>
-                            <!-- Sin rondas generadas -->
-                            <div class="bg-gray-50 rounded-lg p-3 text-center text-gray-500 text-sm">
+                            <div class="panel-empty-hint">
                                 <i class="fas fa-info-circle mr-2"></i>
                                 Genera la primera ronda para ver estas opciones
                             </div>
                         <?php endif; ?>
-                    </div>
                 </div>
-            </div>
+            </article>
             
-            <!-- COLUMNA CENTRAL: Operaciones Principales -->
-            <div class="tw-column w-1/3">
-                <div class="bg-white rounded-xl shadow-md border border-gray-200 overflow-hidden h-full">
-                    <div class="bg-gradient-to-r from-blue-500 to-indigo-500 px-4 py-2">
-                        <h3 class="text-white font-bold text-lg flex items-center mb-0">
-                            <i class="fas fa-cogs mr-2"></i> Operaciones
-                        </h3>
-                    </div>
-                    <div class="p-5 space-y-4">
-                        <!-- Actualizar Resultados -->
+            <!-- Tarjeta: Operaciones -->
+            <article class="panel-card">
+                <div class="panel-card-header panel-card-header--operaciones">
+                    <i class="fas fa-cogs"></i>
+                    <span class="panel-card-title">Operaciones</span>
+                </div>
+                <div class="panel-card-body">
                         <form method="POST" action="<?php echo $use_standalone ? $base_url : 'index.php?page=torneo_gestion'; ?>" 
                               onsubmit="event.preventDefault(); actualizarEstadisticasConfirmar(event);">
                             <input type="hidden" name="action" value="actualizar_estadisticas">
                             <input type="hidden" name="csrf_token" value="<?php echo CSRF::token(); ?>">
                             <input type="hidden" name="torneo_id" value="<?php echo $torneo['id']; ?>">
                             <button type="submit" <?php echo $isLocked ? 'disabled' : ''; ?>
-                                    class="tw-btn <?php echo $isLocked ? 'bg-gray-400' : 'bg-cyan-500 hover:bg-cyan-600'; ?> text-white">
+                                    class="tw-btn <?php echo $isLocked ? 'tw-btn--gray' : 'tw-btn--cyan'; ?>">
                                 <i class="fas fa-sync-alt"></i> Actualizar Estadísticas
                             </button>
                         </form>
 
-                        <!-- Verificar Mesas (QR): activo cuando hay actas pendientes -->
                         <?php if ($actas_pendientes_count > 0): ?>
                             <a href="<?php echo $base_url . ($use_standalone ? '?' : '&'); ?>action=verificar_resultados&torneo_id=<?php echo (int)$torneo['id']; ?>" 
-                               class="tw-btn text-white" style="background-color: #ef4444;">
+                               class="tw-btn tw-btn--red">
                                 <i class="fas fa-check-double"></i> Verificar Mesas
-                                <span class="ml-2 px-2 py-0.5 rounded-full text-sm" style="background-color: rgba(255,255,255,0.3);"><?php echo $actas_pendientes_count; ?></span>
+                                <span class="ml-2 px-2 py-0.5 rounded-full text-sm panel-btn-badge"><?php echo $actas_pendientes_count; ?></span>
                             </a>
                         <?php else: ?>
-                            <button type="button" disabled class="tw-btn bg-gray-400 text-white">
+                            <button type="button" disabled class="tw-btn tw-btn--gray">
                                 <i class="fas fa-check-double"></i> Verificar Mesas
                                 <span class="ml-2 text-xs opacity-75">(envíos QR pendientes)</span>
                             </button>
                         <?php endif; ?>
                         
-                        <!-- Generar Ronda -->
                         <?php if ($proximaRonda <= $totalRondas): ?>
                             <form method="POST" action="<?php echo $use_standalone ? ($base_url . '?torneo_id=' . (int)($torneo['id'] ?? 0)) : 'index.php?page=torneo_gestion'; ?>" id="form-generar-ronda">
                                 <input type="hidden" name="action" value="generar_ronda">
@@ -751,122 +548,104 @@ tailwind.config = {
                                 <input type="hidden" name="torneo_id" value="<?php echo (int)($torneo['id'] ?? 0); ?>">
                                 <button type="submit" id="btn-generar-ronda"
                                         <?php echo (!$puedeGenerar || $isLocked) ? 'disabled' : ''; ?>
-                                        class="tw-btn <?php echo ($puedeGenerar && !$isLocked) ? 'bg-blue-500 hover:bg-blue-600' : 'bg-gray-400'; ?> text-white">
+                                        class="tw-btn <?php echo ($puedeGenerar && !$isLocked) ? 'tw-btn--blue' : 'tw-btn--gray'; ?>">
                                     <i class="fas fa-<?php echo ($puedeGenerar && !$isLocked) ? 'play' : 'lock'; ?>"></i>
                                     Generar Ronda <?php echo $proximaRonda; ?>
                                 </button>
                             </form>
                         <?php else: ?>
-                            <div class="bg-green-100 text-green-700 rounded-lg p-3 text-center font-semibold">
+                            <div class="panel-success-badge">
                                 <i class="fas fa-check-circle mr-2"></i> Todas las rondas generadas
                             </div>
                         <?php endif; ?>
                         
-                        <!-- Registrar Resultados (solo si hay rondas y mesas) -->
                         <?php if ($ultima_ronda > 0 && $primera_mesa): ?>
                             <?php if ($isLocked): ?>
-                                <button type="button" disabled class="tw-btn bg-gray-400 text-white">
+                                <button type="button" disabled class="tw-btn tw-btn--gray">
                                     <i class="fas fa-lock"></i> Ingresar Resultados (Cerrado)
                                 </button>
                             <?php else: ?>
                                 <a href="<?php echo $base_url . ($use_standalone ? '?' : '&'); ?>action=registrar_resultados&torneo_id=<?php echo $torneo['id']; ?>&ronda=<?php echo $ultima_ronda; ?>&mesa=<?php echo $primera_mesa; ?>" 
-                                   class="tw-btn bg-amber-500 hover:bg-amber-600 text-white">
+                                   class="tw-btn tw-btn--amber">
                                     <i class="fas fa-keyboard"></i> Ingresar Resultados
                                 </a>
                             <?php endif; ?>
                         <?php elseif ($ultima_ronda > 0): ?>
-                            <button type="button" disabled class="tw-btn bg-gray-400 text-white">
+                            <button type="button" disabled class="tw-btn tw-btn--gray">
                                 <i class="fas fa-info-circle"></i> Sin mesas registradas
                             </button>
                         <?php endif; ?>
                         
-                        <!-- Cuadrícula (solo si hay rondas) -->
                         <?php if ($ultima_ronda > 0): ?>
                             <a href="<?php echo $base_url . ($use_standalone ? '?' : '&'); ?>action=cuadricula&torneo_id=<?php echo $torneo['id']; ?>&ronda=<?php echo $ultima_ronda; ?>" 
-                               class="tw-btn bg-purple-500 hover:bg-purple-600 text-white">
+                               class="tw-btn tw-btn--purple">
                                 <i class="fas fa-th"></i> Cuadrícula
                             </a>
                             
-                            <!-- Imprimir Hojas (solo si hay rondas) -->
                             <a href="<?php echo $base_url . ($use_standalone ? '?' : '&'); ?>action=hojas_anotacion&torneo_id=<?php echo $torneo['id']; ?>&ronda=<?php echo $ultima_ronda; ?>" 
-                               class="tw-btn bg-indigo-500 hover:bg-indigo-600 text-white">
+                               class="tw-btn tw-btn--indigo">
                                 <i class="fas fa-print"></i> Imprimir Hojas
                             </a>
                         <?php endif; ?>
-
-                    </div>
                 </div>
-            </div>
+            </article>
             
-            <!-- COLUMNA DERECHA: Resultados y Cierre -->
-            <div class="tw-column w-1/3">
-                <div class="bg-white rounded-xl shadow-md border border-gray-200 overflow-hidden h-full">
-                    <div class="bg-gradient-to-r from-amber-500 to-orange-500 px-4 py-2">
-                        <h3 class="text-white font-bold text-lg flex items-center mb-0">
-                            <i class="fas fa-trophy mr-2"></i> Resultados
-                        </h3>
-                    </div>
-                    <div class="p-5 space-y-4">
-                        <!-- Resultados (Adaptado según modalidad) -->
+            <!-- Tarjeta: Resultados -->
+            <article class="panel-card">
+                <div class="panel-card-header panel-card-header--resultados">
+                    <i class="fas fa-trophy"></i>
+                    <span class="panel-card-title">Resultados</span>
+                </div>
+                <div class="panel-card-body">
                         <?php if ($es_modalidad_equipos): ?>
-                            <!-- Modalidad Equipos: Pool de reportes específicos para equipos -->
-                            <!-- Resultados por Equipos - Resumido (orden de clasificación) -->
                             <a href="<?php echo $base_url . ($use_standalone ? '?' : '&'); ?>action=resultados_equipos_resumido&torneo_id=<?php echo $torneo['id']; ?>" 
-                               class="tw-btn bg-purple-500 hover:bg-purple-600 text-white">
+                               class="tw-btn tw-btn--purple">
                                 <i class="fas fa-list-ol"></i> Resultados Equipos (Resumido)
                             </a>
                             
-                            <!-- Resultados por Equipos - Detallado (con rompe control por equipo, orden de clasificación) -->
                             <a href="<?php echo $base_url . ($use_standalone ? '?' : '&'); ?>action=resultados_equipos_detallado&torneo_id=<?php echo $torneo['id']; ?>" 
-                               class="tw-btn bg-indigo-500 hover:bg-indigo-600 text-white">
+                               class="tw-btn tw-btn--indigo">
                                 <i class="fas fa-list-ul"></i> Resultados Equipos (Detallado)
                             </a>
                             
-                            <!-- Resultados / Posiciones (clasificación individual general, mismo reporte que individuales) -->
                             <a href="<?php echo $base_url . ($use_standalone ? '?' : '&'); ?>action=posiciones&torneo_id=<?php echo $torneo['id']; ?>" 
-                               class="tw-btn bg-rose-500 hover:bg-rose-600 text-white">
+                               class="tw-btn tw-btn--rose">
                                 <i class="fas fa-users-cog"></i> Resultados / Posiciones
                             </a>
                         <?php else: ?>
-                            <!-- Modalidad Individual/Parejas: Pool de reportes para individual/parejas -->
-                            <!-- Mostrar Resultados / Posiciones -->
                             <a href="<?php echo $base_url . ($use_standalone ? '?' : '&'); ?>action=posiciones&torneo_id=<?php echo $torneo['id']; ?>" 
-                               class="tw-btn bg-purple-500 hover:bg-purple-600 text-white">
+                               class="tw-btn tw-btn--purple">
                                 <i class="fas fa-list-ol"></i> Resultados
                             </a>
                             
-                            <!-- Resultados por Club -->
                             <a href="<?php echo $base_url . ($use_standalone ? '?' : '&'); ?>action=resultados_por_club&torneo_id=<?php echo $torneo['id']; ?>" 
-                               class="tw-btn bg-emerald-500 hover:bg-emerald-600 text-white">
+                               class="tw-btn tw-btn--emerald">
                                 <i class="fas fa-building"></i> Resultados Clubes
                             </a>
                         <?php endif; ?>
                         
-                        <!-- Podios (Común para ambos tipos - detecta modalidad automáticamente) -->
                         <?php 
                         $podios_action = $es_modalidad_equipos ? 'podios_equipos' : 'podios';
                         $sep = $use_standalone ? '?' : '&';
                         $url_podios = $base_url . $sep . 'action=' . $podios_action . '&torneo_id=' . (int)$torneo['id'];
                         ?>
                         <a href="<?php echo htmlspecialchars($url_podios); ?>" 
-                           class="tw-btn bg-amber-500 hover:bg-amber-600 text-white"
+                           class="tw-btn tw-btn--amber"
                            title="Ver podios del torneo">
                             <i class="fas fa-medal"></i> Podios
                         </a>
                         
-                        <!-- Separador -->
-                        <hr class="border-gray-200 my-2">
+                        <hr>
                         
-                        <!-- Finalizar Torneo (solo cuando rondas completadas + 20 min desde último resultado) -->
                         <?php if ($mostrar_aviso_20min && $countdown_fin_timestamp): ?>
-                        <div id="countdown-cierre-torneo" class="mb-3 p-3 rounded-lg border-2" style="background-color: #fce7f3; border-color: #c026d3;">
-                            <p class="text-sm font-medium mb-1" style="color: #86198f;">
+                        <div id="countdown-cierre-torneo" class="panel-countdown-box mb-3">
+                            <p class="text-sm font-semibold mb-1 panel-countdown-label">
                                 <i class="fas fa-clock"></i> El torneo se cerrará oficialmente en:
                             </p>
-                            <p class="countdown-tiempo-restante text-2xl font-bold tabular-nums" style="color: #86198f;" data-fin="<?php echo (int)$countdown_fin_timestamp; ?>">
+                            <p class="countdown-tiempo-restante text-2xl font-bold tabular-nums panel-countdown-time" data-fin="<?php echo (int)$countdown_fin_timestamp; ?>">
                                 --:--
                             </p>
-                            <p class="text-xs mt-1" style="color: #701a75;">Tras este tiempo se habilitará el botón <strong>Finalizar torneo</strong>.</p>
+                            <p class="text-xs mt-1 panel-countdown-hint">Tras este tiempo se habilitará el botón <strong>Finalizar torneo</strong>.</p>
                         </div>
                         <?php endif; ?>
                         <form method="POST" action="<?php echo $use_standalone ? $base_url : 'index.php?page=torneo_gestion'; ?>" 
@@ -875,15 +654,13 @@ tailwind.config = {
                             <input type="hidden" name="csrf_token" value="<?php echo CSRF::token(); ?>">
                             <input type="hidden" name="torneo_id" value="<?php echo $torneo['id']; ?>">
                             <button type="submit" <?php echo $puedeCerrar ? '' : 'disabled'; ?>
-                                    class="tw-btn <?php echo $isLocked ? 'bg-gray-500' : 'bg-gray-800 hover:bg-gray-900'; ?> text-white">
+                                    class="tw-btn <?php echo $isLocked ? 'tw-btn--gray' : 'tw-btn--dark'; ?>">
                                 <i class="fas fa-lock"></i>
                                 <?php echo $isLocked ? 'Torneo Finalizado' : 'Finalizar torneo'; ?>
                             </button>
                         </form>
-                    </div>
                 </div>
-            </div>
-            
+            </article>
         </div>
 
 </div>
