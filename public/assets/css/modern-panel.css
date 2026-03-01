@@ -1039,3 +1039,56 @@ html {
 .tw-panel a.tw-btn[class*="bg-"] {
   color: #000 !important;
 }
+
+/* ========== Panel: incrementos de fuente (nombre/logo +100%, breadcrumb +150%, meta +100%, ronda +150%, tarjetas +100%, cronómetro +100%) ========== */
+/* Nombre del torneo y logo / ID: +100% */
+.tw-panel .panel-header .titulo-torneo {
+  font-size: 2.52rem !important;
+}
+.tw-panel .panel-header .torneo-id {
+  font-size: 3.22rem !important;
+}
+.tw-panel .panel-header .text-sm.opacity-70 {
+  font-size: 1.23rem !important;
+}
+/* Breadcrumb: +150% */
+.tw-panel nav[aria-label="breadcrumb"] ol,
+.tw-panel nav[aria-label="breadcrumb"] a,
+.tw-panel nav[aria-label="breadcrumb"] .text-gray-700 {
+  font-size: 1.54rem !important;
+}
+/* Línea de fecha, modalidad y rondas (meta): +100% */
+.tw-panel .panel-header .meta {
+  font-size: 1.23rem !important;
+}
+/* Información ronda actual, mesas, inscritos, pendientes: +150% */
+.tw-panel .ronda-info {
+  font-size: 1.54rem !important;
+  padding: 0.5rem 0.65rem;
+}
+.tw-panel .ronda-info .text-gray-600,
+.tw-panel .ronda-info .text-blue-600,
+.tw-panel .ronda-info .text-green-600,
+.tw-panel .ronda-info .text-indigo-600,
+.tw-panel .ronda-info .text-amber-600,
+.tw-panel .ronda-info .font-semibold {
+  font-size: 1.54rem !important;
+}
+.tw-panel .ronda-info .text-xl {
+  font-size: 2.25rem !important;
+}
+/* Títulos de las tarjetas (Gestión de Mesas, Operaciones, Resultados): +100% */
+.tw-panel div[class*="bg-gradient-to-r"] h3 {
+  font-size: 1.72rem !important;
+}
+.tw-panel div[class*="bg-gradient-to-r"] {
+  font-size: 1.72rem !important;
+}
+/* Botón Activar cronómetro: +100% */
+.tw-panel #btnCronometro {
+  font-size: 1.23rem !important;
+  padding: 0.6rem 0.9rem;
+}
+.tw-panel #btnCronometro #lblCronometro {
+  font-size: 1.23rem !important;
+}
