@@ -1,19 +1,28 @@
 /**
  * Registro de Resultados - Mobile-First con Media Queries
- * Base: móvil (formularios flex column, tablas en bloque, grid 1fr).
- * Tablet: min-width 600px (grid 2 columnas, inputs en parejas).
- * Desktop: min-width 1024px (tabla multicolumna).
- * Tipografía: 14px → 15px → 16px. Sin overflow-x.
+ * Tipografía densa: base 12px, títulos 14px → tablet/desktop 13px / 16px.
+ * Nitidez: antialiased, letter-spacing 0.01em, line-height 1.5.
+ * Inputs/celdas: padding 6px 10px. Labels: 11px, uppercase, color suave.
  */
 
-/* ========== BASE: MÓVIL ========== */
+/* Nitidez y legibilidad global (cuerpo) */
+body {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  letter-spacing: 0.01em;
+  line-height: 1.5;
+}
+
+/* ========== BASE: MÓVIL (12px / títulos 14px) ========== */
 .registrar-resultados-wrap {
   width: 100% !important;
   max-width: 100%;
   margin-left: auto;
   margin-right: auto;
   padding: 1rem;
-  font-size: 14px;
+  font-size: 12px;
+  letter-spacing: 0.01em;
+  line-height: 1.5;
 }
 
 .registrar-resultados-wrap .container-fluid {
@@ -38,13 +47,40 @@
 
 .registrar-resultados-wrap h4,
 .registrar-resultados-wrap .card-header h4 {
-  font-size: clamp(1.1rem, 2vw, 1.5rem);
+  font-size: 14px;
   word-wrap: break-word;
   overflow-wrap: break-word;
 }
 
+/* Labels: 11px, mayúsculas sutiles, color suave */
+.registrar-resultados-wrap label {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  color: #6b7280;
+  font-weight: 500;
+}
+
+/* Inputs y celdas compactos: 6px 10px */
+.registrar-resultados-wrap .form-control,
+.registrar-resultados-wrap input[type="number"],
+.registrar-resultados-wrap input[type="text"],
+.registrar-resultados-wrap #formResultados th,
+.registrar-resultados-wrap #formResultados td {
+  padding: 6px 10px !important;
+}
+
+/* Columnas al ancho de pantalla sin truncar */
 .registrar-resultados-wrap .table,
 .registrar-resultados-wrap .form-control,
+.registrar-resultados-wrap #formResultados th,
+.registrar-resultados-wrap #formResultados td {
+  max-width: 100%;
+  overflow-wrap: break-word;
+  word-wrap: break-word;
+  text-overflow: clip;
+}
+
 .registrar-resultados-wrap .card-body,
 .registrar-resultados-wrap .list-group-item {
   text-overflow: clip;
@@ -136,11 +172,13 @@
 }
 
 .registrar-resultados-wrap #formResultados tbody td::before {
-  font-weight: 600;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  color: #6b7280;
+  font-weight: 500;
   display: inline-block;
   min-width: 8rem;
-  color: #374151;
-  font-size: clamp(0.75rem, 1.5vw, 0.8125rem);
 }
 
 .registrar-resultados-wrap #formResultados tbody td.columna-id::before { content: "ID"; }
@@ -246,15 +284,23 @@
   gap: 0.5rem;
 }
 
-/* ========== TABLET (600px): grid 2 columnas, inputs en parejas ========== */
+/* ========== TABLET (600px): grid 2 columnas ========== */
 @media (min-width: 600px) {
-  .registrar-resultados-wrap {
-    font-size: 15px;
-  }
-
   .registrar-resultados-wrap #formResultados .table-responsive {
     grid-template-columns: 1fr 1fr;
     gap: 10px;
+  }
+}
+
+/* ========== TABLET/DESKTOP (768px): tipografía 13px / títulos 16px ========== */
+@media (min-width: 768px) {
+  .registrar-resultados-wrap {
+    font-size: 13px;
+  }
+
+  .registrar-resultados-wrap h4,
+  .registrar-resultados-wrap .card-header h4 {
+    font-size: 16px;
   }
 }
 
@@ -298,7 +344,7 @@
     width: auto;
     max-width: none;
     text-align: center;
-    padding: 0.25rem 0.4rem;
+    padding: 6px 10px;
     vertical-align: middle;
     border: 0.0625rem solid #666;
   }
