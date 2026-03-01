@@ -700,6 +700,9 @@ $tiene_telegram = !empty($telegram_chat_id_actual);
                         <a class="nav-link <?= $section === 'perfil' ? 'active' : '' ?>" href="?section=perfil">
                             <i class="fas fa-user-cog me-2"></i>Mi Perfil
                         </a>
+                        <a class="nav-link" href="<?= htmlspecialchars(rtrim(class_exists('AppHelpers') ? AppHelpers::getPublicUrl() : $base_url, '/') . '/profile.php') ?>">
+                            <i class="fas fa-user-edit me-2"></i>Perfil completo (panel)
+                        </a>
                         <a class="nav-link <?= $section === 'credencial' ? 'active' : '' ?>" href="?section=credencial">
                             <i class="fas fa-id-badge me-2"></i>Mi Credencial
                         </a>

@@ -13,7 +13,8 @@ require_once __DIR__ . '/../lib/app_helpers.php';
 $user = Auth::user();
 if (!$user) {
     $login_url = class_exists('AppHelpers') ? AppHelpers::url('login.php') : 'login.php';
-    header('Location: ' . $login_url, true, 302);
+    $sep = (strpos($login_url, '?') !== false) ? '&' : '?';
+    header('Location: ' . $login_url . $sep . 'return_url=' . rawurlencode('profile.php'), true, 302);
     exit;
 }
 
