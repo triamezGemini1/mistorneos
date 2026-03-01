@@ -1,29 +1,31 @@
 /**
- * Panel de Control - Mobile-First con Media Queries
- * Tipografía densa: base 12px, títulos 14px → tablet/desktop 13px / 16px.
- * Nitidez: antialiased, letter-spacing 0.01em, line-height 1.5.
+ * Panel de Control - Clean Design
+ * Inter, peso base 300 (Light). Títulos/labels máx. 500. Sin bold/700.
+ * Móvil 10px, Tablet/Desktop 11px. Bordes finos 1px #e0e0e0, sombras sutiles.
  */
 
-/* Nitidez y legibilidad global (cuerpo) */
 body {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-weight: 300;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  letter-spacing: 0.01em;
+  letter-spacing: 0.02em;
   line-height: 1.5;
 }
 
-/* ========== BASE: MÓVIL (12px / títulos 14px) ========== */
+/* ========== BASE: MÓVIL (10px) ========== */
 html {
-  font-size: 12px;
+  font-size: 10px;
 }
 
 .tw-panel {
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-weight: 300;
   box-sizing: border-box;
   width: 100% !important;
   max-width: 100%;
-  padding: 1rem;
-  letter-spacing: 0.01em;
+  padding: 0.5rem;
+  letter-spacing: 0.02em;
   line-height: 1.5;
 }
 
@@ -35,8 +37,8 @@ html {
 .tw-panel h2,
 .tw-panel h3,
 .tw-panel h4 {
-  font-size: 14px;
-  font-weight: 600;
+  font-size: 1.2em;
+  font-weight: 500;
   word-wrap: break-word;
   overflow-wrap: break-word;
 }
@@ -48,44 +50,44 @@ html {
 .tw-panel .panel-meta,
 .tw-panel .panel-secondary {
   color: #6b7280;
-  font-size: 0.75rem;
-  font-weight: 400;
+  font-size: 1em;
+  font-weight: 300;
 }
 
-/* Labels: 11px, mayúsculas sutiles, color suave */
 .tw-panel label {
-  font-size: 11px;
+  font-size: 1em;
   text-transform: uppercase;
   letter-spacing: 0.02em;
   color: #6b7280;
   font-weight: 500;
 }
 
-/* Contenedores: tarjetas sin anchos fijos */
+/* Contenedores: bordes finos, sombra casi imperceptible */
 .tw-panel .panel-card {
   background: #fff;
-  border-radius: 0.75rem;
-  box-shadow: 0 0.25rem 0.375rem rgba(0, 0, 0, 0.05);
-  border: 0.0625rem solid #e5e7eb;
+  border-radius: 0.4rem;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+  border: 1px solid #e0e0e0;
   overflow: visible;
   min-height: 100%;
   max-width: 100%;
-  transition: box-shadow 0.25s ease, transform 0.2s ease;
+  transition: box-shadow 0.2s ease;
 }
 
 .tw-panel .panel-card:hover {
-  box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.08);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
 }
 
 .tw-panel .panel-card-header {
-  padding: 6px 10px;
+  padding: 4px 8px;
   color: #fff;
-  font-weight: 600;
-  font-size: 14px;
+  font-weight: 500;
+  font-size: 1.2em;
   display: flex;
   align-items: center;
-  gap: 0.5rem;
-  border-radius: 0.75rem 0.75rem 0 0;
+  gap: 0.4rem;
+  border-radius: 0.4rem 0.4rem 0 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.2);
 }
 
 .tw-panel .panel-card-header i {
@@ -93,10 +95,10 @@ html {
 }
 
 .tw-panel .panel-card-body {
-  padding: 6px 10px;
+  padding: 4px 8px;
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
+  gap: 0.35rem;
 }
 
 .tw-panel .panel-card-header--mesas {
@@ -127,24 +129,23 @@ html {
   max-width: 100%;
 }
 
-/* Botones: min-height táctil, rem */
 .tw-panel .tw-btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   width: 100%;
-  min-height: 2.75rem;
-  padding: 6px 10px;
+  min-height: 2rem;
+  padding: 4px 8px;
   font-family: inherit;
   font-size: inherit;
-  font-weight: 600;
-  border-radius: 0.625rem;
+  font-weight: 500;
+  border-radius: 0.35rem;
   text-decoration: none;
-  transition: transform 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease, color 0.2s ease;
-  border: none;
+  transition: box-shadow 0.2s ease, background-color 0.2s ease, color 0.2s ease;
+  border: 1px solid rgba(0, 0, 0, 0.08);
   cursor: pointer;
-  gap: 0.5rem;
-  letter-spacing: 0.01em;
+  gap: 0.4rem;
+  letter-spacing: 0.02em;
   line-height: 1.5;
 }
 
@@ -154,13 +155,11 @@ html {
 }
 
 .tw-panel .tw-btn:hover:not(:disabled) {
-  transform: translateY(-0.125rem);
-  box-shadow: 0 0.375rem 0.875rem rgba(0, 0, 0, 0.12);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
 }
 
 .tw-panel .tw-btn:active:not(:disabled) {
-  transform: translateY(0);
-  box-shadow: 0 0.125rem 0.375rem rgba(0, 0, 0, 0.08);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
 }
 
 .tw-panel .tw-btn:disabled {
@@ -195,15 +194,16 @@ html {
 .tw-panel .panel-btn-group {
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
+  gap: 0.35rem;
 }
 
 .tw-panel .panel-header {
   background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
-  border-radius: 0.75rem;
-  box-shadow: 0 0.25rem 0.375rem rgba(0, 0, 0, 0.05);
-  padding: 1rem 1.25rem;
-  margin-bottom: 1rem;
+  border-radius: 0.4rem;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
+  border: 1px solid rgba(0, 0, 0, 0.06);
+  padding: 0.5rem 0.75rem;
+  margin-bottom: 0.5rem;
   color: #fff;
 }
 
@@ -212,13 +212,13 @@ html {
   justify-content: space-between;
   align-items: center;
   flex-wrap: wrap;
-  gap: 1rem;
+  gap: 0.5rem;
 }
 
 .tw-panel .panel-header .titulo-torneo {
-  font-size: 14px;
-  font-weight: 700;
-  margin: 0 0 0.25rem 0;
+  font-size: 1.2em;
+  font-weight: 500;
+  margin: 0 0 0.2rem 0;
   text-align: center;
   text-transform: uppercase;
   letter-spacing: 0.02em;
@@ -229,12 +229,12 @@ html {
   display: flex;
   flex-wrap: wrap;
   justify-content: center;
-  gap: 1rem;
-  font-size: 0.75rem;
-  font-weight: 600;
+  gap: 0.5rem;
+  font-size: 1em;
+  font-weight: 400;
   opacity: 0.95;
-  padding-top: 0.5rem;
-  border-top: 0.125rem solid rgba(255, 255, 255, 0.5);
+  padding-top: 0.35rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.3);
 }
 
 .tw-panel .panel-header .meta i {
@@ -242,8 +242,8 @@ html {
 }
 
 .tw-panel .panel-header .torneo-id {
-  font-size: clamp(1.5rem, 4vw, 2rem);
-  font-weight: 800;
+  font-size: 1.4em;
+  font-weight: 500;
   opacity: 0.9;
   text-align: right;
 }
@@ -251,6 +251,10 @@ html {
 .tw-panel .panel-header-grow {
   flex: 1;
   min-width: 0;
+}
+
+.tw-panel .panel-breadcrumb .panel-breadcrumb-current {
+  font-weight: 500;
 }
 
 .tw-panel .tw-btn--ghost-white {
@@ -294,20 +298,19 @@ html {
 }
 
 .tw-panel #btnCronometro {
-  min-height: 2.75rem;
-  padding: 0.75rem 1.5rem;
+  min-height: 2rem;
+  padding: 4px 8px;
   background: linear-gradient(135deg, #0f766e 0%, #0d9488 50%, #14b8a6 100%) !important;
   color: #fff !important;
-  border: none;
-  border-radius: 0.625rem;
-  font-weight: 600;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 0.35rem;
+  font-weight: 500;
   cursor: pointer;
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  transition: box-shadow 0.2s ease;
 }
 
 .tw-panel #btnCronometro:hover {
-  transform: translateY(-0.125rem);
-  box-shadow: 0 0.5rem 1.25rem rgba(0, 0, 0, 0.2);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
 }
 
 .tw-panel #btnCronometro i {
@@ -317,29 +320,29 @@ html {
 .tw-panel .cronometro-finalizar-torneo {
   background: linear-gradient(135deg, #0f766e 0%, #0d9488 50%, #14b8a6 100%) !important;
   color: #fff !important;
-  border: none;
-  border-radius: 0.75rem;
-  padding: 1.25rem 1.5rem;
-  margin-bottom: 0.75rem;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 0.4rem;
+  padding: 0.5rem 0.75rem;
+  margin-bottom: 0.5rem;
   text-align: center;
-  box-shadow: 0 0.25rem 0.875rem rgba(0, 0, 0, 0.1);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
   transition: box-shadow 0.2s ease;
 }
 
 .tw-panel .cronometro-finalizar-torneo:hover {
-  box-shadow: 0 0.5rem 1.25rem rgba(0, 0, 0, 0.15);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
 }
 
 .tw-panel .cronometro-finalizar-torneo .cron-finalizar-label {
   font-size: clamp(0.875rem, 1.5vw, 0.9375rem);
-  font-weight: 600;
+  font-weight: 500;
   opacity: 0.95;
   margin-bottom: 0.35rem;
 }
 
 .tw-panel .cronometro-finalizar-torneo .countdown-tiempo-restante {
   font-size: clamp(1.75rem, 5vw, 2.25rem);
-  font-weight: 800;
+  font-weight: 500;
   letter-spacing: 0.05em;
   margin: 0.25rem 0;
 }
@@ -366,9 +369,10 @@ html {
   width: 90%;
   max-width: 32.5rem;
   background: rgba(0, 0, 0, 0.35);
-  border-radius: 1rem;
-  padding: 2rem;
-  box-shadow: 0 1.5625rem 3.125rem rgba(0, 0, 0, 0.4);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 0.4rem;
+  padding: 1rem;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
 }
 
 #cronometroOverlay .cron-header {
@@ -403,7 +407,7 @@ html {
 
 #cronometroOverlay .cron-header h1 {
   font-size: clamp(1.1rem, 2vw, 1.25rem);
-  font-weight: 700;
+  font-weight: 500;
   margin: 0;
 }
 
@@ -413,7 +417,7 @@ html {
   padding: 0.6rem 1.2rem;
   border-radius: 0.625rem;
   border: none;
-  font-weight: 600;
+  font-weight: 500;
   cursor: pointer;
   transition: background-color 0.2s ease;
 }
@@ -439,7 +443,7 @@ html {
 
 #cronometroOverlay .config-grid label {
   display: block;
-  font-weight: 600;
+  font-weight: 500;
   margin-bottom: 0.5rem;
   font-size: 1rem;
 }
@@ -449,7 +453,7 @@ html {
   padding: 0.75rem;
   border-radius: 0.625rem;
   font-size: clamp(1rem, 2vw, 1.25rem);
-  font-weight: 700;
+  font-weight: 500;
   text-align: center;
   background: rgba(255, 255, 255, 0.2);
   color: #fff;
@@ -524,15 +528,14 @@ html {
 
 .tw-panel .alert-success,
 .tw-panel .alert-error {
-  padding: 0.75rem 1rem;
-  border-radius: 0.75rem;
-  margin-bottom: 1rem;
+  padding: 4px 8px;
+  border-radius: 0.35rem;
+  margin-bottom: 0.5rem;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  font-size: clamp(0.875rem, 1.5vw, 0.9375rem);
-  border-width: 0.0625rem;
-  border-style: solid;
+  font-size: 1em;
+  border: 1px solid;
 }
 
 .tw-panel .alert-success {
@@ -549,10 +552,10 @@ html {
 
 .tw-panel .ronda-info {
   background: #eff6ff;
-  border-left: 0.25rem solid #3b82f6;
-  border-radius: 0.75rem;
-  padding: 0.75rem 1rem;
-  margin-bottom: 1rem;
+  border-left: 1px solid #3b82f6;
+  border-radius: 0.35rem;
+  padding: 4px 8px;
+  margin-bottom: 0.5rem;
 }
 
 .tw-panel .ronda-info .text-gray-600 {
@@ -561,47 +564,49 @@ html {
 
 .tw-panel .panel-empty-hint {
   background: #f9fafb;
-  border-radius: 0.75rem;
-  padding: 1rem;
+  border: 1px solid #e0e0e0;
+  border-radius: 0.35rem;
+  padding: 4px 8px;
   text-align: center;
   color: #6b7280;
-  font-size: clamp(0.8125rem, 1.5vw, 0.875rem);
+  font-size: 1em;
 }
 
 .tw-panel .panel-success-badge {
   background: #dcfce7;
   color: #15803d;
-  border-radius: 0.75rem;
-  padding: 0.75rem 1rem;
+  border: 1px solid rgba(21, 128, 61, 0.3);
+  border-radius: 0.35rem;
+  padding: 4px 8px;
   text-align: center;
-  font-weight: 600;
+  font-weight: 500;
 }
 
 .tw-panel .panel-alert-locked {
   background: #f3f4f6;
-  border-left: 0.25rem solid #6b7280;
-  border-radius: 0.75rem;
-  padding: 0.75rem 1rem;
+  border-left: 1px solid #6b7280;
+  border-radius: 0.35rem;
+  padding: 4px 8px;
   color: #374151;
 }
 
 .tw-panel .panel-card hr {
   border: 0;
-  border-top: 0.0625rem solid #e5e7eb;
-  margin: 0.5rem 0;
+  border-top: 1px solid #e0e0e0;
+  margin: 0.35rem 0;
 }
 
 .tw-panel .panel-btn-badge {
   background-color: rgba(255, 255, 255, 0.3);
   font-size: clamp(0.8125rem, 1.5vw, 0.875rem);
-  font-weight: 600;
+  font-weight: 500;
 }
 
 .tw-panel .panel-countdown-box {
   background-color: #fce7f3;
-  border: 0.125rem solid #c026d3;
-  border-radius: 0.75rem;
-  padding: 0.75rem 1rem;
+  border: 1px solid #e0e0e0;
+  border-radius: 0.35rem;
+  padding: 4px 8px;
 }
 
 .tw-panel .panel-countdown-label {
@@ -635,8 +640,8 @@ html {
 .tw-panel .text-center { text-align: center; }
 .tw-panel .text-sm { font-size: clamp(0.8125rem, 1.5vw, 0.875rem); }
 .tw-panel .text-xl { font-size: clamp(1.125rem, 2vw, 1.25rem); }
-.tw-panel .font-bold { font-weight: 700; }
-.tw-panel .font-semibold { font-weight: 600; }
+.tw-panel .font-bold { font-weight: 500; }
+.tw-panel .font-semibold { font-weight: 500; }
 .tw-panel .text-white { color: #fff !important; }
 .tw-panel .text-gray-500 { color: #6b7280; }
 .tw-panel .text-gray-600 { color: #4b5563; }
@@ -685,19 +690,23 @@ html {
   }
 }
 
-/* ========== TABLET/DESKTOP (768px): tipografía 13px / títulos 16px ========== */
+/* ========== TABLET/DESKTOP (768px): 11px base, cuadrícula clara sin recortes ========== */
 @media (min-width: 768px) {
   html {
-    font-size: 13px;
+    font-size: 11px;
   }
 
-  .tw-panel .panel-card-title,
-  .tw-panel h2,
-  .tw-panel h3,
-  .tw-panel h4,
-  .tw-panel .panel-card-header,
-  .tw-panel .panel-header .titulo-torneo {
-    font-size: 16px;
+  .tw-panel {
+    padding: 0.6rem;
+  }
+
+  .tw-panel .panel-grid {
+    gap: 0.75rem;
+  }
+
+  .tw-panel .panel-grid-mesas {
+    gap: 0.5rem;
+    grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
   }
 }
 
