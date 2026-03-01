@@ -78,7 +78,7 @@ $letras = [1 => 'A', 2 => 'C', 3 => 'B', 4 => 'D'];
             background: white;
             margin-bottom: 0.35rem;
             font-size: clamp(0.875rem, 2.5vw, 1rem);
-            font-weight: bold;
+            font-weight: 300;
             color: #1a365d;
             flex-wrap: wrap;
             gap: 0.5rem;
@@ -124,9 +124,10 @@ $letras = [1 => 'A', 2 => 'C', 3 => 'B', 4 => 'D'];
             border-collapse: collapse;
             width: 100%;
             margin: 0;
-            font-size: clamp(0.75rem, 2vw, 1.2rem);
+            font-size: 0.75rem;
             table-layout: fixed;
-            font-family: Verdana, sans-serif;
+            font-family: Calibri, 'Lato', sans-serif !important;
+            font-weight: 300 !important;
         }
         
         .cuadricula-table th,
@@ -137,19 +138,23 @@ $letras = [1 => 'A', 2 => 'C', 3 => 'B', 4 => 'D'];
             vertical-align: middle;
             height: auto;
             min-height: 1.62vh;
-            word-wrap: break-word;
-            overflow: hidden;
+            white-space: nowrap !important;
+            overflow: hidden !important;
+            text-overflow: ellipsis !important;
+            font-family: Calibri, 'Lato', sans-serif !important;
+            font-weight: 300 !important;
+            font-size: 0.75rem !important;
         }
         
         .cuadricula-table thead th {
-            font-weight: bold;
+            font-weight: 300 !important;
             font-size: 0.85em;
         }
         
         /* Columna 1: ID Usuario (Verde) - 5 dígitos 99999 */
         .col-id-usuario {
             background-color: #4ade80 !important; /* Verde */
-            font-weight: bold;
+            font-weight: 300 !important;
             color: #000;
             width: 10%;
             min-width: 2.8rem;
@@ -158,7 +163,7 @@ $letras = [1 => 'A', 2 => 'C', 3 => 'B', 4 => 'D'];
         /* Columna 2: Mesa y Letra (Azul) - 5 dígitos + letra "99999 A" */
         .col-mesa-letra {
             background-color: #60a5fa !important; /* Azul */
-            font-weight: bold;
+            font-weight: 300 !important;
             color: #000;
             width: 10%;
             min-width: 3.5rem;
@@ -183,6 +188,7 @@ $letras = [1 => 'A', 2 => 'C', 3 => 'B', 4 => 'D'];
         .celda-bye {
             background-color: #fef08a !important;
             font-style: italic;
+            font-weight: 300 !important;
         }
         
         /* Responsive para tablets */
