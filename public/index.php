@@ -159,17 +159,18 @@ if (!in_array($user['role'] ?? '', $allowed_roles, true)) {
     exit;
 }
 
-// Redirigir usuarios normales al portal de jugador, salvo vistas permitidas (resumen/posiciones desde notificación)
+// Redirigir usuarios normales al portal de jugador, salvo vistas permitidas (perfil, cambio contraseña, resumen/posiciones)
 if ($user['role'] === 'usuario') {
     $page = $_GET['page'] ?? '';
     $action = $_GET['action'] ?? '';
     $torneo_id = (int)($_GET['torneo_id'] ?? 0);
     $inscrito_id = (int)($_GET['inscrito_id'] ?? 0);
+    $allow_profile = in_array($page, ['users/profile', 'users/change_password'], true);
     $allow_view = ($page === 'torneo_gestion' && $torneo_id > 0 && in_array($action, ['resumen_individual', 'posiciones']));
     if ($allow_view && $action === 'resumen_individual') {
         $allow_view = ($inscrito_id > 0 && $inscrito_id === Auth::id());
     }
-    if (!$allow_view) {
+    if (!$allow_profile && !$allow_view) {
         $redirect_portal = defined('URL_BASE') ? (URL_BASE . 'user_portal.php') : AppHelpers::url('user_portal.php');
         header('Location: ' . $redirect_portal, true, 302);
         exit;
