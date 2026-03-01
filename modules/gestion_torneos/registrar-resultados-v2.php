@@ -778,7 +778,6 @@ $action_param = $use_standalone ? '?' : '&';
                                             <th rowspan="2" class="text-center align-middle columna-sancion">Sanción</th>
                                             <th rowspan="2" class="text-center align-middle columna-forfait">Forfait</th>
                                             <th rowspan="2" class="text-center align-middle columna-tarjeta">Tarjeta</th>
-                                            <th rowspan="2" class="text-center align-middle">Zap/Chan</th>
                                             <th colspan="4" class="text-center columna-estadisticas">Estadísticas</th>
                                         </tr>
                                         <tr>
@@ -887,34 +886,6 @@ $action_param = $use_standalone ? '?' : '&';
                                                     </div>
                                                 </td>
                                                 
-                                                <!-- Chancleta/Zapato: solo indicadores, no accionan procedimiento sancionatorio -->
-                                                <td class="text-center columna-zapchan">
-                                                    <div class="d-flex justify-content-center gap-2">
-                                                        <label class="mb-0 cursor-pointer">
-                                                            <input type="radio" 
-                                                                   name="pena_<?php echo $indiceArray; ?>" 
-                                                                   value="chancleta"
-                                                                   class="form-check-input"
-                                                                   <?php echo (isset($jugador['chancleta']) && $jugador['chancleta'] > 0) ? 'checked' : ''; ?>>
-                                                            <span class="ml-1">🥿</span>
-                                                        </label>
-                                                        <label class="mb-0 cursor-pointer">
-                                                            <input type="radio" 
-                                                                   name="pena_<?php echo $indiceArray; ?>" 
-                                                                   value="zapato"
-                                                                   class="form-check-input"
-                                                                   <?php echo (isset($jugador['zapato']) && $jugador['zapato'] > 0) ? 'checked' : ''; ?>>
-                                                            <span class="ml-1">👞</span>
-                                                        </label>
-                                                    </div>
-                                                    <input type="hidden" name="jugadores[<?php echo $indiceArray; ?>][chancleta]" 
-                                                           id="chancleta_<?php echo $indiceArray; ?>" 
-                                                           value="<?php echo $jugador['chancleta'] ?? 0; ?>">
-                                                    <input type="hidden" name="jugadores[<?php echo $indiceArray; ?>][zapato]" 
-                                                           id="zapato_<?php echo $indiceArray; ?>" 
-                                                           value="<?php echo $jugador['zapato'] ?? 0; ?>">
-                                                </td>
-                                                
                                                 <!-- Estadísticas -->
                                                 <td class="text-center bg-light columna-estadisticas">
                                                     <div class="estadisticas-valores">
@@ -925,7 +896,13 @@ $action_param = $use_standalone ? '?' : '&';
                                                     </div>
                                                 </td>
                                                 
-                                                <!-- Campos Hidden -->
+                                                <!-- Campos Hidden (Zap/Chan se reubica en fila Observaciones) -->
+                                                <input type="hidden" name="jugadores[<?php echo $indiceArray; ?>][chancleta]" 
+                                                       id="chancleta_<?php echo $indiceArray; ?>" 
+                                                       value="<?php echo $jugador['chancleta'] ?? 0; ?>">
+                                                <input type="hidden" name="jugadores[<?php echo $indiceArray; ?>][zapato]" 
+                                                       id="zapato_<?php echo $indiceArray; ?>" 
+                                                       value="<?php echo $jugador['zapato'] ?? 0; ?>">
                                                 <input type="hidden" name="jugadores[<?php echo $indiceArray; ?>][id]" 
                                                        value="<?php echo $jugador['id']; ?>">
                                                 <input type="hidden" name="jugadores[<?php echo $indiceArray; ?>][id_usuario]" 
@@ -1032,34 +1009,6 @@ $action_param = $use_standalone ? '?' : '&';
                                                     </div>
                                                 </td>
                                                 
-                                                <!-- Zapato/Chancleta -->
-                                                <td class="text-center columna-zapchan">
-                                                    <div class="d-flex justify-content-center gap-2">
-                                                        <label class="mb-0 cursor-pointer">
-                                                            <input type="radio" 
-                                                                   name="pena_<?php echo $indiceArray; ?>" 
-                                                                   value="chancleta"
-                                                                   class="form-check-input"
-                                                                   <?php echo (isset($jugador['chancleta']) && $jugador['chancleta'] > 0) ? 'checked' : ''; ?>>
-                                                            <span class="ml-1">🥿</span>
-                                                        </label>
-                                                        <label class="mb-0 cursor-pointer">
-                                                            <input type="radio" 
-                                                                   name="pena_<?php echo $indiceArray; ?>" 
-                                                                   value="zapato"
-                                                                   class="form-check-input"
-                                                                   <?php echo (isset($jugador['zapato']) && $jugador['zapato'] > 0) ? 'checked' : ''; ?>>
-                                                            <span class="ml-1">👞</span>
-                                                        </label>
-                                                    </div>
-                                                    <input type="hidden" name="jugadores[<?php echo $indiceArray; ?>][chancleta]" 
-                                                           id="chancleta_<?php echo $indiceArray; ?>" 
-                                                           value="<?php echo $jugador['chancleta'] ?? 0; ?>">
-                                                    <input type="hidden" name="jugadores[<?php echo $indiceArray; ?>][zapato]" 
-                                                           id="zapato_<?php echo $indiceArray; ?>" 
-                                                           value="<?php echo $jugador['zapato'] ?? 0; ?>">
-                                                </td>
-                                                
                                                 <!-- Estadísticas -->
                                                 <td class="text-center bg-light columna-estadisticas">
                                                     <div class="estadisticas-valores">
@@ -1070,7 +1019,13 @@ $action_param = $use_standalone ? '?' : '&';
                                                     </div>
                                                 </td>
                                                 
-                                                <!-- Campos Hidden -->
+                                                <!-- Campos Hidden (Zap/Chan reubicado en fila Observaciones) -->
+                                                <input type="hidden" name="jugadores[<?php echo $indiceArray; ?>][chancleta]" 
+                                                       id="chancleta_<?php echo $indiceArray; ?>" 
+                                                       value="<?php echo $jugador['chancleta'] ?? 0; ?>">
+                                                <input type="hidden" name="jugadores[<?php echo $indiceArray; ?>][zapato]" 
+                                                       id="zapato_<?php echo $indiceArray; ?>" 
+                                                       value="<?php echo $jugador['zapato'] ?? 0; ?>">
                                                 <input type="hidden" name="jugadores[<?php echo $indiceArray; ?>][id]" 
                                                        value="<?php echo $jugador['id']; ?>">
                                                 <input type="hidden" name="jugadores[<?php echo $indiceArray; ?>][id_usuario]" 
@@ -1089,15 +1044,37 @@ $action_param = $use_standalone ? '?' : '&';
                                 </table>
                             </div>
 
-                            <!-- Observaciones -->
-                            <div class="mb-4">
-                                <label class="font-weight-bold mb-2">
-                                    <i class="fas fa-comment-alt mr-1"></i>Observaciones
-                                </label>
-                                <textarea name="observaciones" 
-                                          rows="3"
-                                          class="form-control"
-                                          placeholder="Observaciones sobre la partida (opcional)"><?php echo htmlspecialchars($observacionesMesa ?? ''); ?></textarea>
+                            <!-- Observaciones y Zap/Chan en la misma fila -->
+                            <div class="fila-observaciones-zapchan mb-4">
+                                <div class="observaciones-col">
+                                    <label class="font-weight-bold mb-2">
+                                        <i class="fas fa-comment-alt mr-1"></i>Observaciones
+                                    </label>
+                                    <textarea name="observaciones" 
+                                              rows="3"
+                                              class="form-control"
+                                              placeholder="Observaciones sobre la partida (opcional)"><?php echo htmlspecialchars($observacionesMesa ?? ''); ?></textarea>
+                                </div>
+                                <div class="zapchan-col">
+                                    <label class="font-weight-bold mb-2 d-block">
+                                        <i class="fas fa-shoe-prints mr-1"></i>Zap/Chan
+                                    </label>
+                                    <?php foreach ($jugadores as $idx => $jug): $ind = $idx; ?>
+                                    <div class="d-flex justify-content-between align-items-center gap-2 small mb-2">
+                                        <span class="text-truncate" style="max-width: 6rem;" title="<?php echo htmlspecialchars($jug['nombre_completo'] ?? $jug['nombre'] ?? ''); ?>">J<?php echo $ind + 1; ?></span>
+                                        <div class="d-flex gap-2">
+                                            <label class="mb-0 cursor-pointer">
+                                                <input type="radio" name="pena_<?php echo $ind; ?>" value="chancleta" class="form-check-input" <?php echo (isset($jug['chancleta']) && $jug['chancleta'] > 0) ? 'checked' : ''; ?>>
+                                                <span class="ml-1">🥿</span>
+                                            </label>
+                                            <label class="mb-0 cursor-pointer">
+                                                <input type="radio" name="pena_<?php echo $ind; ?>" value="zapato" class="form-check-input" <?php echo (isset($jug['zapato']) && $jug['zapato'] > 0) ? 'checked' : ''; ?>>
+                                                <span class="ml-1">👞</span>
+                                            </label>
+                                        </div>
+                                    </div>
+                                    <?php endforeach; ?>
+                                </div>
                             </div>
 
                             <!-- Botones de Acción -->

@@ -194,7 +194,6 @@ body {
 .registrar-resultados-wrap #formResultados tbody td.columna-forfait::before { content: "Forfait"; }
 .registrar-resultados-wrap #formResultados tbody td.columna-tarjeta::before { content: "Tarjeta"; }
 .registrar-resultados-wrap #formResultados tbody td.columna-estadisticas::before { content: "Estadísticas"; }
-.registrar-resultados-wrap #formResultados tbody td.columna-zapchan::before { content: "Zap/Chan"; }
 
 .registrar-resultados-wrap #formResultados tbody td.columna-puntos {
   padding: 0.75rem 0;
@@ -326,10 +325,27 @@ body {
   }
 }
 
-/* ========== DESKTOP (1024px): tabla multicolumna ========== */
+/* ========== DESKTOP (1024px): tabla multicolumna, anchos en % ========== */
 @media (min-width: 1024px) {
   .registrar-resultados-wrap {
     font-size: 16px;
+  }
+
+  /* Navegación de partidas: ancho 10% del viewport */
+  .registrar-resultados-wrap .row.align-items-start {
+    display: flex;
+    flex-wrap: nowrap;
+  }
+  .registrar-resultados-wrap #sidebar-mesas {
+    width: 10vw !important;
+    max-width: 10vw;
+    min-width: 10vw;
+    flex: 0 0 10vw;
+  }
+  .registrar-resultados-wrap .col-form-registro {
+    width: 90vw !important;
+    max-width: 90vw;
+    flex: 1 1 90vw;
   }
 
   .registrar-resultados-wrap .col-form-registro,
@@ -344,6 +360,7 @@ body {
 
   .registrar-resultados-wrap #formResultados table {
     display: table;
+    table-layout: fixed;
     width: 100%;
     max-width: 100%;
   }
@@ -363,12 +380,44 @@ body {
   .registrar-resultados-wrap #formResultados th,
   .registrar-resultados-wrap #formResultados td {
     display: table-cell;
-    width: auto;
-    max-width: none;
     text-align: center;
     padding: 5px 10px;
     vertical-align: middle;
     border: 1px solid #e0e0e0;
+  }
+
+  /* Columnas en % del ancho de la tabla (registro de resultados) */
+  .registrar-resultados-wrap #formResultados .columna-id { width: 10%; }
+  .registrar-resultados-wrap #formResultados .columna-nombre { width: 20%; }
+  .registrar-resultados-wrap #formResultados .columna-puntos { width: 15%; }
+  .registrar-resultados-wrap #formResultados .columna-sancion { width: 10%; }
+  .registrar-resultados-wrap #formResultados .columna-forfait { width: 8%; }
+  .registrar-resultados-wrap #formResultados .columna-tarjeta { width: 15%; }
+  .registrar-resultados-wrap #formResultados .columna-tarjeta .d-flex { justify-content: center; gap: 0.25rem; }
+  .registrar-resultados-wrap #formResultados .columna-tarjeta .tarjeta-btn { width: 5vw; min-width: 1.5rem; max-width: 3rem; }
+  .registrar-resultados-wrap #formResultados .columna-estadisticas { width: 10%; }
+
+  /* Nombre: una sola fila, truncamiento, tipografía light */
+  .registrar-resultados-wrap #formResultados .columna-nombre,
+  .registrar-resultados-wrap #formResultados .columna-nombre span {
+    font-family: Calibri, 'Lato', sans-serif !important;
+    font-weight: 300 !important;
+    font-size: 0.7rem !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    max-width: 100%;
+    display: block;
+  }
+
+  /* Suprimir incrementador en inputs number (Puntos, Sanción) */
+  .registrar-resultados-wrap #formResultados input[type="number"] {
+    -moz-appearance: textfield;
+  }
+  .registrar-resultados-wrap #formResultados input[type="number"]::-webkit-outer-spin-button,
+  .registrar-resultados-wrap #formResultados input[type="number"]::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
   }
 
   .registrar-resultados-wrap #formResultados tbody tr {
@@ -410,4 +459,25 @@ body {
   .registrar-resultados-wrap #sidebar-mesas .list-group-flush {
     display: block;
   }
+}
+
+/* Fila Observaciones + Zap/Chan: misma fila */
+.registrar-resultados-wrap .fila-observaciones-zapchan {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  align-items: flex-start;
+  margin-bottom: 1rem;
+}
+.registrar-resultados-wrap .fila-observaciones-zapchan .observaciones-col {
+  flex: 1 1 60%;
+  min-width: 200px;
+}
+.registrar-resultados-wrap .fila-observaciones-zapchan .zapchan-col {
+  flex: 0 1 auto;
+  min-width: 180px;
+}
+.registrar-resultados-wrap .zapchan-col label {
+  font-size: 0.85rem;
+  font-weight: 400;
 }
