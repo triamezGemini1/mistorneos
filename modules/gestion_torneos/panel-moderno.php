@@ -315,12 +315,14 @@ tailwind.config = {
     .tw-panel .text-sm { font-size: 0.74rem; }
     
     /* ========== CUADRÍCULA (Grid/Mesas) - solo este módulo ========== */
+    /* Alto celda -15%, Calibri Light, tamaño para 80% ancho, una sola línea */
     .tw-panel .tw-columns,
     .tw-panel .tw-column,
     .tw-panel .tw-column * {
         font-family: Calibri, 'Lato', sans-serif !important;
         font-weight: 300 !important;
-        font-size: 0.8rem !important;
+        font-size: 0.68rem !important;
+        line-height: 1.2;
     }
     .tw-panel .tw-column .font-bold,
     .tw-panel .tw-column .fw-bold,
@@ -334,12 +336,14 @@ tailwind.config = {
         display: flex;
         flex-direction: column;
         align-items: center;
-        min-height: 100%;
+        min-height: 0;
         text-align: center;
+        padding-bottom: 0;
     }
     .tw-panel .tw-column > div > [class*="bg-gradient"] {
         width: 100%;
         text-align: center;
+        padding: 0.36rem 0.5rem !important;
     }
     .tw-panel .tw-column > div > [class*="bg-gradient"] h3 {
         white-space: nowrap;
@@ -347,7 +351,8 @@ tailwind.config = {
         text-overflow: ellipsis;
         max-width: 80%;
         margin: 0 auto;
-        font-size: 0.85rem !important;
+        font-size: 0.72rem !important;
+        line-height: 1.2;
     }
     .tw-panel .tw-column .p-5,
     .tw-panel .tw-column .space-y-4 {
@@ -355,6 +360,8 @@ tailwind.config = {
         max-width: 80%;
         margin-left: auto;
         margin-right: auto;
+        padding: 0.43rem 0.58rem !important;
+        gap: 0.25rem !important;
         display: flex;
         flex-direction: column;
         align-items: center;
@@ -366,7 +373,21 @@ tailwind.config = {
         max-width: 100%;
         box-sizing: border-box;
     }
-    .tw-panel .tw-column .tw-btn,
+    .tw-panel .tw-column .tw-btn {
+        padding: 0.35rem 0.5rem !important;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        min-width: 0;
+        font-size: 0.68rem !important;
+    }
+    .tw-panel .tw-column .tw-btn i {
+        font-size: 0.68rem !important;
+        flex-shrink: 0;
+    }
     .tw-panel .tw-column .p-5 span,
     .tw-panel .tw-column .p-5 a,
     .tw-panel .tw-column .space-y-4 span,
@@ -377,14 +398,10 @@ tailwind.config = {
         display: block;
         min-width: 0;
     }
-    .tw-panel .tw-column .tw-btn {
-        display: flex;
-        align-items: center;
-        justify-content: center;
-    }
     .tw-panel .tw-column .d-flex {
         width: 100%;
         align-items: center;
+        gap: 0.25rem !important;
     }
     .tw-panel .tw-column .d-flex .tw-btn {
         width: 100%;
