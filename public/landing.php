@@ -47,13 +47,31 @@ $eventos_calendario = $landingService->getEventosCalendario();
 // Logos de clientes: desde la carpeta de logos de clubes (tabla clubes, columna logo = upload/logos/...)
 $logos_clientes_clubes = [];
 try {
-    $stmt = $pdo->prepare("SELECT id, nombre, logo FROM clubes WHERE logo IS NOT NULL AND TRIM(logo) != '' AND (estatus = 1 OR estatus = '1') ORDER BY nombre ASC");
+    $stmt = $pdo->prepare("SELECT id, nombre, logo FROM clubes WHERE logo IS NOT NULL AND logo != '' AND (estatus = 1 OR estatus = '1') ORDER BY nombre ASC");
     $stmt->execute();
     while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
-        $logos_clientes_clubes[] = ['nombre' => $row['nombre'] ?? 'Club', 'path' => $row['logo']];
+        $path = trim((string)($row['logo'] ?? ''));
+        if ($path !== '') {
+            $logos_clientes_clubes[] = ['nombre' => $row['nombre'] ?? 'Club', 'path' => $path];
+        }
     }
 } catch (Exception $e) {
     // ignorar
+}
+// Fallback: si no hay clubes con logo, usar imágenes de la carpeta upload/logos/
+if (empty($logos_clientes_clubes)) {
+    $upload_logos_dir = dirname(__DIR__) . DIRECTORY_SEPARATOR . 'upload' . DIRECTORY_SEPARATOR . 'logos';
+    $extensions = ['png', 'jpg', 'jpeg', 'gif', 'webp', 'svg'];
+    if (is_dir($upload_logos_dir)) {
+        foreach (new DirectoryIterator($upload_logos_dir) as $f) {
+            if ($f->isDot() || !$f->isFile()) continue;
+            $ext = strtolower($f->getExtension());
+            if (in_array($ext, $extensions, true)) {
+                $path = 'upload/logos/' . $f->getFilename();
+                $logos_clientes_clubes[] = ['nombre' => pathinfo($f->getFilename(), PATHINFO_FILENAME), 'path' => $path];
+            }
+        }
+    }
 }
 $mitad = (int) ceil(count($logos_clientes_clubes) / 2);
 $logos_fila1 = array_slice($logos_clientes_clubes, 0, $mitad);
@@ -241,7 +259,7 @@ foreach ($eventos_calendario as $ev) {
             #calendario .cal-contenedor-anual { height: calc(100vh - 120px); }
         }
         /* Cintillo de logos de clientes: dos filas, desplazamiento lento */
-        .logos-clientes-wrap { overflow: hidden; width: 100%; background: linear-gradient(to bottom, #f8fafc, #e2e8f0); padding: 1.5rem 0; }
+        .logos-clientes-wrap { overflow: hidden; width: 100%; min-height: 120px; background: linear-gradient(to bottom, #f8fafc, #e2e8f0); padding: 1.5rem 0; }
         .logos-clientes-row { display: flex; width: max-content; animation: marquee 45s linear infinite; }
         .logos-clientes-row:hover { animation-play-state: paused; }
         .logos-clientes-row .logo-item { flex-shrink: 0; display: flex; align-items: center; justify-content: center; width: 180px; height: 90px; margin: 0 2rem; padding: 0.75rem; background: #fff; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }

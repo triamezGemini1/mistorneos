@@ -55,7 +55,7 @@ if ($entidad_param > 0) {
         .slide-enter-active, .slide-leave-active { transition: transform 0.3s ease; }
         .slide-enter-from { transform: translateY(-10px); opacity: 0; }
         .slide-leave-to { transform: translateY(10px); opacity: 0; }
-        .logos-clientes-wrap { overflow: hidden; width: 100%; background: linear-gradient(to bottom, #f8fafc, #e2e8f0); padding: 1.5rem 0; }
+        .logos-clientes-wrap { overflow: hidden; width: 100%; min-height: 120px; background: linear-gradient(to bottom, #f8fafc, #e2e8f0); padding: 1.5rem 0; }
         .logos-clientes-row { display: flex; width: max-content; animation: marquee 45s linear infinite; }
         .logos-clientes-row:hover { animation-play-state: paused; }
         .logos-clientes-row .logo-item { flex-shrink: 0; display: flex; align-items: center; justify-content: center; width: 180px; height: 90px; margin: 0 2rem; padding: 0.75rem; background: #fff; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }

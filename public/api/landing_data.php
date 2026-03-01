@@ -163,12 +163,30 @@ try {
     // Logos de clientes: desde carpeta de logos de clubes (tabla clubes, columna logo = upload/logos/...)
     $logos_clientes = [];
     try {
-        $stmt = $pdo->prepare("SELECT id, nombre, logo FROM clubes WHERE logo IS NOT NULL AND TRIM(logo) != '' AND (estatus = 1 OR estatus = '1') ORDER BY nombre ASC");
+        $stmt = $pdo->prepare("SELECT id, nombre, logo FROM clubes WHERE logo IS NOT NULL AND logo != '' AND (estatus = 1 OR estatus = '1') ORDER BY nombre ASC");
         $stmt->execute();
         while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
-            $logos_clientes[] = ['nombre' => $row['nombre'] ?? 'Club', 'path' => $row['logo']];
+            $path = trim((string)($row['logo'] ?? ''));
+            if ($path !== '') {
+                $logos_clientes[] = ['nombre' => $row['nombre'] ?? 'Club', 'path' => $path];
+            }
         }
     } catch (Exception $e) {}
+    // Fallback: si no hay clubes con logo, usar imágenes de la carpeta upload/logos/
+    if (empty($logos_clientes)) {
+        $upload_logos_dir = dirname(__DIR__, 2) . DIRECTORY_SEPARATOR . 'upload' . DIRECTORY_SEPARATOR . 'logos';
+        $extensions = ['png', 'jpg', 'jpeg', 'gif', 'webp', 'svg'];
+        if (is_dir($upload_logos_dir)) {
+            foreach (new DirectoryIterator($upload_logos_dir) as $f) {
+                if ($f->isDot() || !$f->isFile()) continue;
+                $ext = strtolower($f->getExtension());
+                if (in_array($ext, $extensions, true)) {
+                    $path = 'upload/logos/' . $f->getFilename();
+                    $logos_clientes[] = ['nombre' => pathinfo($f->getFilename(), PATHINFO_FILENAME), 'path' => $path];
+                }
+            }
+        }
+    }
 
     $csrf_token = CSRF::token();
 
