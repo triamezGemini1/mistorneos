@@ -1,35 +1,32 @@
 /**
- * Panel de Control - Light y Compacto
- * Calibri, Lato. Peso base 300 en todo el sitio. Resalte máximo 500 (sin bold/700).
- * Móvil 11.5px, escritorio/tablet 12.5px. letter-spacing 0.015em, line-height 1.3.
- * Bordes inputs #ddd. Tablet 10" más columnas mesas.
+ * Panel de Control - Alta Gama
+ * Inter, peso base 300. Títulos 400/500. Escala: móvil 12px, escritorio 13px (-20%).
+ * line-height 1.4. Labels 11px. Nitidez: -webkit-font-smoothing: antialiased.
  */
 
 body {
-  font-family: Calibri, 'Lato', sans-serif;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   font-weight: 300;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  letter-spacing: 0.015em;
-  line-height: 1.3;
-  color: #2d2d2d;
+  letter-spacing: 0.02em;
+  line-height: 1.4;
 }
 
-/* ========== BASE: MÓVIL (11.5px) ========== */
+/* ========== BASE: MÓVIL (12px) ========== */
 html {
-  font-size: 11.5px;
+  font-size: 12px;
 }
 
 .tw-panel {
-  font-family: Calibri, 'Lato', sans-serif;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   font-weight: 300;
-  color: #2d2d2d;
   box-sizing: border-box;
   width: 100% !important;
   max-width: 100%;
   padding: 0.5rem;
-  letter-spacing: 0.015em;
-  line-height: 1.3;
+  letter-spacing: 0.02em;
+  line-height: 1.4;
 }
 
 .tw-panel * {
@@ -40,165 +37,71 @@ html {
 .tw-panel h2,
 .tw-panel h3,
 .tw-panel h4 {
-  font-size: 1.1em;
-  font-weight: 300;
-  color: #2d2d2d;
+  font-size: 1.15em;
+  font-weight: 400;
   word-wrap: break-word;
   overflow-wrap: break-word;
-  line-height: 1.3;
+  line-height: 1.4;
 }
 
 .tw-panel .panel-card-title {
-  color: #2d2d2d;
-}
-
-/* Resalte máximo 500 (sin bold/700) */
-.tw-panel .panel-value-critical,
-.tw-panel .countdown-tiempo-restante,
-.tw-panel .panel-success-badge {
-  font-weight: 500;
+  color: #111827;
 }
 
 .tw-panel .panel-meta,
 .tw-panel .panel-secondary {
-  color: #5a5a5a;
+  color: #6b7280;
   font-size: 1em;
   font-weight: 300;
 }
 
 .tw-panel label {
-  font-size: 10.5px;
+  font-size: 11px;
   text-transform: uppercase;
-  letter-spacing: 0.015em;
-  color: #5a5a5a;
-  font-weight: 300;
-  line-height: 1.3;
+  letter-spacing: 0.02em;
+  color: #6b7280;
+  font-weight: 500;
+  line-height: 1.4;
 }
 
-/* ========== CUADRÍCULA DE GESTIÓN (MESAS/INVITACIONES) ========== */
-/* Todo el contenido en UNA sola línea: nowrap forzado, tamaño reducido al mínimo que quepa. */
-.tw-panel .panel-card .panel-card-header,
-.tw-panel .panel-card .panel-card-body,
-.tw-panel .panel-card .panel-card-header *,
-.tw-panel .panel-card .panel-card-body * {
-  white-space: nowrap !important;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  min-width: 0;
-}
-
-.tw-panel .panel-grid,
-.tw-panel .panel-card,
-.tw-panel .panel-card-header,
-.tw-panel .panel-card-body,
-.tw-panel .panel-card-title,
-.tw-panel .panel-card .panel-meta,
-.tw-panel .panel-card .panel-secondary,
-.tw-panel .panel-card label {
-  font-family: Calibri, 'Lato', sans-serif !important;
-  font-weight: 300 !important;
-  font-size: 0.6rem !important;
-  letter-spacing: 0.01em !important;
-}
-
-.tw-panel .panel-card-header,
-.tw-panel .panel-card-body {
-  min-width: 0;
-}
-
-.tw-panel .panel-card-body *:not(i) {
-  font-weight: 300 !important;
-  letter-spacing: 0.01em;
-  font-size: 0.6rem !important;
-}
-
-/* Contenido de la celda: zona 80% (padding 10% cada lado) */
-.tw-panel .panel-card-body {
-  box-sizing: border-box;
-  padding-left: 10%;
-  padding-right: 10%;
-}
-
-.tw-panel .panel-card-header .panel-card-title,
-.tw-panel .panel-card-header span,
-.tw-panel .panel-card .panel-card-title,
-.tw-panel .panel-card-body span,
-.tw-panel .panel-card-body div,
-.tw-panel .panel-card .panel-btn-badge,
-.tw-panel .panel-card .tabular-nums,
-.tw-panel .panel-card [class*="badge"],
-.tw-panel .panel-card .text-xl,
-.tw-panel .panel-card .text-2xl {
-  font-size: 0.6rem !important;
-  font-variant-numeric: tabular-nums;
-}
-
-/* Eliminación de bold: forzar Light (300) en todo lo que venga con negrita */
-.tw-panel .fw-bold,
-.tw-panel .font-bold,
-.tw-panel .font-semibold,
-.tw-panel .font-weight-bold,
-.tw-panel h5,
-.tw-panel h6,
-.tw-panel .h5,
-.tw-panel .h6,
-.tw-panel .panel-card strong,
-.tw-panel .panel-card b,
-.tw-panel .panel-card .text-dark,
-.tw-panel .panel-card [class*="font-semibold"],
-.tw-panel .panel-card [class*="font-bold"],
-.tw-panel .panel-card [class*="fw-bold"] {
-  font-weight: 300 !important;
-  color: #2d2d2d;
-  font-size: 0.6rem !important;
-}
-
-.tw-panel .panel-value-critical,
-.tw-panel .countdown-tiempo-restante,
-.tw-panel .panel-success-badge {
-  font-weight: 400 !important;
-}
-
+/* Contenedores: bordes finos, sombra casi imperceptible */
 .tw-panel .panel-card {
   background: #fff;
   border-radius: 0.4rem;
-  border: 1px solid #eee;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+  border: 1px solid #e0e0e0;
   overflow: visible;
   min-height: 100%;
   max-width: 100%;
-  transition: box-shadow 0.15s ease;
-  box-shadow: none;
-  width: 100%;
+  transition: box-shadow 0.2s ease;
 }
 
 .tw-panel .panel-card:hover {
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
 }
 
 .tw-panel .panel-card-header {
-  padding: 0.35rem 0.45rem;
+  padding: 5px 10px;
   color: #fff;
-  font-weight: 300 !important;
-  font-size: 0.6rem;
+  font-weight: 500;
+  font-size: 1.15em;
   display: flex;
   align-items: center;
-  gap: 0.2rem;
+  gap: 0.4rem;
   border-radius: 0.4rem 0.4rem 0 0;
   border-bottom: 1px solid rgba(255, 255, 255, 0.2);
-  line-height: 1.15;
+  line-height: 1.4;
 }
 
 .tw-panel .panel-card-header i {
   opacity: 0.95;
-  font-size: 0.6rem;
-  flex-shrink: 0;
 }
 
 .tw-panel .panel-card-body {
-  padding: 0.4rem 0.5rem;
+  padding: 5px 10px;
   display: flex;
   flex-direction: column;
-  gap: 0.3rem;
+  gap: 0.4rem;
 }
 
 .tw-panel .panel-card-header--mesas {
@@ -213,62 +116,20 @@ html {
   background: linear-gradient(135deg, #f59e0b 0%, #f97316 100%);
 }
 
-/* Cuadrícula: 70% del ancho, grid, gap en rem */
+/* Grid: móvil = 1 columna (stacking) */
 .tw-panel .panel-grid {
   display: grid;
   grid-template-columns: 1fr;
-  gap: 1rem;
-  width: 70%;
-  max-width: 70%;
-  margin-left: auto;
-  margin-right: auto;
-}
-
-.tw-panel .panel-grid-mesas {
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 1rem;
+  gap: 1.25rem;
   width: 100%;
   max-width: 100%;
 }
 
-/* Botones: una sola línea, tamaño reducido para que quepa */
-.tw-panel .panel-card .tw-btn,
-.tw-panel .panel-card .tw-btn * {
-  white-space: nowrap !important;
-}
-
-.tw-panel .panel-card .tw-btn {
-  min-height: 1.1rem;
-  padding: 0.18rem 0.35rem;
-  font-size: 0.6rem !important;
-  font-weight: 300 !important;
-  display: inline-flex;
-  align-items: center;
-  gap: 0.18rem;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  min-width: 0;
+.tw-panel .panel-grid-mesas {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(17.5rem, 1fr));
+  gap: 1rem;
   max-width: 100%;
-}
-
-.tw-panel .panel-card .tw-btn i {
-  font-size: 0.6rem !important;
-  width: 0.6rem;
-  max-width: 0.6rem;
-  max-height: 0.6rem;
-  flex-shrink: 0;
-  vertical-align: middle;
-}
-
-.tw-panel .panel-card .panel-btn-group {
-  flex-wrap: nowrap;
-  min-width: 0;
-}
-
-.tw-panel .panel-card .panel-btn-group .tw-btn {
-  flex: 0 1 auto;
-  min-width: 0;
 }
 
 .tw-panel .tw-btn {
@@ -276,25 +137,23 @@ html {
   align-items: center;
   justify-content: center;
   width: 100%;
-  min-height: 1.5rem;
-  padding: 3px 6px;
+  min-height: 1.85rem;
+  padding: 5px 10px;
   font-family: inherit;
   font-size: inherit;
-  font-weight: 400;
+  font-weight: 500;
   border-radius: 0.35rem;
   text-decoration: none;
   transition: box-shadow 0.2s ease, background-color 0.2s ease, color 0.2s ease;
-  border: 1px solid rgba(0, 0, 0, 0.06);
+  border: 1px solid rgba(0, 0, 0, 0.08);
   cursor: pointer;
-  gap: 0.3rem;
-  letter-spacing: 0.015em;
-  line-height: 1.3;
+  gap: 0.4rem;
+  letter-spacing: 0.02em;
+  line-height: 1.4;
 }
 
 .tw-panel .tw-btn i {
-  font-size: 14px;
-  max-width: 14px;
-  max-height: 14px;
+  font-size: 1rem;
   flex-shrink: 0;
 }
 
@@ -360,13 +219,13 @@ html {
 }
 
 .tw-panel .panel-header .titulo-torneo {
-  font-size: 1.05em;
-  font-weight: 300;
+  font-size: 1.15em;
+  font-weight: 400;
   margin: 0 0 0.2rem 0;
   text-align: center;
   text-transform: uppercase;
-  letter-spacing: 0.015em;
-  line-height: 1.3;
+  letter-spacing: 0.02em;
+  line-height: 1.4;
 }
 
 .tw-panel .panel-header .meta {
@@ -379,7 +238,7 @@ html {
   opacity: 0.95;
   padding-top: 0.35rem;
   border-top: 1px solid rgba(255, 255, 255, 0.3);
-  line-height: 1.3;
+  line-height: 1.4;
 }
 
 .tw-panel .panel-header .meta i {
@@ -399,7 +258,7 @@ html {
 }
 
 .tw-panel .panel-breadcrumb .panel-breadcrumb-current {
-  font-weight: 300;
+  font-weight: 500;
 }
 
 .tw-panel .tw-btn--ghost-white {
@@ -421,7 +280,7 @@ html {
   align-items: center;
   gap: 0.5rem;
   font-size: clamp(0.75rem, 1.5vw, 0.8125rem);
-  color: #5a5a5a;
+  color: #6b7280;
   margin: 0;
   padding: 0;
   list-style: none;
@@ -438,21 +297,21 @@ html {
 }
 
 .tw-panel .panel-breadcrumb .panel-breadcrumb-current {
-  color: #2d2d2d;
-  font-weight: 400;
+  color: #374151;
+  font-weight: 500;
 }
 
 .tw-panel #btnCronometro {
-  min-height: 1.5rem;
-  padding: 3px 6px;
+  min-height: 1.85rem;
+  padding: 5px 10px;
   background: linear-gradient(135deg, #0f766e 0%, #0d9488 50%, #14b8a6 100%) !important;
   color: #fff !important;
   border: 1px solid rgba(255, 255, 255, 0.2);
   border-radius: 0.35rem;
-  font-weight: 400;
+  font-weight: 500;
   cursor: pointer;
   transition: box-shadow 0.2s ease;
-  line-height: 1.3;
+  line-height: 1.4;
 }
 
 .tw-panel #btnCronometro:hover {
@@ -481,25 +340,25 @@ html {
 
 .tw-panel .cronometro-finalizar-torneo .cron-finalizar-label {
   font-size: 1em;
-  font-weight: 300;
+  font-weight: 500;
   opacity: 0.95;
   margin-bottom: 0.25rem;
-  line-height: 1.3;
+  line-height: 1.4;
 }
 
 .tw-panel .cronometro-finalizar-torneo .countdown-tiempo-restante {
-  font-size: 1.4em;
-  font-weight: 500;
+  font-size: 1.5em;
+  font-weight: 400;
   letter-spacing: 0.05em;
   margin: 0.2rem 0;
-  line-height: 1.3;
+  line-height: 1.4;
 }
 
 .tw-panel .cronometro-finalizar-torneo .cron-finalizar-hint {
   font-size: 0.9em;
   opacity: 0.9;
   margin-top: 0.2rem;
-  line-height: 1.3;
+  line-height: 1.4;
 }
 
 #cronometroOverlay {
@@ -511,8 +370,7 @@ html {
   align-items: center;
   justify-content: center;
   color: #fff;
-  font-family: Calibri, 'Lato', sans-serif;
-  font-weight: 300;
+  font-family: 'Inter', system-ui, sans-serif;
 }
 
 #cronometroOverlay .cron-box {
@@ -556,21 +414,20 @@ html {
 }
 
 #cronometroOverlay .cron-header h1 {
-  font-size: clamp(1.05rem, 2vw, 1.15rem);
-  font-weight: 400;
+  font-size: clamp(1.1rem, 2vw, 1.25rem);
+  font-weight: 500;
   margin: 0;
 }
 
 #cronometroOverlay .btn-retornar {
   background: #3b82f6;
   color: #fff;
-  padding: 0.5rem 1rem;
-  border-radius: 0.5rem;
+  padding: 0.6rem 1.2rem;
+  border-radius: 0.625rem;
   border: none;
-  font-weight: 400;
+  font-weight: 500;
   cursor: pointer;
   transition: background-color 0.2s ease;
-  font-size: inherit;
 }
 
 #cronometroOverlay .btn-retornar:hover {
@@ -594,21 +451,21 @@ html {
 
 #cronometroOverlay .config-grid label {
   display: block;
-  font-weight: 300;
+  font-weight: 500;
   margin-bottom: 0.5rem;
   font-size: 1rem;
 }
 
 #cronometroOverlay .config-grid input {
   width: 100%;
-  padding: 0.5rem 0.75rem;
-  border-radius: 0.5rem;
-  font-size: 1rem;
-  font-weight: 400;
+  padding: 0.75rem;
+  border-radius: 0.625rem;
+  font-size: clamp(1rem, 2vw, 1.25rem);
+  font-weight: 500;
   text-align: center;
   background: rgba(255, 255, 255, 0.2);
   color: #fff;
-  border: 1px solid rgba(255, 255, 255, 0.3);
+  border: 0.125rem solid rgba(255, 255, 255, 0.3);
 }
 
 #cronometroOverlay .cron-display {
@@ -679,15 +536,15 @@ html {
 
 .tw-panel .alert-success,
 .tw-panel .alert-error {
-  padding: 3px 6px;
+  padding: 5px 10px;
   border-radius: 0.35rem;
   margin-bottom: 0.5rem;
   display: flex;
   align-items: center;
   justify-content: space-between;
   font-size: 1em;
-  border: 1px solid #ddd;
-  line-height: 1.3;
+  border: 1px solid;
+  line-height: 1.4;
 }
 
 .tw-panel .alert-success {
@@ -706,9 +563,9 @@ html {
   background: #eff6ff;
   border-left: 1px solid #3b82f6;
   border-radius: 0.35rem;
-  padding: 3px 6px;
+  padding: 5px 10px;
   margin-bottom: 0.5rem;
-  line-height: 1.3;
+  line-height: 1.4;
 }
 
 .tw-panel .ronda-info .text-gray-600 {
@@ -717,58 +574,58 @@ html {
 
 .tw-panel .panel-empty-hint {
   background: #f9fafb;
-  border: 1px solid #ddd;
+  border: 1px solid #e0e0e0;
   border-radius: 0.35rem;
-  padding: 3px 6px;
+  padding: 5px 10px;
   text-align: center;
-  color: #5a5a5a;
+  color: #6b7280;
   font-size: 1em;
-  line-height: 1.3;
+  line-height: 1.4;
 }
 
 .tw-panel .panel-success-badge {
   background: #dcfce7;
   color: #15803d;
-  border: 1px solid rgba(21, 128, 61, 0.25);
+  border: 1px solid rgba(21, 128, 61, 0.3);
   border-radius: 0.35rem;
-  padding: 3px 6px;
+  padding: 5px 10px;
   text-align: center;
   font-weight: 500;
-  line-height: 1.3;
+  line-height: 1.4;
 }
 
 .tw-panel .panel-alert-locked {
   background: #f3f4f6;
-  border-left: 1px solid #ddd;
+  border-left: 1px solid #6b7280;
   border-radius: 0.35rem;
-  padding: 3px 6px;
-  color: #2d2d2d;
-  line-height: 1.3;
+  padding: 5px 10px;
+  color: #374151;
+  line-height: 1.4;
 }
 
 .tw-panel .panel-card hr {
   border: 0;
-  border-top: 1px solid #ddd;
-  margin: 0.3rem 0;
+  border-top: 1px solid #e0e0e0;
+  margin: 0.35rem 0;
 }
 
 .tw-panel .panel-btn-badge {
   background-color: rgba(255, 255, 255, 0.3);
-  font-size: 0.9em;
-  font-weight: 400;
+  font-size: clamp(0.8125rem, 1.5vw, 0.875rem);
+  font-weight: 500;
 }
 
 .tw-panel .panel-countdown-box {
   background-color: #fce7f3;
-  border: 1px solid #ddd;
+  border: 1px solid #e0e0e0;
   border-radius: 0.35rem;
-  padding: 3px 6px;
-  line-height: 1.3;
+  padding: 5px 10px;
+  line-height: 1.4;
 }
 
 .tw-panel .panel-countdown-label {
   color: #86198f;
-  font-weight: 400;
+  font-weight: 500;
   margin-bottom: 0.25rem;
 }
 
@@ -799,11 +656,10 @@ html {
 .tw-panel .text-xl { font-size: clamp(1.125rem, 2vw, 1.25rem); }
 .tw-panel .font-bold { font-weight: 500; }
 .tw-panel .font-semibold { font-weight: 500; }
-/* Sin bold/700: resalte máximo 500 */
 .tw-panel .text-white { color: #fff !important; }
-.tw-panel .text-gray-500 { color: #5a5a5a; }
+.tw-panel .text-gray-500 { color: #6b7280; }
 .tw-panel .text-gray-600 { color: #4b5563; }
-.tw-panel .text-gray-700 { color: #2d2d2d; }
+.tw-panel .text-gray-700 { color: #374151; }
 .tw-panel .inline-flex { display: inline-flex; }
 .tw-panel .rounded-full { border-radius: 50rem; }
 .tw-panel .px-3 { padding-left: 0.75rem; padding-right: 0.75rem; }
@@ -832,7 +688,6 @@ html {
 .tw-panel .inline { display: inline; }
 .tw-panel .w-full { width: 100%; }
 
-/* Sin truncamiento: contenido visible, alineación milimétrica */
 .tw-panel,
 .tw-panel .panel-card,
 .tw-panel .panel-card-body,
@@ -840,81 +695,43 @@ html {
   text-overflow: clip;
   overflow-wrap: break-word;
   word-wrap: break-word;
-  overflow: visible;
-}
-
-.tw-panel .panel-grid {
-  width: 70%;
-  max-width: 70%;
-}
-
-.tw-panel .panel-grid .panel-card {
-  width: 100%;
-  min-width: 0;
-}
-
-/* ========== MÓVIL: 1 columna ========== */
-.tw-panel .panel-grid {
-  grid-template-columns: 1fr;
-  gap: 1rem;
-}
-
-.tw-panel .panel-grid-mesas {
-  grid-template-columns: 1fr;
-  gap: 1rem;
 }
 
 /* ========== TABLET (600px): 2 columnas ========== */
 @media (min-width: 600px) {
   .tw-panel .panel-grid {
     grid-template-columns: repeat(2, 1fr);
-    gap: 1rem;
   }
 }
 
-/* ========== TABLET 10" (992px): 3 columnas ========== */
-@media (min-width: 992px) {
-  .tw-panel .panel-grid {
-    grid-template-columns: repeat(3, 1fr);
-    gap: 1rem;
-  }
-
-  .tw-panel .panel-grid-mesas {
-    grid-template-columns: repeat(3, 1fr);
-    gap: 1rem;
-    align-items: start;
-  }
-}
-
-/* ========== PANTALLA 13" (1200px): 4 columnas ========== */
-@media (min-width: 1200px) {
-  .tw-panel .panel-grid {
-    grid-template-columns: repeat(4, 1fr);
-    gap: 1rem;
-  }
-
-  .tw-panel .panel-grid-mesas {
-    grid-template-columns: repeat(4, 1fr);
-    gap: 1rem;
-  }
-}
-
-/* ========== ESCRITORIO (768px): padding ========== */
+/* ========== ESCRITORIO (768px): 13px, tablet 10" espacioso y organizado ========== */
 @media (min-width: 768px) {
   html {
-    font-size: 12px;
+    font-size: 13px;
   }
 
   .tw-panel {
-    padding: 0.5rem 0.6rem;
+    padding: 0.6rem;
+  }
+
+  .tw-panel .panel-grid {
+    gap: 0.6rem;
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .tw-panel .panel-grid-mesas {
+    gap: 0.5rem;
+    grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr));
   }
 }
 
-.tw-panel .panel-grid.panel-grid--wide {
-  grid-template-columns: repeat(4, 1fr);
-}
+/* ========== DESKTOP (1024px): 3–4 columnas, espacioso ========== */
+@media (min-width: 1024px) {
+  .tw-panel .panel-grid {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 0.65rem;
+  }
 
-@media (min-width: 1200px) {
   .tw-panel .panel-grid.panel-grid--wide {
     grid-template-columns: repeat(4, 1fr);
   }
