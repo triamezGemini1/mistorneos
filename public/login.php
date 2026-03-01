@@ -130,6 +130,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         $redirect = !empty($_POST['return_url']) ? trim($_POST['return_url']) : ($return_url ?: '');
         $entry_base = AppHelpers::getRequestEntryUrl();
+        // Forzar escritura de sesión antes del redirect para que la cookie persista (evita perder sesión en subcarpeta)
+        if (function_exists('session_write_close')) {
+            session_write_close();
+        }
         if ($redirect && preg_match('#^[a-zA-Z0-9_\-/\.\?=&]+$#', $redirect) && !preg_match('#^(https?|javascript|data):#i', $redirect)) {
             if (strpos($redirect, '?') !== false || strpos($redirect, '.php') !== false) {
                 $target = (strpos($redirect, 'http') === 0 || strpos($redirect, '/') === 0)
@@ -144,7 +148,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
         exit;
     } else {
-        // Verificar el motivo específico del fallo
+        // Motivo del fallo: solo mostrar inactiva si la contraseña es correcta (evita confundir con "ramaguza" cuando falló la contraseña)
         try {
             $pdo = DB::pdo();
             $stmt = $pdo->prepare("SELECT id, username, status, password_hash FROM usuarios WHERE username = ? OR email = ?");
@@ -152,17 +156,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $user = $stmt->fetch(PDO::FETCH_ASSOC);
             
             if ($user) {
-                // Usuario encontrado: solo activos (status = 0) pueden entrar
-                if ((int)$user['status'] !== 0) {
+                $password_ok = !empty($user['password_hash']) && password_verify($password, $user['password_hash']);
+                if ($password_ok && (int)$user['status'] !== 0) {
                     $error = "Tu cuenta está inactiva. Contacta al administrador.";
                     error_log("Login fallido - Usuario '{$username}' inactivo (status=" . ($user['status'] ?? '') . ")");
+                } elseif (!$password_ok && !empty($user['password_hash'])) {
+                    $error = "Contraseña incorrecta";
+                    error_log("Login fallido - Usuario '{$username}' contraseña incorrecta");
                 } elseif (empty($user['password_hash'])) {
                     $error = "Tu cuenta no tiene contraseña configurada. Contacta al administrador.";
                     error_log("Login fallido - Usuario '{$username}' sin password_hash");
                 } else {
-                    // Activo y tiene password: contraseña incorrecta
-                    $error = "Contraseña incorrecta";
-                    error_log("Login fallido - Usuario '{$username}' contraseña incorrecta");
+                    $error = "Credenciales incorrectas.";
+                    error_log("Login fallido - Usuario '{$username}'");
                 }
             } else {
                 $error = "El usuario o correo no existe en el sistema";
