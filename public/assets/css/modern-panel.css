@@ -75,12 +75,34 @@ html {
   line-height: 1.3;
 }
 
-/* Contenedores: bordes finos, sombra casi imperceptible */
+/* ========== CUADRÍCULA DE GESTIÓN (MESAS/INVITACIONES) ========== */
+/* Unificación: Calibri Light 300, 11.5px, bordes #eeeeee, sin bold */
+.tw-panel .panel-grid,
+.tw-panel .panel-card {
+  font-family: Calibri, 'Lato', sans-serif;
+  font-weight: 300;
+  font-size: 11.5px;
+}
+
+.tw-panel .panel-card strong,
+.tw-panel .panel-card b {
+  font-weight: 400;
+  color: #2d2d2d;
+}
+
+/* Resalte por color, no por grosor */
+.tw-panel .panel-card .text-dark,
+.tw-panel .panel-card [class*="font-semibold"],
+.tw-panel .panel-card [class*="font-bold"] {
+  font-weight: 400;
+  color: #2d2d2d;
+}
+
 .tw-panel .panel-card {
   background: #fff;
   border-radius: 0.4rem;
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
-  border: 1px solid #ddd;
+  border: 1px solid #eeeeee;
   overflow: visible;
   min-height: 100%;
   max-width: 100%;
@@ -92,7 +114,7 @@ html {
 }
 
 .tw-panel .panel-card-header {
-  padding: 3px 6px;
+  padding: 8px;
   color: #fff;
   font-weight: 300;
   font-size: 1.05em;
@@ -109,10 +131,10 @@ html {
 }
 
 .tw-panel .panel-card-body {
-  padding: 3px 6px;
+  padding: 8px;
   display: flex;
   flex-direction: column;
-  gap: 0.3rem;
+  gap: 0.35rem;
 }
 
 .tw-panel .panel-card-header--mesas {
@@ -143,6 +165,21 @@ html {
   max-width: 100%;
 }
 
+/* Botones de acción en cuadrícula: compactos (small), iconos 14px máx */
+.tw-panel .panel-card .tw-btn {
+  min-height: 1.6rem;
+  padding: 4px 8px;
+  font-size: 11.5px;
+  font-weight: 400;
+}
+
+.tw-panel .panel-card .tw-btn i {
+  font-size: 14px;
+  max-width: 14px;
+  max-height: 14px;
+  flex-shrink: 0;
+}
+
 .tw-panel .tw-btn {
   display: inline-flex;
   align-items: center;
@@ -164,7 +201,9 @@ html {
 }
 
 .tw-panel .tw-btn i {
-  font-size: 1rem;
+  font-size: 14px;
+  max-width: 14px;
+  max-height: 14px;
   flex-shrink: 0;
 }
 
@@ -702,6 +741,7 @@ html {
 .tw-panel .inline { display: inline; }
 .tw-panel .w-full { width: 100%; }
 
+/* Sin truncamiento: letra pequeña y nítida, todo el contenido visible */
 .tw-panel,
 .tw-panel .panel-card,
 .tw-panel .panel-card-body,
@@ -709,6 +749,18 @@ html {
   text-overflow: clip;
   overflow-wrap: break-word;
   word-wrap: break-word;
+  overflow: visible;
+}
+
+/* Móvil: cada Card 100% ancho, contenido sin recortes */
+.tw-panel .panel-grid {
+  width: 100%;
+  max-width: 100%;
+}
+
+.tw-panel .panel-grid .panel-card {
+  width: 100%;
+  min-width: 0;
 }
 
 /* ========== TABLET (600px): 2 columnas ========== */
@@ -718,7 +770,21 @@ html {
   }
 }
 
-/* ========== ESCRITORIO / TABLET 10" (768px): 12.5px, más columnas mesas ========== */
+/* ========== TABLET 10" (992px): mínimo 3 columnas cuadrícula ========== */
+@media (min-width: 992px) {
+  .tw-panel .panel-grid {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 0.5rem;
+  }
+
+  .tw-panel .panel-grid-mesas {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 0.5rem;
+    align-items: start;
+  }
+}
+
+/* ========== ESCRITORIO (768px): 12.5px base ========== */
 @media (min-width: 768px) {
   html {
     font-size: 12.5px;
@@ -729,23 +795,20 @@ html {
   }
 
   .tw-panel .panel-grid {
-    gap: 0.45rem;
-    grid-template-columns: repeat(2, 1fr);
+    gap: 0.5rem;
   }
 
-  /* Tablet 10": aprovechar espacio ganado, más columnas alineadas */
   .tw-panel .panel-grid-mesas {
-    gap: 0.45rem;
-    grid-template-columns: repeat(4, 1fr);
+    gap: 0.5rem;
     align-items: start;
   }
 }
 
-/* ========== DESKTOP (1024px): 3–4 columnas panel, 5 columnas mesas ========== */
+/* ========== DESKTOP (1024px): 3–4 columnas, más columnas mesas ========== */
 @media (min-width: 1024px) {
   .tw-panel .panel-grid {
     grid-template-columns: repeat(3, 1fr);
-    gap: 0.45rem;
+    gap: 0.5rem;
   }
 
   .tw-panel .panel-grid.panel-grid--wide {
@@ -753,7 +816,7 @@ html {
   }
 
   .tw-panel .panel-grid-mesas {
-    grid-template-columns: repeat(5, 1fr);
-    gap: 0.45rem;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 0.5rem;
   }
 }
