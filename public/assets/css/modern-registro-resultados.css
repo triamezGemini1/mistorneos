@@ -1,7 +1,7 @@
 /**
- * Registro de Resultados - Clean Design
- * Inter, peso base 300. Títulos/labels máx. 500. Móvil 10px, Tablet/Desktop 11px.
- * Bordes 1px #e0e0e0, sombras sutiles. Cuadrícula de mesas clara en tablet 10" sin recortes.
+ * Registro de Resultados - Alta Gama
+ * Inter, peso base 300. Títulos 400/500. Móvil 12px, escritorio 13px. line-height 1.4.
+ * Labels 11px. Inputs/botones con padding proporcional. Nitidez: antialiased.
  */
 
 body {
@@ -10,10 +10,10 @@ body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   letter-spacing: 0.02em;
-  line-height: 1.5;
+  line-height: 1.4;
 }
 
-/* ========== BASE: MÓVIL (10px) ========== */
+/* ========== BASE: MÓVIL (12px) ========== */
 .registrar-resultados-wrap {
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   font-weight: 300;
@@ -22,9 +22,9 @@ body {
   margin-left: auto;
   margin-right: auto;
   padding: 0.5rem;
-  font-size: 10px;
+  font-size: 12px;
   letter-spacing: 0.02em;
-  line-height: 1.5;
+  line-height: 1.4;
 }
 
 .registrar-resultados-wrap .container-fluid {
@@ -48,18 +48,20 @@ body {
 
 .registrar-resultados-wrap h4,
 .registrar-resultados-wrap .card-header h4 {
-  font-size: 1.2em;
-  font-weight: 500;
+  font-size: 1.15em;
+  font-weight: 400;
   word-wrap: break-word;
   overflow-wrap: break-word;
+  line-height: 1.4;
 }
 
 .registrar-resultados-wrap label {
-  font-size: 1em;
+  font-size: 11px;
   text-transform: uppercase;
   letter-spacing: 0.02em;
   color: #6b7280;
   font-weight: 500;
+  line-height: 1.4;
 }
 
 .registrar-resultados-wrap .form-control,
@@ -67,9 +69,10 @@ body {
 .registrar-resultados-wrap input[type="text"],
 .registrar-resultados-wrap #formResultados th,
 .registrar-resultados-wrap #formResultados td {
-  padding: 4px 8px !important;
+  padding: 5px 10px !important;
   border: 1px solid #e0e0e0;
   font-weight: 300;
+  line-height: 1.4;
 }
 
 /* Columnas al ancho de pantalla sin truncar */
@@ -145,7 +148,7 @@ body {
   border-radius: 0.35rem;
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
   margin-bottom: 0;
-  padding: 4px 8px;
+  padding: 5px 10px;
   background: #fff;
   page-break-inside: avoid;
 }
@@ -174,13 +177,14 @@ body {
 }
 
 .registrar-resultados-wrap #formResultados tbody td::before {
-  font-size: 1em;
+  font-size: 11px;
   text-transform: uppercase;
   letter-spacing: 0.02em;
   color: #6b7280;
   font-weight: 500;
   display: inline-block;
   min-width: 7rem;
+  line-height: 1.4;
 }
 
 .registrar-resultados-wrap #formResultados tbody td.columna-id::before { content: "ID"; }
@@ -238,32 +242,35 @@ body {
 .registrar-resultados-wrap #formResultados #btn-guardar,
 .registrar-resultados-wrap #formResultados .btn.btn-success.btn-lg {
   width: 100%;
-  min-height: 3rem;
-  font-size: clamp(1rem, 2vw, 1.0625rem);
-  padding: 0.75rem 1.5rem;
+  min-height: 2.25rem;
+  font-size: 1em;
+  padding: 0.5rem 1rem;
   margin-top: 0.5rem;
   order: 99;
   white-space: normal;
   text-align: center;
+  line-height: 1.4;
 }
 
 .registrar-resultados-wrap #formResultados .btn.btn-warning#btn-limpiar {
   width: 100%;
-  min-height: 2.75rem;
-  padding: 0.75rem 1rem;
+  min-height: 2.25rem;
+  padding: 0.5rem 1rem;
+  line-height: 1.4;
 }
 
 .registrar-resultados-wrap #formResultados .d-flex.gap-2 a.btn {
   flex: 1 1 100%;
   min-width: 0;
-  min-height: 2.75rem;
-  padding: 0.75rem 1rem;
+  min-height: 2.25rem;
+  padding: 0.5rem 1rem;
   white-space: normal;
+  line-height: 1.4;
 }
 
 .registrar-resultados-wrap #formResultados .d-flex.gap-2:first-of-type a {
   flex: 1 1 100%;
-  min-height: 2.75rem;
+  min-height: 2.25rem;
 }
 
 /* Columnas: sin anchos fijos en móvil */
@@ -294,20 +301,28 @@ body {
   }
 }
 
-/* ========== TABLET/DESKTOP (768px): 11px base, cuadrícula clara sin recortes ========== */
+/* ========== ESCRITORIO (768px): 13px, tablet 10" espacioso ========== */
 @media (min-width: 768px) {
   .registrar-resultados-wrap {
-    font-size: 11px;
+    font-size: 13px;
     padding: 0.6rem;
   }
 
   .registrar-resultados-wrap h4,
   .registrar-resultados-wrap .card-header h4 {
-    font-size: 1.2em;
+    font-size: 1.15em;
   }
 
   .registrar-resultados-wrap #formResultados .table-responsive {
     gap: 6px;
+  }
+
+  .registrar-resultados-wrap .form-control,
+  .registrar-resultados-wrap input[type="number"],
+  .registrar-resultados-wrap input[type="text"],
+  .registrar-resultados-wrap #formResultados th,
+  .registrar-resultados-wrap #formResultados td {
+    padding: 5px 10px !important;
   }
 }
 
@@ -351,7 +366,7 @@ body {
     width: auto;
     max-width: none;
     text-align: center;
-    padding: 4px 8px;
+    padding: 5px 10px;
     vertical-align: middle;
     border: 1px solid #e0e0e0;
   }
@@ -379,8 +394,8 @@ body {
   .registrar-resultados-wrap #formResultados #btn-guardar,
   .registrar-resultados-wrap #formResultados .btn.btn-success.btn-lg {
     width: auto;
-    min-height: 2.75rem;
-    padding: 0.75rem 1.5rem;
+    min-height: 2.25rem;
+    padding: 0.5rem 1rem;
     order: 0;
   }
 

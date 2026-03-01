@@ -1,7 +1,7 @@
 /**
- * Panel de Control - Clean Design
- * Inter, peso base 300 (Light). Títulos/labels máx. 500. Sin bold/700.
- * Móvil 10px, Tablet/Desktop 11px. Bordes finos 1px #e0e0e0, sombras sutiles.
+ * Panel de Control - Alta Gama
+ * Inter, peso base 300. Títulos 400/500. Escala: móvil 12px, escritorio 13px (-20%).
+ * line-height 1.4. Labels 11px. Nitidez: -webkit-font-smoothing: antialiased.
  */
 
 body {
@@ -10,12 +10,12 @@ body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   letter-spacing: 0.02em;
-  line-height: 1.5;
+  line-height: 1.4;
 }
 
-/* ========== BASE: MÓVIL (10px) ========== */
+/* ========== BASE: MÓVIL (12px) ========== */
 html {
-  font-size: 10px;
+  font-size: 12px;
 }
 
 .tw-panel {
@@ -26,7 +26,7 @@ html {
   max-width: 100%;
   padding: 0.5rem;
   letter-spacing: 0.02em;
-  line-height: 1.5;
+  line-height: 1.4;
 }
 
 .tw-panel * {
@@ -37,10 +37,11 @@ html {
 .tw-panel h2,
 .tw-panel h3,
 .tw-panel h4 {
-  font-size: 1.2em;
-  font-weight: 500;
+  font-size: 1.15em;
+  font-weight: 400;
   word-wrap: break-word;
   overflow-wrap: break-word;
+  line-height: 1.4;
 }
 
 .tw-panel .panel-card-title {
@@ -55,11 +56,12 @@ html {
 }
 
 .tw-panel label {
-  font-size: 1em;
+  font-size: 11px;
   text-transform: uppercase;
   letter-spacing: 0.02em;
   color: #6b7280;
   font-weight: 500;
+  line-height: 1.4;
 }
 
 /* Contenedores: bordes finos, sombra casi imperceptible */
@@ -79,15 +81,16 @@ html {
 }
 
 .tw-panel .panel-card-header {
-  padding: 4px 8px;
+  padding: 5px 10px;
   color: #fff;
   font-weight: 500;
-  font-size: 1.2em;
+  font-size: 1.15em;
   display: flex;
   align-items: center;
   gap: 0.4rem;
   border-radius: 0.4rem 0.4rem 0 0;
   border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+  line-height: 1.4;
 }
 
 .tw-panel .panel-card-header i {
@@ -95,10 +98,10 @@ html {
 }
 
 .tw-panel .panel-card-body {
-  padding: 4px 8px;
+  padding: 5px 10px;
   display: flex;
   flex-direction: column;
-  gap: 0.35rem;
+  gap: 0.4rem;
 }
 
 .tw-panel .panel-card-header--mesas {
@@ -134,8 +137,8 @@ html {
   align-items: center;
   justify-content: center;
   width: 100%;
-  min-height: 2rem;
-  padding: 4px 8px;
+  min-height: 1.85rem;
+  padding: 5px 10px;
   font-family: inherit;
   font-size: inherit;
   font-weight: 500;
@@ -146,7 +149,7 @@ html {
   cursor: pointer;
   gap: 0.4rem;
   letter-spacing: 0.02em;
-  line-height: 1.5;
+  line-height: 1.4;
 }
 
 .tw-panel .tw-btn i {
@@ -216,13 +219,13 @@ html {
 }
 
 .tw-panel .panel-header .titulo-torneo {
-  font-size: 1.2em;
-  font-weight: 500;
+  font-size: 1.15em;
+  font-weight: 400;
   margin: 0 0 0.2rem 0;
   text-align: center;
   text-transform: uppercase;
   letter-spacing: 0.02em;
-  line-height: 1.5;
+  line-height: 1.4;
 }
 
 .tw-panel .panel-header .meta {
@@ -231,10 +234,11 @@ html {
   justify-content: center;
   gap: 0.5rem;
   font-size: 1em;
-  font-weight: 400;
+  font-weight: 300;
   opacity: 0.95;
   padding-top: 0.35rem;
   border-top: 1px solid rgba(255, 255, 255, 0.3);
+  line-height: 1.4;
 }
 
 .tw-panel .panel-header .meta i {
@@ -298,8 +302,8 @@ html {
 }
 
 .tw-panel #btnCronometro {
-  min-height: 2rem;
-  padding: 4px 8px;
+  min-height: 1.85rem;
+  padding: 5px 10px;
   background: linear-gradient(135deg, #0f766e 0%, #0d9488 50%, #14b8a6 100%) !important;
   color: #fff !important;
   border: 1px solid rgba(255, 255, 255, 0.2);
@@ -307,6 +311,7 @@ html {
   font-weight: 500;
   cursor: pointer;
   transition: box-shadow 0.2s ease;
+  line-height: 1.4;
 }
 
 .tw-panel #btnCronometro:hover {
@@ -334,23 +339,26 @@ html {
 }
 
 .tw-panel .cronometro-finalizar-torneo .cron-finalizar-label {
-  font-size: clamp(0.875rem, 1.5vw, 0.9375rem);
+  font-size: 1em;
   font-weight: 500;
   opacity: 0.95;
-  margin-bottom: 0.35rem;
+  margin-bottom: 0.25rem;
+  line-height: 1.4;
 }
 
 .tw-panel .cronometro-finalizar-torneo .countdown-tiempo-restante {
-  font-size: clamp(1.75rem, 5vw, 2.25rem);
-  font-weight: 500;
+  font-size: 1.5em;
+  font-weight: 400;
   letter-spacing: 0.05em;
-  margin: 0.25rem 0;
+  margin: 0.2rem 0;
+  line-height: 1.4;
 }
 
 .tw-panel .cronometro-finalizar-torneo .cron-finalizar-hint {
-  font-size: 0.75rem;
+  font-size: 0.9em;
   opacity: 0.9;
-  margin-top: 0.25rem;
+  margin-top: 0.2rem;
+  line-height: 1.4;
 }
 
 #cronometroOverlay {
@@ -528,7 +536,7 @@ html {
 
 .tw-panel .alert-success,
 .tw-panel .alert-error {
-  padding: 4px 8px;
+  padding: 5px 10px;
   border-radius: 0.35rem;
   margin-bottom: 0.5rem;
   display: flex;
@@ -536,6 +544,7 @@ html {
   justify-content: space-between;
   font-size: 1em;
   border: 1px solid;
+  line-height: 1.4;
 }
 
 .tw-panel .alert-success {
@@ -554,8 +563,9 @@ html {
   background: #eff6ff;
   border-left: 1px solid #3b82f6;
   border-radius: 0.35rem;
-  padding: 4px 8px;
+  padding: 5px 10px;
   margin-bottom: 0.5rem;
+  line-height: 1.4;
 }
 
 .tw-panel .ronda-info .text-gray-600 {
@@ -566,10 +576,11 @@ html {
   background: #f9fafb;
   border: 1px solid #e0e0e0;
   border-radius: 0.35rem;
-  padding: 4px 8px;
+  padding: 5px 10px;
   text-align: center;
   color: #6b7280;
   font-size: 1em;
+  line-height: 1.4;
 }
 
 .tw-panel .panel-success-badge {
@@ -577,17 +588,19 @@ html {
   color: #15803d;
   border: 1px solid rgba(21, 128, 61, 0.3);
   border-radius: 0.35rem;
-  padding: 4px 8px;
+  padding: 5px 10px;
   text-align: center;
   font-weight: 500;
+  line-height: 1.4;
 }
 
 .tw-panel .panel-alert-locked {
   background: #f3f4f6;
   border-left: 1px solid #6b7280;
   border-radius: 0.35rem;
-  padding: 4px 8px;
+  padding: 5px 10px;
   color: #374151;
+  line-height: 1.4;
 }
 
 .tw-panel .panel-card hr {
@@ -606,7 +619,8 @@ html {
   background-color: #fce7f3;
   border: 1px solid #e0e0e0;
   border-radius: 0.35rem;
-  padding: 4px 8px;
+  padding: 5px 10px;
+  line-height: 1.4;
 }
 
 .tw-panel .panel-countdown-label {
@@ -690,10 +704,10 @@ html {
   }
 }
 
-/* ========== TABLET/DESKTOP (768px): 11px base, cuadrícula clara sin recortes ========== */
+/* ========== ESCRITORIO (768px): 13px, tablet 10" espacioso y organizado ========== */
 @media (min-width: 768px) {
   html {
-    font-size: 11px;
+    font-size: 13px;
   }
 
   .tw-panel {
@@ -701,19 +715,21 @@ html {
   }
 
   .tw-panel .panel-grid {
-    gap: 0.75rem;
+    gap: 0.6rem;
+    grid-template-columns: repeat(2, 1fr);
   }
 
   .tw-panel .panel-grid-mesas {
     gap: 0.5rem;
-    grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr));
   }
 }
 
-/* ========== DESKTOP (1024px): 3–4 columnas ========== */
+/* ========== DESKTOP (1024px): 3–4 columnas, espacioso ========== */
 @media (min-width: 1024px) {
   .tw-panel .panel-grid {
     grid-template-columns: repeat(3, 1fr);
+    gap: 0.65rem;
   }
 
   .tw-panel .panel-grid.panel-grid--wide {
