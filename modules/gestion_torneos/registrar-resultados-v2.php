@@ -183,11 +183,9 @@ $action_param = $use_standalone ? '?' : '&';
     .columna-sancion { width: 5%; }
     .columna-forfait { width: 8%; }
     .columna-tarjeta { width: 15%; }
-    /* Estadísticas en conjunto no superan 10%: pos 2%, gan 2%, per 2%, efect 4% */
-    .columna-pos { width: 2%; max-width: 2%; }
-    .columna-gan { width: 2%; max-width: 2%; }
-    .columna-per { width: 2%; max-width: 2%; }
-    .columna-efect { width: 4%; max-width: 4%; }
+    /* Estadísticas: una columna, formato "pos - gan - per - efect", no supera 10% del ancho */
+    .columna-estadisticas { width: 10%; max-width: 10%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .columna-estadisticas .estadisticas-valores { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .columna-tarjeta .tarjeta-btn { width: 5%; min-width: 2rem; box-sizing: border-box; }
     .estadisticas-valores { font-size: clamp(0.75rem, 1.5vw, 0.875rem); font-weight: 300; color: #111827; white-space: nowrap; line-height: 1.5; }
     /* Suprimir incrementador en inputs numéricos */
@@ -724,10 +722,7 @@ $action_param = $use_standalone ? '?' : '&';
                                             <th rowspan="2" class="text-center align-middle columna-sancion">Sanción</th>
                                             <th rowspan="2" class="text-center align-middle columna-forfait">Forfait</th>
                                             <th rowspan="2" class="text-center align-middle columna-tarjeta">Tarjeta</th>
-                                            <th class="text-center columna-pos">Pos</th>
-                                            <th class="text-center columna-gan">Gan</th>
-                                            <th class="text-center columna-per">Per</th>
-                                            <th class="text-center columna-efect">Efect</th>
+                                            <th rowspan="2" class="text-center align-middle columna-estadisticas">Estadísticas</th>
                                         </tr>
                                     </thead>
                                     <tbody>
@@ -832,11 +827,15 @@ $action_param = $use_standalone ? '?' : '&';
                                                     </div>
                                                 </td>
                                                 
-                                                <!-- Estadísticas: Pos, Gan, Per, Efect en columnas respectivas -->
-                                                <td class="text-center bg-light columna-pos"><span class="estadisticas-valores"><?php echo (int)($jugador['inscrito']['posicion'] ?? 0); ?></span></td>
-                                                <td class="text-center bg-light columna-gan"><span class="estadisticas-valores"><?php echo (int)($jugador['inscrito']['ganados'] ?? 0); ?></span></td>
-                                                <td class="text-center bg-light columna-per"><span class="estadisticas-valores"><?php echo (int)($jugador['inscrito']['perdidos'] ?? 0); ?></span></td>
-                                                <td class="text-center bg-light columna-efect"><span class="estadisticas-valores"><?php echo (int)($jugador['inscrito']['efectividad'] ?? 0); ?></span></td>
+                                                <!-- Estadísticas: pos - gan - per - efect (≤10% ancho) -->
+                                                <?php 
+                                                $pos = (int)($jugador['inscrito']['posicion'] ?? 0);
+                                                $gan = (int)($jugador['inscrito']['ganados'] ?? 0);
+                                                $per = (int)($jugador['inscrito']['perdidos'] ?? 0);
+                                                $efec = (int)($jugador['inscrito']['efectividad'] ?? 0);
+                                                $estadisticas_linea = $pos . ' - ' . $gan . ' - ' . $per . ' - ' . $efec;
+                                                ?>
+                                                <td class="text-center bg-light columna-estadisticas"><span class="estadisticas-valores"><?php echo htmlspecialchars($estadisticas_linea); ?></span></td>
                                                 
                                                 <!-- Campos Hidden -->
                                                 <input type="hidden" name="jugadores[<?php echo $indiceArray; ?>][id]" 
@@ -945,11 +944,15 @@ $action_param = $use_standalone ? '?' : '&';
                                                     </div>
                                                 </td>
                                                 
-                                                <!-- Estadísticas: Pos, Gan, Per, Efect -->
-                                                <td class="text-center bg-light columna-pos"><span class="estadisticas-valores"><?php echo (int)($jugador['inscrito']['posicion'] ?? 0); ?></span></td>
-                                                <td class="text-center bg-light columna-gan"><span class="estadisticas-valores"><?php echo (int)($jugador['inscrito']['ganados'] ?? 0); ?></span></td>
-                                                <td class="text-center bg-light columna-per"><span class="estadisticas-valores"><?php echo (int)($jugador['inscrito']['perdidos'] ?? 0); ?></span></td>
-                                                <td class="text-center bg-light columna-efect"><span class="estadisticas-valores"><?php echo (int)($jugador['inscrito']['efectividad'] ?? 0); ?></span></td>
+                                                <!-- Estadísticas: pos - gan - per - efect (≤10% ancho) -->
+                                                <?php 
+                                                $pos = (int)($jugador['inscrito']['posicion'] ?? 0);
+                                                $gan = (int)($jugador['inscrito']['ganados'] ?? 0);
+                                                $per = (int)($jugador['inscrito']['perdidos'] ?? 0);
+                                                $efec = (int)($jugador['inscrito']['efectividad'] ?? 0);
+                                                $estadisticas_linea = $pos . ' - ' . $gan . ' - ' . $per . ' - ' . $efec;
+                                                ?>
+                                                <td class="text-center bg-light columna-estadisticas"><span class="estadisticas-valores"><?php echo htmlspecialchars($estadisticas_linea); ?></span></td>
                                                 
                                                 <!-- Campos Hidden -->
                                                 <input type="hidden" name="jugadores[<?php echo $indiceArray; ?>][id]" 

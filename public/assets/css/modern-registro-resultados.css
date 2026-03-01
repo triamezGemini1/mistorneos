@@ -193,10 +193,7 @@ body {
 .registrar-resultados-wrap #formResultados tbody td.columna-sancion::before { content: "Sanción"; }
 .registrar-resultados-wrap #formResultados tbody td.columna-forfait::before { content: "Forfait"; }
 .registrar-resultados-wrap #formResultados tbody td.columna-tarjeta::before { content: "Tarjeta"; }
-.registrar-resultados-wrap #formResultados tbody td.columna-pos::before { content: "Pos"; }
-.registrar-resultados-wrap #formResultados tbody td.columna-gan::before { content: "Gan"; }
-.registrar-resultados-wrap #formResultados tbody td.columna-per::before { content: "Per"; }
-.registrar-resultados-wrap #formResultados tbody td.columna-efect::before { content: "Efect"; }
+.registrar-resultados-wrap #formResultados tbody td.columna-estadisticas::before { content: "Estadísticas"; }
 
 .registrar-resultados-wrap #formResultados tbody td.columna-puntos {
   padding: 0.75rem 0;
@@ -303,10 +300,7 @@ body {
 .registrar-resultados-wrap .columna-sancion,
 .registrar-resultados-wrap .columna-tarjeta,
 .registrar-resultados-wrap .columna-forfait,
-.registrar-resultados-wrap .columna-pos,
-.registrar-resultados-wrap .columna-gan,
-.registrar-resultados-wrap .columna-per,
-.registrar-resultados-wrap .columna-efect {
+.registrar-resultados-wrap .columna-estadisticas {
   min-width: 0 !important;
   max-width: none !important;
   width: 100% !important;
@@ -400,11 +394,9 @@ body {
   .registrar-resultados-wrap #formResultados .columna-sancion { width: 5%; }
   .registrar-resultados-wrap #formResultados .columna-forfait { width: 8%; }
   .registrar-resultados-wrap #formResultados .columna-tarjeta { width: 15%; }
-  /* Estadísticas en conjunto 10%: pos 2%, gan 2%, per 2%, efect 4% */
-  .registrar-resultados-wrap #formResultados .columna-pos { width: 2%; max-width: 2%; }
-  .registrar-resultados-wrap #formResultados .columna-gan { width: 2%; max-width: 2%; }
-  .registrar-resultados-wrap #formResultados .columna-per { width: 2%; max-width: 2%; }
-  .registrar-resultados-wrap #formResultados .columna-efect { width: 4%; max-width: 4%; }
+  /* Estadísticas: una columna "pos - gan - per - efect", máximo 10% del ancho */
+  .registrar-resultados-wrap #formResultados .columna-estadisticas { width: 10%; max-width: 10%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .registrar-resultados-wrap #formResultados .columna-estadisticas .estadisticas-valores { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .registrar-resultados-wrap #formResultados .columna-tarjeta .tarjeta-btn { width: 33.33%; min-width: 2rem; box-sizing: border-box; border: none; }
   .registrar-resultados-wrap #formResultados .tarjeta-btn { border: none; }
 
