@@ -94,7 +94,35 @@ html {
 .tw-panel .panel-card-body *:not(.tw-btn):not(i) {
   font-weight: 300 !important;
   letter-spacing: 0.02em;
-  font-size: 0.7rem !important;
+  font-size: 0.56rem !important; /* 80% de 0.7rem para que letras/números ocupen ~80% del espacio de la celda */
+}
+
+/* Contenido de la celda: zona del 80% (padding 10% cada lado), números y texto al 80% del tamaño */
+.tw-panel .panel-card-body {
+  box-sizing: border-box;
+  padding-left: 10%;
+  padding-right: 10%;
+}
+
+.tw-panel .panel-card-header .panel-card-title,
+.tw-panel .panel-card-header span {
+  font-size: 0.56rem !important;
+}
+
+.tw-panel .panel-card .panel-card-title,
+.tw-panel .panel-card-body span,
+.tw-panel .panel-card-body div:not(.panel-btn-group):not(.tw-btn) {
+  font-size: 0.56rem !important;
+}
+
+/* Números y badges dentro de la cuadrícula al 80% del tamaño */
+.tw-panel .panel-card .panel-btn-badge,
+.tw-panel .panel-card .tabular-nums,
+.tw-panel .panel-card [class*="badge"],
+.tw-panel .panel-card .text-xl,
+.tw-panel .panel-card .text-2xl {
+  font-size: 0.56rem !important;
+  font-variant-numeric: tabular-nums;
 }
 
 /* Eliminación de bold: forzar Light (300) en todo lo que venga con negrita */
