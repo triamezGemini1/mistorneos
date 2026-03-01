@@ -314,6 +314,82 @@ tailwind.config = {
     .tw-panel .text-gray-500 { color: #6b7280; }
     .tw-panel .text-sm { font-size: 0.74rem; }
     
+    /* ========== CUADRÍCULA (Grid/Mesas) - solo este módulo ========== */
+    .tw-panel .tw-columns,
+    .tw-panel .tw-column,
+    .tw-panel .tw-column * {
+        font-family: Calibri, 'Lato', sans-serif !important;
+        font-weight: 300 !important;
+        font-size: 0.8rem !important;
+    }
+    .tw-panel .tw-column .font-bold,
+    .tw-panel .tw-column .fw-bold,
+    .tw-panel .tw-column .font-semibold,
+    .tw-panel .tw-column h3,
+    .tw-panel .tw-column [class*="font-bold"],
+    .tw-panel .tw-column [class*="font-semibold"] {
+        font-weight: 300 !important;
+    }
+    .tw-panel .tw-column > div {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        min-height: 100%;
+        text-align: center;
+    }
+    .tw-panel .tw-column > div > [class*="bg-gradient"] {
+        width: 100%;
+        text-align: center;
+    }
+    .tw-panel .tw-column > div > [class*="bg-gradient"] h3 {
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        max-width: 80%;
+        margin: 0 auto;
+        font-size: 0.85rem !important;
+    }
+    .tw-panel .tw-column .p-5,
+    .tw-panel .tw-column .space-y-4 {
+        width: 80%;
+        max-width: 80%;
+        margin-left: auto;
+        margin-right: auto;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        box-sizing: border-box;
+    }
+    .tw-panel .tw-column .p-5 > *,
+    .tw-panel .tw-column .space-y-4 > * {
+        width: 100%;
+        max-width: 100%;
+        box-sizing: border-box;
+    }
+    .tw-panel .tw-column .tw-btn,
+    .tw-panel .tw-column .p-5 span,
+    .tw-panel .tw-column .p-5 a,
+    .tw-panel .tw-column .space-y-4 span,
+    .tw-panel .tw-column .space-y-4 a {
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        display: block;
+        min-width: 0;
+    }
+    .tw-panel .tw-column .tw-btn {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    .tw-panel .tw-column .d-flex {
+        width: 100%;
+        align-items: center;
+    }
+    .tw-panel .tw-column .d-flex .tw-btn {
+        width: 100%;
+    }
+    
     @media (max-width: 1024px) {
         .tw-panel .tw-columns { flex-direction: column !important; }
         .tw-panel .tw-column { width: 100% !important; margin-bottom: 1rem; }
