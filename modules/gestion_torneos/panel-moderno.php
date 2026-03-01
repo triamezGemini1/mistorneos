@@ -314,97 +314,68 @@ tailwind.config = {
     .tw-panel .text-gray-500 { color: #6b7280; }
     .tw-panel .text-sm { font-size: 0.74rem; }
     
-    /* ========== CUADRÍCULA (Grid/Mesas) - solo este módulo ========== */
-    /* Alto celda -15%, Calibri Light, tamaño para 80% ancho, una sola línea */
-    .tw-panel .tw-columns,
-    .tw-panel .tw-column,
-    .tw-panel .tw-column * {
+    /* ========== CUADRÍCULA – SOBRESCRITURA TOTAL (ignora estilos heredados) ========== */
+    .tw-panel .tw-columns .tw-column span,
+    .tw-panel .tw-columns .tw-column td,
+    .tw-panel .tw-columns .tw-column h3,
+    .tw-panel .tw-columns .tw-column h5,
+    .tw-panel .tw-columns .tw-column h6,
+    .tw-panel .tw-columns .tw-column p,
+    .tw-panel .tw-columns .tw-column a,
+    .tw-panel .tw-columns .tw-column .tw-btn,
+    .tw-panel .tw-columns .tw-column .tw-btn *,
+    .tw-panel .tw-columns .tw-column .p-5 > *,
+    .tw-panel .tw-columns .tw-column .space-y-4 > * {
         font-family: Calibri, 'Lato', sans-serif !important;
         font-weight: 300 !important;
-        font-size: 0.68rem !important;
-        line-height: 1.2;
+        font-size: 0.75rem !important;
+        white-space: nowrap !important;
+        overflow: hidden !important;
+        text-overflow: ellipsis !important;
+        display: block !important;
+        max-width: 80% !important;
+        margin-left: auto !important;
+        margin-right: auto !important;
+        box-sizing: border-box !important;
     }
-    .tw-panel .tw-column .font-bold,
-    .tw-panel .tw-column .fw-bold,
-    .tw-panel .tw-column .font-semibold,
-    .tw-panel .tw-column h3,
-    .tw-panel .tw-column [class*="font-bold"],
-    .tw-panel .tw-column [class*="font-semibold"] {
+    .tw-panel .tw-columns .tw-column span,
+    .tw-panel .tw-columns .tw-column td,
+    .tw-panel .tw-columns .tw-column h3,
+    .tw-panel .tw-columns .tw-column h5,
+    .tw-panel .tw-columns .tw-column h6,
+    .tw-panel .tw-columns .tw-column p,
+    .tw-panel .tw-columns .tw-column a {
+        font-family: Calibri, 'Lato', sans-serif !important;
         font-weight: 300 !important;
+        font-size: 0.75rem !important;
+        white-space: nowrap !important;
+        overflow: hidden !important;
+        text-overflow: ellipsis !important;
+        display: block !important;
+        max-width: 80% !important;
+        margin-left: auto !important;
+        margin-right: auto !important;
     }
-    .tw-panel .tw-column > div {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        min-height: 0;
-        text-align: center;
-        padding-bottom: 0;
-    }
-    .tw-panel .tw-column > div > [class*="bg-gradient"] {
-        width: 100%;
-        text-align: center;
-        padding: 0.36rem 0.5rem !important;
-    }
-    .tw-panel .tw-column > div > [class*="bg-gradient"] h3 {
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        max-width: 80%;
-        margin: 0 auto;
-        font-size: 0.72rem !important;
-        line-height: 1.2;
-    }
-    .tw-panel .tw-column .p-5,
-    .tw-panel .tw-column .space-y-4 {
-        width: 80%;
-        max-width: 80%;
-        margin-left: auto;
-        margin-right: auto;
-        padding: 0.43rem 0.58rem !important;
-        gap: 0.25rem !important;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        box-sizing: border-box;
-    }
-    .tw-panel .tw-column .p-5 > *,
-    .tw-panel .tw-column .space-y-4 > * {
-        width: 100%;
-        max-width: 100%;
-        box-sizing: border-box;
-    }
-    .tw-panel .tw-column .tw-btn {
-        padding: 0.35rem 0.5rem !important;
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        display: flex;
+    .tw-panel .tw-columns .tw-column .tw-btn {
+        display: flex !important;
         align-items: center;
         justify-content: center;
-        min-width: 0;
-        font-size: 0.68rem !important;
     }
-    .tw-panel .tw-column .tw-btn i {
-        font-size: 0.68rem !important;
+    .tw-panel .tw-columns .tw-column .tw-btn i {
+        display: inline-block !important;
         flex-shrink: 0;
     }
-    .tw-panel .tw-column .p-5 span,
-    .tw-panel .tw-column .p-5 a,
-    .tw-panel .tw-column .space-y-4 span,
-    .tw-panel .tw-column .space-y-4 a {
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        display: block;
-        min-width: 0;
+    .tw-panel .tw-columns .tw-column .fw-bold,
+    .tw-panel .tw-columns .tw-column .font-weight-bold,
+    .tw-panel .tw-columns .tw-column .font-bold,
+    .tw-panel .tw-columns .tw-column [class*="font-bold"],
+    .tw-panel .tw-columns .tw-column [class*="font-semibold"] {
+        font-weight: 300 !important;
     }
-    .tw-panel .tw-column .d-flex {
-        width: 100%;
-        align-items: center;
-        gap: 0.25rem !important;
-    }
-    .tw-panel .tw-column .d-flex .tw-btn {
-        width: 100%;
+    .tw-panel .tw-columns .tw-column .p-5,
+    .tw-panel .tw-columns .tw-column .space-y-4 {
+        width: 80% !important;
+        max-width: 80% !important;
     }
     
     @media (max-width: 1024px) {
@@ -713,7 +684,7 @@ tailwind.config = {
             <div class="tw-column w-1/3">
                 <div class="bg-white rounded-xl shadow-md border border-gray-200 overflow-hidden h-full">
                     <div class="bg-gradient-to-r from-emerald-500 to-teal-500 px-4 py-2">
-                        <h3 class="text-white font-bold text-lg flex items-center mb-0">
+                        <h3 class="text-white text-lg flex items-center mb-0">
                             <i class="fas fa-table mr-2"></i> Gestión de Mesas
                         </h3>
                     </div>
@@ -805,9 +776,9 @@ tailwind.config = {
             <div class="tw-column w-1/3">
                 <div class="bg-white rounded-xl shadow-md border border-gray-200 overflow-hidden h-full">
                     <div class="bg-gradient-to-r from-blue-500 to-indigo-500 px-4 py-2">
-                        <h3 class="text-white font-bold text-lg flex items-center mb-0">
-                            <i class="fas fa-cogs mr-2"></i> Operaciones
-                        </h3>
+<h3 class="text-white text-lg flex items-center mb-0">
+                        <i class="fas fa-cogs mr-2"></i> Operaciones
+                    </h3>
                     </div>
                     <div class="p-5 space-y-4">
                         <!-- Actualizar Resultados -->
@@ -895,9 +866,9 @@ tailwind.config = {
             <div class="tw-column w-1/3">
                 <div class="bg-white rounded-xl shadow-md border border-gray-200 overflow-hidden h-full">
                     <div class="bg-gradient-to-r from-amber-500 to-orange-500 px-4 py-2">
-                        <h3 class="text-white font-bold text-lg flex items-center mb-0">
-                            <i class="fas fa-trophy mr-2"></i> Resultados
-                        </h3>
+<h3 class="text-white text-lg flex items-center mb-0">
+                        <i class="fas fa-trophy mr-2"></i> Resultados
+                    </h3>
                     </div>
                     <div class="p-5 space-y-4">
                         <!-- Resultados (Adaptado según modalidad) -->
