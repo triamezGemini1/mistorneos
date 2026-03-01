@@ -1,25 +1,39 @@
 /**
- * Registro de Resultados - Mobile-First, sin unidades fijas (px)
- * Base: móvil (dispositivo por defecto). Tablas = Cards (stacking).
- * A partir de 768px: tabla multicolumna y layout ampliado.
- * Prohibido overflow-x: scroll. Formulario width 100% max-width 37.5rem (600px) centrado.
+ * Registro de Resultados - Mobile-First con Media Queries
+ * Base: móvil (formularios flex column, tablas en bloque, grid 1fr).
+ * Tablet: min-width 600px (grid 2 columnas, inputs en parejas).
+ * Desktop: min-width 1024px (tabla multicolumna).
+ * Tipografía: 14px → 15px → 16px. Sin overflow-x.
  */
 
-/* ========== BASE: MÓVIL (tabla como bloques/Cards) ========== */
+/* ========== BASE: MÓVIL ========== */
 .registrar-resultados-wrap {
-  width: 100%;
+  width: 100% !important;
   max-width: 100%;
   margin-left: auto;
   margin-right: auto;
-  padding-left: 0.9375rem;
-  padding-right: 0.9375rem;
-  font-size: clamp(0.875rem, 2.5vw, 1rem);
+  padding: 1rem;
+  font-size: 14px;
 }
 
 .registrar-resultados-wrap .container-fluid {
+  width: 100% !important;
   max-width: 100%;
-  padding-left: 0.9375rem;
-  padding-right: 0.9375rem;
+  padding: 1rem;
+}
+
+/* Formularios: flex column, ancho completo */
+.registrar-resultados-wrap .card-body,
+.registrar-resultados-wrap #formResultados {
+  display: flex;
+  flex-direction: column;
+  width: 100% !important;
+  max-width: 100%;
+  padding: 1rem;
+}
+
+.registrar-resultados-wrap #formResultados {
+  padding: 0;
 }
 
 .registrar-resultados-wrap h4,
@@ -38,49 +52,54 @@
   word-wrap: break-word;
 }
 
-/* Sin scroll horizontal: tabla se convierte en bloques */
 .registrar-resultados-wrap .table-responsive {
   overflow: visible;
 }
 
-/* Formulario principal: ancho completo, máximo 600px centrado */
 .registrar-resultados-wrap .col-form-registro,
 .registrar-resultados-wrap .formulario-resultados-sticky {
-  width: 100%;
-  max-width: 37.5rem;
+  width: 100% !important;
+  max-width: 100%;
   margin-left: auto;
   margin-right: auto;
 }
 
-.registrar-resultados-wrap #formResultados {
+/* Cuadrícula de resultados: grid, gap 10px, 1 col móvil */
+.registrar-resultados-wrap #formResultados .table-responsive {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: 1fr;
+  overflow: visible;
+}
+
+/* Tablas desaparecen y se convierten en bloques (cards) */
+.registrar-resultados-wrap #formResultados table {
+  display: contents;
+}
+
+.registrar-resultados-wrap #formResultados thead {
+  display: none;
+}
+
+.registrar-resultados-wrap #formResultados tbody {
+  display: contents;
+}
+
+.registrar-resultados-wrap #formResultados tr {
+  display: block;
   width: 100%;
   max-width: 100%;
 }
 
-/* Tabla como listado de Cards (móvil por defecto) */
-.registrar-resultados-wrap #formResultados .table-responsive {
-  display: block;
-}
-
-.registrar-resultados-wrap #formResultados table,
-.registrar-resultados-wrap #formResultados thead,
-.registrar-resultados-wrap #formResultados tbody,
-.registrar-resultados-wrap #formResultados tr,
 .registrar-resultados-wrap #formResultados th,
 .registrar-resultados-wrap #formResultados td {
   display: block;
-  width: 100%;
+  width: 100% !important;
   max-width: 100%;
 }
 
 .registrar-resultados-wrap #formResultados thead {
-  position: absolute;
-  clip: rect(0, 0, 0, 0);
-  clip-path: inset(50%);
-  height: 1px;
-  width: 1px;
-  overflow: hidden;
-  white-space: nowrap;
+  display: none;
 }
 
 .registrar-resultados-wrap #formResultados tbody tr {
@@ -227,8 +246,24 @@
   gap: 0.5rem;
 }
 
-/* ========== ESCRITORIO (768px+): tabla multicolumna, layout ampliado ========== */
-@media (min-width: 768px) {
+/* ========== TABLET (600px): grid 2 columnas, inputs en parejas ========== */
+@media (min-width: 600px) {
+  .registrar-resultados-wrap {
+    font-size: 15px;
+  }
+
+  .registrar-resultados-wrap #formResultados .table-responsive {
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+}
+
+/* ========== DESKTOP (1024px): tabla multicolumna ========== */
+@media (min-width: 1024px) {
+  .registrar-resultados-wrap {
+    font-size: 16px;
+  }
+
   .registrar-resultados-wrap .col-form-registro,
   .registrar-resultados-wrap .formulario-resultados-sticky {
     max-width: none;
@@ -246,13 +281,6 @@
   }
 
   .registrar-resultados-wrap #formResultados thead {
-    position: static;
-    clip: auto;
-    clip-path: none;
-    height: auto;
-    width: auto;
-    overflow: visible;
-    white-space: normal;
     display: table-header-group;
   }
 
