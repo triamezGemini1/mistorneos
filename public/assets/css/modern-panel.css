@@ -97,7 +97,7 @@ html {
 .tw-panel .panel-card label {
   font-family: Calibri, 'Lato', sans-serif !important;
   font-weight: 300 !important;
-  font-size: 0.32rem !important;
+  font-size: 0.24rem !important;
   letter-spacing: 0.01em !important;
 }
 
@@ -109,7 +109,7 @@ html {
 .tw-panel .panel-card-body *:not(i) {
   font-weight: 300 !important;
   letter-spacing: 0.01em;
-  font-size: 0.32rem !important;
+  font-size: 0.24rem !important;
 }
 
 /* Contenido de la celda: zona 80% (padding 10% cada lado) */
@@ -129,7 +129,7 @@ html {
 .tw-panel .panel-card [class*="badge"],
 .tw-panel .panel-card .text-xl,
 .tw-panel .panel-card .text-2xl {
-  font-size: 0.32rem !important;
+  font-size: 0.24rem !important;
   font-variant-numeric: tabular-nums;
 }
 
@@ -150,7 +150,7 @@ html {
 .tw-panel .panel-card [class*="fw-bold"] {
   font-weight: 300 !important;
   color: #2d2d2d;
-  font-size: 0.32rem !important;
+  font-size: 0.24rem !important;
 }
 
 .tw-panel .panel-value-critical,
@@ -179,7 +179,7 @@ html {
   padding: 0.35rem 0.45rem;
   color: #fff;
   font-weight: 300 !important;
-  font-size: 0.32rem;
+  font-size: 0.24rem;
   display: flex;
   align-items: center;
   gap: 0.2rem;
@@ -190,7 +190,7 @@ html {
 
 .tw-panel .panel-card-header i {
   opacity: 0.95;
-  font-size: 0.32rem;
+  font-size: 0.24rem;
   flex-shrink: 0;
 }
 
@@ -241,7 +241,7 @@ html {
 .tw-panel .panel-card .tw-btn {
   min-height: 1.1rem;
   padding: 0.18rem 0.35rem;
-  font-size: 0.32rem !important;
+  font-size: 0.24rem !important;
   font-weight: 300 !important;
   display: inline-flex;
   align-items: center;
@@ -253,10 +253,10 @@ html {
 }
 
 .tw-panel .panel-card .tw-btn i {
-  font-size: 0.32rem !important;
-  width: 0.32rem;
-  max-width: 0.32rem;
-  max-height: 0.32rem;
+  font-size: 0.24rem !important;
+  width: 0.24rem;
+  max-width: 0.24rem;
+  max-height: 0.24rem;
   flex-shrink: 0;
   vertical-align: middle;
 }
