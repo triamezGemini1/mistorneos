@@ -1,0 +1,265 @@
+/**
+ * Registro de Resultados - Responsividad real (mobile-first)
+ * 1. Tablas como listado de Cards en móvil
+ * 2. Inputs de puntuación 100% ancho, grandes y táctiles
+ * 3. Contenedores dinámicos (max-width 100%, padding 15px)
+ * 4. Sin overflow que trunque datos críticos
+ */
+
+/* ---- Contenedores dinámicos: sin anchos fijos en px ---- */
+.registrar-resultados-wrap {
+  width: 100%;
+  max-width: 100%;
+  margin-left: auto;
+  margin-right: auto;
+  padding-left: 15px;
+  padding-right: 15px;
+}
+
+.registrar-resultados-wrap .container-fluid {
+  max-width: 100%;
+  padding-left: 15px;
+  padding-right: 15px;
+}
+
+@media (max-width: 767px) {
+  .registrar-resultados-wrap {
+    width: 100%;
+    padding-left: 15px;
+    padding-right: 15px;
+  }
+
+  .registrar-resultados-wrap .container-fluid {
+    padding-left: 15px;
+    padding-right: 15px;
+  }
+}
+
+/* ---- Tipografía fluida: base 14px móvil, 16px desktop ---- */
+.registrar-resultados-wrap {
+  font-size: 1rem;
+}
+
+@media (max-width: 767px) {
+  .registrar-resultados-wrap {
+    font-size: 0.875rem;
+  }
+}
+
+@media (max-width: 374px) {
+  .registrar-resultados-wrap {
+    font-size: clamp(0.875rem, 4vw, 1rem);
+  }
+}
+
+.registrar-resultados-wrap h4,
+.registrar-resultados-wrap .card-header h4,
+.registrar-resultados-wrap .font-weight-bold.display-4 {
+  font-size: clamp(1.1rem, 2vw, 1.5rem);
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+}
+
+/* Sin truncamiento */
+.registrar-resultados-wrap .table,
+.registrar-resultados-wrap .form-control,
+.registrar-resultados-wrap .card-body,
+.registrar-resultados-wrap .list-group-item {
+  text-overflow: clip;
+  overflow-wrap: break-word;
+  word-wrap: break-word;
+}
+
+/* Quitar overflow que trunque contenido crítico en tabla */
+.registrar-resultados-wrap .table-responsive {
+  overflow-x: visible;
+  overflow-y: visible;
+}
+
+@media (max-width: 767px) {
+  .registrar-resultados-wrap .table-responsive {
+    overflow: visible;
+  }
+}
+
+/* ---- En móvil (< 768px): tabla como listado de Cards ---- */
+@media (max-width: 767px) {
+  .registrar-resultados-wrap #formResultados .table-responsive {
+    display: block;
+  }
+
+  .registrar-resultados-wrap #formResultados table,
+  .registrar-resultados-wrap #formResultados thead,
+  .registrar-resultados-wrap #formResultados tbody,
+  .registrar-resultados-wrap #formResultados tr,
+  .registrar-resultados-wrap #formResultados th,
+  .registrar-resultados-wrap #formResultados td {
+    display: block;
+    width: 100%;
+    max-width: 100%;
+  }
+
+  .registrar-resultados-wrap #formResultados thead {
+    position: absolute;
+    clip: rect(0, 0, 0, 0);
+    clip-path: inset(50%);
+    height: 1px;
+    width: 1px;
+    overflow: hidden;
+    white-space: nowrap;
+  }
+
+  .registrar-resultados-wrap #formResultados tbody tr {
+    border: 2px solid #333;
+    border-radius: 12px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+    margin-bottom: 1rem;
+    padding: 1rem;
+    background: #fff;
+    page-break-inside: avoid;
+  }
+
+  .registrar-resultados-wrap #formResultados tbody tr.table-info {
+    border-left: 4px solid #17a2b8;
+  }
+
+  .registrar-resultados-wrap #formResultados tbody tr.table-success {
+    border-left: 4px solid #28a745;
+  }
+
+  .registrar-resultados-wrap #formResultados tbody tr input[type="hidden"] {
+    display: none !important;
+  }
+
+  .registrar-resultados-wrap #formResultados tbody td {
+    border: none;
+    padding: 0.5rem 0;
+    padding-left: 0;
+    text-align: left;
+    vertical-align: middle;
+  }
+
+  .registrar-resultados-wrap #formResultados tbody td::before {
+    content: attr(data-label);
+    font-weight: 600;
+    display: inline-block;
+    min-width: 8rem;
+    color: #374151;
+    font-size: 0.8125rem;
+  }
+
+  .registrar-resultados-wrap #formResultados tbody td.columna-id::before { content: "ID"; }
+  .registrar-resultados-wrap #formResultados tbody td.columna-nombre::before { content: "Nombre"; }
+  .registrar-resultados-wrap #formResultados tbody td.columna-puntos::before { content: "Puntos"; }
+  .registrar-resultados-wrap #formResultados tbody td.columna-sancion::before { content: "Sanción"; }
+  .registrar-resultados-wrap #formResultados tbody td.columna-forfait::before { content: "Forfait"; }
+  .registrar-resultados-wrap #formResultados tbody td.columna-tarjeta::before { content: "Tarjeta"; }
+  .registrar-resultados-wrap #formResultados tbody td.columna-estadisticas::before { content: "Estadísticas"; }
+  .registrar-resultados-wrap #formResultados tbody td.columna-zapchan::before { content: "Zap/Chan"; }
+
+  /* Puntos: celda que contiene el input compartido (rowspan) */
+  .registrar-resultados-wrap #formResultados tbody td.columna-puntos {
+    padding: 0.75rem 0;
+  }
+
+  .registrar-resultados-wrap .estadisticas-valores {
+    white-space: normal;
+  }
+}
+
+/* ---- Formulario: inputs de puntuación 100% ancho, grandes y táctiles ---- */
+@media (max-width: 767px) {
+  .registrar-resultados-wrap #formResultados .form-control,
+  .registrar-resultados-wrap #formResultados input[type="number"],
+  .registrar-resultados-wrap #formResultados input[type="text"],
+  .registrar-resultados-wrap #formResultados textarea,
+  .registrar-resultados-wrap #puntos_pareja_A,
+  .registrar-resultados-wrap #puntos_pareja_B {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    min-height: 44px !important;
+    font-size: clamp(1rem, 4vw, 1.25rem) !important;
+    padding: 0.75rem 1rem !important;
+    box-sizing: border-box;
+  }
+
+  .registrar-resultados-wrap #input_ir_mesa {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    min-height: 44px !important;
+    font-size: clamp(1.25rem, 5vw, 1.5rem) !important;
+  }
+
+  .registrar-resultados-wrap #formResultados textarea {
+    min-height: 4rem;
+    width: 100%;
+  }
+
+  /* Botón Guardar y navegación: ancho completo en móvil ---- */
+  .registrar-resultados-wrap #formResultados .d-flex.flex-wrap.justify-content-between {
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  .registrar-resultados-wrap #formResultados #btn-guardar,
+  .registrar-resultados-wrap #formResultados .btn.btn-success.btn-lg {
+    width: 100%;
+    min-height: 48px;
+    font-size: 1.0625rem;
+    margin-top: 0.5rem;
+    order: 99;
+  }
+
+  .registrar-resultados-wrap #formResultados .btn.btn-warning#btn-limpiar {
+    width: 100%;
+    min-height: 44px;
+  }
+
+  .registrar-resultados-wrap #formResultados .d-flex.gap-2 a.btn {
+    flex: 1 1 auto;
+    min-width: 0;
+    min-height: 44px;
+  }
+
+  /* Navegación Mesa Anterior / Siguiente: apilar o full width */
+  .registrar-resultados-wrap #formResultados .d-flex.gap-2:first-of-type {
+    flex-wrap: wrap;
+  }
+
+  .registrar-resultados-wrap #formResultados .d-flex.gap-2:first-of-type a {
+    flex: 1 1 100%;
+    min-height: 44px;
+  }
+}
+
+/* ---- Grid de mesas (sidebar): auto-fit para acomodar ---- */
+@media (min-width: 768px) {
+  .registrar-resultados-wrap #sidebar-mesas .list-group {
+    display: block;
+  }
+}
+
+@media (max-width: 767px) {
+  .registrar-resultados-wrap #sidebar-mesas .list-group-flush {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 0.5rem;
+  }
+}
+
+/* Eliminar min/max width fijos en px que causen truncamiento en móvil */
+@media (max-width: 767px) {
+  .registrar-resultados-wrap .columna-id,
+  .registrar-resultados-wrap .columna-nombre,
+  .registrar-resultados-wrap .columna-puntos,
+  .registrar-resultados-wrap .columna-sancion,
+  .registrar-resultados-wrap .columna-tarjeta,
+  .registrar-resultados-wrap .columna-forfait,
+  .registrar-resultados-wrap .columna-estadisticas {
+    min-width: 0 !important;
+    max-width: none !important;
+    width: 100% !important;
+  }
+}

@@ -538,6 +538,7 @@ $action_param = $use_standalone ? '?' : '&';
         }
     }
 </style>
+<link rel="stylesheet" href="assets/css/modern-registro-resultados.css">
 
 <div class="container-fluid registrar-resultados-wrap">
     <?php if (!empty($es_operador_ambito) && !empty($mesas_ambito)): ?>
@@ -884,7 +885,7 @@ $action_param = $use_standalone ? '?' : '&';
                                                 </td>
                                                 
                                                 <!-- Chancleta/Zapato: solo indicadores, no accionan procedimiento sancionatorio -->
-                                                <td class="text-center">
+                                                <td class="text-center columna-zapchan">
                                                     <div class="d-flex justify-content-center gap-2">
                                                         <label class="mb-0 cursor-pointer">
                                                             <input type="radio" 
@@ -1029,7 +1030,7 @@ $action_param = $use_standalone ? '?' : '&';
                                                 </td>
                                                 
                                                 <!-- Zapato/Chancleta -->
-                                                <td class="text-center">
+                                                <td class="text-center columna-zapchan">
                                                     <div class="d-flex justify-content-center gap-2">
                                                         <label class="mb-0 cursor-pointer">
                                                             <input type="radio" 
