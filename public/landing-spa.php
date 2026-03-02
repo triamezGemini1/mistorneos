@@ -153,6 +153,27 @@ if ($entidad_param > 0) {
         .esports-theme .landing-card-light span:not([class*="bg-"]):not([class*="text-white"]),
         .esports-theme .landing-card-light label,
         .esports-theme .landing-card-light summary { color: #111827 !important; }
+        /* Títulos en negro: mayor especificidad que .esports-theme section:not(#hero) .container h2/h3 */
+        .esports-theme section#registro .container.landing-card-light .text-center h2,
+        .esports-theme section#registro .container.landing-card-light h2,
+        .esports-theme section#registro .container.landing-card-light h3,
+        .esports-theme section#registro .container.landing-card-light h4,
+        .esports-theme section#registro .container.landing-card-light h5,
+        .esports-theme section#registro .container.landing-card-light h6,
+        .esports-theme section#servicios .container.landing-card-light .text-center h2,
+        .esports-theme section#servicios .container.landing-card-light h2,
+        .esports-theme section#servicios .container.landing-card-light h3,
+        .esports-theme section#servicios .container.landing-card-light h4,
+        .esports-theme section#servicios .container.landing-card-light h5,
+        .esports-theme section#faq .container.landing-card-light .text-center h2,
+        .esports-theme section#faq .container.landing-card-light h2,
+        .esports-theme section#faq .container.landing-card-light h3,
+        .esports-theme section#faq .container.landing-card-light h4,
+        .esports-theme section#faq .container.landing-card-light details summary,
+        .esports-theme section#comentarios .container.landing-card-light .text-center h2,
+        .esports-theme section#comentarios .container.landing-card-light h2,
+        .esports-theme section#comentarios .container.landing-card-light h3,
+        .esports-theme section#comentarios .container.landing-card-light h4 { color: #111827 !important; }
         .esports-theme .landing-card-light .text-gray-600,
         .esports-theme .landing-card-light .text-gray-500 { color: #374151 !important; }
         .esports-theme .landing-card-light .text-primary-700 { color: #1e40af !important; }
