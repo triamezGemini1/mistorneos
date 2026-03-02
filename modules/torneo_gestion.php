@@ -3948,6 +3948,24 @@ function guardarResultados($user_id, $is_admin_general) {
             $stmt->execute([$observaciones, $torneo_id, $ronda, $mesa]);
         }
         
+        // Marcar como retirados a los jugadores con tarjeta negra (siguen sin participación, asumidos como BYE en rondas futuras)
+        $idsTarjetaNegra = [];
+        foreach ($datosJugadores as $j) {
+            if ((int)($j['tarjeta'] ?? 0) === SancionesHelper::TARJETA_NEGRA) {
+                $idsTarjetaNegra[] = (int)$j['id_usuario'];
+            }
+        }
+        if (!empty($idsTarjetaNegra)) {
+            require_once __DIR__ . '/../lib/InscritosHelper.php';
+            $placeholders = implode(',', array_fill(0, count($idsTarjetaNegra), '?'));
+            $stmt = $pdo->prepare("UPDATE inscritos SET estatus = ? WHERE torneo_id = ? AND id_usuario IN ($placeholders)");
+            $stmt->execute(array_merge([InscritosHelper::ESTATUS_RETIRADO_NUM, $torneo_id], $idsTarjetaNegra));
+            $n = count($idsTarjetaNegra);
+            $_SESSION['info'] = $n === 1
+                ? 'Jugador marcado como retirado del torneo por tarjeta negra. No participará en rondas futuras (asumido como BYE).'
+                : "{$n} jugadores marcados como retirados del torneo por tarjeta negra. No participarán en rondas futuras (asumidos como BYE).";
+        }
+        
         $pdo->commit();
         
         // Actualizar estadísticas de los jugadores involucrados y recalcular posiciones

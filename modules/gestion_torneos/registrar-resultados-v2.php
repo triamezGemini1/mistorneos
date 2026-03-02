@@ -661,6 +661,13 @@ $action_param = $use_standalone ? '?' : '&';
                             <button type="button" class="close" data-dismiss="alert"><span>&times;</span></button>
                         </div>
                     <?php endif; ?>
+                    <?php if (isset($_SESSION['info'])): ?>
+                        <div class="alert alert-info alert-dismissible fade show">
+                            <i class="fas fa-info-circle mr-2"></i>
+                            <?php echo htmlspecialchars($_SESSION['info']); unset($_SESSION['info']); ?>
+                            <button type="button" class="close" data-dismiss="alert"><span>&times;</span></button>
+                        </div>
+                    <?php endif; ?>
 
                     <!-- Botones de navegación y reasignar -->
                     <div class="mb-3">

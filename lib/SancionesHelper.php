@@ -8,6 +8,8 @@
  * - Sanción 80 pts: Resta 80 del resultado1. Si inscritos.tarjeta > 0 → tarjeta siguiente (Roja/Negra); si no → Amarilla.
  * - La tarjeta se guarda solo en partiresul; inscritos se actualiza vía actualizarEstadisticasInscritos.
  * - Tarjeta previa = desde partiresul de partidas ANTERIORES (excluir la partida actual para evitar doble escalación al re-editar).
+ * - Tarjeta negra (4): Al guardar resultados, el jugador se marca como retirado del torneo (inscritos.estatus=4).
+ *   No participará en rondas futuras; se asume como BYE para el resto del torneo.
  */
 class SancionesHelper {
 
