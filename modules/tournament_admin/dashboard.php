@@ -146,6 +146,10 @@ if ($tabla_partiresul_existe) {
                        class="btn btn-outline-info">
                         <i class="fas fa-chart-bar me-2"></i>Ver Resultados
                     </a>
+                    <a href="index.php?page=tournament_admin&torneo_id=<?= $torneo_id ?>&action=generar_qr" 
+                       class="btn btn-outline-success">
+                        <i class="fas fa-qrcode me-2"></i>Generar e imprimir QR del torneo
+                    </a>
                 </div>
             </div>
         </div>

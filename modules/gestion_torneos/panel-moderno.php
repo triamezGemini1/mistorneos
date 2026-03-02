@@ -628,6 +628,12 @@ tailwind.config = {
                                 <i class="fas fa-print"></i> Imprimir Hojas
                             </a>
                         <?php endif; ?>
+                        
+                        <!-- Generar e imprimir QR del torneo (acceso desde panel) -->
+                        <a href="index.php?page=tournament_admin&torneo_id=<?php echo (int)($torneo['id'] ?? 0); ?>&action=generar_qr" 
+                           class="tw-btn bg-emerald-600 hover:bg-emerald-700 text-white" target="_blank" rel="noopener">
+                            <i class="fas fa-qrcode"></i> Generar e imprimir QR del torneo
+                        </a>
 
                     </div>
                 </div>
