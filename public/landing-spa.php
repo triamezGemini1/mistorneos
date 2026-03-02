@@ -21,7 +21,7 @@ if ($entidad_param > 0) {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes">
-    <meta name="theme-color" content="#1a365d">
+    <meta name="theme-color" content="#0f172a">
     <title>La Estación del Dominó - Sistema de Gestión de Torneos de Dominó en Venezuela</title>
     <meta name="description" content="Plataforma integral para la gestión de torneos de dominó en Venezuela. Participa en eventos, consulta resultados, inscríbete en torneos y únete a nuestra comunidad de jugadores.">
     <meta name="keywords" content="dominó, torneos dominó, dominó venezuela, torneos, campeonatos, clubes dominó, resultados dominó, inscripciones torneos">
@@ -34,10 +34,44 @@ if ($entidad_param > 0) {
     
     <link rel="stylesheet" href="<?= htmlspecialchars($base_url . 'assets/dist/output.css') ?>">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Montserrat:wght@600;700;800;900&display=swap" rel="stylesheet">
     
     <style>
+        /* ========== Tema E-sports: variables y base ========== */
+        :root {
+            --esports-bg: #0f172a;
+            --esports-bg-subtle: linear-gradient(180deg, #0f172a 0%, #0f172a 50%, #0c1222 100%);
+            --esports-card-bg: #1e293b;
+            --esports-card-border: rgba(255, 255, 255, 0.08);
+            --esports-accent: #00f2ff;
+            --esports-accent-hover: #33f5ff;
+            --esports-accent-glow: rgba(0, 242, 255, 0.4);
+            --esports-text: #e2e8f0;
+            --esports-text-muted: #94a3b8;
+        }
         body { font-family: 'Inter', system-ui, sans-serif; }
+        body.esports-theme { background: var(--esports-bg); color: var(--esports-text); min-height: 100vh; }
+        body.esports-theme .esports-font-title { font-family: 'Montserrat', sans-serif; font-weight: 800; text-transform: uppercase; letter-spacing: 0.02em; }
+        .esports-theme section:not(#hero) .container { background: var(--esports-card-bg); border-radius: 12px; border: 1px solid var(--esports-card-border); }
+        .esports-theme .btn-accent { background: var(--esports-accent); color: #0f172a; font-family: 'Montserrat', sans-serif; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; border: none; transition: box-shadow 0.25s ease, transform 0.2s ease, background 0.2s ease; }
+        .esports-theme .btn-accent:hover { background: var(--esports-accent-hover); box-shadow: 0 0 24px var(--esports-accent-glow); transform: translateY(-2px); }
+        .esports-theme .btn-accent.hero-cta-primary { font-size: 1.125rem; padding: 1rem 2.5rem; border-radius: 12px; box-shadow: 0 0 20px var(--esports-accent-glow); }
+        .esports-theme .btn-accent.hero-cta-primary:hover { box-shadow: 0 0 32px var(--esports-accent-glow), 0 0 48px rgba(0, 242, 255, 0.2); }
+        .esports-theme section:not(#hero) { margin-top: 1.5rem; margin-bottom: 1.5rem; }
+        .esports-theme section:not(#hero):first-of-type { margin-top: 2rem; }
+        .esports-theme section:not(#hero) .container { padding-top: 2rem; padding-bottom: 2rem; }
+        .esports-theme #app > div.min-h-screen > p { color: var(--esports-text-muted); }
+        .esports-theme section:not(#hero) .container .text-center h2,
+        .esports-theme section:not(#hero) .container h2 { color: #f1f5f9 !important; font-family: 'Montserrat', sans-serif; font-weight: 800; text-transform: uppercase; letter-spacing: 0.02em; }
+        .esports-theme section:not(#hero) .container h3,
+        .esports-theme section:not(#hero) .container h4,
+        .esports-theme section:not(#hero) .container h5 { color: #e2e8f0 !important; }
+        .esports-theme section:not(#hero) .container p { color: var(--esports-text-muted) !important; }
+        .esports-theme section:not(#hero) .container .text-primary-700,
+        .esports-theme section:not(#hero) .container .text-gray-900 { color: #e2e8f0 !important; }
+        .esports-theme section:not(#hero) .container .text-gray-600 { color: var(--esports-text-muted) !important; }
+        .esports-theme section:not(#hero) .container a:not(.btn-accent):not([class*="bg-"]) { color: var(--esports-accent); }
+        .esports-theme section:not(#hero) .container a:not(.btn-accent):not([class*="bg-"]):hover { color: var(--esports-accent-hover); }
         .landing-logo-org { max-height: 60%; max-width: 60%; width: auto; height: auto; object-fit: contain; }
         #calendario .cal-contenedor-anual { height: calc(100vh - 160px); min-height: 380px; max-height: 80vh; overflow: hidden; max-width: 1200px; margin: 0 auto; }
         #grid-anual { display: grid; grid-template-columns: repeat(4, 1fr); grid-template-rows: repeat(3, 1fr); gap: 6px; height: 100%; overflow: hidden; }
@@ -124,7 +158,7 @@ if ($entidad_param > 0) {
         .comment-form-stars label { cursor: pointer; padding: 8px; margin: -8px; }
     </style>
 </head>
-<body class="bg-gray-50 antialiased">
+<body class="esports-theme antialiased">
     <div id="app">
         <div class="min-h-screen flex flex-col items-center justify-center py-20" v-if="loading">
             <div class="flex flex-col items-center gap-4">
@@ -152,7 +186,7 @@ if ($entidad_param > 0) {
     <script type="text/x-template" id="landing-template">
         <div>
             <!-- Navbar -->
-            <nav class="bg-gradient-to-b from-primary-700 to-primary-600 shadow-lg sticky top-0 z-50 backdrop-blur-sm">
+            <nav class="esports-nav bg-[#0f172a]/95 border-b border-white/10 shadow-lg sticky top-0 z-50 backdrop-blur-md">
                 <div class="container mx-auto px-4 sm:px-6 lg:px-8">
                     <div class="flex items-center justify-between h-16 md:h-20">
                         <a href="#" @click.prevent="scrollToSection('hero')" class="flex items-center space-x-2 text-white font-bold text-lg md:text-xl hover:opacity-90 transition-opacity">
@@ -160,53 +194,56 @@ if ($entidad_param > 0) {
                             <span>La Estación del Dominó</span>
                         </a>
                         <div class="hidden md:flex items-center space-x-1">
-                            <a href="#documentos" @click.prevent="scrollToSection('documentos')" class="px-4 py-2 text-white/90 hover:text-white hover:bg-white/10 rounded-lg transition-all font-medium">Documentos</a>
-                            <a href="#eventos-masivos" @click.prevent="scrollToSection('eventos-masivos')" class="px-4 py-2 text-white/90 hover:text-white hover:bg-white/10 rounded-lg transition-all font-medium">Eventos Nacionales</a>
-                            <a href="#logos-clientes" @click.prevent="scrollToSection('logos-clientes')" class="px-4 py-2 text-white/90 hover:text-white hover:bg-white/10 rounded-lg transition-all font-medium">Clientes</a>
-                            <a href="#eventos" @click.prevent="scrollToSection('eventos')" class="px-4 py-2 text-white/90 hover:text-white hover:bg-white/10 rounded-lg transition-all font-medium">Eventos</a>
-                            <a href="#calendario" @click.prevent="scrollToSection('calendario')" class="px-4 py-2 text-white/90 hover:text-white hover:bg-white/10 rounded-lg transition-all font-medium">Calendario</a>
-                            <a href="#registro" @click.prevent="scrollToSection('registro')" class="px-4 py-2 text-white/90 hover:text-white hover:bg-white/10 rounded-lg transition-all font-medium">Registro</a>
-                            <a href="#servicios" @click.prevent="scrollToSection('servicios')" class="px-4 py-2 text-white/90 hover:text-white hover:bg-white/10 rounded-lg transition-all font-medium">Servicios</a>
-                            <a href="#galeria" @click.prevent="scrollToSection('galeria')" class="px-4 py-2 text-white/90 hover:text-white hover:bg-white/10 rounded-lg transition-all font-medium">Galería</a>
-                            <a href="#faq" @click.prevent="scrollToSection('faq')" class="px-4 py-2 text-white/90 hover:text-white hover:bg-white/10 rounded-lg transition-all font-medium">FAQ</a>
-                            <a href="#comentarios" @click.prevent="scrollToSection('comentarios')" class="px-4 py-2 text-white/90 hover:text-white hover:bg-white/10 rounded-lg transition-all font-medium">Comentarios</a>
-                            <a :href="baseUrl + 'login.php'" class="ml-4 px-6 py-2 bg-accent text-primary-700 font-semibold rounded-lg hover:bg-accentDark hover:text-white transition-all shadow-md"><i class="fas fa-sign-in-alt mr-2"></i>Iniciar Sesión</a>
+                            <a href="#documentos" @click.prevent="scrollToSection('documentos')" class="px-4 py-2 text-slate-300 hover:text-[#00f2ff] hover:bg-white/5 rounded-lg transition-all font-medium">Documentos</a>
+                            <a href="#eventos-masivos" @click.prevent="scrollToSection('eventos-masivos')" class="px-4 py-2 text-slate-300 hover:text-[#00f2ff] hover:bg-white/5 rounded-lg transition-all font-medium">Eventos Nacionales</a>
+                            <a href="#logos-clientes" @click.prevent="scrollToSection('logos-clientes')" class="px-4 py-2 text-slate-300 hover:text-[#00f2ff] hover:bg-white/5 rounded-lg transition-all font-medium">Clientes</a>
+                            <a href="#eventos" @click.prevent="scrollToSection('eventos')" class="px-4 py-2 text-slate-300 hover:text-[#00f2ff] hover:bg-white/5 rounded-lg transition-all font-medium">Eventos</a>
+                            <a href="#calendario" @click.prevent="scrollToSection('calendario')" class="px-4 py-2 text-slate-300 hover:text-[#00f2ff] hover:bg-white/5 rounded-lg transition-all font-medium">Calendario</a>
+                            <a href="#registro" @click.prevent="scrollToSection('registro')" class="px-4 py-2 text-slate-300 hover:text-[#00f2ff] hover:bg-white/5 rounded-lg transition-all font-medium">Registro</a>
+                            <a href="#servicios" @click.prevent="scrollToSection('servicios')" class="px-4 py-2 text-slate-300 hover:text-[#00f2ff] hover:bg-white/5 rounded-lg transition-all font-medium">Servicios</a>
+                            <a href="#galeria" @click.prevent="scrollToSection('galeria')" class="px-4 py-2 text-slate-300 hover:text-[#00f2ff] hover:bg-white/5 rounded-lg transition-all font-medium">Galería</a>
+                            <a href="#faq" @click.prevent="scrollToSection('faq')" class="px-4 py-2 text-slate-300 hover:text-[#00f2ff] hover:bg-white/5 rounded-lg transition-all font-medium">FAQ</a>
+                            <a href="#comentarios" @click.prevent="scrollToSection('comentarios')" class="px-4 py-2 text-slate-300 hover:text-[#00f2ff] hover:bg-white/5 rounded-lg transition-all font-medium">Comentarios</a>
+                            <a :href="baseUrl + 'login.php'" class="ml-4 px-6 py-2.5 btn-accent rounded-lg font-semibold transition-all shadow-lg"><i class="fas fa-sign-in-alt mr-2"></i>Iniciar Sesión</a>
                         </div>
                         <button @click="mobileMenuOpen = !mobileMenuOpen" class="md:hidden text-white p-2 rounded-lg hover:bg-white/10"><i class="fas fa-bars text-xl"></i></button>
                     </div>
                     <div v-show="mobileMenuOpen" class="md:hidden pb-4">
                         <div class="flex flex-col space-y-2">
-                            <a href="#" @click.prevent="scrollToSection('documentos')" class="px-4 py-2 text-white/90 hover:bg-white/10 rounded-lg">Documentos</a>
-                            <a href="#" @click.prevent="scrollToSection('eventos-masivos')" class="px-4 py-2 text-white/90 hover:bg-white/10 rounded-lg">Eventos Nacionales</a>
-                            <a href="#" @click.prevent="scrollToSection('logos-clientes')" class="px-4 py-2 text-white/90 hover:bg-white/10 rounded-lg">Clientes</a>
-                            <a href="#" @click.prevent="scrollToSection('eventos')" class="px-4 py-2 text-white/90 hover:bg-white/10 rounded-lg">Eventos</a>
-                            <a href="#" @click.prevent="scrollToSection('calendario')" class="px-4 py-2 text-white/90 hover:bg-white/10 rounded-lg">Calendario</a>
-                            <a href="#" @click.prevent="scrollToSection('registro')" class="px-4 py-2 text-white/90 hover:bg-white/10 rounded-lg">Registro</a>
-                            <a href="#" @click.prevent="scrollToSection('servicios')" class="px-4 py-2 text-white/90 hover:bg-white/10 rounded-lg">Servicios</a>
-                            <a href="#" @click.prevent="scrollToSection('galeria')" class="px-4 py-2 text-white/90 hover:bg-white/10 rounded-lg">Galería</a>
-                            <a href="#" @click.prevent="scrollToSection('faq')" class="px-4 py-2 text-white/90 hover:bg-white/10 rounded-lg">FAQ</a>
-                            <a href="#" @click.prevent="scrollToSection('comentarios')" class="px-4 py-2 text-white/90 hover:bg-white/10 rounded-lg">Comentarios</a>
-                            <a :href="baseUrl + 'login.php'" class="mt-2 px-4 py-2 bg-accent text-primary-700 font-semibold rounded-lg text-center"><i class="fas fa-sign-in-alt mr-2"></i>Iniciar Sesión</a>
+                            <a href="#" @click.prevent="scrollToSection('documentos')" class="px-4 py-2 text-slate-300 hover:text-[#00f2ff] hover:bg-white/5 rounded-lg">Documentos</a>
+                            <a href="#" @click.prevent="scrollToSection('eventos-masivos')" class="px-4 py-2 text-slate-300 hover:text-[#00f2ff] hover:bg-white/5 rounded-lg">Eventos Nacionales</a>
+                            <a href="#" @click.prevent="scrollToSection('logos-clientes')" class="px-4 py-2 text-slate-300 hover:text-[#00f2ff] hover:bg-white/5 rounded-lg">Clientes</a>
+                            <a href="#" @click.prevent="scrollToSection('eventos')" class="px-4 py-2 text-slate-300 hover:text-[#00f2ff] hover:bg-white/5 rounded-lg">Eventos</a>
+                            <a href="#" @click.prevent="scrollToSection('calendario')" class="px-4 py-2 text-slate-300 hover:text-[#00f2ff] hover:bg-white/5 rounded-lg">Calendario</a>
+                            <a href="#" @click.prevent="scrollToSection('registro')" class="px-4 py-2 text-slate-300 hover:text-[#00f2ff] hover:bg-white/5 rounded-lg">Registro</a>
+                            <a href="#" @click.prevent="scrollToSection('servicios')" class="px-4 py-2 text-slate-300 hover:text-[#00f2ff] hover:bg-white/5 rounded-lg">Servicios</a>
+                            <a href="#" @click.prevent="scrollToSection('galeria')" class="px-4 py-2 text-slate-300 hover:text-[#00f2ff] hover:bg-white/5 rounded-lg">Galería</a>
+                            <a href="#" @click.prevent="scrollToSection('faq')" class="px-4 py-2 text-slate-300 hover:text-[#00f2ff] hover:bg-white/5 rounded-lg">FAQ</a>
+                            <a href="#" @click.prevent="scrollToSection('comentarios')" class="px-4 py-2 text-slate-300 hover:text-[#00f2ff] hover:bg-white/5 rounded-lg">Comentarios</a>
+                            <a :href="baseUrl + 'login.php'" class="mt-2 px-4 py-2.5 btn-accent rounded-lg text-center inline-block"><i class="fas fa-sign-in-alt mr-2"></i>Iniciar Sesión</a>
                         </div>
                     </div>
                 </div>
             </nav>
 
             <!-- Hero -->
-            <section id="hero" class="relative bg-gradient-to-br from-primary-700 via-primary-600 to-primary-500 text-white overflow-hidden">
-                <div class="absolute inset-0 opacity-10" style="background-image: radial-gradient(circle at 2px 2px, white 1px, transparent 0); background-size: 40px 40px;"></div>
-                <div class="absolute inset-0 bg-gradient-to-r from-accent/20 via-transparent to-blue-500/20"></div>
-                <div class="container mx-auto px-4 sm:px-6 lg:px-8 py-20 md:py-28 lg:py-32 relative z-10">
+            <section id="hero" class="relative overflow-hidden" style="background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #0f172a 100%);">
+                <div class="absolute inset-0 opacity-30" style="background-image: radial-gradient(circle at 2px 2px, rgba(0,242,255,0.15) 1px, transparent 0); background-size: 32px 32px;"></div>
+                <div class="absolute inset-0 bg-gradient-to-r from-[#00f2ff]/10 via-transparent to-[#00f2ff]/10"></div>
+                <div class="container mx-auto px-4 sm:px-6 lg:px-8 py-24 md:py-32 lg:py-40 relative z-10">
                     <div class="max-w-4xl mx-auto text-center">
-                        <h1 class="text-4xl md:text-5xl lg:text-6xl font-bold mb-6 leading-tight">Bienvenido a<br><span class="text-accent">La Estación del Dominó</span></h1>
-                        <p class="text-lg md:text-xl lg:text-2xl mb-8 text-white/90 leading-relaxed">La plataforma integral para la gestión de torneos de dominó en Venezuela.<br class="hidden md:block">Participa en eventos cerca de ti o únete como organizador.</p>
+                        <h1 class="esports-font-title text-4xl md:text-5xl lg:text-7xl mb-6 leading-tight text-white tracking-tight">
+                            Domina la Mesa,<br><span class="text-[#00f2ff]">Conviértete en Leyenda</span>
+                        </h1>
+                        <p class="text-lg md:text-xl text-slate-400 mb-10 max-w-2xl mx-auto leading-relaxed">La plataforma de torneos de dominó. Inscríbete en eventos, sigue resultados en vivo y únete a la comunidad.</p>
                         <div class="flex flex-col sm:flex-row gap-4 justify-center items-center">
-                            <a :href="baseUrl + '#registro'" @click.prevent="scrollToSection('registro')" class="w-full sm:w-auto px-8 py-4 bg-accent text-primary-700 font-semibold rounded-xl hover:bg-accentDark hover:text-white transition-all shadow-xl transform hover:-translate-y-1"><i class="fas fa-building mr-2"></i>Solicitar Afiliación</a>
-                            <a :href="baseUrl + 'login.php'" class="w-full sm:w-auto px-8 py-4 bg-white/10 backdrop-blur-sm text-white font-semibold rounded-xl border-2 border-white/30 hover:bg-white hover:text-primary-700 transition-all shadow-lg"><i class="fas fa-sign-in-alt mr-2"></i>Ya tengo cuenta</a>
+                            <a href="#" @click.prevent="scrollToSection('eventos')" class="hero-cta-primary btn-accent inline-flex items-center justify-center w-full sm:w-auto px-10 py-5 text-lg"><i class="fas fa-trophy mr-3"></i>Registrar Torneo</a>
+                            <a href="#" @click.prevent="scrollToSection('registro')" class="w-full sm:w-auto px-8 py-4 bg-white/10 text-white font-semibold rounded-xl border border-white/20 hover:bg-white/20 hover:border-[#00f2ff]/50 transition-all text-center"><i class="fas fa-building mr-2"></i>Solicitar Afiliación</a>
+                            <a :href="baseUrl + 'login.php'" class="w-full sm:w-auto px-8 py-4 text-slate-300 font-semibold rounded-xl border border-slate-500 hover:bg-white/5 hover:text-white transition-all text-center"><i class="fas fa-sign-in-alt mr-2"></i>Ya tengo cuenta</a>
                         </div>
                     </div>
                 </div>
-                <div class="absolute bottom-0 left-0 right-0"><svg class="w-full h-12 md:h-20" viewBox="0 0 1200 120" preserveAspectRatio="none"><path d="M0,0 C150,80 350,80 600,40 C850,0 1050,0 1200,40 L1200,120 L0,120 Z" fill="#f9fafb"></path></svg></div>
+                <div class="absolute bottom-0 left-0 right-0"><svg class="w-full h-12 md:h-20" viewBox="0 0 1200 120" preserveAspectRatio="none"><path d="M0,0 C150,80 350,80 600,40 C850,0 1050,0 1200,40 L1200,120 L0,120 Z" fill="#0f172a"></path></svg></div>
             </section>
 
             <!-- Documentos oficiales de dominó -->
