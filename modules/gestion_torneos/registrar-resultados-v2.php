@@ -204,12 +204,12 @@ $action_param = $use_standalone ? '?' : '&';
     .registrar-resultados-wrap input[type="number"]::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
     .registrar-resultados-wrap input[type="number"] { -moz-appearance: textfield; appearance: textfield; }
     
-    /* Filas de jugadores: altura reducida y bordes sólidos */
+    /* Filas de jugadores: altura reducida y bordes sólidos (~15% más compacto) */
     #formResultados tbody tr {
         border: 2px solid #333 !important;
     }
     #formResultados tbody tr td {
-        padding: 0.25rem 0.4rem !important;
+        padding: 0.2rem 0.35rem !important;
         vertical-align: middle;
         border: 1px solid #666;
     }
@@ -252,21 +252,35 @@ $action_param = $use_standalone ? '?' : '&';
         border-radius: 3px;
     }
     
-    /* Formulario fijo: evita que se mueva con el ingreso de datos */
+    /* Formulario fijo: evita que se mueva con el ingreso de datos (~15% más compacto) */
     .formulario-resultados-sticky {
         position: sticky;
-        top: 1rem;
+        top: 0.5rem;
         align-self: flex-start;
     }
     
     /* Ancla del formulario: al volver tras guardar, la vista se mantiene en el formulario */
     #formResultados {
-        scroll-margin-top: 1rem;
+        scroll-margin-top: 0.5rem;
     }
     
     /* Evitar salto de layout: reservar espacio estable para mensajes */
     .card.formulario-resultados-sticky .card-body > .alert {
-        min-height: 2.75rem;
+        min-height: 2.2rem;
+    }
+    
+    /* Formulario más compacto: menos padding en card-body del formulario de resultados */
+    .registrar-resultados-wrap .formulario-resultados-sticky .card-body {
+        padding: 0.6rem 0.75rem !important;
+    }
+    .registrar-resultados-wrap .formulario-resultados-sticky .card-header {
+        padding: 0.4rem 0.75rem !important;
+    }
+    .registrar-resultados-wrap .formulario-resultados-sticky .card-body .mb-3 {
+        margin-bottom: 0.65rem !important;
+    }
+    .registrar-resultados-wrap .formulario-resultados-sticky .card-body .mb-4 {
+        margin-bottom: 0.85rem !important;
     }
     
     /* Mensaje de validación */
@@ -277,8 +291,8 @@ $action_param = $use_standalone ? '?' : '&';
         display: block;
     }
     
-    /* Fila Observaciones + Zap/Chan en una línea */
-    .row-observaciones-zapchan { margin-bottom: 1rem; }
+    /* Fila Observaciones + Zap/Chan en una línea (~15% más compacto) */
+    .row-observaciones-zapchan { margin-bottom: 0.65rem; }
     .row-observaciones-zapchan .zapchan-linea { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: flex; align-items: center; gap: 0.5rem; flex-wrap: nowrap; }
     .row-observaciones-zapchan .zapchan-jugador { display: inline-flex; align-items: center; gap: 0.25rem; }
     
@@ -360,8 +374,8 @@ $action_param = $use_standalone ? '?' : '&';
         
         .table th,
         .table td {
-            padding: 0.375rem 0.25rem;
-            font-size: clamp(0.65rem, 1.8vw, 0.8rem);
+            padding: 0.28rem 0.2rem;
+            font-size: clamp(0.62rem, 1.7vw, 0.78rem);
         }
         
         .columna-puntos {
@@ -388,45 +402,45 @@ $action_param = $use_standalone ? '?' : '&';
             font-size: clamp(0.6rem, 1.5vw, 0.75rem);
         }
         
-        /* Inputs más grandes para touch */
+        /* Inputs para touch (~15% más compactos para caber en pantalla) */
         .form-control {
-            min-height: 2.5rem;
-            font-size: clamp(0.875rem, 2.5vw, 1rem);
+            min-height: 2.1rem;
+            font-size: clamp(0.8rem, 2.2vw, 0.95rem);
         }
         
         .form-control-sm {
-            min-height: 2rem;
-            font-size: clamp(0.75rem, 2vw, 0.875rem);
+            min-height: 1.7rem;
+            font-size: clamp(0.7rem, 1.8vw, 0.8rem);
         }
         
-        /* Botones más grandes */
+        /* Botones algo más compactos */
         .btn {
-            min-height: 2.75rem;
-            padding: 0.5rem 1rem;
-            font-size: clamp(0.875rem, 2vw, 1rem);
+            min-height: 2.3rem;
+            padding: 0.4rem 0.85rem;
+            font-size: clamp(0.8rem, 1.8vw, 0.95rem);
             touch-action: manipulation;
         }
         
         .btn-sm {
-            min-height: 2.25rem;
-            padding: 0.375rem 0.75rem;
-            font-size: clamp(0.75rem, 1.8vw, 0.875rem);
+            min-height: 1.9rem;
+            padding: 0.3rem 0.6rem;
+            font-size: clamp(0.7rem, 1.6vw, 0.8rem);
         }
         
-        /* Ajustes de espaciado */
+        /* Ajustes de espaciado (~15% más compacto para caber en pantalla) */
         .card-body {
-            padding: 0.75rem;
+            padding: 0.5rem 0.6rem !important;
         }
         
         .mb-3, .mb-4 {
-            margin-bottom: 1rem !important;
+            margin-bottom: 0.65rem !important;
         }
         
-        /* Input de puntos más grande */
+        /* Input de puntos: algo más compacto */
         #puntos_pareja_A,
         #puntos_pareja_B {
-            font-size: clamp(1rem, 3vw, 1.25rem) !important;
-            min-height: 3rem;
+            font-size: clamp(0.95rem, 2.8vw, 1.15rem) !important;
+            min-height: 2.5rem;
         }
     }
     
