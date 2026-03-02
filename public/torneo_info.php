@@ -162,7 +162,7 @@ if ($tabla_partiresul_existe) {
     }
 }
 
-// Listado general del evento
+// Listado general del evento (inscritos confirmados: estatus 1, 2, 'confirmado', 'solvente')
 if ($seccion === 'general' || $seccion === 'listado') {
     $stmt = $pdo->prepare("
         SELECT 
@@ -173,7 +173,8 @@ if ($seccion === 'general' || $seccion === 'listado') {
         FROM inscritos i
         LEFT JOIN usuarios u ON i.id_usuario = u.id
         LEFT JOIN clubes c ON i.id_club = c.id
-        WHERE i.torneo_id = ? AND i.estatus = 'confirmado'
+        WHERE i.torneo_id = ?
+        AND (i.estatus IN (1, 2, '1', '2', 'confirmado', 'solvente'))
         ORDER BY i.ptosrnk DESC, i.efectividad DESC, i.ganados DESC
     ");
     $stmt->execute([$torneo_id]);
