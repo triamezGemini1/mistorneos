@@ -96,31 +96,46 @@ if ($entidad_param > 0) {
         .logos-clientes-row .logo-item { flex-shrink: 0; display: flex; align-items: center; justify-content: center; width: 360px; height: 180px; margin: 0 2rem; padding: 1rem; background: #fff; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
         .logos-clientes-row .logo-item img { max-width: 100%; max-height: 100%; object-fit: contain; }
         @keyframes marquee { 0% { transform: translateX(0); } 100% { transform: translateX(-50%); } }
-        /* Tarjetas y secciones con fondo claro: texto negro para legibilidad */
-        .bg-white.rounded-2xl, .bg-white.rounded-xl { color: #111827 !important; }
-        .bg-white.rounded-2xl h2, .bg-white.rounded-2xl h3, .bg-white.rounded-2xl h4, .bg-white.rounded-2xl h5, .bg-white.rounded-2xl p,
-        .bg-white.rounded-xl h2, .bg-white.rounded-xl h3, .bg-white.rounded-xl h4, .bg-white.rounded-xl h5, .bg-white.rounded-xl p { color: #111827 !important; }
-        /* Secciones con fondo claro: contenedor sin fondo oscuro y texto negro */
-        section[class*="from-slate-50"] .container,
-        section[class*="to-blue-50"] .container,
-        section.bg-white .container {
+        /* Tarjetas y secciones con fondo claro: texto negro (especificidad alta para ganar al tema .esports-theme) */
+        .esports-theme #documentos .container,
+        .esports-theme section[class*="from-slate-50"] .container,
+        .esports-theme section[class*="to-blue-50"] .container {
             background: transparent !important;
             border: none !important;
             color: #111827 !important;
         }
-        section[class*="from-slate-50"] .container h2,
-        section[class*="from-slate-50"] .container h3,
-        section[class*="from-slate-50"] .container h4,
-        section[class*="from-slate-50"] .container p,
-        section[class*="to-blue-50"] .container h2,
-        section[class*="to-blue-50"] .container h3,
-        section[class*="to-blue-50"] .container p,
-        section.bg-white .container h2,
-        section.bg-white .container h3,
-        section.bg-white .container p { color: #111827 !important; }
+        .esports-theme #documentos .container h2,
+        .esports-theme #documentos .container h3,
+        .esports-theme #documentos .container h4,
+        .esports-theme #documentos .container p,
+        .esports-theme section[class*="from-slate-50"] .container h2,
+        .esports-theme section[class*="from-slate-50"] .container h3,
+        .esports-theme section[class*="from-slate-50"] .container p { color: #111827 !important; }
 
-        /* Contenedor tipo tarjeta blanca con letras negras (Solicitud afiliación, Qué ofrecemos, FAQ, Comentarios) */
-        .landing-card-light {
+        /* Tarjetas de documentos e invitaciones FVD: fondo blanco y letras negras */
+        .esports-theme #documentos .bg-white.rounded-2xl,
+        .esports-theme #documentos .bg-white.rounded-xl,
+        .esports-theme #documentos .bg-white\/60 {
+            background: #ffffff !important;
+            color: #111827 !important;
+        }
+        .esports-theme #documentos .bg-white.rounded-2xl h3,
+        .esports-theme #documentos .bg-white.rounded-2xl h4,
+        .esports-theme #documentos .bg-white.rounded-2xl p,
+        .esports-theme #documentos .bg-white.rounded-xl h3,
+        .esports-theme #documentos .bg-white.rounded-xl h4,
+        .esports-theme #documentos .bg-white.rounded-xl p,
+        .esports-theme #documentos .bg-white\/60 p,
+        .esports-theme #documentos .bg-white\/60 code { color: #111827 !important; }
+        .esports-theme #documentos .text-gray-600 { color: #374151 !important; }
+        .esports-theme #documentos .text-primary-700 { color: #1e40af !important; }
+
+        /* Contenedor tipo tarjeta blanca (registro, servicios, faq, comentarios): forzar sobre tema */
+        .esports-theme .landing-card-light,
+        .esports-theme section#registro .container.landing-card-light,
+        .esports-theme section#servicios .container.landing-card-light,
+        .esports-theme section#faq .container.landing-card-light,
+        .esports-theme section#comentarios .container.landing-card-light {
             background: #ffffff !important;
             color: #111827 !important;
             border-radius: 1rem;
@@ -128,14 +143,21 @@ if ($entidad_param > 0) {
             border: 1px solid #e5e7eb;
             padding: 2rem !important;
         }
-        .landing-card-light h2, .landing-card-light h3, .landing-card-light h4, .landing-card-light h5, .landing-card-light h6,
-        .landing-card-light p, .landing-card-light li, .landing-card-light span:not([class*="bg-"]):not([class*="text-white"]) { color: #111827 !important; }
-        .landing-card-light .text-gray-600, .landing-card-light .text-gray-500 { color: #374151 !important; }
-        .landing-card-light .text-primary-700 { color: #1e40af !important; }
-        .landing-card-light a:not([class*="bg-"]):not(.btn-accent) { color: #1d4ed8 !important; }
-        .landing-card-light a:not([class*="bg-"]):not(.btn-accent):hover { color: #1e40af !important; }
-        .landing-card-light label { color: #111827 !important; }
-        .landing-card-light summary { color: #111827 !important; }
+        .esports-theme .landing-card-light h2,
+        .esports-theme .landing-card-light h3,
+        .esports-theme .landing-card-light h4,
+        .esports-theme .landing-card-light h5,
+        .esports-theme .landing-card-light h6,
+        .esports-theme .landing-card-light p,
+        .esports-theme .landing-card-light li,
+        .esports-theme .landing-card-light span:not([class*="bg-"]):not([class*="text-white"]),
+        .esports-theme .landing-card-light label,
+        .esports-theme .landing-card-light summary { color: #111827 !important; }
+        .esports-theme .landing-card-light .text-gray-600,
+        .esports-theme .landing-card-light .text-gray-500 { color: #374151 !important; }
+        .esports-theme .landing-card-light .text-primary-700 { color: #1e40af !important; }
+        .esports-theme .landing-card-light a:not([class*="bg-"]):not(.btn-accent) { color: #1d4ed8 !important; }
+        .esports-theme .landing-card-light a:not([class*="bg-"]):not(.btn-accent):hover { color: #1e40af !important; }
 
         /* ========== Mobile-First: formularios ========== */
         .landing-form-grid { display: grid; grid-template-columns: 1fr; gap: 1rem; width: 100%; }
