@@ -72,7 +72,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     require_once __DIR__ . '/../config/auth.php';
     
-    if (Auth::login($username, $password)) {
+    $login_ok = Auth::login($username, $password);
+    error_log('[SESSION] Auth::login resultado=' . ($login_ok ? 'true' : 'false') . ' | username=' . $username);
+    if ($login_ok) {
         require_once __DIR__ . '/../lib/app_helpers.php';
         if (getenv('SESSION_DEBUG')) error_log('[SESSION_DEBUG] login.php | login OK | session_id=' . session_id() . ' | user_id=' . (Auth::user()['id'] ?? '') . ' | username=' . (Auth::user()['username'] ?? ''));
         ob_end_clean();
@@ -170,6 +172,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
         exit;
     } else {
+        error_log('[SESSION] Login fallido - mostrando motivo (usuario=' . $username . ')');
         // Mensaje al usuario según motivo real (username = valor enviado en ESTA petición en el campo del formulario)
         try {
             $pdo = DB::pdo();
