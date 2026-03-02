@@ -524,9 +524,8 @@ if ($entidad_param > 0) {
                         </div>
                     </div>
                     <div class="max-w-7xl mx-auto">
-                        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8 landing-form-grid-1-3">
-                            <div class="lg:col-span-1 landing-card-mobile">
-                                <div class="bg-white rounded-2xl shadow-xl p-6 border border-gray-200 sticky top-24 comment-form-container">
+                        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                            <div class="bg-white rounded-2xl shadow-lg p-6 border border-gray-200 hover:shadow-xl transition-shadow">
                                     <h3 class="text-2xl font-bold text-gray-900 mb-6"><i class="fas fa-comment-dots text-primary-500 mr-2"></i>Envía tu Comentario</h3>
                                     <template v-if="data.user">
                                         <form @submit.prevent="enviarComentario" class="comment-form-grid">
@@ -575,8 +574,7 @@ if ($entidad_param > 0) {
                                         <a :href="baseUrl + 'login.php?redirect=' + encodeURIComponent(baseUrl + 'landing-spa.php#comentarios')" class="inline-block bg-primary-500 text-white px-6 py-3 rounded-lg font-semibold hover:bg-primary-600 transition-all"><i class="fas fa-sign-in-alt mr-2"></i>Iniciar Sesión</a>
                                     </div>
                                 </div>
-                            </div>
-                            <div class="lg:col-span-2">
+                            <div class="space-y-6">
                                 <div v-if="data.comentarios?.length" class="space-y-6">
                                     <div class="bg-white rounded-2xl shadow-lg p-6 mb-6 border border-gray-200">
                                         <div class="grid grid-cols-3 gap-4 text-center">
