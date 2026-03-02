@@ -85,6 +85,43 @@ if ($entidad_param > 0) {
             .landing-table-as-cards td { display: block; padding: 0.5rem 0; border: none; }
             .landing-table-as-cards td::before { content: attr(data-label); font-weight: 600; color: #374151; display: block; margin-bottom: 0.25rem; }
         }
+
+        /* ========== Formulario "Envía tu comentario" – Mobile First + estética ========== */
+        .comment-form-container { max-width: 800px; margin-left: auto; margin-right: auto; }
+        .comment-form-grid { display: grid; grid-template-columns: 1fr; gap: 1rem; width: 100%; padding: 0; }
+        @media (min-width: 768px) {
+            .comment-form-grid { grid-template-columns: repeat(2, 1fr); gap: 1.25rem; }
+        }
+        .comment-form-full { grid-column: 1 / -1; }
+        .comment-form-field { display: flex; flex-direction: column; gap: 0.5rem; margin-bottom: 0; }
+        .comment-form-field label { font-size: 0.875rem; font-weight: 600; color: #374151; }
+        .comment-form-input-wrap { position: relative; width: 100%; }
+        .comment-form-input-wrap .comment-form-icon { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: #9ca3af; font-size: 1rem; pointer-events: none; z-index: 1; }
+        .comment-form-input-wrap.comment-form-icon-textarea .comment-form-icon { top: 18px; transform: none; }
+        .comment-form-input {
+            width: 100%; min-height: 44px; padding: 12px 16px; padding-left: 2.75rem;
+            font-size: 16px; box-sizing: border-box;
+            border: 1px solid #e5e7eb; border-radius: 8px;
+            background: #fff;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+            transition: border-color 0.2s ease, box-shadow 0.2s ease, outline 0.2s ease;
+        }
+        .comment-form-input:focus { outline: none; border-color: #1a365d; box-shadow: 0 0 0 3px rgba(26,54,93,0.15); }
+        .comment-form-input-wrap textarea.comment-form-input { padding-top: 12px; min-height: 120px; resize: vertical; }
+        .comment-form-input-wrap textarea.comment-form-input { padding-left: 2.75rem; }
+        .comment-form-btn {
+            min-height: 44px; padding: 12px 24px; font-size: 16px; font-weight: 700;
+            border: none; border-radius: 8px; cursor: pointer;
+            background: #1a365d; color: #fff;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            transition: background 0.2s ease, box-shadow 0.2s ease, transform 0.15s ease;
+        }
+        .comment-form-btn:hover:not(:disabled) { background: #152b4a; box-shadow: 0 4px 8px rgba(0,0,0,0.12); }
+        .comment-form-btn:disabled { opacity: 0.6; cursor: not-allowed; }
+        @media (max-width: 767px) { .comment-form-btn { width: 100%; } }
+        @media (min-width: 768px) { .comment-form-btn { width: auto; margin-left: auto; display: block; } }
+        .comment-form-stars { display: flex; align-items: center; flex-wrap: wrap; gap: 0.25rem; min-height: 44px; }
+        .comment-form-stars label { cursor: pointer; padding: 8px; margin: -8px; }
     </style>
 </head>
 <body class="bg-gray-50 antialiased">
@@ -489,39 +526,47 @@ if ($entidad_param > 0) {
                     <div class="max-w-7xl mx-auto">
                         <div class="grid grid-cols-1 lg:grid-cols-3 gap-8 landing-form-grid-1-3">
                             <div class="lg:col-span-1 landing-card-mobile">
-                                <div class="bg-white rounded-2xl shadow-xl p-6 border border-gray-200 sticky top-24">
+                                <div class="bg-white rounded-2xl shadow-xl p-6 border border-gray-200 sticky top-24 comment-form-container">
                                     <h3 class="text-2xl font-bold text-gray-900 mb-6"><i class="fas fa-comment-dots text-primary-500 mr-2"></i>Envía tu Comentario</h3>
                                     <template v-if="data.user">
-                                        <form @submit.prevent="enviarComentario" class="landing-form-grid space-y-4">
-                                            <div class="bg-primary-50 p-3 rounded-lg mb-4 landing-form-grid-full">
-                                                <p class="text-sm text-primary-700"><i class="fas fa-user-check mr-2"></i>Comentando como: <strong>{{ data.user.nombre }}</strong></p>
+                                        <form @submit.prevent="enviarComentario" class="comment-form-grid">
+                                            <div class="bg-primary-50 p-3 rounded-lg comment-form-full" style="margin-bottom: 0;">
+                                                <p class="text-sm text-primary-700 mb-0"><i class="fas fa-user-check mr-2"></i>Comentando como: <strong>{{ data.user.nombre }}</strong></p>
                                             </div>
-                                            <div class="landing-label-block landing-field">
-                                                <label class="block text-sm font-semibold text-gray-700 mb-2">Tipo *</label>
-                                                <select v-model="commentForm.tipo" required class="landing-input-touch border border-gray-300 focus:ring-2 focus:ring-primary-500">
-                                                    <option value="comentario">Comentario</option>
-                                                    <option value="sugerencia">Sugerencia</option>
-                                                    <option value="testimonio">Testimonio</option>
-                                                </select>
+                                            <div class="comment-form-field">
+                                                <label>Tipo *</label>
+                                                <div class="comment-form-input-wrap">
+                                                    <i class="fas fa-tag comment-form-icon" aria-hidden="true"></i>
+                                                    <select v-model="commentForm.tipo" required class="comment-form-input">
+                                                        <option value="comentario">Comentario</option>
+                                                        <option value="sugerencia">Sugerencia</option>
+                                                        <option value="testimonio">Testimonio</option>
+                                                    </select>
+                                                </div>
                                             </div>
-                                            <div class="landing-label-block landing-field">
-                                                <label class="block text-sm font-semibold text-gray-700 mb-2">Calificación (opcional)</label>
-                                                <div class="flex space-x-2 min-h-[44px] items-center flex-wrap">
-                                                    <label v-for="i in 5" :key="i" class="cursor-pointer p-2 -m-2">
+                                            <div class="comment-form-field">
+                                                <label>Calificación (opcional)</label>
+                                                <div class="comment-form-stars">
+                                                    <label v-for="i in 5" :key="i">
                                                         <input type="radio" v-model="commentForm.calificacion" :value="i" class="hidden">
                                                         <i class="far fa-star text-2xl hover:text-yellow-500 transition-colors" :class="commentForm.calificacion >= i ? 'fas text-yellow-400' : 'text-yellow-400'"></i>
                                                     </label>
                                                 </div>
                                             </div>
-                                            <div class="landing-label-block landing-field landing-form-grid-full">
-                                                <label class="block text-sm font-semibold text-gray-700 mb-2">Mensaje *</label>
-                                                <textarea v-model="commentForm.contenido" rows="5" required placeholder="Escribe tu comentario..." class="landing-input-touch border border-gray-300 focus:ring-2 focus:ring-primary-500 min-h-[120px]"></textarea>
+                                            <div class="comment-form-field comment-form-full">
+                                                <label>Mensaje *</label>
+                                                <div class="comment-form-input-wrap comment-form-icon-textarea">
+                                                    <i class="fas fa-comment comment-form-icon" aria-hidden="true"></i>
+                                                    <textarea v-model="commentForm.contenido" rows="5" required placeholder="Escribe tu comentario..." class="comment-form-input"></textarea>
+                                                </div>
                                             </div>
-                                            <button type="submit" :disabled="commentSending" class="landing-btn-touch w-full bg-gradient-to-r from-primary-500 to-primary-700 text-white rounded-lg font-bold hover:from-primary-600 hover:to-primary-800 transition-all shadow-lg disabled:opacity-50 landing-form-grid-full">
-                                                <i v-if="commentSending" class="fas fa-spinner fa-spin mr-2"></i>
-                                                <i v-else class="fas fa-paper-plane mr-2"></i>{{ commentSending ? 'Enviando...' : 'Enviar Comentario' }}
-                                            </button>
-                                            <p class="text-xs text-gray-500 text-center landing-form-grid-full"><i class="fas fa-shield-alt mr-1"></i>Los comentarios son moderados antes de publicarse</p>
+                                            <div class="comment-form-full">
+                                                <button type="submit" :disabled="commentSending" class="comment-form-btn">
+                                                    <i v-if="commentSending" class="fas fa-spinner fa-spin mr-2"></i>
+                                                    <i v-else class="fas fa-paper-plane mr-2"></i>{{ commentSending ? 'Enviando...' : 'Enviar Comentario' }}
+                                                </button>
+                                            </div>
+                                            <p class="text-xs text-gray-500 text-center comment-form-full mb-0"><i class="fas fa-shield-alt mr-1"></i>Los comentarios son moderados antes de publicarse</p>
                                         </form>
                                     </template>
                                     <div v-else class="text-center py-8">
