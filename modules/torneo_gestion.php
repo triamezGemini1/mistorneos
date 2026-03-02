@@ -4825,29 +4825,51 @@ function recalcularPosiciones($torneo_id) {
         $actualizados = 0;
         $puntosRankingActualizados = 0;
         
+        // Para posiciones 31+: obtener puntos_por_partida_ganada (clasificacion 30 o la última disponible)
+        $puntosPorPartidaGanadaPos31 = null;
+        if ($existeClasiRanking && $limitePosiciones >= 30) {
+            try {
+                $stmt = $pdo->prepare("SELECT puntos_por_partida_ganada FROM clasiranking 
+                                       WHERE tipo_torneo = ? AND clasificacion <= 30 
+                                       ORDER BY clasificacion DESC LIMIT 1");
+                $stmt->execute([$tipoTorneo]);
+                $r = $stmt->fetch(PDO::FETCH_ASSOC);
+                if ($r) {
+                    $puntosPorPartidaGanadaPos31 = (int)$r['puntos_por_partida_ganada'];
+                }
+            } catch (Exception $e) {}
+        }
+        
         foreach ($inscritos as $inscrito) {
             $id = (int)$inscrito['id'];
             $ganados = (int)($inscrito['ganados'] ?? 0);
             
             // Calcular puntos de ranking según la posición actual (usa clasiranking si existe)
+            // Retirados no se procesan aquí (excluidos en el SELECT)
             $ptosrnk = 1; // Por defecto, punto por participación
             
-            if ($existeClasiRanking && $posicion <= $limitePosiciones) {
+            if ($existeClasiRanking) {
                 try {
-                    $stmt = $pdo->prepare("SELECT puntos_posicion, puntos_por_partida_ganada 
-                                           FROM clasiranking 
-                                           WHERE tipo_torneo = ? AND clasificacion = ? 
-                                           LIMIT 1");
-                    $stmt->execute([$tipoTorneo, $posicion]);
-                    $ranking = $stmt->fetch(PDO::FETCH_ASSOC);
-                    
-                    if ($ranking) {
-                        $puntosPorPosicion = (int)$ranking['puntos_posicion'];
-                        $puntosPorPartidaGanada = (int)$ranking['puntos_por_partida_ganada'];
-                        $ptosrnk = $puntosPorPosicion + ($ganados * $puntosPorPartidaGanada) + 1;
+                    if ($posicion <= $limitePosiciones) {
+                        // Posiciones 1 a limitePosiciones: fórmula completa
+                        $stmt = $pdo->prepare("SELECT puntos_posicion, puntos_por_partida_ganada 
+                                               FROM clasiranking 
+                                               WHERE tipo_torneo = ? AND clasificacion = ? 
+                                               LIMIT 1");
+                        $stmt->execute([$tipoTorneo, $posicion]);
+                        $ranking = $stmt->fetch(PDO::FETCH_ASSOC);
+                        
+                        if ($ranking) {
+                            $puntosPorPosicion = (int)$ranking['puntos_posicion'];
+                            $puntosPorPartidaGanada = (int)$ranking['puntos_por_partida_ganada'];
+                            $ptosrnk = $puntosPorPosicion + ($ganados * $puntosPorPartidaGanada) + 1;
+                        }
+                    } elseif ($posicion >= 31 && $puntosPorPartidaGanadaPos31 !== null) {
+                        // Posiciones 31 en adelante: solo partidas ganadas × puntos_por_partida_ganada (tabla)
+                        $ptosrnk = $ganados * $puntosPorPartidaGanadaPos31;
                     }
                 } catch (Exception $e) {
-                    // Si falla la tabla (ej. nombre distinto), mantener ptosrnk = 1
+                    // Si falla la tabla, mantener ptosrnk = 1
                 }
             }
             
@@ -4864,6 +4886,10 @@ function recalcularPosiciones($torneo_id) {
         }
         
         error_log("recalcularPosiciones: Actualizadas $actualizados posiciones y $puntosRankingActualizados puntos de ranking");
+        
+        // Retirados: eliminar puntos de ranking (ptosrnk = 0)
+        $stmt = $pdo->prepare("UPDATE inscritos SET ptosrnk = 0 WHERE torneo_id = ? AND estatus = 4");
+        $stmt->execute([$torneo_id]);
         
         // Verificar que no hay duplicados
         $stmt = $pdo->prepare("SELECT posicion, COUNT(*) as cantidad 

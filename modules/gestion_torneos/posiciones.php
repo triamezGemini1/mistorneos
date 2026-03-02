@@ -177,7 +177,7 @@ $base_url = $use_standalone ? $script_actual : 'index.php?page=torneo_gestion';
                                             </td>
                                             <td><?php echo (int)($pos['efectividad'] ?? 0); ?></td>
                                             <td><strong><?php echo (int)($pos['puntos'] ?? 0); ?></strong></td>
-                                            <td><strong class="text-primary"><?php echo (int)($pos['ptosrnk'] ?? 0); ?></strong></td>
+                                            <td><strong class="text-primary"><?php echo $es_retirado ? '—' : (int)($pos['ptosrnk'] ?? 0); ?></strong></td>
                                             <td>
                                                 <?php 
                                                 $sancion = (int)($pos['sancion'] ?? 0);
