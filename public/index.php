@@ -328,9 +328,10 @@ if ($page === 'organizaciones') {
     }
 }
 
-// Verificar permisos de torneos ANTES de enviar cualquier salida (layout). Así el redirect a access_denied funciona y no se queda la página en blanco.
-if ($page === 'tournaments') {
-    Auth::requireRole(['admin_general', 'admin_torneo', 'admin_club']);
+// Unificar Torneos: solo usar la vista del menú lateral (torneo_gestion). Acceso GET a page=tournaments redirige al panel.
+if ($page === 'tournaments' && ($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'GET') {
+    header('Location: index.php?page=torneo_gestion&action=index' . (isset($_GET['error']) ? '&error=' . urlencode($_GET['error']) : '') . (isset($_GET['success']) ? '&success=' . urlencode($_GET['success']) : ''));
+    exit;
 }
 
 // Incluir layout principal (para GET normal y páginas de visualización). $page ya está definida y saneada; el layout la usa para incluir el módulo correcto.

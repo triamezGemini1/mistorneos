@@ -19,13 +19,13 @@ Auth::requireRole(['admin_general', 'admin_torneo', 'admin_club']);
 $torneo_id = isset($_GET['torneo_id']) ? (int)$_GET['torneo_id'] : 0;
 
 if ($torneo_id <= 0) {
-    header('Location: index.php?page=tournaments&error=' . urlencode('Debe seleccionar un torneo'));
+    header('Location: index.php?page=torneo_gestion&action=index&error=' . urlencode('Debe seleccionar un torneo'));
     exit;
 }
 
 // Verificar acceso al torneo
 if (!Auth::canAccessTournament($torneo_id)) {
-    header('Location: index.php?page=tournaments&error=' . urlencode('No tiene permisos para acceder a este torneo'));
+    header('Location: index.php?page=torneo_gestion&action=index&error=' . urlencode('No tiene permisos para acceder a este torneo'));
     exit;
 }
 
@@ -47,7 +47,7 @@ $stmt->execute([$torneo_id]);
 $torneo = $stmt->fetch(PDO::FETCH_ASSOC);
 
 if (!$torneo) {
-    header('Location: index.php?page=tournaments&error=' . urlencode('Torneo no encontrado'));
+    header('Location: index.php?page=torneo_gestion&action=index&error=' . urlencode('Torneo no encontrado'));
     exit;
 }
 
@@ -361,7 +361,7 @@ $error_message = $_GET['error'] ?? null;
                         <?php
                         $url_retorno = ($menu_action === 'imprimir_qr_lote') 
                             ? 'index.php?page=tournament_admin&torneo_id=' . (int)$torneo_id 
-                            : 'index.php?page=tournaments';
+                            : 'index.php?page=torneo_gestion&action=index';
                         $texto_retorno = ($menu_action === 'imprimir_qr_lote') ? 'Retorno al panel' : 'Volver a Torneos';
                         ?>
                         <a href="<?= htmlspecialchars($url_retorno) ?>" class="btn btn-light btn-lg">
