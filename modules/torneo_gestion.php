@@ -4825,51 +4825,77 @@ function recalcularPosiciones($torneo_id) {
         $actualizados = 0;
         $puntosRankingActualizados = 0;
         
-        // Para posiciones 31+: obtener puntos_por_partida_ganada (clasificacion 30 o la última disponible)
+        // Para posiciones 31+: obtener puntos_por_partida_ganada y puntos_asistencia (clasificacion 30 o la última disponible)
         $puntosPorPartidaGanadaPos31 = null;
+        $puntosAsistenciaPos31 = 1;
         if ($existeClasiRanking && $limitePosiciones >= 30) {
             try {
-                $stmt = $pdo->prepare("SELECT puntos_por_partida_ganada FROM clasiranking 
+                $stmt = $pdo->prepare("SELECT puntos_por_partida_ganada, COALESCE(puntos_asistencia, 1) as puntos_asistencia 
+                                       FROM clasiranking 
                                        WHERE tipo_torneo = ? AND clasificacion <= 30 
                                        ORDER BY clasificacion DESC LIMIT 1");
                 $stmt->execute([$tipoTorneo]);
                 $r = $stmt->fetch(PDO::FETCH_ASSOC);
                 if ($r) {
                     $puntosPorPartidaGanadaPos31 = (int)$r['puntos_por_partida_ganada'];
+                    $puntosAsistenciaPos31 = (int)($r['puntos_asistencia'] ?? 1);
                 }
-            } catch (Exception $e) {}
+            } catch (Exception $e) {
+                // Si puntos_asistencia no existe, intentar sin esa columna
+                try {
+                    $stmt = $pdo->prepare("SELECT puntos_por_partida_ganada FROM clasiranking 
+                                           WHERE tipo_torneo = ? AND clasificacion <= 30 
+                                           ORDER BY clasificacion DESC LIMIT 1");
+                    $stmt->execute([$tipoTorneo]);
+                    $r = $stmt->fetch(PDO::FETCH_ASSOC);
+                    if ($r) {
+                        $puntosPorPartidaGanadaPos31 = (int)$r['puntos_por_partida_ganada'];
+                    }
+                } catch (Exception $e2) {}
+            }
         }
         
         foreach ($inscritos as $inscrito) {
             $id = (int)$inscrito['id'];
             $ganados = (int)($inscrito['ganados'] ?? 0);
             
-            // Calcular puntos de ranking según la posición actual (usa clasiranking si existe)
+            // Calcular puntos de ranking: (ganados × puntos_por_partida_ganada) + puntos_asistencia
             // Retirados no se procesan aquí (excluidos en el SELECT)
             $ptosrnk = 1; // Por defecto, punto por participación
             
             if ($existeClasiRanking) {
                 try {
                     if ($posicion <= $limitePosiciones) {
-                        // Posiciones 1 a limitePosiciones: fórmula completa
-                        $stmt = $pdo->prepare("SELECT puntos_posicion, puntos_por_partida_ganada 
-                                               FROM clasiranking 
-                                               WHERE tipo_torneo = ? AND clasificacion = ? 
-                                               LIMIT 1");
-                        $stmt->execute([$tipoTorneo, $posicion]);
-                        $ranking = $stmt->fetch(PDO::FETCH_ASSOC);
-                        
-                        if ($ranking) {
+                        // Posiciones 1 a limitePosiciones: puntos_posicion + (ganados × puntos_por_partida_ganada) + puntos_asistencia
+                        $ranking = null;
+                        $puntosAsistencia = 1;
+                        try {
+                            $stmt = $pdo->prepare("SELECT puntos_posicion, puntos_por_partida_ganada, COALESCE(puntos_asistencia, 1) as puntos_asistencia 
+                                                   FROM clasiranking 
+                                                   WHERE tipo_torneo = ? AND clasificacion = ? 
+                                                   LIMIT 1");
+                            $stmt->execute([$tipoTorneo, $posicion]);
+                            $ranking = $stmt->fetch(PDO::FETCH_ASSOC);
+                            if ($ranking) {
+                                $puntosAsistencia = (int)($ranking['puntos_asistencia'] ?? 1);
+                            }
+                        } catch (Exception $e) {
+                            $stmt = $pdo->prepare("SELECT puntos_posicion, puntos_por_partida_ganada FROM clasiranking 
+                                                   WHERE tipo_torneo = ? AND clasificacion = ? LIMIT 1");
+                            $stmt->execute([$tipoTorneo, $posicion]);
+                            $ranking = $stmt->fetch(PDO::FETCH_ASSOC);
+                        }
+                        if (!empty($ranking)) {
                             $puntosPorPosicion = (int)$ranking['puntos_posicion'];
                             $puntosPorPartidaGanada = (int)$ranking['puntos_por_partida_ganada'];
-                            $ptosrnk = $puntosPorPosicion + ($ganados * $puntosPorPartidaGanada) + 1;
+                            $ptosrnk = $puntosPorPosicion + ($ganados * $puntosPorPartidaGanada) + $puntosAsistencia;
                         }
                     } elseif ($posicion >= 31 && $puntosPorPartidaGanadaPos31 !== null) {
-                        // Posiciones 31 en adelante: solo partidas ganadas × puntos_por_partida_ganada (tabla)
-                        $ptosrnk = $ganados * $puntosPorPartidaGanadaPos31;
+                        // Posiciones 31 en adelante: (ganados × puntos_por_partida_ganada) + puntos_asistencia
+                        $ptosrnk = ($ganados * $puntosPorPartidaGanadaPos31) + $puntosAsistenciaPos31;
                     }
                 } catch (Exception $e) {
-                    // Si falla la tabla, mantener ptosrnk = 1
+                    // Si falla (ej. columna puntos_asistencia no existe), mantener ptosrnk = 1
                 }
             }
             
