@@ -230,6 +230,7 @@ $clases = [1 => 'Abierto', 2 => 'Por Categorías'];
             </div>
             
             <div class="p-4">
+                <a href="perfil_jugador.php?torneo_id=<?= (int)$torneo_id ?>" class="btn btn-outline-light mb-3"><i class="fas fa-arrow-left me-2"></i>Retorno</a>
                 <!-- Información del Torneo -->
                 <div class="card mb-4">
                     <div class="card-body">

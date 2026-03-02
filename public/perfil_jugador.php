@@ -13,6 +13,7 @@ $torneo_id = isset($_GET['torneo_id']) ? (int)$_GET['torneo_id'] : 0;
 $base_url = rtrim(AppHelpers::getPublicUrl(), '/') . '/';
 $api_url = $base_url . 'api_perfil_jugador.php';
 $logo_url = AppHelpers::getAppLogo();
+$landing_url = $base_url . 'landing-spa.php';
 ?>
 <!DOCTYPE html>
 <html lang="es">
@@ -176,6 +177,7 @@ $logo_url = AppHelpers::getAppLogo();
 <body>
     <div class="wrap">
         <header class="header">
+            <a href="<?= htmlspecialchars($landing_url) ?>" id="btn-retorno-header" class="btn-icon" title="Retorno" style="margin-right: auto;"><i class="fas fa-arrow-left"></i></a>
             <img src="<?= htmlspecialchars($logo_url) ?>" alt="La Estación del Dominó">
             <div id="header-actions"></div>
         </header>
@@ -183,6 +185,7 @@ $logo_url = AppHelpers::getAppLogo();
         <!-- Pantalla: Sin torneo -->
         <div id="screen-error" class="<?= $torneo_id > 0 ? 'hidden' : '' ?>">
             <div class="card">
+                <a href="<?= htmlspecialchars($landing_url) ?>" class="btn-secondary-spa mb-3"><i class="fas fa-arrow-left me-2"></i>Retorno</a>
                 <h2><i class="fas fa-exclamation-triangle"></i> Enlace inválido</h2>
                 <p class="value">Use el código QR del evento para acceder.</p>
                 <p class="sub">La URL debe incluir el número del torneo (ej. perfil_jugador.php?torneo_id=1).</p>
@@ -192,8 +195,9 @@ $logo_url = AppHelpers::getAppLogo();
         <!-- Pantalla: Formulario cédula -->
         <div id="screen-login" class="<?= $torneo_id > 0 ? '' : 'hidden' ?>">
             <div class="card">
+                <a href="<?= htmlspecialchars($landing_url) ?>" class="btn-secondary-spa mb-3"><i class="fas fa-arrow-left me-2"></i>Retorno</a>
                 <h2><i class="fas fa-id-card"></i> Acceso al torneo</h2>
-                <p class="sub" style="margin-bottom: 16px;">Ingrese su cédula para ver su mesa, resultados y resumen.</p>
+                <p class="sub" style="margin-bottom: 16px;">Ingrese su cédula para ver su mesa y resumen.</p>
                 <form id="form-cedula">
                     <input type="hidden" name="torneo_id" value="<?= (int)$torneo_id ?>">
                     <input type="text" id="input-cedula" name="cedula" placeholder="Ej: V12345678 o 12345678" autocomplete="off" required>
@@ -223,15 +227,7 @@ $logo_url = AppHelpers::getAppLogo();
                 <p class="last-update" id="mesa-last-update"></p>
             </div>
 
-            <!-- 2. Resultados de partida -->
-            <div class="card" id="card-resultados">
-                <h2><i class="fas fa-edit"></i> Resultados de partida</h2>
-                <p class="sub" id="resultados-desc">Reportar resultado de tu mesa actual.</p>
-                <a id="btn-reportar-mesa" href="#" class="btn-primary-spa hidden" data-url=""><i class="fas fa-pen"></i> Ir a registrar resultado</a>
-                <p class="sub mt-2 hidden" id="resultados-sin-mesa">No hay mesa asignada para la ronda actual.</p>
-            </div>
-
-            <!-- 3. Resumen individual -->
+            <!-- 2. Resumen individual -->
             <div class="card" id="card-resumen">
                 <h2><i class="fas fa-chart-line"></i> Resumen individual</h2>
                 <div id="resumen-content">
@@ -239,7 +235,7 @@ $logo_url = AppHelpers::getAppLogo();
                 </div>
             </div>
 
-            <!-- 4. Resultados generales -->
+            <!-- 3. Resultados generales -->
             <div class="card">
                 <h2><i class="fas fa-list-ol"></i> Resultados generales</h2>
                 <p class="sub">Clasificación del torneo.</p>
@@ -256,6 +252,7 @@ $logo_url = AppHelpers::getAppLogo();
 (function() {
     const TORNEO_ID = <?= (int)$torneo_id ?>;
     const API_URL = <?= json_encode($api_url) ?>;
+    const LANDING_URL = <?= json_encode($landing_url) ?>;
     const STORAGE_KEY = 'perfil_jugador_cedula_' + TORNEO_ID;
     const REFRESH_MS = 60000;
 
@@ -280,6 +277,18 @@ $logo_url = AppHelpers::getAppLogo();
 
     function renderHeaderActions() {
         const wrap = document.getElementById('header-actions');
+        const retorno = document.getElementById('btn-retorno-header');
+        if (retorno) {
+            if (getCedula() && document.getElementById('screen-dashboard') && !document.getElementById('screen-dashboard').classList.contains('hidden')) {
+                retorno.href = '#';
+                retorno.removeAttribute('target');
+                retorno.onclick = function(e) { e.preventDefault(); clearCedula(); if (refreshTimer) clearInterval(refreshTimer); refreshTimer = null; showScreen('screen-login'); document.getElementById('input-cedula').value = ''; renderHeaderActions(); };
+            } else {
+                retorno.href = LANDING_URL;
+                retorno.setAttribute('target', '_self');
+                retorno.onclick = null;
+            }
+        }
         if (!wrap) return;
         if (getCedula() && document.getElementById('screen-dashboard') && !document.getElementById('screen-dashboard').classList.contains('hidden')) {
             wrap.innerHTML = '<button type="button" class="btn-icon" id="btn-logout-header" title="Cerrar sesión"><i class="fas fa-sign-out-alt"></i></button>';
@@ -335,25 +344,18 @@ $logo_url = AppHelpers::getAppLogo();
 
         const mesa = data.mesa_actual;
         const mesaContent = document.getElementById('mesa-content');
-        const btnReportar = document.getElementById('btn-reportar-mesa');
-        const sinMesa = document.getElementById('resultados-sin-mesa');
 
-        if (mesa) {
-            mesaContent.innerHTML = '<p class="value">Ronda ' + mesa.ronda + ' · Mesa ' + mesa.mesa_numero + '</p>' +
-                (mesa.oponentes && mesa.oponentes.length ? '<ul class="oponentes-list">' + mesa.oponentes.map(function(o) { return '<li>' + escapeHtml(o) + '</li>'; }).join('') + '</ul>' : '');
-            if (mesa.url_mesa) {
-                btnReportar.href = mesa.url_mesa;
-                btnReportar.setAttribute('data-url', mesa.url_mesa);
-                btnReportar.classList.remove('hidden');
-                sinMesa.classList.add('hidden');
-            } else {
-                btnReportar.classList.add('hidden');
-                sinMesa.classList.remove('hidden');
-            }
+        if (mesa && mesa.jugadores_mesa && mesa.jugadores_mesa.length) {
+            let listHtml = '<p class="value">Ronda ' + mesa.ronda + ' · Mesa ' + mesa.mesa_numero + '</p><ul class="oponentes-list" style="list-style: none; padding-left: 0;">';
+            mesa.jugadores_mesa.forEach(function(j) {
+                listHtml += '<li><strong>' + escapeHtml(j.ubicacion) + '</strong> — ID ' + j.id_usuario + ' · ' + escapeHtml(j.nombre) + '</li>';
+            });
+            listHtml += '</ul>';
+            mesaContent.innerHTML = listHtml;
+        } else if (mesa) {
+            mesaContent.innerHTML = '<p class="value">Ronda ' + mesa.ronda + ' · Mesa ' + mesa.mesa_numero + '</p><p class="sub">Sin jugadores cargados.</p>';
         } else {
             mesaContent.innerHTML = '<p class="sub">No hay mesa asignada para la ronda actual.</p>';
-            btnReportar.classList.add('hidden');
-            sinMesa.classList.remove('hidden');
         }
 
         document.getElementById('mesa-last-update').textContent = 'Actualizado ' + new Date().toLocaleTimeString('es');
@@ -379,15 +381,15 @@ $logo_url = AppHelpers::getAppLogo();
                 lastData = data;
                 const mesa = data.mesa_actual;
                 const mesaContent = document.getElementById('mesa-content');
-                if (mesa) {
-                    mesaContent.innerHTML = '<p class="value">Ronda ' + mesa.ronda + ' · Mesa ' + mesa.mesa_numero + '</p>' +
-                        (mesa.oponentes && mesa.oponentes.length ? '<ul class="oponentes-list">' + mesa.oponentes.map(function(o) { return '<li>' + escapeHtml(o) + '</li>'; }).join('') + '</ul>' : '');
-                    const btnReportar = document.getElementById('btn-reportar-mesa');
-                    if (mesa.url_mesa) {
-                        btnReportar.href = mesa.url_mesa;
-                        btnReportar.setAttribute('data-url', mesa.url_mesa);
-                        btnReportar.classList.remove('hidden');
-                    }
+                if (mesa && mesa.jugadores_mesa && mesa.jugadores_mesa.length) {
+                    let listHtml = '<p class="value">Ronda ' + mesa.ronda + ' · Mesa ' + mesa.mesa_numero + '</p><ul class="oponentes-list" style="list-style: none; padding-left: 0;">';
+                    mesa.jugadores_mesa.forEach(function(j) {
+                        listHtml += '<li><strong>' + escapeHtml(j.ubicacion) + '</strong> — ID ' + j.id_usuario + ' · ' + escapeHtml(j.nombre) + '</li>';
+                    });
+                    listHtml += '</ul>';
+                    mesaContent.innerHTML = listHtml;
+                } else if (mesa) {
+                    mesaContent.innerHTML = '<p class="value">Ronda ' + mesa.ronda + ' · Mesa ' + mesa.mesa_numero + '</p><p class="sub">Sin jugadores cargados.</p>';
                 }
                 document.getElementById('mesa-last-update').textContent = 'Actualizado ' + new Date().toLocaleTimeString('es');
             }
@@ -395,26 +397,8 @@ $logo_url = AppHelpers::getAppLogo();
     }
 
     function attachDashboardListeners() {
-        var btnReportar = document.getElementById('btn-reportar-mesa');
         var btnRefresh = document.getElementById('btn-refresh-mesa');
         var btnCerrar = document.getElementById('btn-cerrar-sesion');
-        if (btnReportar && !btnReportar._listener) {
-            btnReportar._listener = true;
-            btnReportar.addEventListener('click', function(e) {
-                var url = this.getAttribute('data-url');
-                if (url && typeof Swal !== 'undefined') {
-                    e.preventDefault();
-                    Swal.fire({
-                        title: 'Registro de resultados',
-                        text: 'Se abrirá la hoja oficial para registrar el resultado de tu mesa. ¿Continuar?',
-                        icon: 'question',
-                        showCancelButton: true,
-                        confirmButtonText: 'Sí, abrir',
-                        cancelButtonText: 'Cancelar'
-                    }).then(function(res) { if (res.isConfirmed) window.location.href = url; });
-                }
-            });
-        }
         if (btnRefresh && !btnRefresh._listener) {
             btnRefresh._listener = true;
             btnRefresh.addEventListener('click', function() {

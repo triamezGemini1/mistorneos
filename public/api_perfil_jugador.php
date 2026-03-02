@@ -19,7 +19,6 @@ require_once __DIR__ . '/../config/bootstrap.php';
 require_once __DIR__ . '/../config/db.php';
 require_once __DIR__ . '/../lib/app_helpers.php';
 require_once __DIR__ . '/../lib/InscritosPartiresulHelper.php';
-require_once __DIR__ . '/../lib/QrMesaTokenHelper.php';
 
 $torneo_id = isset($_GET['torneo_id']) ? (int)$_GET['torneo_id'] : (int)($_POST['torneo_id'] ?? 0);
 $cedula_raw = trim((string)($_GET['cedula'] ?? $_POST['cedula'] ?? ''));
@@ -113,6 +112,7 @@ try {
     $ronda_activa = (int)$stmt->fetchColumn();
 
     $mesa_actual = null;
+    $ubicaciones = [1 => 'A', 2 => 'B', 3 => 'C', 4 => 'D'];
     if ($ronda_activa > 0) {
         $stmt = $pdo->prepare("
             SELECT partida, mesa, secuencia
@@ -125,28 +125,27 @@ try {
         if ($mi_fila) {
             $mesa_num = (int)$mi_fila['mesa'];
             $stmt = $pdo->prepare("
-                SELECT pr.id_usuario, u.nombre
+                SELECT pr.id_usuario, pr.secuencia, u.nombre
                 FROM partiresul pr
                 INNER JOIN usuarios u ON pr.id_usuario = u.id
                 WHERE pr.id_torneo = ? AND pr.partida = ? AND pr.mesa = ?
                 ORDER BY pr.secuencia ASC
             ");
             $stmt->execute([$torneo_id, $ronda_activa, $mesa_num]);
-            $compañeros = $stmt->fetchAll(PDO::FETCH_ASSOC);
-            $oponentes = [];
-            foreach ($compañeros as $row) {
-                if ((int)$row['id_usuario'] !== $id_usuario) {
-                    $oponentes[] = $row['nombre'] ?? '';
-                }
+            $filas = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            $jugadores_mesa = [];
+            foreach ($filas as $row) {
+                $sec = (int)($row['secuencia'] ?? 0);
+                $jugadores_mesa[] = [
+                    'id_usuario' => (int)$row['id_usuario'],
+                    'nombre' => $row['nombre'] ?? '—',
+                    'ubicacion' => $ubicaciones[$sec] ?? (string)$sec,
+                ];
             }
-            $token = QrMesaTokenHelper::generar($torneo_id, $mesa_num, $ronda_activa);
-            $url_mesa = $base_public . '/public_mesa_input.php?t=' . $torneo_id . '&m=' . $mesa_num . '&r=' . $ronda_activa . '&token=' . $token;
-
             $mesa_actual = [
                 'ronda' => $ronda_activa,
                 'mesa_numero' => $mesa_num,
-                'oponentes' => $oponentes,
-                'url_mesa' => $url_mesa,
+                'jugadores_mesa' => $jugadores_mesa,
             ];
         }
     }
