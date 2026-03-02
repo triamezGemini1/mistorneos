@@ -141,9 +141,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         $redirect = !empty($_POST['return_url']) ? trim($_POST['return_url']) : ($return_url ?: '');
         $entry_base = AppHelpers::getRequestEntryUrl();
-        // Forzar escritura de sesión antes del redirect para que la cookie persista (evita perder sesión en subcarpeta)
+        // Forzar escritura de sesión y enviar cookie explícitamente con path correcto (subcarpeta)
+        $cookie_path = (defined('URL_BASE') && URL_BASE !== '' && URL_BASE !== '/') ? URL_BASE : '/';
+        $params = session_get_cookie_params();
+        $sid = session_id();
         if (function_exists('session_write_close')) {
             session_write_close();
+        }
+        if ($sid !== '' && $cookie_path !== '') {
+            setcookie(session_name(), $sid, [
+                'expires' => 0,
+                'path' => $cookie_path,
+                'domain' => $params['domain'] ?? '',
+                'secure' => $params['secure'] ?? false,
+                'httponly' => $params['httponly'] ?? true,
+                'samesite' => $params['samesite'] ?? 'Lax'
+            ]);
         }
         if ($redirect && preg_match('#^[a-zA-Z0-9_\-/\.\?=&]+$#', $redirect) && !preg_match('#^(https?|javascript|data):#i', $redirect)) {
             if (strpos($redirect, '?') !== false || strpos($redirect, '.php') !== false) {
