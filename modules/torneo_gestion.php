@@ -1357,8 +1357,8 @@ function obtenerDatosPosiciones($torneo_id) {
             INNER JOIN usuarios u ON i.id_usuario = u.id
             LEFT JOIN clubes c ON i.id_club = c.id
             LEFT JOIN equipos e ON i.torneo_id = e.id_torneo AND i.codigo_equipo = e.codigo_equipo AND e.estatus = 0
-            WHERE i.torneo_id = ? AND i.estatus != 4
-            ORDER BY i.posicion ASC, i.ganados DESC, i.efectividad DESC, i.puntos DESC";
+            WHERE i.torneo_id = ?
+            ORDER BY i.estatus = 4 ASC, i.posicion ASC, i.ganados DESC, i.efectividad DESC, i.puntos DESC";
     
     $stmt = $pdo->prepare($sql);
     $stmt->execute([$torneo_id, $torneo_id]);
