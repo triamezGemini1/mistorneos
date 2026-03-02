@@ -89,7 +89,7 @@ if ($torneo_id <= 0) {
 } else {
     try {
         $pdo = DB::pdo();
-        $stmt = $pdo->prepare("SELECT id, nombre, fechator FROM tournaments WHERE id = ?");
+        $stmt = $pdo->prepare("SELECT id, nombre, fechator, club_responsable FROM tournaments WHERE id = ?");
         $stmt->execute([$torneo_id]);
         $torneo = $stmt->fetch(PDO::FETCH_ASSOC);
         if (!$torneo) {
@@ -155,19 +155,28 @@ if ($torneo_id <= 0) {
                     }
                 }
 
+                $org_id = isset($torneo['club_responsable']) && (int)$torneo['club_responsable'] > 0 ? (int)$torneo['club_responsable'] : null;
+                $cols_clubes_list = ['id', 'nombre', 'direccion', 'delegado', 'telefono', 'email', 'logo', 'estatus'];
+                $has_organizacion_id = in_array('organizacion_id', $pdo->query("SHOW COLUMNS FROM clubes")->fetchAll(PDO::FETCH_COLUMN), true);
+                if ($has_organizacion_id) {
+                    $cols_clubes_list[] = 'organizacion_id';
+                }
+                if (in_array('id_directorio_club', $pdo->query("SHOW COLUMNS FROM clubes")->fetchAll(PDO::FETCH_COLUMN), true)) {
+                    $cols_clubes_list[] = 'id_directorio_club';
+                }
                 $total = (int) $pdo->query("SELECT COUNT(*) FROM clubes")->fetchColumn();
                 $current_page = isset($_GET['p']) ? max(1, (int)$_GET['p']) : 1;
                 $per_page_val = (int)($_GET['per_page'] ?? 0);
                 $per_page = ($per_page_val >= 10 && $per_page_val <= 100) ? $per_page_val : 25;
                 $pagination = new Pagination($total, $current_page, $per_page);
-                $cols_clubes_list = ['id', 'nombre', 'direccion', 'delegado', 'telefono', 'email', 'logo', 'estatus'];
-                if (in_array('id_directorio_club', $pdo->query("SHOW COLUMNS FROM clubes")->fetchAll(PDO::FETCH_COLUMN), true)) {
-                    $cols_clubes_list[] = 'id_directorio_club';
-                }
+                // Orden: primero los clubes de la organización que organiza el torneo, luego el resto; dentro de cada grupo por nombre
+                $order_sql = $has_organizacion_id && $org_id !== null
+                    ? "ORDER BY (CASE WHEN organizacion_id = " . (int)$org_id . " THEN 0 ELSE 1 END), nombre ASC"
+                    : "ORDER BY nombre ASC";
                 $stmt = $pdo->prepare("
                     SELECT " . implode(', ', $cols_clubes_list) . "
                     FROM clubes
-                    ORDER BY nombre ASC
+                    " . $order_sql . "
                     LIMIT " . $pagination->getLimit() . " OFFSET " . $pagination->getOffset()
                 );
                 $stmt->execute();
@@ -531,7 +540,13 @@ $fechator_fmt = $torneo && !empty($torneo['fechator']) ? date('d/m/Y', strtotime
                                                 <td class="align-middle small"><?= htmlspecialchars($row['delegado'] ?? '—') ?></td>
                                                 <td class="align-middle small"><?= htmlspecialchars($row['telefono'] ?? '—') ?></td>
                                                 <td class="text-center align-middle">
-                                                    <?php $estatus_club = (int)($row['estatus'] ?? 1); ?>
+                                                    <?php
+                                                    $estatus_club = (int)($row['estatus'] ?? 1);
+                                                    $es_de_org = isset($org_id) && isset($row['organizacion_id']) && (int)$row['organizacion_id'] === $org_id;
+                                                    ?>
+                                                    <?php if ($es_de_org): ?>
+                                                        <span class="badge bg-primary" title="Club de la organización que organiza este torneo">Mi organización</span>
+                                                    <?php endif; ?>
                                                     <span class="badge bg-<?= $estatus_club === 9 ? 'info' : ($estatus_club ? 'success' : 'secondary') ?>"><?= $estatus_club === 9 ? 'Procede del directorio' : ($estatus_club ? 'Activo' : 'Inactivo') ?></span>
                                                     <?php if ($ya_invitado): ?>
                                                         <br><span class="badge bg-info mt-1">Ya invitado</span>
