@@ -3592,12 +3592,13 @@ function generarRonda($torneo_id, $user_id, $is_admin_general) {
                 }
 
                 require_once __DIR__ . '/../lib/app_helpers.php';
+                $urlSpaJugador = rtrim(AppHelpers::getPublicUrl(), '/') . '/perfil_jugador.php?torneo_id=' . $torneo_id;
                 foreach ($jugadores as &$j) {
                     $uid = (int)$j['id'];
                     $j['mesa'] = $mesaPareja[$uid]['mesa'] ?? '—';
                     $j['pareja_id'] = $mesaPareja[$uid]['pareja_id'] ?? 0;
                     $j['pareja'] = $mesaPareja[$uid]['pareja'] ?? '—';
-                    $j['url_resumen'] = AppHelpers::url('index.php', ['page' => 'torneo_gestion', 'action' => 'resumen_individual', 'torneo_id' => $torneo_id, 'inscrito_id' => $uid, 'from' => 'notificaciones']);
+                    $j['url_resumen'] = $urlSpaJugador;
                     $j['url_clasificacion'] = AppHelpers::url('index.php', ['page' => 'torneo_gestion', 'action' => 'posiciones', 'torneo_id' => $torneo_id, 'from' => 'notificaciones']);
                 }
                 unset($j);

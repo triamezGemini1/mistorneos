@@ -60,7 +60,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['buscar'])) {
                     SELECT i.*, c.nombre as club_nombre, u.uuid as identificador_unico
                     FROM inscripciones i
                     LEFT JOIN clubes c ON i.club_id = c.id
-                    LEFT JOIN users u ON i.cedula = u.cedula AND u.role = 'usuario'
+                    LEFT JOIN usuarios u ON i.cedula = u.cedula AND u.role = 'usuario'
                     WHERE i.torneo_id = ? AND i.cedula = ? AND i.estatus = 1
                     LIMIT 1
                 ");
