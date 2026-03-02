@@ -67,7 +67,7 @@ class ResultadosPublicHelper
                 $sql .= ", 0 as ganadas_por_forfait, 0 as partidas_bye";
             }
             $sql .= " FROM inscritos i LEFT JOIN usuarios u ON i.id_usuario = u.id LEFT JOIN clubes c ON i.id_club = c.id
-                WHERE i.torneo_id = ? AND (i.estatus = 'confirmado' OR i.estatus IS NULL)
+                WHERE i.torneo_id = ? AND (i.estatus IS NULL OR (i.estatus != 4 AND i.estatus != 'retirado'))
                 ORDER BY i.ptosrnk DESC, i.efectividad DESC, i.ganados DESC, i.puntos DESC
                 LIMIT " . (int)$limit . " OFFSET " . (int)$offset;
             $stmt = $pdo->prepare($sql);
@@ -84,7 +84,7 @@ class ResultadosPublicHelper
         try {
             $stmt = $pdo->prepare("
                 SELECT COUNT(*) FROM inscritos 
-                WHERE torneo_id = ? AND (estatus = 'confirmado' OR estatus IS NULL)
+                WHERE torneo_id = ? AND (estatus IS NULL OR (estatus != 4 AND estatus != 'retirado'))
             ");
             $stmt->execute([$torneo_id]);
             return (int)$stmt->fetchColumn();
@@ -110,7 +110,7 @@ class ResultadosPublicHelper
                 c.id as club_id_from_join, c.nombre as club_nombre, c.logo as club_logo,
                 0 as ganadas_por_forfait";
             $sql .= " FROM inscritos i INNER JOIN usuarios u ON i.id_usuario = u.id LEFT JOIN clubes c ON i.id_club = c.id
-                WHERE i.torneo_id = ? AND i.estatus != 'retirado'
+                WHERE i.torneo_id = ? AND (i.estatus IS NULL OR (i.estatus != 4 AND i.estatus != 'retirado'))
                 ORDER BY COALESCE(i.id_club, -1) ASC, CAST(i.ganados AS SIGNED) DESC, CAST(i.efectividad AS SIGNED) DESC, CAST(i.puntos AS SIGNED) DESC";
 
             $stmt = $pdo->prepare($sql);
@@ -196,7 +196,7 @@ class ResultadosPublicHelper
             if (empty($equipos)) {
                 $stmt = $pdo->prepare("
                     SELECT DISTINCT i.codigo_equipo FROM inscritos i
-                    WHERE i.torneo_id = ? AND i.codigo_equipo IS NOT NULL AND i.codigo_equipo != '' AND i.estatus != 'retirado'
+                    WHERE i.torneo_id = ? AND i.codigo_equipo IS NOT NULL AND i.codigo_equipo != '' AND (i.estatus IS NULL OR (i.estatus != 4 AND i.estatus != 'retirado'))
                     ORDER BY i.codigo_equipo ASC LIMIT " . (int)$limit . " OFFSET " . (int)$offset
                 );
                 $stmt->execute([$torneo_id]);
@@ -205,12 +205,12 @@ class ResultadosPublicHelper
                     $st2 = $pdo->prepare("
                         SELECT i.codigo_equipo, CONCAT('Equipo ', i.codigo_equipo) as nombre_equipo, i.id_club, c.nombre as club_nombre
                         FROM inscritos i LEFT JOIN clubes c ON i.id_club = c.id
-                        WHERE i.torneo_id = ? AND i.codigo_equipo = ? AND i.estatus != 'retirado' LIMIT 1
+                        WHERE i.torneo_id = ? AND i.codigo_equipo = ? AND (i.estatus IS NULL OR (i.estatus != 4 AND i.estatus != 'retirado')) LIMIT 1
                     ");
                     $st2->execute([$torneo_id, $cod]);
                     $eq = $st2->fetch(PDO::FETCH_ASSOC);
                     if ($eq) {
-                        $st3 = $pdo->prepare("SELECT SUM(ganados) g, SUM(perdidos) p, SUM(efectividad) ef, SUM(puntos) pt FROM inscritos WHERE torneo_id = ? AND codigo_equipo = ? AND estatus != 'retirado'");
+                        $st3 = $pdo->prepare("SELECT SUM(ganados) g, SUM(perdidos) p, SUM(efectividad) ef, SUM(puntos) pt FROM inscritos WHERE torneo_id = ? AND codigo_equipo = ? AND (estatus IS NULL OR (estatus != 4 AND estatus != 'retirado'))");
                         $st3->execute([$torneo_id, $cod]);
                         $s = $st3->fetch(PDO::FETCH_ASSOC);
                         $equipos[] = [
@@ -249,7 +249,7 @@ class ResultadosPublicHelper
                 SELECT i.id_usuario, u.nombre as nombre_completo, i.posicion, i.ganados, i.perdidos, i.efectividad, i.puntos, i.ptosrnk, i.gff, i.sancion, i.tarjeta
                 FROM inscritos i
                 INNER JOIN usuarios u ON i.id_usuario = u.id
-                WHERE i.torneo_id = ? AND i.codigo_equipo = ? AND i.estatus != 'retirado'
+                WHERE i.torneo_id = ? AND i.codigo_equipo = ? AND (i.estatus IS NULL OR (i.estatus != 4 AND i.estatus != 'retirado'))
                 ORDER BY i.ganados DESC, i.efectividad DESC, i.puntos DESC
             ");
             $stmt->execute([$torneo_id, $cod]);

@@ -38,7 +38,7 @@ $torneo_data = null;
 try {
     $stmt = $pdo->prepare("
         SELECT t.*, o.nombre as organizacion_nombre,
-            (SELECT COUNT(*) FROM inscritos WHERE torneo_id = t.id AND (estatus = 'confirmado' OR estatus IS NULL)) as total_inscritos,
+            (SELECT COUNT(*) FROM inscritos WHERE torneo_id = t.id AND (estatus IS NULL OR (estatus != 4 AND estatus != 'retirado'))) as total_inscritos,
             (SELECT COUNT(*) FROM club_photos WHERE torneo_id = t.id) as total_fotos
         FROM tournaments t
         LEFT JOIN organizaciones o ON t.club_responsable = o.id
