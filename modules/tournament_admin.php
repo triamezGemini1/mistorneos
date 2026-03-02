@@ -358,8 +358,14 @@ $error_message = $_GET['error'] ?? null;
                                 <small><?= htmlspecialchars($mensaje_rondas) ?></small>
                             </div>
                         <?php endif; ?>
-                        <a href="index.php?page=tournaments" class="btn btn-light btn-lg">
-                            <i class="fas fa-arrow-left me-2"></i>Volver a Torneos
+                        <?php
+                        $url_retorno = ($menu_action === 'imprimir_qr_lote') 
+                            ? 'index.php?page=tournament_admin&torneo_id=' . (int)$torneo_id 
+                            : 'index.php?page=tournaments';
+                        $texto_retorno = ($menu_action === 'imprimir_qr_lote') ? 'Retorno al panel' : 'Volver a Torneos';
+                        ?>
+                        <a href="<?= htmlspecialchars($url_retorno) ?>" class="btn btn-light btn-lg">
+                            <i class="fas fa-arrow-left me-2"></i><?= $texto_retorno ?>
                         </a>
                         <?php if ($puede_finalizar): ?>
                             <button type="button" class="btn btn-danger btn-lg ms-2" id="btnCerrarTorneo" title="Finalizar Torneo">
