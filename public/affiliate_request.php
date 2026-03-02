@@ -291,6 +291,50 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $success = $es_usuario_registrado
                     ? 'Se creó una solicitud pendiente para registrar tu organización. Debe ser autorizada por el administrador general; al aprobarse se te asignará la nueva organización como administrador.'
                     : '¡Solicitud enviada! Se ha creado tu usuario en estado pendiente. Debe ser autorizada por el administrador general; al aprobarse podrás acceder y se creará tu organización.';
+                
+                // Notificar a admin_general sobre la nueva solicitud (campanita web + email)
+                try {
+                    require_once __DIR__ . '/../config/auth.php';
+                    $stmt_admin = $pdo->prepare("SELECT id FROM usuarios WHERE role = 'admin_general' AND (status = 1 OR status = 'approved' OR status IS NULL)");
+                    $stmt_admin->execute();
+                    $admins = $stmt_admin->fetchAll(PDO::FETCH_ASSOC);
+                    $app_url = rtrim($_ENV['APP_URL'] ?? $base_url, '/');
+                    $url_solicitudes = $app_url . '/index.php?page=affiliate_requests&filter=pendiente';
+                    $mensaje = "Nueva solicitud de afiliación de " . ($nombre ?? 'N/A') . " (" . ($club_nombre ?? '') . "). Revisar en Solicitudes de Afiliación.";
+                    $has_datos_json = $pdo->query("SHOW COLUMNS FROM notifications_queue LIKE 'datos_json'")->rowCount() > 0;
+                    foreach ($admins as $admin) {
+                        $uid = (int)$admin['id'];
+                        if ($has_datos_json) {
+                            $pdo->prepare("INSERT INTO notifications_queue (usuario_id, canal, mensaje, url_destino, datos_json) VALUES (?, 'web', ?, ?, ?)")
+                                ->execute([$uid, $mensaje, $url_solicitudes, json_encode(['tipo' => 'solicitud_afiliacion', 'nombre' => $nombre ?? '', 'club' => $club_nombre ?? ''])]);
+                        } else {
+                            $pdo->prepare("INSERT INTO notifications_queue (usuario_id, canal, mensaje, url_destino) VALUES (?, 'web', ?, ?)")
+                                ->execute([$uid, $mensaje, $url_solicitudes]);
+                        }
+                    }
+                    // Email a admin_general (siempre intentar envío por correo, no solo web)
+                    if (!empty($admins)) {
+                        require_once __DIR__ . '/../lib/NotificationSender.php';
+                        $stmt_mail = $pdo->prepare("SELECT id, nombre, email FROM usuarios WHERE role = 'admin_general' AND email IS NOT NULL AND email != '' LIMIT 5");
+                        $stmt_mail->execute();
+                        $admins_mail = $stmt_mail->fetchAll(PDO::FETCH_ASSOC);
+                        $asunto = 'Nueva solicitud de afiliación - ' . ($club_nombre ?? 'Sin nombre');
+                        $cuerpo = "Se ha recibido una nueva solicitud de afiliación:\n\n";
+                        $cuerpo .= "Nombre: " . ($nombre ?? '') . "\n";
+                        $cuerpo .= "Organización/Club: " . ($club_nombre ?? '') . "\n";
+                        $cuerpo .= "Email: " . ($email ?? '') . "\n";
+                        $cuerpo .= "Celular: " . ($celular ?? '') . "\n\n";
+                        $cuerpo .= "Revisar: " . $url_solicitudes;
+                        foreach ($admins_mail as $a) {
+                            $r = NotificationSender::sendEmail($a['email'], $asunto, $cuerpo, $a['nombre'] ?? '');
+                            if ($r['ok']) break;
+                            error_log("Email afiliación a admin {$a['email']}: " . ($r['error'] ?? ''));
+                        }
+                    }
+                } catch (Exception $e) {
+                    error_log("Error notificando solicitud afiliación a admin: " . $e->getMessage());
+                }
+                
                 $_POST = [];
                 $nacionalidad = 'V';
                 $cedula = '';
