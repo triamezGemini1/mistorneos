@@ -170,20 +170,18 @@ $landing_url = $base_url . 'landing-spa.php';
         }
         #screen-dashboard .user-bar strong { font-size: 1.05rem; }
         #screen-dashboard .user-bar span { color: var(--muted); font-size: 0.9rem; }
-        .resumen-stats { margin-bottom: 16px; }
-        .resumen-trayectoria { margin-top: 16px; padding-top: 16px; border-top: 1px solid rgba(255,255,255,0.08); }
-        .resumen-trayectoria h3 { font-size: 0.95rem; color: var(--muted); margin: 0 0 12px 0; font-weight: 600; }
-        .partida-block {
-            background: rgba(0,0,0,0.2);
-            border-radius: 12px;
-            padding: 14px;
-            margin-bottom: 12px;
-            border: 1px solid rgba(255,255,255,0.06);
-        }
-        .partida-block .partida-tit { font-size: 0.95rem; font-weight: 700; color: var(--accent); margin-bottom: 10px; padding-bottom: 8px; border-bottom: 1px solid rgba(255,255,255,0.08); }
-        .partida-block .partida-row { display: flex; justify-content: space-between; padding: 4px 0; font-size: 0.9rem; }
-        .partida-block .partida-row .lbl { color: var(--muted); }
-        .partida-block .partida-row .val { font-weight: 500; }
+        .resumen-stats-bar { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; margin-bottom: 14px; }
+        .resumen-stats-bar .stat-item { background: rgba(0,0,0,0.2); border-radius: 10px; padding: 10px; text-align: center; border: 1px solid rgba(255,255,255,0.06); }
+        .resumen-stats-bar .stat-item .label { font-size: 0.65rem; color: var(--muted); text-transform: uppercase; margin-bottom: 2px; }
+        .resumen-stats-bar .stat-item .value { font-size: 0.9rem; font-weight: 700; word-break: break-word; }
+        .resumen-stats-bar .stat-item.wide { grid-column: 1 / -1; }
+        .resumen-table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; margin-top: 12px; }
+        .resumen-table-wrap table { width: 100%; min-width: 520px; border-collapse: collapse; font-size: 0.8rem; }
+        .resumen-table-wrap th, .resumen-table-wrap td { padding: 6px 4px; border-bottom: 1px solid rgba(255,255,255,0.08); text-align: left; }
+        .resumen-table-wrap th { color: var(--muted); font-weight: 600; }
+        .resumen-table-wrap td.num, .resumen-table-wrap th.num { text-align: center; }
+        .resumen-table-wrap .nombre-cell { max-width: 80px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .resumen-table-wrap .tfoot-row { background: rgba(34, 197, 94, 0.2); font-weight: 700; }
         @media (min-width: 481px) {
             body { background: #0c1222; }
             .wrap { box-shadow: 0 0 0 1px rgba(255,255,255,0.06); border-radius: 24px; padding: 20px; background: var(--bg); }
@@ -379,43 +377,37 @@ $landing_url = $base_url . 'landing-spa.php';
 
         const resumen = data.resumen || {};
         const partidas = data.partidas || [];
-        let resumenHtml =
-            '<div class="resumen-stats">' +
-            '<p class="value">Puntos: ' + (resumen.puntos ?? '—') + ' · Efectividad: ' + (resumen.efectividad ?? '—') + '</p>' +
-            '<p class="sub">Ganados: ' + (resumen.ganados ?? 0) + ' · Perdidos: ' + (resumen.perdidos ?? 0) + '</p>' +
-            '<p class="sub">Posición: #' + (resumen.posicion ?? '—') + '</p>' +
-            '</div>';
-        resumenHtml += '<div class="resumen-trayectoria"><h3>Trayectoria de partidas</h3>';
+        const jugador = data.jugador || {};
+        let resumenHtml = '<div class="resumen-stats-bar">';
+        resumenHtml += '<div class="stat-item"><div class="label">Número</div><div class="value">' + (jugador.id_usuario || '—') + '</div></div>';
+        resumenHtml += '<div class="stat-item wide"><div class="label">Nombre</div><div class="value">' + escapeHtml(jugador.nombre || '—') + '</div></div>';
+        resumenHtml += '<div class="stat-item"><div class="label">Posición</div><div class="value">' + (resumen.posicion ?? '—') + '</div></div>';
+        resumenHtml += '<div class="stat-item"><div class="label">Ganados</div><div class="value">' + (resumen.ganados ?? 0) + '</div></div>';
+        resumenHtml += '<div class="stat-item"><div class="label">Perdidos</div><div class="value">' + (resumen.perdidos ?? 0) + '</div></div>';
+        resumenHtml += '<div class="stat-item"><div class="label">Efectividad</div><div class="value">' + (resumen.efectividad ?? 0) + '</div></div>';
+        resumenHtml += '<div class="stat-item"><div class="label">Puntos</div><div class="value">' + (resumen.puntos ?? 0) + '</div></div>';
+        resumenHtml += '</div>';
         if (partidas.length === 0) {
             resumenHtml += '<p class="sub">Aún no hay partidas registradas.</p>';
         } else {
+            var sumR1 = 0, sumR2 = 0, sumEf = 0;
+            resumenHtml += '<div class="resumen-table-wrap"><table><thead><tr>';
+            resumenHtml += '<th class="num">Partida</th><th class="num">Mesa</th><th>Compañero</th><th>Contrario 1</th><th>Contrario 2</th>';
+            resumenHtml += '<th class="num">Result 1</th><th class="num">Result 2</th><th class="num">Efectiv.</th><th class="num">Ganados</th></tr></thead><tbody>';
             partidas.forEach(function(p, idx) {
-                var mesaRaw = p.mesa;
                 var mesa = parseInt(p.mesa, 10) || 0;
-                var esBye = (mesa === 0 || mesaRaw === '0' || String(mesaRaw) === '0');
-                var tit = 'Partida ' + (idx + 1) + ' — Ronda ' + (p.partida || 0) + ' · ' + (esBye ? 'BYE' : 'Mesa ' + mesa);
-                resumenHtml += '<div class="partida-block">';
-                resumenHtml += '<div class="partida-tit">' + escapeHtml(tit) + '</div>';
-                resumenHtml += '<div class="partida-row"><span class="lbl">Ronda</span><span class="val">' + (p.partida || 0) + '</span></div>';
-                resumenHtml += '<div class="partida-row"><span class="lbl">Mesa</span><span class="val">' + (esBye ? 'BYE' : mesa) + '</span></div>';
-                resumenHtml += '<div class="partida-row"><span class="lbl">Posición</span><span class="val">' + (p.secuencia || 0) + '</span></div>';
-                resumenHtml += '<div class="partida-row"><span class="lbl">Resultado 1</span><span class="val">' + (p.resultado1 ?? 0) + '</span></div>';
-                resumenHtml += '<div class="partida-row"><span class="lbl">Resultado 2</span><span class="val">' + (p.resultado2 ?? 0) + '</span></div>';
-                resumenHtml += '<div class="partida-row"><span class="lbl">Efectividad</span><span class="val">' + (p.efectividad ?? 0) + '</span></div>';
-                resumenHtml += '<div class="partida-row"><span class="lbl">Forfait</span><span class="val">' + (p.ff ? 'Sí' : 'No') + '</span></div>';
-                resumenHtml += '<div class="partida-row"><span class="lbl">Bye</span><span class="val">' + (esBye ? 'Sí' : 'No') + '</span></div>';
-                resumenHtml += '<div class="partida-row"><span class="lbl">Tarjeta</span><span class="val">' + (p.tarjeta ?? 0) + '</span></div>';
-                resumenHtml += '<div class="partida-row"><span class="lbl">Sanción (pts)</span><span class="val">' + (p.sancion ?? 0) + '</span></div>';
-                resumenHtml += '<div class="partida-row"><span class="lbl">Chancleta</span><span class="val">' + (p.chancleta ? 'Sí' : 'No') + '</span></div>';
-                resumenHtml += '<div class="partida-row"><span class="lbl">Zapato</span><span class="val">' + (p.zapato ? 'Sí' : 'No') + '</span></div>';
-                if (p.observaciones && String(p.observaciones).trim() !== '') {
-                    resumenHtml += '<div class="partida-row"><span class="lbl">Observaciones</span><span class="val">' + escapeHtml(String(p.observaciones).trim()) + '</span></div>';
-                }
-                resumenHtml += '<div class="partida-row"><span class="lbl">Registrado</span><span class="val">' + (p.registrado ? 'Sí' : 'No') + '</span></div>';
-                resumenHtml += '</div>';
+                var esBye = (mesa === 0 || p.mesa === '0' || String(p.mesa) === '0');
+                var r1 = parseInt(p.resultado1, 10) || 0, r2 = parseInt(p.resultado2, 10) || 0, ef = parseInt(p.efectividad, 10) || 0;
+                sumR1 += r1; sumR2 += r2; sumEf += ef;
+                resumenHtml += '<tr>';
+                resumenHtml += '<td class="num">' + (idx + 1) + '</td><td class="num">' + (esBye ? 'BYE' : mesa) + '</td>';
+                resumenHtml += '<td class="nombre-cell">' + escapeHtml(p.compañero || p.companero || '—') + '</td>';
+                resumenHtml += '<td class="nombre-cell">' + escapeHtml(p.contrario1 || '—') + '</td><td class="nombre-cell">' + escapeHtml(p.contrario2 || '—') + '</td>';
+                resumenHtml += '<td class="num">' + r1 + '</td><td class="num">' + r2 + '</td><td class="num">' + ef + '</td><td class="num">' + (p.ganada || 0) + '</td></tr>';
             });
+            resumenHtml += '</tbody><tfoot><tr class="tfoot-row"><td colspan="5" class="num"><strong>TOTALES / SUMAS</strong></td>';
+            resumenHtml += '<td class="num">' + sumR1 + '</td><td class="num">' + sumR2 + '</td><td class="num">' + sumEf + '</td><td class="num">' + (resumen.ganados || 0) + '</td></tr></tfoot></table></div>';
         }
-        resumenHtml += '</div>';
         document.getElementById('resumen-content').innerHTML = resumenHtml;
 
         var linkClas = document.getElementById('link-clasificacion');

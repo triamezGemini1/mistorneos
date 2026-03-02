@@ -185,7 +185,7 @@ try {
         'posicion' => $posicion,
     ];
 
-    // Trayectoria completa de partidas (resumen individual: toda la info una por una)
+    // Trayectoria completa de partidas (resumen individual: como reporte clasificación)
     $stmt_partidas = $pdo->prepare("
         SELECT partida, mesa, secuencia, resultado1, resultado2, efectividad, ff, tarjeta, sancion, chancleta, zapato, observaciones, registrado
         FROM partiresul
@@ -193,7 +193,48 @@ try {
         ORDER BY partida ASC, CAST(mesa AS UNSIGNED) ASC
     ");
     $stmt_partidas->execute([$torneo_id, $id_usuario]);
-    $response['partidas'] = $stmt_partidas->fetchAll(PDO::FETCH_ASSOC);
+    $partidas_raw = $stmt_partidas->fetchAll(PDO::FETCH_ASSOC);
+    $response['partidas'] = [];
+    foreach ($partidas_raw as $p) {
+        $mesa = (int)$p['mesa'];
+        $sec = (int)($p['secuencia'] ?? 0);
+        $r1 = (int)($p['resultado1'] ?? 0);
+        $r2 = (int)($p['resultado2'] ?? 0);
+        $compañero = '';
+        $contrario1 = '';
+        $contrario2 = '';
+        $ganada = 0;
+        if ($mesa > 0) {
+            $stmt_mesa = $pdo->prepare("
+                SELECT pr.id_usuario, pr.secuencia, COALESCE(u.nombre, u.username) as nombre
+                FROM partiresul pr
+                INNER JOIN usuarios u ON u.id = pr.id_usuario
+                WHERE pr.id_torneo = ? AND pr.partida = ? AND pr.mesa = ?
+                ORDER BY pr.secuencia ASC
+            ");
+            $stmt_mesa->execute([$torneo_id, $p['partida'], $p['mesa']]);
+            $en_mesa = $stmt_mesa->fetchAll(PDO::FETCH_ASSOC);
+            $mi_equipo = in_array($sec, [1, 2]) ? [1, 2] : [3, 4];
+            $otro_equipo = in_array($sec, [1, 2]) ? [3, 4] : [1, 2];
+            foreach ($en_mesa as $row) {
+                $s = (int)$row['secuencia'];
+                if ((int)$row['id_usuario'] !== $id_usuario) {
+                    if (in_array($s, $mi_equipo)) {
+                        $compañero = $row['nombre'] ?? '—';
+                    } else {
+                        if ($contrario1 === '') $contrario1 = $row['nombre'] ?? '—';
+                        else $contrario2 = $row['nombre'] ?? '—';
+                    }
+                }
+            }
+            $ganada = (in_array($sec, [1, 2]) && $r1 > $r2) || (in_array($sec, [3, 4]) && $r2 > $r1) ? 1 : 0;
+        }
+        $p['compañero'] = $compañero ?: '—';
+        $p['contrario1'] = $contrario1 ?: '—';
+        $p['contrario2'] = $contrario2 ?: '—';
+        $p['ganada'] = $ganada;
+        $response['partidas'][] = $p;
+    }
 
     $response['url_clasificacion'] = $base_public . '/clasificacion.php?torneo_id=' . $torneo_id;
 
