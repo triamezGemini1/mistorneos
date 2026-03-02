@@ -119,6 +119,24 @@ if ($entidad_param > 0) {
         section.bg-white .container h3,
         section.bg-white .container p { color: #111827 !important; }
 
+        /* Contenedor tipo tarjeta blanca con letras negras (Solicitud afiliación, Qué ofrecemos, FAQ, Comentarios) */
+        .landing-card-light {
+            background: #ffffff !important;
+            color: #111827 !important;
+            border-radius: 1rem;
+            box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -2px rgba(0,0,0,0.1);
+            border: 1px solid #e5e7eb;
+            padding: 2rem !important;
+        }
+        .landing-card-light h2, .landing-card-light h3, .landing-card-light h4, .landing-card-light h5, .landing-card-light h6,
+        .landing-card-light p, .landing-card-light li, .landing-card-light span:not([class*="bg-"]):not([class*="text-white"]) { color: #111827 !important; }
+        .landing-card-light .text-gray-600, .landing-card-light .text-gray-500 { color: #374151 !important; }
+        .landing-card-light .text-primary-700 { color: #1e40af !important; }
+        .landing-card-light a:not([class*="bg-"]):not(.btn-accent) { color: #1d4ed8 !important; }
+        .landing-card-light a:not([class*="bg-"]):not(.btn-accent):hover { color: #1e40af !important; }
+        .landing-card-light label { color: #111827 !important; }
+        .landing-card-light summary { color: #111827 !important; }
+
         /* ========== Mobile-First: formularios ========== */
         .landing-form-grid { display: grid; grid-template-columns: 1fr; gap: 1rem; width: 100%; }
         @media (min-width: 768px) { .landing-form-grid { grid-template-columns: repeat(2, 1fr); gap: 1.25rem; } }
@@ -309,8 +327,8 @@ if ($entidad_param > 0) {
             </section>
 
             <!-- Registro (solo afiliación, centrada) -->
-            <section id="registro" class="py-16 md:py-24 bg-white">
-                <div class="container mx-auto px-4 sm:px-6 lg:px-8 flex flex-col items-center">
+            <section id="registro" class="py-16 md:py-24 bg-gray-100">
+                <div class="container mx-auto px-4 sm:px-6 lg:px-8 flex flex-col items-center landing-card-light">
                     <div class="text-center mb-12">
                         <h2 class="text-3xl md:text-4xl lg:text-5xl font-bold text-primary-700 mb-4">Solicitud de Afiliación</h2>
                         <p class="text-lg text-gray-600 max-w-2xl mx-auto">Para clubes y organizadores que desean ser parte del proyecto y administrar eventos</p>
@@ -480,8 +498,8 @@ if ($entidad_param > 0) {
             </section>
 
             <!-- Servicios -->
-            <section id="servicios" class="py-16 md:py-24 bg-white">
-                <div class="container mx-auto px-4 sm:px-6 lg:px-8">
+            <section id="servicios" class="py-16 md:py-24 bg-gray-100">
+                <div class="container mx-auto px-4 sm:px-6 lg:px-8 landing-card-light">
                     <div class="text-center mb-12">
                         <h2 class="text-3xl md:text-4xl lg:text-5xl font-bold text-primary-700 mb-4">¿Qué Ofrecemos?</h2>
                         <p class="text-lg md:text-xl text-gray-600 max-w-2xl mx-auto">Todo lo que necesitas para disfrutar del dominó de manera profesional y organizada</p>
@@ -531,8 +549,8 @@ if ($entidad_param > 0) {
             </section>
 
             <!-- FAQ -->
-            <section id="faq" class="py-16 md:py-24 bg-white">
-                <div class="container mx-auto px-4 sm:px-6 lg:px-8">
+            <section id="faq" class="py-16 md:py-24 bg-gray-100">
+                <div class="container mx-auto px-4 sm:px-6 lg:px-8 landing-card-light">
                     <div class="text-center mb-12">
                         <h2 class="text-3xl md:text-4xl lg:text-5xl font-bold text-primary-700 mb-4">Preguntas Frecuentes</h2>
                         <p class="text-lg md:text-xl text-gray-600 max-w-2xl mx-auto">Todo lo que necesitas saber sobre La Estación del Dominó</p>
@@ -567,8 +585,8 @@ if ($entidad_param > 0) {
             </section>
 
             <!-- Comentarios -->
-            <section id="comentarios" class="py-16 md:py-24 bg-white">
-                <div class="container mx-auto px-4 sm:px-6 lg:px-8">
+            <section id="comentarios" class="py-16 md:py-24 bg-gray-100">
+                <div class="container mx-auto px-4 sm:px-6 lg:px-8 landing-card-light">
                     <div class="text-center mb-12">
                         <h2 class="text-3xl md:text-4xl font-bold text-primary-700 mb-4"><i class="fas fa-comments mr-3 text-accent"></i>Comentarios y Testimonios</h2>
                         <p class="text-lg text-gray-600">La opinión de nuestra comunidad es muy importante</p>
