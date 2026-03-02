@@ -304,6 +304,16 @@ foreach ($eventos_calendario as $ev) {
         .logos-clientes-row .logo-item { flex-shrink: 0; display: flex; align-items: center; justify-content: center; width: 360px; height: 180px; margin: 0 2rem; padding: 1rem; background: #fff; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
         .logos-clientes-row .logo-item img { max-width: 100%; max-height: 100%; object-fit: contain; }
         @keyframes marquee { 0% { transform: translateX(0); } 100% { transform: translateX(-50%); } }
+        /* Tarjetas con fondo claro: texto negro para legibilidad */
+        .bg-white.rounded-2xl,
+        .bg-white.rounded-xl { color: #111827; }
+        .bg-white.rounded-2xl h2, .bg-white.rounded-2xl h3, .bg-white.rounded-2xl h4, .bg-white.rounded-2xl h5, .bg-white.rounded-2xl h6,
+        .bg-white.rounded-2xl p, .bg-white.rounded-xl h2, .bg-white.rounded-xl h3, .bg-white.rounded-xl h4, .bg-white.rounded-xl h5, .bg-white.rounded-xl p { color: #111827; }
+        section.bg-white .container, section.bg-gray-50 .container { color: #111827; }
+        section.bg-white .container h2, section.bg-white .container h3, section.bg-white .container p,
+        section.bg-gray-50 .container h2, section.bg-gray-50 .container h3, section.bg-gray-50 .container p { color: #111827; }
+        section[class*="from-slate-50"] .container, section[class*="to-blue-50"] .container { color: #111827; }
+        section[class*="from-slate-50"] .container h2, section[class*="from-slate-50"] .container h3, section[class*="from-slate-50"] .container p { color: #111827; }
     </style>
 </head>
 <body class="bg-gray-50 antialiased">

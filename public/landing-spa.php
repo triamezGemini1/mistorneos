@@ -95,6 +95,12 @@ if ($entidad_param > 0) {
         .logos-clientes-row .logo-item { flex-shrink: 0; display: flex; align-items: center; justify-content: center; width: 360px; height: 180px; margin: 0 2rem; padding: 1rem; background: #fff; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
         .logos-clientes-row .logo-item img { max-width: 100%; max-height: 100%; object-fit: contain; }
         @keyframes marquee { 0% { transform: translateX(0); } 100% { transform: translateX(-50%); } }
+        /* Tarjetas con fondo claro: texto negro para legibilidad */
+        .bg-white.rounded-2xl, .bg-white.rounded-xl { color: #111827 !important; }
+        .bg-white.rounded-2xl h2, .bg-white.rounded-2xl h3, .bg-white.rounded-2xl h4, .bg-white.rounded-2xl p,
+        .bg-white.rounded-xl h2, .bg-white.rounded-xl h3, .bg-white.rounded-xl h4, .bg-white.rounded-xl p { color: #111827 !important; }
+        section[class*="from-slate-50"] .container, section[class*="to-blue-50"] .container { color: #111827 !important; }
+        section[class*="from-slate-50"] .container h2, section[class*="from-slate-50"] .container h3, section[class*="from-slate-50"] .container p { color: #111827 !important; }
 
         /* ========== Mobile-First: formularios ========== */
         .landing-form-grid { display: grid; grid-template-columns: 1fr; gap: 1rem; width: 100%; }
@@ -189,9 +195,8 @@ if ($entidad_param > 0) {
             <nav class="esports-nav bg-[#0f172a]/95 border-b border-white/10 shadow-lg sticky top-0 z-50 backdrop-blur-md">
                 <div class="container mx-auto px-4 sm:px-6 lg:px-8">
                     <div class="flex items-center justify-between h-16 md:h-20">
-                        <a href="#" @click.prevent="scrollToSection('hero')" class="flex items-center space-x-2 text-white font-bold text-lg md:text-xl hover:opacity-90 transition-opacity">
+                        <a :href="baseUrl + 'landing-spa.php'" @click.prevent="scrollToSection('hero')" class="flex items-center text-white font-bold hover:opacity-90 transition-opacity" title="La Estación del Dominó">
                             <img :src="logoUrl" alt="La Estación del Dominó" class="h-8 md:h-10 w-auto">
-                            <span>La Estación del Dominó</span>
                         </a>
                         <div class="hidden md:flex items-center space-x-1">
                             <a href="#documentos" @click.prevent="scrollToSection('documentos')" class="px-4 py-2 text-slate-300 hover:text-[#00f2ff] hover:bg-white/5 rounded-lg transition-all font-medium">Documentos</a>
@@ -237,8 +242,7 @@ if ($entidad_param > 0) {
                         </h1>
                         <p class="text-lg md:text-xl text-slate-400 mb-10 max-w-2xl mx-auto leading-relaxed">La plataforma de torneos de dominó. Inscríbete en eventos, sigue resultados en vivo y únete a la comunidad.</p>
                         <div class="flex flex-col sm:flex-row gap-4 justify-center items-center">
-                            <a href="#" @click.prevent="scrollToSection('eventos')" class="hero-cta-primary btn-accent inline-flex items-center justify-center w-full sm:w-auto px-10 py-5 text-lg"><i class="fas fa-trophy mr-3"></i>Registrar Torneo</a>
-                            <a href="#" @click.prevent="scrollToSection('registro')" class="w-full sm:w-auto px-8 py-4 bg-white/10 text-white font-semibold rounded-xl border border-white/20 hover:bg-white/20 hover:border-[#00f2ff]/50 transition-all text-center"><i class="fas fa-building mr-2"></i>Solicitar Afiliación</a>
+                            <a href="#" @click.prevent="scrollToSection('registro')" class="hero-cta-primary btn-accent inline-flex items-center justify-center w-full sm:w-auto px-10 py-5 text-lg"><i class="fas fa-building mr-3"></i>Solicitar Afiliación</a>
                             <a :href="baseUrl + 'login.php'" class="w-full sm:w-auto px-8 py-4 text-slate-300 font-semibold rounded-xl border border-slate-500 hover:bg-white/5 hover:text-white transition-all text-center"><i class="fas fa-sign-in-alt mr-2"></i>Ya tengo cuenta</a>
                         </div>
                     </div>
