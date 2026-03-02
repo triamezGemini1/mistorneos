@@ -1,16 +1,7 @@
 <?php
-/**
- * Login - Flujo resumido:
- * 1. GET: se muestra el formulario. El campo "Usuario o Email" (name="username") está vacío; no se toma de sesión ni de otro usuario.
- * 2. POST: $username = trim($_POST['username']) → ÚNICAMENTE lo que el usuario escribió (o el navegador autocompletó) en esta petición.
- * 3. Auth::login($username, $password) → Security::authenticateUser(); el usuario en los logs es siempre el de esta petición.
- * 4. Si OK: redirect a index.php o return_url; la sesión guarda el usuario que pasó Auth.
- * 5. Si falla: se muestra mensaje y se registra en log con "(usuario enviado en petición: 'X')" para dejar claro que X es lo enviado en ESA petición, no otro usuario.
- * Cada línea del error_log corresponde a UNA petición HTTP; si ves "ramaguza" es porque en esa petición el formulario se envió con username=ramaguza (mismo navegador con autocompletado, otra persona, o otra pestaña).
- */
-// Evitar que salida accidental (BOM, espacios, warnings) anule header()
+require_once __DIR__ . '/../config/session_start_early.php';
+/** Login: usuario del log = valor enviado en esa petición en el formulario. */
 ob_start();
-
 try {
     require __DIR__ . '/../config/bootstrap.php';
     require __DIR__ . '/../config/db.php';
