@@ -136,9 +136,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $target_url = ($redirect && preg_match('#^[a-zA-Z0-9_\-/\.\?=&]+$#', $redirect) && !preg_match('#^(https?|javascript|data):#i', $redirect) && (strpos($redirect, '?') !== false || strpos($redirect, '.php') !== false))
             ? ((strpos($redirect, 'http') === 0 || strpos($redirect, '/') === 0) ? $redirect : $entry_base . '/' . ltrim($redirect, '/'))
             : $entry_base . '/index.php';
-        if (getenv('SESSION_DEBUG')) error_log('[SESSION_DEBUG] login.php | antes redirect | entry_base=' . $entry_base . ' | target_url=' . $target_url . ' | session_id=' . session_id());
-        // Forzar escritura de sesión y enviar cookie explícitamente con path correcto (subcarpeta)
-        $cookie_path = (defined('URL_BASE') && URL_BASE !== '' && URL_BASE !== '/') ? URL_BASE : '/';
+        error_log('[SESSION] login OK -> redirect | target=' . $target_url . ' | session_id=' . session_id());
+        if (getenv('SESSION_DEBUG')) error_log('[SESSION_DEBUG] login.php | entry_base=' . $entry_base . ' | session_id=' . session_id());
+        // Cookie con path='/' para que el navegador la envíe en todas las peticiones del dominio
+        $cookie_path = '/';
         $params = session_get_cookie_params();
         $sid = session_id();
         if (function_exists('session_write_close')) {

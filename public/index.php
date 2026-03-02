@@ -138,7 +138,8 @@ try {
                 $login_url = '/' . $login_url;
             }
         }
-        if (getenv('SESSION_DEBUG')) error_log('[SESSION_DEBUG] index.php | SIN usuario -> redirect a login | login_url=' . $login_url . ' | COOKIE recibida=' . (isset($_COOKIE[session_name()]) ? 'si' : 'no'));
+        error_log('[SESSION] index.php SIN usuario -> redirect a login | login_url=' . $login_url . ' | cookie_recibida=' . (isset($_COOKIE[session_name()]) ? 'si' : 'no') . ' | session_id=' . session_id());
+        if (getenv('SESSION_DEBUG')) error_log('[SESSION_DEBUG] index.php | script=' . ($_SERVER['SCRIPT_NAME'] ?? ''));
         header('Location: ' . $login_url, true, 302);
         exit;
     }

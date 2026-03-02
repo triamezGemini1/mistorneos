@@ -5,12 +5,8 @@ if (session_status() === PHP_SESSION_ACTIVE) {
     if ($session_debug) error_log('[SESSION_DEBUG] session_start_early.php | sesión ya activa, saliendo');
     return;
 }
+// Usar path='/' para que la cookie se envíe en toda la ruta (evita pérdida de sesión en subcarpetas tipo /mistorneos_beta/public/)
 $path = '/';
-if (!empty($_SERVER['SCRIPT_NAME'])) {
-    $dir = str_replace('\\', '/', dirname($_SERVER['SCRIPT_NAME']));
-    if ($dir !== '.' && $dir !== '' && $dir !== '/') $path = '/' . trim($dir, '/') . '/';
-}
-if ($path === '//') $path = '/';
 $secure = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') || (!empty($_SERVER['HTTP_X_FORWARDED_PROTO']) && $_SERVER['HTTP_X_FORWARDED_PROTO'] === 'https');
 session_set_cookie_params(['lifetime' => 0, 'path' => $path, 'domain' => '', 'secure' => $secure, 'httponly' => true, 'samesite' => 'Lax']);
 $sname = getenv('SESSION_NAME') ?: 'mistorneos_session';
