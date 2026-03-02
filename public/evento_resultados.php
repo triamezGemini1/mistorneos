@@ -74,7 +74,7 @@ if ($vista === 'general') {
 $clubes_data = [];
 $pareclub = (int)($torneo_data['pareclub'] ?? 0);
 $limite_club = ($pareclub > 0) ? $pareclub : 8;
-if ($vista === 'club') {
+if ($vista === 'club' || $vista === 'club_resumido' || $vista === 'club_detallado') {
     $clubes_data = ResultadosPublicHelper::getResultadosPorClub($pdo, $torneo_id, $limite_club);
 }
 
@@ -268,9 +268,15 @@ $url_base = 'evento_resultados.php?torneo_id=' . $torneo_id;
                     </a>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link <?= $vista === 'club' ? 'active' : '' ?>"
-                       href="<?= $url_base ?>&vista=club">
-                        <i class="fas fa-building me-1"></i>Por club
+                    <a class="nav-link <?= $vista === 'club_resumido' ? 'active' : '' ?>"
+                       href="<?= $url_base ?>&vista=club_resumido">
+                        <i class="fas fa-chart-bar me-1"></i>Por club (resumido)
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link <?= ($vista === 'club' || $vista === 'club_detallado') ? 'active' : '' ?>"
+                       href="<?= $url_base ?>&vista=club_detallado">
+                        <i class="fas fa-list-ul me-1"></i>Por club (detallado)
                     </a>
                 </li>
                 <?php if ($es_equipos): ?>
@@ -361,9 +367,52 @@ $url_base = 'evento_resultados.php?torneo_id=' . $torneo_id;
                     <?php endif; ?>
                 <?php endif; ?>
 
-            <?php elseif ($vista === 'club'): ?>
-                <!-- Resultados por club -->
-                <h5 class="mb-4"><i class="fas fa-building text-primary me-2"></i>Resultados por club</h5>
+            <?php elseif ($vista === 'club_resumido'): ?>
+                <!-- Resultados por club - Vista resumida (una fila por club) -->
+                <h5 class="mb-4"><i class="fas fa-chart-bar text-primary me-2"></i>Resultados por club (resumido)</h5>
+                <p class="text-muted small mb-3">Se consideran los mejores <?= $limite_club ?> jugadores de cada club para las estadísticas.</p>
+                <?php if (empty($clubes_data)): ?>
+                    <p class="text-muted">No hay datos por club disponibles.</p>
+                <?php else: ?>
+                    <div class="table-responsive">
+                        <table class="table tabla-resultados table-hover">
+                            <thead>
+                                <tr>
+                                    <th class="text-center">Pos</th>
+                                    <th>Club</th>
+                                    <th class="text-center">Jugadores</th>
+                                    <th class="text-center">Ganados</th>
+                                    <th class="text-center">Perdidos</th>
+                                    <th class="text-center">GFF</th>
+                                    <th class="text-center">Efect. prom.</th>
+                                    <th class="text-center">Puntos prom.</th>
+                                    <th class="text-center">Pts. Rnk total</th>
+                                    <th class="text-center">Mejor pos.</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <?php $pos_club = 1; foreach ($clubes_data as $club): ?>
+                                <tr class="<?= $pos_club <= 3 ? ($pos_club == 1 ? 'pos-1' : ($pos_club == 2 ? 'pos-2' : 'pos-3')) : '' ?>">
+                                    <td class="text-center"><strong><?= $pos_club ?></strong><?php if ($pos_club <= 3): ?> <i class="fas fa-medal text-warning"></i><?php endif; ?></td>
+                                    <td><strong><?= htmlspecialchars($club['club_nombre']) ?></strong></td>
+                                    <td class="text-center"><?= count($club['jugadores'] ?? []) ?></td>
+                                    <td class="text-center text-success fw-bold"><?= (int)($club['total_ganados'] ?? 0) ?></td>
+                                    <td class="text-center text-danger"><?= (int)($club['total_perdidos'] ?? 0) ?></td>
+                                    <td class="text-center"><?= (int)($club['total_gff'] ?? 0) ?></td>
+                                    <td class="text-center"><?= (int)($club['promedio_efectividad'] ?? 0) ?></td>
+                                    <td class="text-center"><?= (int)($club['promedio_puntos'] ?? 0) ?></td>
+                                    <td class="text-center fw-bold"><?= (int)($club['total_ptosrnk'] ?? 0) ?></td>
+                                    <td class="text-center"><?= (int)($club['mejor_posicion'] ?? 0) ?: '—' ?></td>
+                                </tr>
+                                <?php $pos_club++; endforeach; ?>
+                            </tbody>
+                        </table>
+                    </div>
+                <?php endif; ?>
+
+            <?php elseif ($vista === 'club' || $vista === 'club_detallado'): ?>
+                <!-- Resultados por club - Vista detallada (tarjeta por club con jugadores) -->
+                <h5 class="mb-4"><i class="fas fa-list-ul text-primary me-2"></i>Resultados por club (detallado)</h5>
                 <p class="text-muted small mb-3">Se consideran los mejores <?= $limite_club ?> jugadores de cada club.</p>
                 <?php if (empty($clubes_data)): ?>
                     <p class="text-muted">No hay datos por club disponibles.</p>
