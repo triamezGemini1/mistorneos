@@ -113,6 +113,8 @@ $torneo_nombre = $torneo['nombre'] ?? 'Torneo';
         .pos-3 { color: #d97706; }
         .num { text-align: right; white-space: nowrap; }
         .nombre { max-width: 120px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .nombre-link { color: #f1f5f9; text-decoration: none; }
+        .nombre-link:hover { color: #38bdf8; text-decoration: underline; }
         .empty { text-align: center; padding: 2rem; color: #64748b; }
         @media (min-width: 481px) {
             body { padding: 20px; }
@@ -154,7 +156,7 @@ $torneo_nombre = $torneo['nombre'] ?? 'Torneo';
                         ?>
                         <tr>
                             <td class="pos <?= $posClass ?>"><?= $pos ?></td>
-                            <td class="nombre" title="<?= htmlspecialchars($row['nombre_jugador'] ?? '') ?>"><?= htmlspecialchars($row['nombre_jugador'] ?? '—') ?></td>
+                            <td class="nombre"><a href="resumen_jugador.php?torneo_id=<?= (int)$torneo_id ?>&id_usuario=<?= (int)($row['id_usuario'] ?? 0) ?>" class="nombre-link" title="<?= htmlspecialchars($row['nombre_jugador'] ?? '') ?>"><?= htmlspecialchars($row['nombre_jugador'] ?? '—') ?></a></td>
                             <td class="num"><?= (int)($row['ganados'] ?? 0) ?></td>
                             <td class="num"><?= (int)($row['perdidos'] ?? 0) ?></td>
                             <td class="num"><?= (int)($row['efectividad'] ?? 0) ?></td>
