@@ -140,20 +140,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             : $entry_base . '/index.php';
         error_log('[SESSION] login OK -> redirect | target=' . $target_url . ' | session_id=' . session_id());
         if (getenv('SESSION_DEBUG')) error_log('[SESSION_DEBUG] login.php | entry_base=' . $entry_base . ' | session_id=' . session_id());
-        // Borrar cookie antigua con path de subcarpeta (si existe) para que el navegador no envíe un session_id viejo
         $params = session_get_cookie_params();
         $sname = session_name();
         $sid = session_id();
         if (function_exists('session_write_close')) {
             session_write_close();
         }
-        $old_path = (defined('URL_BASE') && URL_BASE !== '' && URL_BASE !== '/') ? rtrim(URL_BASE, '/') : '';
-        if ($old_path !== '' && $old_path !== '/') {
-            setcookie($sname, '', ['expires' => time() - 3600, 'path' => $old_path, 'domain' => $params['domain'] ?? '', 'secure' => $params['secure'] ?? false, 'httponly' => $params['httponly'] ?? true, 'samesite' => $params['samesite'] ?? 'Lax']);
+        $cookie_opts = ['expires' => 0, 'path' => '/', 'domain' => $params['domain'] ?? '', 'secure' => $params['secure'] ?? false, 'httponly' => $params['httponly'] ?? true, 'samesite' => $params['samesite'] ?? 'Lax'];
+        // 1) Borrar cookie antigua con path de subcarpeta (si existe) para que no se envíe en la siguiente petición
+        if (defined('URL_BASE') && URL_BASE !== '' && URL_BASE !== '/') {
+            setcookie($sname, '', array_merge($cookie_opts, ['expires' => time() - 3600, 'path' => URL_BASE]));
         }
+        // 2) Enviar cookie con el session_id actual y path=/ (única cookie para todo el dominio)
         if ($sid !== '') {
-            setcookie($sname, $sid, ['expires' => 0, 'path' => '/', 'domain' => $params['domain'] ?? '', 'secure' => $params['secure'] ?? false, 'httponly' => $params['httponly'] ?? true, 'samesite' => $params['samesite'] ?? 'Lax']);
-            if (getenv('SESSION_DEBUG')) error_log('[SESSION_DEBUG] login.php | setcookie path=/ | id=' . $sid);
+            setcookie($sname, $sid, $cookie_opts);
         }
         if ($redirect && preg_match('#^[a-zA-Z0-9_\-/\.\?=&]+$#', $redirect) && !preg_match('#^(https?|javascript|data):#i', $redirect)) {
             if (strpos($redirect, '?') !== false || strpos($redirect, '.php') !== false) {
