@@ -193,8 +193,8 @@ $action_param = $use_standalone ? '?' : '&';
     .columna-estadisticas .estadisticas-valores { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .columna-tarjeta .tarjeta-btn { width: 33.33%; min-width: 1.5rem; max-width: 33.33%; box-sizing: border-box; flex-shrink: 0; }
     .estadisticas-valores { font-size: clamp(0.75rem, 1.5vw, 0.875rem); font-weight: 300; color: #111827; white-space: nowrap; line-height: 1.5; }
-    /* Títulos de columna (ID, nombre, puntos, etc.) en negrita */
-    #formResultados thead th { font-weight: bold !important; }
+    /* Títulos de columna (ID, nombre, puntos, etc.) en negrita; filas ~10% más compactas */
+    #formResultados thead th { font-weight: bold !important; padding: 0.18rem 0.32rem !important; }
     /* Contenedor de la información: reducir tamaño de letra y negrita */
     .registrar-resultados-wrap #formResultados tbody td,
     .registrar-resultados-wrap .estadisticas-valores,
@@ -209,7 +209,7 @@ $action_param = $use_standalone ? '?' : '&';
         border: 2px solid #333 !important;
     }
     #formResultados tbody tr td {
-        padding: 0.2rem 0.35rem !important;
+        padding: 0.18rem 0.32rem !important;
         vertical-align: middle;
         border: 1px solid #666;
     }
@@ -269,19 +269,23 @@ $action_param = $use_standalone ? '?' : '&';
         min-height: 2.2rem;
     }
     
-    /* Formulario más compacto: menos padding en card-body del formulario de resultados */
+    /* Formulario más compacto: menos padding en card-body del formulario de resultados (filas ~10% más compactas) */
     .registrar-resultados-wrap .formulario-resultados-sticky .card-body {
-        padding: 0.6rem 0.75rem !important;
+        padding: 0.55rem 0.7rem !important;
     }
     .registrar-resultados-wrap .formulario-resultados-sticky .card-header {
-        padding: 0.4rem 0.75rem !important;
+        padding: 0.36rem 0.7rem !important;
     }
     .registrar-resultados-wrap .formulario-resultados-sticky .card-body .mb-3 {
-        margin-bottom: 0.65rem !important;
+        margin-bottom: 0.6rem !important;
     }
     .registrar-resultados-wrap .formulario-resultados-sticky .card-body .mb-4 {
-        margin-bottom: 0.85rem !important;
+        margin-bottom: 0.75rem !important;
     }
+    /* Filas del formulario ~10% más compactas: navegación, botones */
+    .registrar-resultados-wrap .formulario-resultados-sticky .form-botones-row .gap-2 { gap: 0.45rem !important; }
+    .registrar-resultados-wrap .formulario-resultados-sticky .form-botones-row { gap: 0.65rem !important; }
+    .registrar-resultados-wrap .formulario-resultados-sticky .text-muted.font-weight-bold { font-size: clamp(2.36rem, 4.05vw, 2.7rem) !important; }
     
     /* Mensaje de validación */
     #mensaje-validacion {
@@ -291,10 +295,18 @@ $action_param = $use_standalone ? '?' : '&';
         display: block;
     }
     
-    /* Fila Observaciones + Zap/Chan en una línea (~15% más compacto) */
-    .row-observaciones-zapchan { margin-bottom: 0.65rem; }
-    .row-observaciones-zapchan .zapchan-linea { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: flex; align-items: center; gap: 0.5rem; flex-wrap: nowrap; }
-    .row-observaciones-zapchan .zapchan-jugador { display: inline-flex; align-items: center; gap: 0.25rem; }
+    /* Fila Observaciones + Zap/Chan: 20% más compacta */
+    .row-observaciones-zapchan { margin-bottom: 0.55rem; }
+    .row-observaciones-zapchan .d-flex.mb-2 { margin-bottom: 0.4rem !important; }
+    .row-observaciones-zapchan textarea.observaciones-compact {
+        min-height: 2.4rem !important;
+        padding: 0.35rem 0.5rem !important;
+        font-size: 0.9em;
+        line-height: 1.25;
+        resize: vertical;
+    }
+    .row-observaciones-zapchan .zapchan-linea { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: flex; align-items: center; gap: 0.4rem; flex-wrap: nowrap; }
+    .row-observaciones-zapchan .zapchan-jugador { display: inline-flex; align-items: center; gap: 0.2rem; }
     
     /* Responsive para móviles */
     @media screen and (max-width: 768px) {
@@ -1026,13 +1038,13 @@ $action_param = $use_standalone ? '?' : '&';
                                     </div>
                                 </div>
                                 <textarea name="observaciones" 
-                                          rows="3"
-                                          class="form-control"
+                                          rows="2"
+                                          class="form-control observaciones-compact"
                                           placeholder="Observaciones sobre la partida (opcional)"><?php echo htmlspecialchars($observacionesMesa ?? ''); ?></textarea>
                             </div>
 
                             <!-- Botones de Acción -->
-                            <div class="d-flex flex-wrap justify-content-between align-items-center gap-3">
+                            <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 form-botones-row">
                                 <!-- Navegación -->
                                 <div class="d-flex gap-2">
                                     <?php if ($mesaAnterior ?? null): ?>
