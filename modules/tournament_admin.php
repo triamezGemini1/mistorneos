@@ -570,10 +570,18 @@ $error_message = $_GET['error'] ?? null;
                     </a>
                     <?php endif; ?>
                     
+                    <?php if ($mostrar('generar_qr')): ?>
+                    <a href="index.php?page=tournament_admin&torneo_id=<?= $torneo_id ?>&action=generar_qr" 
+                       class="menu-item d-block text-decoration-none text-dark <?= $menu_action === 'generar_qr' ? 'active' : '' ?>">
+                        <i class="fas fa-qrcode"></i>
+                        <strong>Generar e imprimir QR del torneo</strong>
+                    </a>
+                    <?php endif; ?>
+                    
                     <?php if ($mostrar('generar_qr_general')): ?>
                     <a href="index.php?page=tournament_admin&torneo_id=<?= $torneo_id ?>&action=generar_qr_general" 
-                       class="menu-item d-block text-decoration-none text-dark <?= in_array($menu_action, ['generar_qr_general', 'generar_qr']) ? 'active' : '' ?>">
-                        <i class="fas fa-qrcode"></i>
+                       class="menu-item d-block text-decoration-none text-dark <?= $menu_action === 'generar_qr_general' ? 'active' : '' ?>">
+                        <i class="fas fa-list"></i>
                         <strong>QR General</strong>
                     </a>
                     <?php endif; ?>
@@ -595,11 +603,7 @@ $error_message = $_GET['error'] ?? null;
                 // Las variables $torneo_id, $torneo, $pdo, $tabla_inscritos_existe, $tabla_partiresul_existe
                 // están disponibles para todas las subpáginas
                 
-                // Manejar acciones de QR (redirigir generar_qr a generar_qr_general para compatibilidad)
-                if ($menu_action === 'generar_qr') {
-                    $menu_action = 'generar_qr_general';
-                }
-                
+                // generar_qr carga la página completa de QRs (generar_qr.php); generar_qr_general y generar_qr_personal son opciones alternativas
                 $action_file = __DIR__ . '/tournament_admin/' . $menu_action . '.php';
                 
                 if (file_exists($action_file)) {
