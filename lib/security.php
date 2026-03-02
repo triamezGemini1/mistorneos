@@ -38,15 +38,15 @@ final class Security
             $stmt->execute([$usernameTrim, $usernameTrim]);
             $user = $stmt->fetch(PDO::FETCH_ASSOC);
 
-            // Si no existe el usuario
+            // Si no existe el usuario ($username es el valor enviado en esta petición, no de sesión)
             if (!$user) {
-                error_log("Autenticación fallida: Usuario '{$username}' no existe");
+                error_log("Autenticación fallida (usuario enviado en petición: '{$username}'): no existe");
                 return null;
             }
 
             // Verificar contraseña primero (no revelar si estaba inactivo si la contraseña falla)
             if (!self::verifyPassword($password, $user['password_hash'])) {
-                error_log("Autenticación fallida: Contraseña incorrecta para usuario '{$username}'");
+                error_log("Autenticación fallida (usuario enviado en petición: '{$username}'): contraseña incorrecta");
                 return null;
             }
 
@@ -68,7 +68,7 @@ final class Security
                 $stmt2->execute([$user['id']]);
                 $row = $stmt2->fetch(PDO::FETCH_ASSOC);
                 if ($row !== false && isset($row['is_active']) && (int)$row['is_active'] !== 1) {
-                    error_log("Autenticación fallida: Usuario '{$username}' desactivado (is_active=0)");
+                    error_log("Autenticación fallida (usuario enviado en petición: '{$username}'): desactivado is_active=0");
                     return null;
                 }
             } catch (Throwable $e) {

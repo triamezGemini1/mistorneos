@@ -1,4 +1,13 @@
 <?php
+/**
+ * Login - Flujo resumido:
+ * 1. GET: se muestra el formulario. El campo "Usuario o Email" (name="username") está vacío; no se toma de sesión ni de otro usuario.
+ * 2. POST: $username = trim($_POST['username']) → ÚNICAMENTE lo que el usuario escribió (o el navegador autocompletó) en esta petición.
+ * 3. Auth::login($username, $password) → Security::authenticateUser(); el usuario en los logs es siempre el de esta petición.
+ * 4. Si OK: redirect a index.php o return_url; la sesión guarda el usuario que pasó Auth.
+ * 5. Si falla: se muestra mensaje y se registra en log con "(usuario enviado en petición: 'X')" para dejar claro que X es lo enviado en ESA petición, no otro usuario.
+ * Cada línea del error_log corresponde a UNA petición HTTP; si ves "ramaguza" es porque en esa petición el formulario se envió con username=ramaguza (mismo navegador con autocompletado, otra persona, o otra pestaña).
+ */
 // Evitar que salida accidental (BOM, espacios, warnings) anule header()
 ob_start();
 
@@ -65,8 +74,10 @@ if ($from_invitation_flow && !empty($_SESSION['invitation_club_name'])) {
 }
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    // El usuario SIEMPRE viene solo del campo del formulario (name="username"). Cada línea del log corresponde a UNA petición HTTP.
     $username = trim($_POST['username'] ?? '');
     $password = $_POST['password'] ?? ''; // NO hacer trim al password
+    error_log("Login intent - valor enviado en esta petición como 'username': " . ($username === '' ? '(vacío)' : "'" . $username . "'"));
 
     require_once __DIR__ . '/../config/auth.php';
     
@@ -148,7 +159,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
         exit;
     } else {
-        // Motivo del fallo: solo mostrar inactiva si la contraseña es correcta (evita confundir con "ramaguza" cuando falló la contraseña)
+        // Mensaje al usuario según motivo real (username = valor enviado en ESTA petición en el campo del formulario)
         try {
             $pdo = DB::pdo();
             $stmt = $pdo->prepare("SELECT id, username, status, password_hash FROM usuarios WHERE username = ? OR email = ?");
@@ -159,20 +170,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $password_ok = !empty($user['password_hash']) && password_verify($password, $user['password_hash']);
                 if ($password_ok && (int)$user['status'] !== 0) {
                     $error = "Tu cuenta está inactiva. Contacta al administrador.";
-                    error_log("Login fallido - Usuario '{$username}' inactivo (status=" . ($user['status'] ?? '') . ")");
+                    error_log("Login fallido (usuario enviado en petición: '{$username}'): cuenta inactiva status=" . ($user['status'] ?? ''));
                 } elseif (!$password_ok && !empty($user['password_hash'])) {
                     $error = "Contraseña incorrecta";
-                    error_log("Login fallido - Usuario '{$username}' contraseña incorrecta");
+                    error_log("Login fallido (usuario enviado en petición: '{$username}'): contraseña incorrecta");
                 } elseif (empty($user['password_hash'])) {
                     $error = "Tu cuenta no tiene contraseña configurada. Contacta al administrador.";
-                    error_log("Login fallido - Usuario '{$username}' sin password_hash");
+                    error_log("Login fallido (usuario enviado en petición: '{$username}'): sin password_hash");
                 } else {
                     $error = "Credenciales incorrectas.";
-                    error_log("Login fallido - Usuario '{$username}'");
+                    error_log("Login fallido (usuario enviado en petición: '{$username}')");
                 }
             } else {
                 $error = "El usuario o correo no existe en el sistema";
-                error_log("Login fallido - Usuario '{$username}' no existe");
+                error_log("Login fallido (usuario enviado en petición: '{$username}'): no existe");
             }
         } catch (Exception $e) {
             $error = "Error al verificar credenciales. Por favor intenta de nuevo.";
