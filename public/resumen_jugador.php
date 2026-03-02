@@ -203,11 +203,15 @@ foreach ($partidas as $p) {
         .stat-box.danger .num { color: #f87171; }
         .stat-box.warning .num { color: #fbbf24; }
         .page-title { text-align: center; font-size: 1.25rem; font-weight: 700; margin: 0 0 16px 0; color: #f1f5f9; }
-        .stats-bar { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-bottom: 16px; }
-        .stats-bar .stat-item { background: rgba(255,255,255,0.06); border-radius: 10px; padding: 12px; text-align: center; border: 1px solid rgba(255,255,255,0.08); }
-        .stats-bar .stat-item .label { font-size: 0.7rem; color: #94a3b8; text-transform: uppercase; margin-bottom: 4px; }
-        .stats-bar .stat-item .value { font-size: 1rem; font-weight: 700; color: #f1f5f9; word-break: break-word; }
-        .stats-bar .stat-item.wide { grid-column: 1 / -1; }
+        .stats-row { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; margin-bottom: 12px; padding: 12px; background: rgba(255,255,255,0.06); border-radius: 10px; border: 1px solid rgba(255,255,255,0.08); }
+        .stats-row .stat-item { display: flex; align-items: baseline; gap: 6px; }
+        .stats-row .stat-item .label { font-size: 0.7rem; color: #94a3b8; text-transform: uppercase; }
+        .stats-row .stat-item .value { font-size: 1rem; font-weight: 700; color: #f1f5f9; }
+        .stats-row.stats-row-2 { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
+        .stats-row.stats-row-2 .stat-item { flex-direction: column; align-items: center; gap: 2px; padding: 8px; background: rgba(0,0,0,0.15); border-radius: 8px; }
+        .stats-row.stats-row-2 .stat-item .value { font-size: 1.1rem; }
+        @media (min-width: 360px) { .stats-row.stats-row-2 { grid-template-columns: repeat(3, 1fr); } }
+        @media (min-width: 480px) { .stats-row.stats-row-2 { grid-template-columns: repeat(5, 1fr); } }
         .table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; margin: 0 -12px 12px; padding: 0 12px; }
         table { width: 100%; min-width: 560px; border-collapse: collapse; font-size: 0.8rem; }
         th, td { padding: 8px 6px; text-align: left; border-bottom: 1px solid rgba(255,255,255,0.08); }
@@ -219,8 +223,6 @@ foreach ($partidas as $p) {
         .empty { text-align: center; padding: 2rem; color: #64748b; }
         .nombre-cell { max-width: 90px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
         @media (min-width: 481px) {
-            .stats-bar { grid-template-columns: repeat(4, 1fr); }
-            .stats-bar .stat-item.wide { grid-column: span 2; }
             body { padding: 20px; }
             .wrap { box-shadow: 0 0 0 1px rgba(255,255,255,0.06); border-radius: 16px; padding: 20px; background: #0f172a; }
         }
@@ -237,15 +239,18 @@ foreach ($partidas as $p) {
         <p class="sub" style="text-align: center;"><?= htmlspecialchars($torneo_nombre) ?></p>
 
         <div class="card">
-            <!-- Barra de estadísticas (como en imagen) -->
-            <div class="stats-bar">
-                <div class="stat-item"><div class="label">Número</div><div class="value"><?= (int)($id_usuario) ?></div></div>
-                <div class="stat-item wide"><div class="label">Nombre</div><div class="value"><?= htmlspecialchars($nombre_jugador) ?></div></div>
-                <div class="stat-item"><div class="label">Posición</div><div class="value"><?= $posicion ?: '—' ?></div></div>
-                <div class="stat-item"><div class="label">Ganados</div><div class="value"><?= (int)($resumen['ganados'] ?? 0) ?></div></div>
-                <div class="stat-item"><div class="label">Perdidos</div><div class="value"><?= (int)($resumen['perdidos'] ?? 0) ?></div></div>
-                <div class="stat-item"><div class="label">Efectividad</div><div class="value"><?= (int)($resumen['efectividad'] ?? 0) ?></div></div>
-                <div class="stat-item"><div class="label">Puntos</div><div class="value"><?= (int)($resumen['puntos'] ?? 0) ?></div></div>
+            <!-- Fila 1: ID y Nombre -->
+            <div class="stats-row">
+                <div class="stat-item"><span class="label">Número</span><span class="value"><?= (int)($id_usuario) ?></span></div>
+                <div class="stat-item"><span class="label">Nombre</span><span class="value"><?= htmlspecialchars($nombre_jugador) ?></span></div>
+            </div>
+            <!-- Fila 2: Posición, Ganados, Perdidos, Efectividad, Puntos -->
+            <div class="stats-row stats-row-2">
+                <div class="stat-item"><span class="label">Posición</span><span class="value"><?= $posicion ?: '—' ?></span></div>
+                <div class="stat-item"><span class="label">Ganados</span><span class="value"><?= (int)($resumen['ganados'] ?? 0) ?></span></div>
+                <div class="stat-item"><span class="label">Perdidos</span><span class="value"><?= (int)($resumen['perdidos'] ?? 0) ?></span></div>
+                <div class="stat-item"><span class="label">Efectividad</span><span class="value"><?= (int)($resumen['efectividad'] ?? 0) ?></span></div>
+                <div class="stat-item"><span class="label">Puntos</span><span class="value"><?= (int)($resumen['puntos'] ?? 0) ?></span></div>
             </div>
 
             <!-- Tabla trayectoria de partidas -->
@@ -261,8 +266,8 @@ foreach ($partidas as $p) {
                                 <th>Compañero</th>
                                 <th>Contrario 1</th>
                                 <th>Contrario 2</th>
-                                <th class="num">Result 1</th>
-                                <th class="num">Result 2</th>
+                                <th class="num">R1</th>
+                                <th class="num">R2</th>
                                 <th class="num">Efectiv.</th>
                                 <th class="num">Ganados</th>
                             </tr>

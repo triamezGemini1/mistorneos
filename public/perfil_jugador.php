@@ -170,11 +170,15 @@ $landing_url = $base_url . 'landing-spa.php';
         }
         #screen-dashboard .user-bar strong { font-size: 1.05rem; }
         #screen-dashboard .user-bar span { color: var(--muted); font-size: 0.9rem; }
-        .resumen-stats-bar { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; margin-bottom: 14px; }
-        .resumen-stats-bar .stat-item { background: rgba(0,0,0,0.2); border-radius: 10px; padding: 10px; text-align: center; border: 1px solid rgba(255,255,255,0.06); }
-        .resumen-stats-bar .stat-item .label { font-size: 0.65rem; color: var(--muted); text-transform: uppercase; margin-bottom: 2px; }
-        .resumen-stats-bar .stat-item .value { font-size: 0.9rem; font-weight: 700; word-break: break-word; }
-        .resumen-stats-bar .stat-item.wide { grid-column: 1 / -1; }
+        .resumen-stats-row { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-bottom: 10px; padding: 10px; background: rgba(0,0,0,0.2); border-radius: 10px; border: 1px solid rgba(255,255,255,0.06); }
+        .resumen-stats-row .stat-item { display: flex; align-items: baseline; gap: 4px; }
+        .resumen-stats-row .stat-item .label { font-size: 0.65rem; color: var(--muted); text-transform: uppercase; }
+        .resumen-stats-row .stat-item .value { font-size: 0.9rem; font-weight: 700; }
+        .resumen-stats-row-2 { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
+        .resumen-stats-row-2 .stat-item { flex-direction: column; align-items: center; padding: 8px; background: rgba(0,0,0,0.15); border-radius: 8px; }
+        .resumen-stats-row-2 .stat-item .value { font-size: 1rem; }
+        @media (min-width: 360px) { .resumen-stats-row-2 { grid-template-columns: repeat(3, 1fr); } }
+        @media (min-width: 480px) { .resumen-stats-row-2 { grid-template-columns: repeat(5, 1fr); } }
         .resumen-table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; margin-top: 12px; }
         .resumen-table-wrap table { width: 100%; min-width: 520px; border-collapse: collapse; font-size: 0.8rem; }
         .resumen-table-wrap th, .resumen-table-wrap td { padding: 6px 4px; border-bottom: 1px solid rgba(255,255,255,0.08); text-align: left; }
@@ -378,14 +382,16 @@ $landing_url = $base_url . 'landing-spa.php';
         const resumen = data.resumen || {};
         const partidas = data.partidas || [];
         const jugador = data.jugador || {};
-        let resumenHtml = '<div class="resumen-stats-bar">';
-        resumenHtml += '<div class="stat-item"><div class="label">Número</div><div class="value">' + (jugador.id_usuario || '—') + '</div></div>';
-        resumenHtml += '<div class="stat-item wide"><div class="label">Nombre</div><div class="value">' + escapeHtml(jugador.nombre || '—') + '</div></div>';
-        resumenHtml += '<div class="stat-item"><div class="label">Posición</div><div class="value">' + (resumen.posicion ?? '—') + '</div></div>';
-        resumenHtml += '<div class="stat-item"><div class="label">Ganados</div><div class="value">' + (resumen.ganados ?? 0) + '</div></div>';
-        resumenHtml += '<div class="stat-item"><div class="label">Perdidos</div><div class="value">' + (resumen.perdidos ?? 0) + '</div></div>';
-        resumenHtml += '<div class="stat-item"><div class="label">Efectividad</div><div class="value">' + (resumen.efectividad ?? 0) + '</div></div>';
-        resumenHtml += '<div class="stat-item"><div class="label">Puntos</div><div class="value">' + (resumen.puntos ?? 0) + '</div></div>';
+        let resumenHtml = '<div class="resumen-stats-row">';
+        resumenHtml += '<div class="stat-item"><span class="label">Número</span><span class="value">' + (jugador.id_usuario || '—') + '</span></div>';
+        resumenHtml += '<div class="stat-item"><span class="label">Nombre</span><span class="value">' + escapeHtml(jugador.nombre || '—') + '</span></div>';
+        resumenHtml += '</div>';
+        resumenHtml += '<div class="resumen-stats-row resumen-stats-row-2">';
+        resumenHtml += '<div class="stat-item"><span class="label">Posición</span><span class="value">' + (resumen.posicion ?? '—') + '</span></div>';
+        resumenHtml += '<div class="stat-item"><span class="label">Ganados</span><span class="value">' + (resumen.ganados ?? 0) + '</span></div>';
+        resumenHtml += '<div class="stat-item"><span class="label">Perdidos</span><span class="value">' + (resumen.perdidos ?? 0) + '</span></div>';
+        resumenHtml += '<div class="stat-item"><span class="label">Efectividad</span><span class="value">' + (resumen.efectividad ?? 0) + '</span></div>';
+        resumenHtml += '<div class="stat-item"><span class="label">Puntos</span><span class="value">' + (resumen.puntos ?? 0) + '</span></div>';
         resumenHtml += '</div>';
         if (partidas.length === 0) {
             resumenHtml += '<p class="sub">Aún no hay partidas registradas.</p>';
@@ -393,7 +399,7 @@ $landing_url = $base_url . 'landing-spa.php';
             var sumR1 = 0, sumR2 = 0, sumEf = 0;
             resumenHtml += '<div class="resumen-table-wrap"><table><thead><tr>';
             resumenHtml += '<th class="num">Partida</th><th class="num">Mesa</th><th>Compañero</th><th>Contrario 1</th><th>Contrario 2</th>';
-            resumenHtml += '<th class="num">Result 1</th><th class="num">Result 2</th><th class="num">Efectiv.</th><th class="num">Ganados</th></tr></thead><tbody>';
+            resumenHtml += '<th class="num">R1</th><th class="num">R2</th><th class="num">Efectiv.</th><th class="num">Ganados</th></tr></thead><tbody>';
             partidas.forEach(function(p, idx) {
                 var mesa = parseInt(p.mesa, 10) || 0;
                 var esBye = (mesa === 0 || p.mesa === '0' || String(p.mesa) === '0');
