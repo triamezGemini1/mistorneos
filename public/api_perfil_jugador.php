@@ -29,7 +29,7 @@ if (strlen($cedula) > 1 && preg_match('/^[VEJP]/i', $cedula_raw)) {
     $cedula = strtoupper(substr($cedula_raw, 0, 1)) . preg_replace('/\D/', '', $cedula_raw);
 }
 
-$response = ['ok' => false, 'error' => null, 'jugador' => null, 'torneo' => null, 'mesa_actual' => null, 'resumen' => null, 'url_clasificacion' => null];
+$response = ['ok' => false, 'error' => null, 'jugador' => null, 'torneo' => null, 'mesa_actual' => null, 'resumen' => null, 'partidas' => [], 'url_clasificacion' => null];
 
 if ($torneo_id <= 0) {
     $response['error'] = 'Falta el torneo. Use el enlace del QR del evento.';
@@ -184,6 +184,16 @@ try {
         'perdidos' => (int)($stats['perdidos'] ?? 0),
         'posicion' => $posicion,
     ];
+
+    // Trayectoria completa de partidas (resumen individual: toda la info una por una)
+    $stmt_partidas = $pdo->prepare("
+        SELECT partida, mesa, secuencia, resultado1, resultado2, efectividad, ff, tarjeta, sancion, chancleta, zapato, observaciones, registrado
+        FROM partiresul
+        WHERE id_torneo = ? AND id_usuario = ?
+        ORDER BY partida ASC, CAST(mesa AS UNSIGNED) ASC
+    ");
+    $stmt_partidas->execute([$torneo_id, $id_usuario]);
+    $response['partidas'] = $stmt_partidas->fetchAll(PDO::FETCH_ASSOC);
 
     $response['url_clasificacion'] = $base_public . '/clasificacion.php?torneo_id=' . $torneo_id;
 

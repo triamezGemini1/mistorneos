@@ -170,6 +170,20 @@ $landing_url = $base_url . 'landing-spa.php';
         }
         #screen-dashboard .user-bar strong { font-size: 1.05rem; }
         #screen-dashboard .user-bar span { color: var(--muted); font-size: 0.9rem; }
+        .resumen-stats { margin-bottom: 16px; }
+        .resumen-trayectoria { margin-top: 16px; padding-top: 16px; border-top: 1px solid rgba(255,255,255,0.08); }
+        .resumen-trayectoria h3 { font-size: 0.95rem; color: var(--muted); margin: 0 0 12px 0; font-weight: 600; }
+        .partida-block {
+            background: rgba(0,0,0,0.2);
+            border-radius: 12px;
+            padding: 14px;
+            margin-bottom: 12px;
+            border: 1px solid rgba(255,255,255,0.06);
+        }
+        .partida-block .partida-tit { font-size: 0.95rem; font-weight: 700; color: var(--accent); margin-bottom: 10px; padding-bottom: 8px; border-bottom: 1px solid rgba(255,255,255,0.08); }
+        .partida-block .partida-row { display: flex; justify-content: space-between; padding: 4px 0; font-size: 0.9rem; }
+        .partida-block .partida-row .lbl { color: var(--muted); }
+        .partida-block .partida-row .val { font-weight: 500; }
         @media (min-width: 481px) {
             body { background: #0c1222; }
             .wrap { box-shadow: 0 0 0 1px rgba(255,255,255,0.06); border-radius: 24px; padding: 20px; background: var(--bg); }
@@ -364,10 +378,45 @@ $landing_url = $base_url . 'landing-spa.php';
         document.getElementById('mesa-last-update').textContent = 'Actualizado ' + new Date().toLocaleTimeString('es');
 
         const resumen = data.resumen || {};
-        document.getElementById('resumen-content').innerHTML =
+        const partidas = data.partidas || [];
+        let resumenHtml =
+            '<div class="resumen-stats">' +
             '<p class="value">Puntos: ' + (resumen.puntos ?? '—') + ' · Efectividad: ' + (resumen.efectividad ?? '—') + '</p>' +
             '<p class="sub">Ganados: ' + (resumen.ganados ?? 0) + ' · Perdidos: ' + (resumen.perdidos ?? 0) + '</p>' +
-            '<p class="sub">Posición: #' + (resumen.posicion ?? '—') + '</p>';
+            '<p class="sub">Posición: #' + (resumen.posicion ?? '—') + '</p>' +
+            '</div>';
+        resumenHtml += '<div class="resumen-trayectoria"><h3>Trayectoria de partidas</h3>';
+        if (partidas.length === 0) {
+            resumenHtml += '<p class="sub">Aún no hay partidas registradas.</p>';
+        } else {
+            partidas.forEach(function(p, idx) {
+                var mesaRaw = p.mesa;
+                var mesa = parseInt(p.mesa, 10) || 0;
+                var esBye = (mesa === 0 || mesaRaw === '0' || String(mesaRaw) === '0');
+                var tit = 'Partida ' + (idx + 1) + ' — Ronda ' + (p.partida || 0) + ' · ' + (esBye ? 'BYE' : 'Mesa ' + mesa);
+                resumenHtml += '<div class="partida-block">';
+                resumenHtml += '<div class="partida-tit">' + escapeHtml(tit) + '</div>';
+                resumenHtml += '<div class="partida-row"><span class="lbl">Ronda</span><span class="val">' + (p.partida || 0) + '</span></div>';
+                resumenHtml += '<div class="partida-row"><span class="lbl">Mesa</span><span class="val">' + (esBye ? 'BYE' : mesa) + '</span></div>';
+                resumenHtml += '<div class="partida-row"><span class="lbl">Posición</span><span class="val">' + (p.secuencia || 0) + '</span></div>';
+                resumenHtml += '<div class="partida-row"><span class="lbl">Resultado 1</span><span class="val">' + (p.resultado1 ?? 0) + '</span></div>';
+                resumenHtml += '<div class="partida-row"><span class="lbl">Resultado 2</span><span class="val">' + (p.resultado2 ?? 0) + '</span></div>';
+                resumenHtml += '<div class="partida-row"><span class="lbl">Efectividad</span><span class="val">' + (p.efectividad ?? 0) + '</span></div>';
+                resumenHtml += '<div class="partida-row"><span class="lbl">Forfait</span><span class="val">' + (p.ff ? 'Sí' : 'No') + '</span></div>';
+                resumenHtml += '<div class="partida-row"><span class="lbl">Bye</span><span class="val">' + (esBye ? 'Sí' : 'No') + '</span></div>';
+                resumenHtml += '<div class="partida-row"><span class="lbl">Tarjeta</span><span class="val">' + (p.tarjeta ?? 0) + '</span></div>';
+                resumenHtml += '<div class="partida-row"><span class="lbl">Sanción (pts)</span><span class="val">' + (p.sancion ?? 0) + '</span></div>';
+                resumenHtml += '<div class="partida-row"><span class="lbl">Chancleta</span><span class="val">' + (p.chancleta ? 'Sí' : 'No') + '</span></div>';
+                resumenHtml += '<div class="partida-row"><span class="lbl">Zapato</span><span class="val">' + (p.zapato ? 'Sí' : 'No') + '</span></div>';
+                if (p.observaciones && String(p.observaciones).trim() !== '') {
+                    resumenHtml += '<div class="partida-row"><span class="lbl">Observaciones</span><span class="val">' + escapeHtml(String(p.observaciones).trim()) + '</span></div>';
+                }
+                resumenHtml += '<div class="partida-row"><span class="lbl">Registrado</span><span class="val">' + (p.registrado ? 'Sí' : 'No') + '</span></div>';
+                resumenHtml += '</div>';
+            });
+        }
+        resumenHtml += '</div>';
+        document.getElementById('resumen-content').innerHTML = resumenHtml;
 
         var linkClas = document.getElementById('link-clasificacion');
         if (linkClas) {
@@ -400,6 +449,7 @@ $landing_url = $base_url . 'landing-spa.php';
                     mesaContent.innerHTML = '<p class="value">Ronda ' + mesa.ronda + ' · Mesa ' + mesa.mesa_numero + '</p><p class="sub">Sin jugadores cargados.</p>';
                 }
                 document.getElementById('mesa-last-update').textContent = 'Actualizado ' + new Date().toLocaleTimeString('es');
+                renderDashboard(data);
             }
         });
     }
