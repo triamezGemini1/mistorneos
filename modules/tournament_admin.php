@@ -359,11 +359,8 @@ $error_message = $_GET['error'] ?? null;
                             </div>
                         <?php endif; ?>
                         <?php
-                        $es_impresion_qr = in_array($menu_action, ['generar_qr', 'imprimir_qr_lote', 'generar_qr_general', 'generar_qr_personal'], true);
-                        $url_retorno = $es_impresion_qr
-                            ? 'index.php?page=tournament_admin&torneo_id=' . (int)$torneo_id
-                            : 'index.php?page=torneo_gestion&action=index';
-                        $texto_retorno = $es_impresion_qr ? 'Retorno al panel' : 'Volver a Torneos';
+                        $url_retorno = 'index.php?page=tournament_admin&torneo_id=' . (int)$torneo_id;
+                        $texto_retorno = 'Retorno al panel';
                         ?>
                         <a href="<?= htmlspecialchars($url_retorno) ?>" class="btn btn-light btn-lg">
                             <i class="fas fa-arrow-left me-2"></i><?= $texto_retorno ?>
