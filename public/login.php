@@ -74,6 +74,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     
     if (Auth::login($username, $password)) {
         require_once __DIR__ . '/../lib/app_helpers.php';
+        if (getenv('SESSION_DEBUG')) error_log('[SESSION_DEBUG] login.php | login OK | session_id=' . session_id() . ' | user_id=' . (Auth::user()['id'] ?? '') . ' | username=' . (Auth::user()['username'] ?? ''));
         ob_end_clean();
 
         // Reclamación de token de invitación: vincular usuario y redirigir al formulario
@@ -132,6 +133,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         $redirect = !empty($_POST['return_url']) ? trim($_POST['return_url']) : ($return_url ?: '');
         $entry_base = AppHelpers::getRequestEntryUrl();
+        $target_url = ($redirect && preg_match('#^[a-zA-Z0-9_\-/\.\?=&]+$#', $redirect) && !preg_match('#^(https?|javascript|data):#i', $redirect) && (strpos($redirect, '?') !== false || strpos($redirect, '.php') !== false))
+            ? ((strpos($redirect, 'http') === 0 || strpos($redirect, '/') === 0) ? $redirect : $entry_base . '/' . ltrim($redirect, '/'))
+            : $entry_base . '/index.php';
+        if (getenv('SESSION_DEBUG')) error_log('[SESSION_DEBUG] login.php | antes redirect | entry_base=' . $entry_base . ' | target_url=' . $target_url . ' | session_id=' . session_id());
         // Forzar escritura de sesión y enviar cookie explícitamente con path correcto (subcarpeta)
         $cookie_path = (defined('URL_BASE') && URL_BASE !== '' && URL_BASE !== '/') ? URL_BASE : '/';
         $params = session_get_cookie_params();
@@ -148,6 +153,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 'httponly' => $params['httponly'] ?? true,
                 'samesite' => $params['samesite'] ?? 'Lax'
             ]);
+            if (getenv('SESSION_DEBUG')) error_log('[SESSION_DEBUG] login.php | setcookie enviada | path=' . $cookie_path . ' | name=' . session_name());
         }
         if ($redirect && preg_match('#^[a-zA-Z0-9_\-/\.\?=&]+$#', $redirect) && !preg_match('#^(https?|javascript|data):#i', $redirect)) {
             if (strpos($redirect, '?') !== false || strpos($redirect, '.php') !== false) {

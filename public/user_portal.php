@@ -5,6 +5,7 @@ require_once __DIR__ . '/../config/db.php';
 require_once __DIR__ . '/../config/csrf.php';
 require_once __DIR__ . '/../config/auth.php';
 
+if (getenv('SESSION_DEBUG')) error_log('[SESSION_DEBUG] user_portal.php | session_id=' . session_id() . ' | has_user=' . (isset($_SESSION['user']) ? 'si' : 'no') . ' | cookie=' . (isset($_COOKIE[session_name()]) ? 'si' : 'no'));
 // Verificar autenticación
 if (!isset($_SESSION['user'])) {
     header('Location: ' . AppHelpers::url('login.php'));

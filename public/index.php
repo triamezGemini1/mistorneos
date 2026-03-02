@@ -129,6 +129,7 @@ if ($useModernRouter) {
 // Verificar autenticación: sesión inválida → redirigir a URL_BASE . login.php (subcarpeta)
 try {
     $user = Auth::user();
+    if (getenv('SESSION_DEBUG')) error_log('[SESSION_DEBUG] index.php | comprobando auth | session_id=' . session_id() . ' | has_user=' . ($user ? 'si' : 'no') . ' | script=' . ($_SERVER['SCRIPT_NAME'] ?? ''));
     if (!$user) {
         $login_url = (defined('URL_BASE') ? URL_BASE : '') . 'login.php';
         if ($login_url === 'login.php') {
@@ -137,9 +138,11 @@ try {
                 $login_url = '/' . $login_url;
             }
         }
+        if (getenv('SESSION_DEBUG')) error_log('[SESSION_DEBUG] index.php | SIN usuario -> redirect a login | login_url=' . $login_url . ' | COOKIE recibida=' . (isset($_COOKIE[session_name()]) ? 'si' : 'no'));
         header('Location: ' . $login_url, true, 302);
         exit;
     }
+    if (getenv('SESSION_DEBUG')) error_log('[SESSION_DEBUG] index.php | usuario OK | id=' . ($user['id'] ?? '') . ' | role=' . ($user['role'] ?? ''));
 } catch (Throwable $e) {
     // Si hay error fatal (ej: MySQL no disponible), mostrar página de error
     error_log("Error en index.php: " . $e->getMessage());

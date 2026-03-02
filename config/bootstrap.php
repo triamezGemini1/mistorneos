@@ -89,6 +89,9 @@ if (!defined('URL_BASE')) {
 // CONFIGURACIÓN DE SESIONES SEGURAS (anclaje a URL_BASE)
 // =================================================================
 // path: debe coincidir con la URL real (ej. /pruebas/public/) para que la cookie no se pierda.
+if (session_status() === PHP_SESSION_ACTIVE && (getenv('SESSION_DEBUG') || defined('SESSION_DEBUG'))) {
+    error_log('[SESSION_DEBUG] bootstrap.php | sesión ya activa (session_start_early), no se inicia de nuevo | id=' . session_id());
+}
 if (session_status() === PHP_SESSION_NONE) {
     $cookie_path = (URL_BASE !== '' && URL_BASE !== '/') ? URL_BASE : '/';
     session_set_cookie_params([

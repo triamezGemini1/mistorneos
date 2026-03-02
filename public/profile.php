@@ -7,6 +7,7 @@ require_once __DIR__ . '/../config/db.php';
 require_once __DIR__ . '/../lib/app_helpers.php';
 
 $user = Auth::user();
+if (getenv('SESSION_DEBUG')) error_log('[SESSION_DEBUG] profile.php | session_id=' . session_id() . ' | has_user=' . ($user ? 'si' : 'no') . ' | cookie=' . (isset($_COOKIE[session_name()]) ? 'si' : 'no'));
 if (!$user) {
     $login_url = class_exists('AppHelpers') ? AppHelpers::url('login.php') : 'login.php';
     $sep = (strpos($login_url, '?') !== false) ? '&' : '?';
