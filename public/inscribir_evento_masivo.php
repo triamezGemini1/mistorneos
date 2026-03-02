@@ -50,7 +50,7 @@ if ($torneo_id > 0) {
             $error = 'Las inscripciones en línea están deshabilitadas el día del torneo. Los interesados deben inscribirse antes o presentarse al sitio del evento para formalizar su participación.';
         } elseif (strtotime($torneo['fechator']) < strtotime('today')) {
             // Torneo ya finalizado: redirigir a resultados con mensaje informativo
-            $resultados_url = app_base_url() . '/public/resultados_detalle.php?torneo_id=' . $torneo_id . '&msg=' . urlencode('Este torneo ha finalizado. Consulta los resultados oficiales aquí.');
+            $resultados_url = app_base_url() . '/public/evento_resultados.php?torneo_id=' . $torneo_id . '&msg=' . urlencode('Este torneo ha finalizado. Consulta los resultados oficiales aquí.');
             header('Location: ' . $resultados_url);
             exit;
         } elseif ((int)($torneo['permite_inscripcion_linea'] ?? 1) !== 1) {

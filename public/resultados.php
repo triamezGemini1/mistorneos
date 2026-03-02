@@ -236,7 +236,7 @@ $clases = [1 => 'Abierto', 2 => 'Por Categorías'];
                                         </div>
                                     </div>
                                     <div class="torneo-actions">
-                                        <a href="resultados_detalle.php?torneo_id=<?= $torneo['id'] ?>" 
+                                        <a href="evento_resultados.php?torneo_id=<?= $torneo['id'] ?>" 
                                            class="btn btn-primary btn-sm">
                                             <i class="fas fa-chart-bar me-1"></i>Ver Resultados
                                         </a>

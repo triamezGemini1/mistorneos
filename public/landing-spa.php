@@ -508,7 +508,7 @@ if ($entidad_param > 0) {
                                         <span class="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-xs font-semibold">{{ CLASES[parseInt(ev.clase)||1] || 'Torneo' }}</span>
                                         <span class="px-3 py-1 bg-cyan-100 text-cyan-700 rounded-full text-xs font-semibold">{{ MODALIDADES[parseInt(ev.modalidad)||1] || 'Individual' }}</span>
                                     </div>
-                                    <a :href="baseUrl + 'resultados_detalle.php?torneo_id=' + ev.id" class="block w-full px-4 py-2 bg-green-500 text-white font-semibold rounded-lg hover:bg-green-600 transition-all text-center mb-2"><i class="fas fa-chart-bar mr-2"></i>Ver Resultados</a>
+                                    <a :href="baseUrl + 'evento_resultados.php?torneo_id=' + ev.id" class="block w-full px-4 py-2 bg-green-500 text-white font-semibold rounded-lg hover:bg-green-600 transition-all text-center mb-2"><i class="fas fa-chart-bar mr-2"></i>Ver Resultados</a>
                                     <button v-if="ev.total_fotos > 0" type="button" @click="viewEventPhotos(ev.id, ev.nombre)" class="w-full px-4 py-2 bg-primary-500 text-white font-semibold rounded-lg hover:bg-primary-600 transition-all"><i class="fas fa-images mr-2"></i>Ver Fotos ({{ ev.total_fotos }})</button>
                                 </div>
                             </div>
@@ -529,7 +529,7 @@ if ($entidad_param > 0) {
                             <div v-if="eventos.length > 0" class="bg-white rounded-xl p-4 shadow-md">
                                 <h4 class="font-bold text-slate-800 mb-3">{{ fecha.split('-').reverse().join('/') }}</h4>
                                 <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-                                    <a v-for="ev in eventos" :key="ev.id" :href="baseUrl + 'resultados_detalle.php?torneo_id=' + ev.id" class="flex items-center gap-3 p-3 bg-slate-50 rounded-lg hover:bg-teal-50 transition-colors">
+                                    <a v-for="ev in eventos" :key="ev.id" :href="baseUrl + 'evento_resultados.php?torneo_id=' + ev.id" class="flex items-center gap-3 p-3 bg-slate-50 rounded-lg hover:bg-teal-50 transition-colors">
                                         <span class="text-primary-600 font-semibold">{{ ev.nombre_limpio || ev.nombre }}</span>
                                         <span class="text-sm text-gray-600">{{ ev.organizacion_nombre }}</span>
                                     </a>

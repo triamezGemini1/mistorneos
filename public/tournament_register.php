@@ -35,7 +35,7 @@ if (!$torneo) {
 
 // Si el torneo ya finalizó, redirigir a resultados
 if ($torneo['fechator'] && strtotime($torneo['fechator']) < strtotime('today')) {
-    $resultados_url = app_base_url() . '/public/resultados_detalle.php?torneo_id=' . $torneo_id . '&msg=' . urlencode('Este torneo ha finalizado. Consulta los resultados oficiales aquí.');
+    $resultados_url = app_base_url() . '/public/evento_resultados.php?torneo_id=' . $torneo_id . '&msg=' . urlencode('Este torneo ha finalizado. Consulta los resultados oficiales aquí.');
     header('Location: ' . $resultados_url);
     exit;
 }

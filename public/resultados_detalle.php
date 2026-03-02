@@ -24,6 +24,12 @@ $is_logged_in = !empty($user);
 // Obtener ID del torneo
 $torneo_id = isset($_GET['torneo_id']) ? (int)$_GET['torneo_id'] : 0;
 
+// Redirigir a la página dinámica de resultados (compatible con enlaces antiguos)
+if ($torneo_id > 0) {
+    header('Location: evento_resultados.php?torneo_id=' . $torneo_id . (isset($_GET['msg']) ? '&msg=' . urlencode($_GET['msg']) : ''));
+    exit;
+}
+
 if ($torneo_id <= 0) {
     header('Location: resultados.php');
     exit;
