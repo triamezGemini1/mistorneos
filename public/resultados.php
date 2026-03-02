@@ -52,7 +52,7 @@ try {
             t.clase,
             o.nombre as organizacion_nombre,
             o.responsable as club_delegado,
-            (SELECT COUNT(*) FROM inscritos WHERE torneo_id = t.id AND estatus = 'confirmado') as total_inscritos,
+            (SELECT COUNT(*) FROM inscritos WHERE torneo_id = t.id AND (estatus IS NULL OR (estatus != 4 AND estatus != 'retirado'))) as total_inscritos,
             (SELECT COUNT(*) FROM partiresul WHERE id_torneo = t.id AND registrado = 1) as total_partidas,
             (SELECT COUNT(*) FROM club_photos WHERE torneo_id = t.id) as total_fotos
         FROM tournaments t
