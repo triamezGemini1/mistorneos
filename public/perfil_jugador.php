@@ -242,7 +242,7 @@ $landing_url = $base_url . 'landing-spa.php';
             <div class="card">
                 <h2><i class="fas fa-list-ol"></i> Resultados generales</h2>
                 <p class="sub">Clasificación del torneo.</p>
-                <a id="link-clasificacion" href="torneo_info.php?torneo_id=<?= (int)$torneo_id ?>&seccion=general" target="_blank" rel="noopener" class="btn-secondary-spa"><i class="fas fa-external-link-alt"></i> Ver clasificación</a>
+                <a id="link-clasificacion" href="clasificacion.php?torneo_id=<?= (int)$torneo_id ?>" target="_blank" rel="noopener" class="btn-secondary-spa"><i class="fas fa-external-link-alt"></i> Ver clasificación</a>
             </div>
 
             <div style="margin-top: 24px;">
@@ -371,7 +371,7 @@ $landing_url = $base_url . 'landing-spa.php';
 
         var linkClas = document.getElementById('link-clasificacion');
         if (linkClas) {
-            linkClas.href = 'torneo_info.php?torneo_id=' + encodeURIComponent(TORNEO_ID) + '&seccion=general';
+            linkClas.href = 'clasificacion.php?torneo_id=' + encodeURIComponent(TORNEO_ID);
             linkClas.target = '_blank';
             linkClas.rel = 'noopener';
         }

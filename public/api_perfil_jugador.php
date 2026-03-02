@@ -185,7 +185,7 @@ try {
         'posicion' => $posicion,
     ];
 
-    $response['url_clasificacion'] = $base_public . '/torneo_info.php?torneo_id=' . $torneo_id . '&seccion=general';
+    $response['url_clasificacion'] = $base_public . '/clasificacion.php?torneo_id=' . $torneo_id;
 
 } catch (Throwable $e) {
     error_log('api_perfil_jugador: ' . $e->getMessage());
