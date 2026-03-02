@@ -187,7 +187,8 @@ $clases = [1 => 'Abierto', 2 => 'Por Categorías'];
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes">
+    <meta name="theme-color" content="#1a365d">
     <title>Información del Torneo - <?= htmlspecialchars($torneo_data['nombre']) ?></title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
@@ -218,6 +219,12 @@ $clases = [1 => 'Abierto', 2 => 'Por Categorías'];
             color: white;
             border-color: #1a365d;
         }
+        @media (max-width: 576px) {
+            .container { padding-left: 0.5rem; padding-right: 0.5rem; }
+            .table { font-size: 0.875rem; }
+            .nav-tabs .nav-link { padding: 0.5rem 0.4rem; font-size: 0.8rem; }
+        }
+        .table-responsive { overflow-x: auto; -webkit-overflow-scrolling: touch; }
     </style>
 </head>
 <body>
@@ -230,7 +237,7 @@ $clases = [1 => 'Abierto', 2 => 'Por Categorías'];
             </div>
             
             <div class="p-4">
-                <a href="perfil_jugador.php?torneo_id=<?= (int)$torneo_id ?>" class="btn btn-outline-light mb-3"><i class="fas fa-arrow-left me-2"></i>Retorno</a>
+                <a href="perfil_jugador.php?torneo_id=<?= (int)$torneo_id ?>" class="btn btn-outline-light mb-3 d-inline-flex align-items-center" style="font-size: 1rem;"><i class="fas fa-arrow-left me-2"></i>Retorno</a>
                 <!-- Información del Torneo -->
                 <div class="card mb-4">
                     <div class="card-body">

@@ -60,6 +60,8 @@ $landing_url = $base_url . 'landing-spa.php';
             border-bottom: 1px solid rgba(255,255,255,0.08);
         }
         .header img { height: 40px; width: auto; display: block; }
+        .btn-retorno-header { display: inline-flex; align-items: center; gap: 6px; padding: 10px 14px; font-size: 0.95rem; text-decoration: none; color: var(--text); border-radius: 12px; background: var(--card); border: 1px solid rgba(255,255,255,0.1); }
+        .btn-retorno-header:hover { background: #334155; color: var(--accent); }
         .btn-icon {
             background: var(--card);
             border: 1px solid rgba(255,255,255,0.1);
@@ -177,7 +179,7 @@ $landing_url = $base_url . 'landing-spa.php';
 <body>
     <div class="wrap">
         <header class="header">
-            <a href="<?= htmlspecialchars($landing_url) ?>" id="btn-retorno-header" class="btn-icon" title="Retorno" style="margin-right: auto;"><i class="fas fa-arrow-left"></i></a>
+            <a href="<?= htmlspecialchars($landing_url) ?>" id="btn-retorno-header" class="btn-retorno-header" title="Retorno" style="margin-right: auto;"><i class="fas fa-arrow-left"></i><span>Retorno</span></a>
             <img src="<?= htmlspecialchars($logo_url) ?>" alt="La Estación del Dominó">
             <div id="header-actions"></div>
         </header>
@@ -208,6 +210,7 @@ $landing_url = $base_url . 'landing-spa.php';
 
         <!-- Pantalla: Dashboard (4 secciones) -->
         <div id="screen-dashboard" class="hidden">
+            <a href="#" id="btn-retorno-dashboard" class="btn-secondary-spa mb-3" style="display: inline-flex;"><i class="fas fa-arrow-left me-2"></i>Retorno</a>
             <div class="user-bar">
                 <div>
                     <strong id="user-name">—</strong>
@@ -239,7 +242,7 @@ $landing_url = $base_url . 'landing-spa.php';
             <div class="card">
                 <h2><i class="fas fa-list-ol"></i> Resultados generales</h2>
                 <p class="sub">Clasificación del torneo.</p>
-                <a id="link-clasificacion" href="#" target="_blank" rel="noopener" class="btn-secondary-spa"><i class="fas fa-external-link-alt"></i> Ver clasificación</a>
+                <a id="link-clasificacion" href="torneo_info.php?torneo_id=<?= (int)$torneo_id ?>&seccion=general" target="_blank" rel="noopener" class="btn-secondary-spa"><i class="fas fa-external-link-alt"></i> Ver clasificación</a>
             </div>
 
             <div style="margin-top: 24px;">
@@ -362,11 +365,16 @@ $landing_url = $base_url . 'landing-spa.php';
 
         const resumen = data.resumen || {};
         document.getElementById('resumen-content').innerHTML =
-            '<p class="value">' + (resumen.puntos ?? '—') + ' pts · Efect. ' + (resumen.efectividad ?? '—') + '</p>' +
-            '<p class="sub">Ganados: ' + (resumen.ganados ?? 0) + ' · Perdidos: ' + (resumen.perdidos ?? 0) + ' · Posición #' + (resumen.posicion ?? '—') + '</p>';
+            '<p class="value">Puntos: ' + (resumen.puntos ?? '—') + ' · Efectividad: ' + (resumen.efectividad ?? '—') + '</p>' +
+            '<p class="sub">Ganados: ' + (resumen.ganados ?? 0) + ' · Perdidos: ' + (resumen.perdidos ?? 0) + '</p>' +
+            '<p class="sub">Posición: #' + (resumen.posicion ?? '—') + '</p>';
 
-        const linkClas = document.getElementById('link-clasificacion');
-        if (data.url_clasificacion) linkClas.href = data.url_clasificacion;
+        var linkClas = document.getElementById('link-clasificacion');
+        if (linkClas) {
+            linkClas.href = 'torneo_info.php?torneo_id=' + encodeURIComponent(TORNEO_ID) + '&seccion=general';
+            linkClas.target = '_blank';
+            linkClas.rel = 'noopener';
+        }
     }
 
     function escapeHtml(s) {
@@ -397,6 +405,19 @@ $landing_url = $base_url . 'landing-spa.php';
     }
 
     function attachDashboardListeners() {
+        var btnRetornoDash = document.getElementById('btn-retorno-dashboard');
+        if (btnRetornoDash && !btnRetornoDash._listener) {
+            btnRetornoDash._listener = true;
+            btnRetornoDash.addEventListener('click', function(e) {
+                e.preventDefault();
+                clearCedula();
+                if (refreshTimer) clearInterval(refreshTimer);
+                refreshTimer = null;
+                showScreen('screen-login');
+                document.getElementById('input-cedula').value = '';
+                renderHeaderActions();
+            });
+        }
         var btnRefresh = document.getElementById('btn-refresh-mesa');
         var btnCerrar = document.getElementById('btn-cerrar-sesion');
         if (btnRefresh && !btnRefresh._listener) {
