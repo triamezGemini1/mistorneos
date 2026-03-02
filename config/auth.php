@@ -18,7 +18,8 @@ class Auth {
         'club_id' => $user['club_id'],
         'entidad' => isset($user['entidad']) ? (int)$user['entidad'] : 0
       ];
-      session_regenerate_id(true);
+      // No regenerar ID aquí: el navegador ya envió una cookie (session_id); si regeneramos,
+      // la nueva cookie no llega a la siguiente petición en entornos con subcarpeta y se pierde la sesión.
       return true;
     }
     return false;
