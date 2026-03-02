@@ -1,7 +1,8 @@
 <?php
 /**
- * Landing Page SPA - La Estación del Dominó
+ * Landing Page SPA - La Estación del Dominó (OFICIAL)
  * Single Page Application con Vue 3 para mejor UX
+ * URL oficial: .../public/landing-spa.php
  */
 
 require_once __DIR__ . '/../config/bootstrap.php';
@@ -10,7 +11,7 @@ require_once __DIR__ . '/../lib/app_helpers.php';
 $app_base = rtrim(app_base_url(), '/');
 $base_url = $app_base . '/public/';
 $api_url = $base_url . 'api/landing_data.php';
-$logo_url = $app_base . '/lib/Assets/mislogos/logo4.png';
+$logo_url = class_exists('AppHelpers') ? AppHelpers::getAppLogo() : ($app_base . '/public/view_image.php?path=' . rawurlencode('lib/Assets/mislogos/logo4.png'));
 $entidad_param = isset($_GET['entidad']) ? (int)$_GET['entidad'] : 0;
 if ($entidad_param > 0) {
     $api_url .= '?entidad=' . $entidad_param;
@@ -95,12 +96,28 @@ if ($entidad_param > 0) {
         .logos-clientes-row .logo-item { flex-shrink: 0; display: flex; align-items: center; justify-content: center; width: 360px; height: 180px; margin: 0 2rem; padding: 1rem; background: #fff; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
         .logos-clientes-row .logo-item img { max-width: 100%; max-height: 100%; object-fit: contain; }
         @keyframes marquee { 0% { transform: translateX(0); } 100% { transform: translateX(-50%); } }
-        /* Tarjetas con fondo claro: texto negro para legibilidad */
+        /* Tarjetas y secciones con fondo claro: texto negro para legibilidad */
         .bg-white.rounded-2xl, .bg-white.rounded-xl { color: #111827 !important; }
-        .bg-white.rounded-2xl h2, .bg-white.rounded-2xl h3, .bg-white.rounded-2xl h4, .bg-white.rounded-2xl p,
-        .bg-white.rounded-xl h2, .bg-white.rounded-xl h3, .bg-white.rounded-xl h4, .bg-white.rounded-xl p { color: #111827 !important; }
-        section[class*="from-slate-50"] .container, section[class*="to-blue-50"] .container { color: #111827 !important; }
-        section[class*="from-slate-50"] .container h2, section[class*="from-slate-50"] .container h3, section[class*="from-slate-50"] .container p { color: #111827 !important; }
+        .bg-white.rounded-2xl h2, .bg-white.rounded-2xl h3, .bg-white.rounded-2xl h4, .bg-white.rounded-2xl h5, .bg-white.rounded-2xl p,
+        .bg-white.rounded-xl h2, .bg-white.rounded-xl h3, .bg-white.rounded-xl h4, .bg-white.rounded-xl h5, .bg-white.rounded-xl p { color: #111827 !important; }
+        /* Secciones con fondo claro: contenedor sin fondo oscuro y texto negro */
+        section[class*="from-slate-50"] .container,
+        section[class*="to-blue-50"] .container,
+        section.bg-white .container {
+            background: transparent !important;
+            border: none !important;
+            color: #111827 !important;
+        }
+        section[class*="from-slate-50"] .container h2,
+        section[class*="from-slate-50"] .container h3,
+        section[class*="from-slate-50"] .container h4,
+        section[class*="from-slate-50"] .container p,
+        section[class*="to-blue-50"] .container h2,
+        section[class*="to-blue-50"] .container h3,
+        section[class*="to-blue-50"] .container p,
+        section.bg-white .container h2,
+        section.bg-white .container h3,
+        section.bg-white .container p { color: #111827 !important; }
 
         /* ========== Mobile-First: formularios ========== */
         .landing-form-grid { display: grid; grid-template-columns: 1fr; gap: 1rem; width: 100%; }
