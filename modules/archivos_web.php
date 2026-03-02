@@ -1,8 +1,8 @@
 <?php
 /**
- * Contenido web - Solo Admin General
- * Subir y gestionar: Documentos oficiales, Logos de clientes, Invitaciones FVD
- * Los archivos se pueden consultar y descargar desde la web pública.
+ * Archivos descargables - CRUD para Admin General
+ * Subir, listar, renombrar y eliminar: Documentos oficiales, Logos de clientes, Invitaciones FVD
+ * Los archivos se muestran y descargan desde el portal público.
  */
 
 declare(strict_types=1);
@@ -74,11 +74,47 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             exit;
         }
         $full_path = $dir_full . DIRECTORY_SEPARATOR . $archivo;
-        if (is_file($full_path) && strpos(realpath($full_path), $dir_full) === 0) {
-            @unlink($full_path);
-            header('Location: index.php?page=archivos_web&success=' . rawurlencode('Archivo eliminado'));
+        $real_full = realpath($full_path);
+        $real_dir = realpath($dir_full);
+        if ($real_full && $real_dir && is_file($real_full) && (strpos($real_full, $real_dir) === 0 || strpos(str_replace('\\', '/', $real_full), str_replace('\\', '/', $real_dir)) === 0)) {
+            if (@unlink($real_full)) {
+                header('Location: index.php?page=archivos_web&success=' . rawurlencode('Archivo eliminado'));
+            } else {
+                header('Location: index.php?page=archivos_web&error=' . rawurlencode('No se pudo eliminar el archivo'));
+            }
         } else {
-            header('Location: index.php?page=archivos_web&error=' . rawurlencode('No se pudo eliminar'));
+            header('Location: index.php?page=archivos_web&error=' . rawurlencode('Archivo no encontrado o ruta no permitida'));
+        }
+        exit;
+    }
+
+    if ($action === 'rename') {
+        $archivo = $_POST['archivo'] ?? '';
+        $nuevo_nombre = $_POST['nuevo_nombre'] ?? '';
+        $archivo = basename(str_replace(['../', '..\\'], '', $archivo));
+        $nuevo_nombre = basename(preg_replace('/[^a-zA-Z0-9._-]/', '_', $nuevo_nombre));
+        $ext_orig = strtolower(pathinfo($archivo, PATHINFO_EXTENSION));
+        $ext_nuevo = strtolower(pathinfo($nuevo_nombre, PATHINFO_EXTENSION));
+        if ($archivo === '' || $nuevo_nombre === '') {
+            header('Location: index.php?page=archivos_web&error=' . rawurlencode('Nombre no válido'));
+            exit;
+        }
+        if (!in_array($ext_nuevo, $cfg['extensions'], true)) {
+            header('Location: index.php?page=archivos_web&error=' . rawurlencode('Extensión no permitida. Use: ' . implode(', ', $cfg['extensions'])));
+            exit;
+        }
+        $path_orig = $dir_full . DIRECTORY_SEPARATOR . $archivo;
+        $path_nuevo = $dir_full . DIRECTORY_SEPARATOR . $nuevo_nombre;
+        $real_orig = realpath($path_orig);
+        $real_dir = realpath($dir_full);
+        if ($real_orig && $real_dir && is_file($real_orig) && (strpos($real_orig, $real_dir) === 0 || strpos(str_replace('\\', '/', $real_orig), str_replace('\\', '/', $real_dir)) === 0)) {
+            if (@rename($path_orig, $path_nuevo)) {
+                header('Location: index.php?page=archivos_web&success=' . rawurlencode('Archivo renombrado correctamente'));
+            } else {
+                header('Location: index.php?page=archivos_web&error=' . rawurlencode('No se pudo renombrar'));
+            }
+        } else {
+            header('Location: index.php?page=archivos_web&error=' . rawurlencode('Archivo no encontrado'));
         }
         exit;
     }
@@ -122,8 +158,8 @@ $current_user = Auth::user();
 <div class="container-fluid">
     <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-3">
         <div>
-            <h1 class="h2 mb-2 fw-bold"><i class="fas fa-folder-open me-2 text-primary"></i>Contenido web</h1>
-            <p class="text-muted mb-0">Documentos oficiales, logos de clientes e invitaciones FVD para el portal público</p>
+            <h1 class="h2 mb-2 fw-bold"><i class="fas fa-file-download me-2 text-primary"></i>Archivos descargables</h1>
+            <p class="text-muted mb-0">CRUD: subir, ver, renombrar y eliminar documentos oficiales, logos de clientes e invitaciones FVD del portal público</p>
         </div>
     </div>
 
@@ -194,6 +230,9 @@ $current_user = Auth::user();
                             <?php if ($key !== 'logos_clientes'): ?>
                             <a href="<?= htmlspecialchars($url_ver . (strpos($url_ver, '?') !== false ? '&' : '?') . 'download=1') ?>" class="btn btn-sm btn-outline-secondary me-1" title="Descargar"><i class="fas fa-download"></i></a>
                             <?php endif; ?>
+                            <button type="button" class="btn btn-sm btn-outline-warning me-1" title="Renombrar" data-bs-toggle="modal" data-bs-target="#modalRename" data-archivo="<?= htmlspecialchars($f['nombre']) ?>" data-seccion="<?= htmlspecialchars($key) ?>">
+                                <i class="fas fa-edit"></i>
+                            </button>
                             <form method="post" class="d-inline" onsubmit="return confirm('¿Eliminar este archivo?');">
                                 <?= CSRF::input() ?>
                                 <input type="hidden" name="action" value="delete">
@@ -211,4 +250,42 @@ $current_user = Auth::user();
         </div>
     </div>
     <?php endforeach; ?>
+
+<!-- Modal Renombrar -->
+<div class="modal fade" id="modalRename" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form method="post">
+                <?= CSRF::input() ?>
+                <input type="hidden" name="action" value="rename">
+                <input type="hidden" name="seccion" id="renameSeccion">
+                <input type="hidden" name="archivo" id="renameArchivo">
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="fas fa-edit me-2"></i>Renombrar archivo</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <label class="form-label">Nuevo nombre del archivo</label>
+                    <input type="text" name="nuevo_nombre" id="renameNuevoNombre" class="form-control" required placeholder="nombre_archivo.pdf">
+                    <p class="text-muted small mt-2 mb-0">Use solo letras, números, guiones y puntos. La extensión debe coincidir con las permitidas.</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary"><i class="fas fa-save me-1"></i>Renombrar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+<script>
+document.getElementById('modalRename').addEventListener('show.bs.modal', function(e) {
+    var btn = e.relatedTarget;
+    if (btn) {
+        document.getElementById('renameSeccion').value = btn.getAttribute('data-seccion') || '';
+        document.getElementById('renameArchivo').value = btn.getAttribute('data-archivo') || '';
+        document.getElementById('renameNuevoNombre').value = btn.getAttribute('data-archivo') || '';
+        document.getElementById('renameNuevoNombre').focus();
+    }
+});
+</script>
 </div>
