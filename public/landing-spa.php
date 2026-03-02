@@ -61,6 +61,30 @@ if ($entidad_param > 0) {
         .logos-clientes-row .logo-item { flex-shrink: 0; display: flex; align-items: center; justify-content: center; width: 360px; height: 180px; margin: 0 2rem; padding: 1rem; background: #fff; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
         .logos-clientes-row .logo-item img { max-width: 100%; max-height: 100%; object-fit: contain; }
         @keyframes marquee { 0% { transform: translateX(0); } 100% { transform: translateX(-50%); } }
+
+        /* ========== Mobile-First: formularios ========== */
+        .landing-form-grid { display: grid; grid-template-columns: 1fr; gap: 1rem; width: 100%; }
+        @media (min-width: 768px) { .landing-form-grid { grid-template-columns: repeat(2, 1fr); gap: 1.25rem; } }
+        @media (min-width: 1024px) { .landing-form-grid { grid-template-columns: repeat(3, 1fr); gap: 1.5rem; } }
+        .landing-form-grid-1-3 { display: grid; grid-template-columns: 1fr; gap: 1.5rem; }
+        @media (min-width: 1024px) { .landing-form-grid-1-3 { grid-template-columns: 1fr 2fr; } }
+        .landing-form-grid-full { grid-column: 1 / -1; }
+        .landing-input-touch { min-height: 44px; padding: 12px 16px; font-size: 16px; width: 100%; box-sizing: border-box; border-radius: 0.5rem; }
+        .landing-btn-touch { min-height: 44px; padding: 12px 20px; font-size: 16px; }
+        .landing-label-block { display: flex; flex-direction: column; gap: 0.5rem; margin-bottom: 1rem; }
+        @media (max-width: 359px) { .landing-label-block { width: 100%; min-width: 0; } .landing-label-block label { order: -1; } }
+        .landing-field { width: 100%; min-width: 0; }
+        @media (max-width: 359px) { .landing-field { max-width: 100%; } }
+        .landing-card-mobile { width: 100%; max-width: 100%; }
+        @media (min-width: 1024px) { .landing-card-mobile { max-width: 42rem; } }
+        /* Tablas → Cards en móvil (no se usa tabla en esta página; útil si se incluye después) */
+        @media (max-width: 767px) {
+            .landing-table-as-cards { display: block; }
+            .landing-table-as-cards thead { display: none; }
+            .landing-table-as-cards tr { display: block; margin-bottom: 1rem; border: 1px solid #e5e7eb; border-radius: 0.75rem; padding: 1rem; background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,0.08); }
+            .landing-table-as-cards td { display: block; padding: 0.5rem 0; border: none; }
+            .landing-table-as-cards td::before { content: attr(data-label); font-weight: 600; color: #374151; display: block; margin-bottom: 0.25rem; }
+        }
     </style>
 </head>
 <body class="bg-gray-50 antialiased">
@@ -212,7 +236,7 @@ if ($entidad_param > 0) {
                                         <li class="flex items-center"><i class="fas fa-check-circle mr-3"></i><span>Invita jugadores a eventos</span></li>
                                         <li class="flex items-center"><i class="fas fa-check-circle mr-3"></i><span>Reportes y estadísticas</span></li>
                                     </ul>
-                                    <a :href="baseUrl + 'affiliate_request.php'" class="block w-full px-6 py-3 bg-white text-rose-600 font-semibold rounded-xl hover:bg-gray-100 transition-all text-center shadow-lg"><i class="fas fa-paper-plane mr-2"></i>Solicitar Afiliación</a>
+                                    <a :href="baseUrl + 'affiliate_request.php'" class="landing-btn-touch block w-full px-6 py-3 bg-white text-rose-600 font-semibold rounded-xl hover:bg-gray-100 transition-all text-center shadow-lg flex items-center justify-center"><i class="fas fa-paper-plane mr-2"></i>Solicitar Afiliación</a>
                                 </div>
                             </div>
                         </div>
@@ -463,41 +487,41 @@ if ($entidad_param > 0) {
                         </div>
                     </div>
                     <div class="max-w-7xl mx-auto">
-                        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                            <div class="lg:col-span-1">
+                        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8 landing-form-grid-1-3">
+                            <div class="lg:col-span-1 landing-card-mobile">
                                 <div class="bg-white rounded-2xl shadow-xl p-6 border border-gray-200 sticky top-24">
                                     <h3 class="text-2xl font-bold text-gray-900 mb-6"><i class="fas fa-comment-dots text-primary-500 mr-2"></i>Envía tu Comentario</h3>
                                     <template v-if="data.user">
-                                        <form @submit.prevent="enviarComentario" class="space-y-4">
-                                            <div class="bg-primary-50 p-3 rounded-lg mb-4">
+                                        <form @submit.prevent="enviarComentario" class="landing-form-grid space-y-4">
+                                            <div class="bg-primary-50 p-3 rounded-lg mb-4 landing-form-grid-full">
                                                 <p class="text-sm text-primary-700"><i class="fas fa-user-check mr-2"></i>Comentando como: <strong>{{ data.user.nombre }}</strong></p>
                                             </div>
-                                            <div>
+                                            <div class="landing-label-block landing-field">
                                                 <label class="block text-sm font-semibold text-gray-700 mb-2">Tipo *</label>
-                                                <select v-model="commentForm.tipo" required class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500">
+                                                <select v-model="commentForm.tipo" required class="landing-input-touch border border-gray-300 focus:ring-2 focus:ring-primary-500">
                                                     <option value="comentario">Comentario</option>
                                                     <option value="sugerencia">Sugerencia</option>
                                                     <option value="testimonio">Testimonio</option>
                                                 </select>
                                             </div>
-                                            <div>
+                                            <div class="landing-label-block landing-field">
                                                 <label class="block text-sm font-semibold text-gray-700 mb-2">Calificación (opcional)</label>
-                                                <div class="flex space-x-2">
-                                                    <label v-for="i in 5" :key="i" class="cursor-pointer">
+                                                <div class="flex space-x-2 min-h-[44px] items-center flex-wrap">
+                                                    <label v-for="i in 5" :key="i" class="cursor-pointer p-2 -m-2">
                                                         <input type="radio" v-model="commentForm.calificacion" :value="i" class="hidden">
                                                         <i class="far fa-star text-2xl hover:text-yellow-500 transition-colors" :class="commentForm.calificacion >= i ? 'fas text-yellow-400' : 'text-yellow-400'"></i>
                                                     </label>
                                                 </div>
                                             </div>
-                                            <div>
+                                            <div class="landing-label-block landing-field landing-form-grid-full">
                                                 <label class="block text-sm font-semibold text-gray-700 mb-2">Mensaje *</label>
-                                                <textarea v-model="commentForm.contenido" rows="5" required placeholder="Escribe tu comentario..." class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500"></textarea>
+                                                <textarea v-model="commentForm.contenido" rows="5" required placeholder="Escribe tu comentario..." class="landing-input-touch border border-gray-300 focus:ring-2 focus:ring-primary-500 min-h-[120px]"></textarea>
                                             </div>
-                                            <button type="submit" :disabled="commentSending" class="w-full bg-gradient-to-r from-primary-500 to-primary-700 text-white py-3 rounded-lg font-bold hover:from-primary-600 hover:to-primary-800 transition-all shadow-lg disabled:opacity-50">
+                                            <button type="submit" :disabled="commentSending" class="landing-btn-touch w-full bg-gradient-to-r from-primary-500 to-primary-700 text-white rounded-lg font-bold hover:from-primary-600 hover:to-primary-800 transition-all shadow-lg disabled:opacity-50 landing-form-grid-full">
                                                 <i v-if="commentSending" class="fas fa-spinner fa-spin mr-2"></i>
                                                 <i v-else class="fas fa-paper-plane mr-2"></i>{{ commentSending ? 'Enviando...' : 'Enviar Comentario' }}
                                             </button>
-                                            <p class="text-xs text-gray-500 text-center"><i class="fas fa-shield-alt mr-1"></i>Los comentarios son moderados antes de publicarse</p>
+                                            <p class="text-xs text-gray-500 text-center landing-form-grid-full"><i class="fas fa-shield-alt mr-1"></i>Los comentarios son moderados antes de publicarse</p>
                                         </form>
                                     </template>
                                     <div v-else class="text-center py-8">
