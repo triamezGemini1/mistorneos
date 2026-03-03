@@ -531,6 +531,31 @@ try {
             $view_file = __DIR__ . '/gestion_torneos/inscribir-sitio.php';
             $view_data = obtenerDatosInscribirSitio($torneo_id, $user_id, $is_admin_general);
             break;
+
+        case 'sustituir_jugador':
+            if (!$torneo_id) {
+                throw new Exception('Debe especificar un torneo');
+            }
+            verificarPermisosTorneo($torneo_id, $user_id, $is_admin_general);
+            $torneo_check = obtenerTorneo($torneo_id, $user_id, $is_admin_general);
+            if (!$torneo_check) {
+                throw new Exception('Torneo no encontrado o sin permisos');
+            }
+            $modalidad = (int)($torneo_check['modalidad'] ?? 0);
+            if ($modalidad === 3) {
+                $_SESSION['error'] = 'La sustitución de jugadores no aplica a torneos por equipos.';
+                header('Location: ' . buildRedirectUrl('inscripciones', ['torneo_id' => $torneo_id]));
+                exit;
+            }
+            $rondas = obtenerRondasGeneradas($torneo_id);
+            if (empty($rondas)) {
+                $_SESSION['error'] = 'La sustitución solo está disponible cuando el torneo ha iniciado (rondas generadas).';
+                header('Location: ' . buildRedirectUrl('inscripciones', ['torneo_id' => $torneo_id]));
+                exit;
+            }
+            $view_file = __DIR__ . '/gestion_torneos/sustituir-jugador.php';
+            $view_data = obtenerDatosSustituirJugador($torneo_id, $user_id, $is_admin_general);
+            break;
             
         case 'registrar_resultados':
         case 'registrar_resultados_v2':
@@ -1432,6 +1457,17 @@ function obtenerDatosInscripciones($torneo_id) {
     $stmt = $pdo->prepare($sql);
     $stmt->execute([$torneo_id]);
     $inscritos = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+    // Obtener jugadores retirados (estatus = 4) para sustitución
+    $sql_retirados = "SELECT i.*, u.nombre as nombre_completo, u.username, u.cedula, c.nombre as nombre_club
+        FROM inscritos i
+        INNER JOIN usuarios u ON i.id_usuario = u.id
+        LEFT JOIN clubes c ON i.id_club = c.id
+        WHERE i.torneo_id = ? AND i.estatus = 4
+        ORDER BY u.nombre ASC";
+    $stmt = $pdo->prepare($sql_retirados);
+    $stmt->execute([$torneo_id]);
+    $retirados = $stmt->fetchAll(PDO::FETCH_ASSOC);
     
     // Estadísticas
     $total_inscritos = count($inscritos);
@@ -1477,6 +1513,7 @@ function obtenerDatosInscripciones($torneo_id) {
     return [
         'torneo' => $torneo,
         'inscritos' => $inscritos,
+        'retirados' => $retirados,
         'total_inscritos' => $total_inscritos,
         'confirmados' => $confirmados,
         'hombres' => $hombres,
@@ -2515,6 +2552,26 @@ function obtenerDatosInscribirSitio($torneo_id, $user_id, $is_admin_general) {
         'usuarios_inscritos' => $usuarios_inscritos,
         'clubes_disponibles' => $clubes_disponibles
     ];
+}
+
+/**
+ * Obtiene datos para sustituir jugador retirado (torneo iniciado).
+ * Solo para modalidad individual/parejas (no equipos).
+ */
+function obtenerDatosSustituirJugador($torneo_id, $user_id, $is_admin_general) {
+    $datos_inscribir = obtenerDatosInscribirSitio($torneo_id, $user_id, $is_admin_general);
+    $pdo = DB::pdo();
+
+    $stmt = $pdo->prepare("SELECT i.*, u.nombre as nombre_completo, u.username, u.cedula, c.nombre as nombre_club
+        FROM inscritos i
+        INNER JOIN usuarios u ON i.id_usuario = u.id
+        LEFT JOIN clubes c ON i.id_club = c.id
+        WHERE i.torneo_id = ? AND i.estatus = 4
+        ORDER BY u.nombre ASC");
+    $stmt->execute([$torneo_id]);
+    $retirados = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+    return array_merge($datos_inscribir, ['retirados' => $retirados]);
 }
 
 /**

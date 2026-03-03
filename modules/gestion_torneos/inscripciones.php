@@ -93,6 +93,18 @@ $puede_confirmar_retirar = isset($puede_confirmar_retirar) ? $puede_confirmar_re
 <div class="alert alert-info mb-4">
     <i class="fas fa-info-circle me-2"></i>
     <strong>El torneo ya ha iniciado.</strong> No se pueden agregar nuevos jugadores.
+    <?php
+    $retirados = $retirados ?? [];
+    $es_modalidad_equipos = isset($torneo['modalidad']) && (int)$torneo['modalidad'] === 3;
+    if (!empty($retirados) && !$es_modalidad_equipos):
+        $url_sustituir = $base_url . ($use_standalone ? '?' : '&') . 'action=sustituir_jugador&torneo_id=' . (int)$torneo['id'];
+    ?>
+    <span class="ms-2">
+        <a href="<?= htmlspecialchars($url_sustituir) ?>" class="btn btn-warning btn-sm ms-2">
+            <i class="fas fa-user-exchange me-1"></i> Sustituir jugador retirado
+        </a>
+    </span>
+    <?php endif; ?>
 </div>
 <?php endif; ?>
 
