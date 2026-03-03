@@ -206,11 +206,13 @@ if ($_POST['action'] === 'register_player') {
             $ced_insc = preg_replace('/\D/', '', (string)$cedula);
             $id_club_val = ($id_club_insc > 0) ? $id_club_insc : null;
             $estatus_confirmado = 1;
+            $numero = 0;
+            $clasiequi = 0;
             $stmt = $pdo->prepare("
-                INSERT INTO inscritos (id_usuario, torneo_id, id_club, estatus, inscrito_por, fecha_inscripcion, nacionalidad, cedula)
-                VALUES (?, ?, ?, ?, ?, NOW(), ?, ?)
+                INSERT INTO inscritos (id_usuario, torneo_id, id_club, estatus, inscrito_por, fecha_inscripcion, nacionalidad, cedula, numero, clasiequi)
+                VALUES (?, ?, ?, ?, ?, NOW(), ?, ?, ?, ?)
             ");
-            $stmt->execute([$id_usuario, $torneo_id, $id_club_val, $estatus_confirmado, $inscrito_por, $nac_insc, $ced_insc]);
+            $stmt->execute([$id_usuario, $torneo_id, $id_club_val, $estatus_confirmado, $inscrito_por, $nac_insc, $ced_insc, $numero, $clasiequi]);
             if (file_exists(__DIR__ . '/../lib/UserActivationHelper.php')) {
                 require_once __DIR__ . '/../lib/UserActivationHelper.php';
                 UserActivationHelper::activateUser($pdo, $id_usuario);
