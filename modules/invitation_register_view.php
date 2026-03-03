@@ -255,7 +255,18 @@
         </div>
         <?php endif; ?>
 
-        <?php if (!empty($stand_by)): ?>
+        <?php if (!empty($_GET['success'])): ?>
+        <div class="alert alert-success shadow-sm mb-4" role="alert">
+            <i class="fas fa-check-circle me-2"></i><strong>Inscripción exitosa.</strong> <?= htmlspecialchars($success_message ?? '') ?>
+            <?php if (!empty($stand_by)): ?>
+            <p class="mb-0 mt-2 small">Para inscribir más jugadores, <a href="<?= htmlspecialchars(class_exists('AppHelpers') ? rtrim(AppHelpers::getPublicUrl(), '/') : '') ?>/auth/login?<?= http_build_query(['return_url' => 'invitation/register?token=' . urlencode($token) . '&torneo=' . $torneo_id . '&club=' . $club_id]) ?>">inicie sesión</a> o <a href="<?= htmlspecialchars(class_exists('AppHelpers') ? rtrim(AppHelpers::getPublicUrl(), '/') : '') ?>/join?token=<?= urlencode($token) ?>">regístrese</a>.</p>
+            <?php endif; ?>
+        </div>
+        <?php endif; ?>
+
+        <?php
+        $mostrar_stand_by = !empty($stand_by) && empty($_GET['success']);
+        if ($mostrar_stand_by): ?>
         <!-- Invitación en Stand-by: banner y formulario bloqueado -->
         <div class="alert alert-warning shadow-sm mb-4" role="alert">
             <div class="d-flex align-items-start">
@@ -348,7 +359,9 @@
             </div>
             <?php endif; ?>
             <div class="col-<?= $mostrar_reportes_lateral ? 'md-8' : '12' ?>">
-            <?php if ($inscripciones_abiertas && empty($stand_by)): ?>
+            <?php
+            $mostrar_formulario = $inscripciones_abiertas && (empty($stand_by) || !empty($_GET['success']));
+            if ($mostrar_formulario): ?>
             <?php
             $modalidad_val = isset($tournament_data['modalidad']) ? (int)$tournament_data['modalidad'] : 0;
             if ($modalidad_val === 0 && !empty($torneo_id)) {
