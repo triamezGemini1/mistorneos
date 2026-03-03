@@ -190,7 +190,7 @@ try {
                         </div>
                     <?php elseif (empty($clubes)): ?>
                         <div class="alert alert-warning">
-                            ?? No hay clubes registrados. <a href="../clubs/new.php">Crear club</a>
+                            ?? No hay clubes registrados. <a href="<?= htmlspecialchars(function_exists('AppHelpers') ? AppHelpers::dashboard('clubs', ['action' => 'new']) : 'index.php?page=clubs&action=new') ?>">Crear club</a>
                         </div>
                     <?php else: ?>
                     
