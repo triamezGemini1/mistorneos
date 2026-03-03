@@ -1052,12 +1052,18 @@ $action_param = $use_standalone ? '?' : '&';
 
                             <!-- Botones de Acción -->
                             <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 form-botones-row">
-                                <!-- Navegación -->
-                                <div class="d-flex gap-2">
+                                <!-- Navegación y Reasignar -->
+                                <div class="d-flex gap-2 flex-wrap align-items-center">
                                     <?php if ($mesaAnterior ?? null): ?>
                                         <a href="<?php echo $base_url . $action_param; ?>action=registrar_resultados&torneo_id=<?php echo $torneo['id']; ?>&ronda=<?php echo $ronda; ?>&mesa=<?php echo $mesaAnterior; ?>"
                                            class="btn btn-secondary">
                                             <i class="fas fa-arrow-left mr-2"></i>Mesa Anterior
+                                        </a>
+                                    <?php endif; ?>
+                                    <?php if (!empty($jugadores) && count($jugadores) == 4): ?>
+                                        <a href="<?php echo $base_url . $action_param; ?>action=reasignar_mesa&torneo_id=<?php echo $torneo['id']; ?>&ronda=<?php echo $ronda; ?>&mesa=<?php echo $mesaActual; ?>"
+                                           class="btn btn-sm" style="background-color: #20c997; color: white;" title="Intercambiar posiciones de jugadores en la mesa">
+                                            <i class="fas fa-exchange-alt mr-2"></i>Reasignar Mesa
                                         </a>
                                     <?php endif; ?>
                                     <?php if ($mesaSiguiente ?? null): ?>

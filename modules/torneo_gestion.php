@@ -583,7 +583,10 @@ try {
                 throw new Exception('La mesa debe tener exactamente 4 jugadores para reasignar');
             }
             $view_file = __DIR__ . '/gestion_torneos/reasignar-mesa.php';
-            $view_data = array_merge(['torneo' => $torneo], $datos);
+            $view_data = array_merge(
+                ['torneo' => $torneo, 'mesaActual' => $mesa, 'ronda' => $ronda],
+                $datos
+            );
             break;
             
         case 'agregar_mesa':
