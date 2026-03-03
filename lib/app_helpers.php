@@ -228,6 +228,36 @@ class AppHelpers {
     public static function redirectToDashboard(string $page = 'home', array $params = []): void {
         self::redirect(self::dashboard($page, $params));
     }
+
+    /**
+     * Redirige al origen (política: siempre regresar al origen salvo navegación expedita).
+     * Usa return_to o from (POST/GET); si no hay, usa referrer mismo-origen; si no, fallback.
+     */
+    public static function redirectToOrigin(string $fallbackPage = 'home', array $fallbackParams = []): void {
+        $origin = $_POST['return_to'] ?? $_GET['return_to'] ?? $_GET['from'] ?? '';
+        if ($origin !== '') {
+            $decoded = rawurldecode($origin);
+            $safe = (strpos($decoded, 'http') !== 0);
+            if (!$safe && isset($_SERVER['HTTP_HOST'])) {
+                $host = parse_url($decoded, PHP_URL_HOST);
+                $safe = ($host === null || $host === $_SERVER['HTTP_HOST']);
+            }
+            if ($safe) {
+                self::redirect($decoded);
+                return;
+            }
+        }
+        $ref = $_SERVER['HTTP_REFERER'] ?? '';
+        if ($ref !== '' && strpos($ref, 'http') === 0) {
+            $refHost = parse_url($ref, PHP_URL_HOST);
+            $curHost = $_SERVER['HTTP_HOST'] ?? '';
+            if ($refHost === $curHost) {
+                self::redirect($ref);
+                return;
+            }
+        }
+        self::redirectToDashboard($fallbackPage, $fallbackParams);
+    }
     
     /**
      * Obtiene informaci�n del entorno para debugging

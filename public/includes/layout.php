@@ -112,8 +112,23 @@ if (in_array($user['role'], ['admin_club', 'admin_general', 'admin_torneo'], tru
 </head>
 <?php
 $is_panel_control_torneos = ($current_page === 'torneo_gestion' && ($_GET['action'] ?? '') === 'panel');
+$nav_origin = '';
+$from_url = $_GET['from'] ?? $_GET['return_to'] ?? '';
+if ($from_url !== '') {
+    $decoded = rawurldecode($from_url);
+    $safe = false;
+    if (strpos($decoded, 'http') !== 0) {
+        $safe = true;
+    } elseif (isset($_SERVER['HTTP_HOST'])) {
+        $host = parse_url($decoded, PHP_URL_HOST);
+        $safe = ($host === null || $host === $_SERVER['HTTP_HOST']);
+    }
+    if ($safe) {
+        $nav_origin = htmlspecialchars($decoded, ENT_QUOTES, 'UTF-8');
+    }
+}
 ?>
-<body class="bg-light<?= $is_panel_control_torneos ? ' page-panel-control-torneos' : '' ?>">
+<body class="bg-light<?= $is_panel_control_torneos ? ' page-panel-control-torneos' : '' ?>"<?= $nav_origin !== '' ? ' data-nav-origin="' . $nav_origin . '"' : '' ?>>
   <!-- Contenedor para notificaciones toast (Push + tarjeta visual) -->
   <div id="notification-container" aria-live="polite"></div>
 
@@ -591,6 +606,9 @@ $is_panel_control_torneos = ($current_page === 'torneo_gestion' && ($_GET['actio
 
       <!-- Contenido dinámico (CSS/head ya cargados arriba; el módulo se incluye dentro del body con formato) -->
       <main class="container-fluid py-4">
+        <?php if ($current_page !== 'home'): ?>
+        <div id="global-volver-container"></div>
+        <?php endif; ?>
         <?php 
         $content = __DIR__ . "/../../modules/$current_page.php";
         if (file_exists($content)) {
