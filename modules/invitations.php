@@ -60,13 +60,15 @@ if ($action === 'delete' && $id) {
         
         if ($result && $stmt->rowCount() > 0) {
             $filter_param = isset($_GET['filter_torneo']) ? '&filter_torneo=' . (int)$_GET['filter_torneo'] : '';
-            header('Location: index.php?page=invitations' . $filter_param . '&success=' . urlencode('Invitaci�n eliminada exitosamente'));
+            $script_path = isset($_SERVER['SCRIPT_NAME']) ? $_SERVER['SCRIPT_NAME'] : 'index.php';
+            header('Location: ' . $script_path . '?page=invitations' . $filter_param . '&success=' . urlencode('Invitación eliminada exitosamente'));
         } else {
-            throw new Exception('No se pudo eliminar la invitaci�n');
+            throw new Exception('No se pudo eliminar la invitación');
         }
     } catch (Exception $e) {
         $filter_param = isset($_GET['filter_torneo']) ? '&filter_torneo=' . (int)$_GET['filter_torneo'] : '';
-        header('Location: index.php?page=invitations' . $filter_param . '&error=' . urlencode('Error al eliminar: ' . $e->getMessage()));
+        $script_path = isset($_SERVER['SCRIPT_NAME']) ? $_SERVER['SCRIPT_NAME'] : 'index.php';
+        header('Location: ' . $script_path . '?page=invitations' . $filter_param . '&error=' . urlencode('Error al eliminar: ' . $e->getMessage()));
     }
     exit;
 }
@@ -77,7 +79,8 @@ if ($action === 'create' && $_SERVER['REQUEST_METHOD'] === 'POST') {
     try {
         CSRF::validate();
     } catch (Throwable $e) {
-        header('Location: index.php?page=invitations&error=' . urlencode('Sesión inválida o token expirado.'));
+        $sp = isset($_SERVER['SCRIPT_NAME']) ? $_SERVER['SCRIPT_NAME'] : 'index.php';
+        header('Location: ' . $sp . '?page=invitations&error=' . urlencode('Sesión inválida o token expirado.'));
         exit;
     }
     $torneo_id = (int)($_POST['torneo_id'] ?? 0);
@@ -105,7 +108,8 @@ if ($action === 'create' && $_SERVER['REQUEST_METHOD'] === 'POST') {
         $err = 'No tiene permiso para crear invitaciones en este torneo';
     }
     if ($err) {
-        header('Location: index.php?page=invitations&action=new&torneo_id=' . $torneo_id . '&error=' . urlencode($err));
+        $sp = isset($_SERVER['SCRIPT_NAME']) ? $_SERVER['SCRIPT_NAME'] : 'index.php';
+        header('Location: ' . $sp . '?page=invitations&action=new&torneo_id=' . $torneo_id . '&error=' . urlencode($err));
         exit;
     }
     $stmt = DB::pdo()->prepare("SELECT id, nombre, delegado, telefono, email FROM clubes WHERE id = ? AND estatus = 1");
@@ -116,7 +120,8 @@ if ($action === 'create' && $_SERVER['REQUEST_METHOD'] === 'POST') {
     $club_tel = $club['telefono'] ?? null;
     $token = bin2hex(random_bytes(32));
     if (strlen($token) !== 64) {
-        header('Location: index.php?page=invitations&action=new&torneo_id=' . $torneo_id . '&error=' . urlencode('Error al generar token.'));
+        $sp = isset($_SERVER['SCRIPT_NAME']) ? $_SERVER['SCRIPT_NAME'] : 'index.php';
+        header('Location: ' . $sp . '?page=invitations&action=new&torneo_id=' . $torneo_id . '&error=' . urlencode('Error al generar token.'));
         exit;
     }
     $usuario_creador = (Auth::user() && isset(Auth::user()['id'])) ? (string)Auth::user()['id'] : '';
@@ -152,7 +157,8 @@ if ($action === 'create' && $_SERVER['REQUEST_METHOD'] === 'POST') {
         $stmt = DB::pdo()->prepare("INSERT INTO {$tb_inv} (torneo_id, club_id, acceso1, acceso2, usuario, token, estado) VALUES (?, ?, ?, ?, ?, ?, 'activa')");
         $stmt->execute([$torneo_id, $club_id, $acceso1, $acceso2, $usuario_creador, $token]);
     }
-    header('Location: index.php?page=invitations&filter_torneo=' . $torneo_id . '&success=1&msg=' . urlencode('Invitación creada.'));
+    $sp = isset($_SERVER['SCRIPT_NAME']) ? $_SERVER['SCRIPT_NAME'] : 'index.php';
+    header('Location: ' . $sp . '?page=invitations&filter_torneo=' . $torneo_id . '&success=1&msg=' . urlencode('Invitación creada.'));
     exit;
 }
 
@@ -161,12 +167,14 @@ if ($action === 'edit_save' && $_SERVER['REQUEST_METHOD'] === 'POST') {
     try {
         CSRF::validate();
     } catch (Throwable $e) {
-        header('Location: index.php?page=invitations&error=' . urlencode('Sesión inválida o token expirado.'));
+        $sp = isset($_SERVER['SCRIPT_NAME']) ? $_SERVER['SCRIPT_NAME'] : 'index.php';
+        header('Location: ' . $sp . '?page=invitations&error=' . urlencode('Sesión inválida o token expirado.'));
         exit;
     }
     $edit_id = (int)($_POST['id'] ?? 0);
     if ($edit_id <= 0) {
-        header('Location: index.php?page=invitations&error=' . urlencode('ID de invitación inválido.'));
+        $sp = isset($_SERVER['SCRIPT_NAME']) ? $_SERVER['SCRIPT_NAME'] : 'index.php';
+        header('Location: ' . $sp . '?page=invitations&error=' . urlencode('ID de invitación inválido.'));
         exit;
     }
     $acceso1 = trim((string)($_POST['acceso1'] ?? ''));
@@ -177,14 +185,16 @@ if ($action === 'edit_save' && $_SERVER['REQUEST_METHOD'] === 'POST') {
     $invitado_email = trim((string)($_POST['invitado_email'] ?? ''));
     $filter_torneo = (int)($_POST['filter_torneo'] ?? $_GET['filter_torneo'] ?? 0);
     if ($acceso1 === '' || $acceso2 === '' || $acceso1 > $acceso2) {
-        header('Location: index.php?page=invitations&action=edit&id=' . $edit_id . '&error=' . urlencode('Fechas de acceso inválidas.'));
+        $sp = isset($_SERVER['SCRIPT_NAME']) ? $_SERVER['SCRIPT_NAME'] : 'index.php';
+        header('Location: ' . $sp . '?page=invitations&action=edit&id=' . $edit_id . '&error=' . urlencode('Fechas de acceso inválidas.'));
         exit;
     }
     $stmt = DB::pdo()->prepare("SELECT id, torneo_id FROM {$tb_inv} WHERE id = ?");
     $stmt->execute([$edit_id]);
     $inv = $stmt->fetch(PDO::FETCH_ASSOC);
     if (!$inv || !Auth::canModifyTournament((int)$inv['torneo_id'])) {
-        header('Location: index.php?page=invitations&error=' . urlencode('No tiene permiso para editar esta invitación.'));
+        $sp = isset($_SERVER['SCRIPT_NAME']) ? $_SERVER['SCRIPT_NAME'] : 'index.php';
+        header('Location: ' . $sp . '?page=invitations&error=' . urlencode('No tiene permiso para editar esta invitación.'));
         exit;
     }
     $cols = DB::pdo()->query("SHOW COLUMNS FROM {$tb_inv}")->fetchAll(PDO::FETCH_COLUMN);
@@ -201,9 +211,10 @@ if ($action === 'edit_save' && $_SERVER['REQUEST_METHOD'] === 'POST') {
     $params[] = $edit_id;
     $stmt = DB::pdo()->prepare("UPDATE {$tb_inv} SET {$set} WHERE id = ?");
     $stmt->execute($params);
-    $redirect = "index.php?page=invitations&msg=" . urlencode("Invitación actualizada.");
+    $sp = isset($_SERVER['SCRIPT_NAME']) ? $_SERVER['SCRIPT_NAME'] : 'index.php';
+    $redirect = $sp . "?page=invitations&msg=" . urlencode("Invitación actualizada.");
     if (!empty($_POST['return_to']) && $_POST['return_to'] === 'invitacion_clubes' && !empty($_POST['torneo_id'])) {
-        $redirect = "index.php?page=invitacion_clubes&torneo_id=" . (int)$_POST['torneo_id'] . "&success=1&msg=" . urlencode("Invitación actualizada.");
+        $redirect = $sp . "?page=invitacion_clubes&torneo_id=" . (int)$_POST['torneo_id'] . "&success=1&msg=" . urlencode("Invitación actualizada.");
     } elseif ($filter_torneo > 0) {
         $redirect .= "&filter_torneo=" . $filter_torneo;
     }
@@ -231,7 +242,13 @@ if ($action === 'edit' && $id) {
         } else {
             // Verificar permisos para editar
             if (!Auth::canModifyTournament((int)$invitation['torneo_id'])) {
-                header('Location: index.php?page=invitations&error=' . urlencode('No tiene permisos para editar invitaciones de este torneo. Solo puede editar invitaciones de torneos futuros de su club.'));
+                $script_path = isset($_SERVER['SCRIPT_NAME']) ? $_SERVER['SCRIPT_NAME'] : 'index.php';
+                $target = $script_path . '?page=invitations&error=' . urlencode('No tiene permisos para editar invitaciones de este torneo. Solo puede editar invitaciones de torneos futuros de su club.');
+                if (!headers_sent()) {
+                    header('Location: ' . $target);
+                    exit;
+                }
+                echo '<meta http-equiv="refresh" content="0;url=' . htmlspecialchars($target) . '"><p>Redirigiendo...</p>';
                 exit;
             }
         }
@@ -297,17 +314,27 @@ $pagination = null;
 $filter_torneo = $_GET['filter_torneo'] ?? $_GET['torneo_id'] ?? '';
 $stats = ['total' => 0, 'activas' => 0, 'expiradas' => 0, 'canceladas' => 0];
 
-// Acceso solo por panel de control: se requiere torneo_id en la URL
+// Acceso solo por panel de control: index.php redirige ANTES del layout. Fallback por si se llega aquí.
 if ($action === 'list' && empty($filter_torneo)) {
-    $dashboard = class_exists('AppHelpers') ? AppHelpers::dashboard('home') : 'index.php';
-    header('Location: ' . $dashboard . (isset($_GET['error']) ? '' : '?error=' . urlencode('Acceda a Invitaciones desde el Panel de Control de un torneo.')));
+    $script_path = isset($_SERVER['SCRIPT_NAME']) ? $_SERVER['SCRIPT_NAME'] : 'index.php';
+    $target = $script_path . '?page=home&error=' . urlencode('Acceda a Invitaciones desde el Panel de Control de un torneo.');
+    if (!headers_sent()) {
+        header('Location: ' . $target);
+        exit;
+    }
+    echo '<meta http-equiv="refresh" content="0;url=' . htmlspecialchars($target) . '"><p>Redirigiendo...</p>';
     exit;
 }
 if ($action === 'new') {
     $torneo_id_new = (int)($_GET['torneo_id'] ?? $_GET['filter_torneo'] ?? 0);
     if ($torneo_id_new <= 0 || !Auth::canAccessTournament($torneo_id_new)) {
-        $dashboard = class_exists('AppHelpers') ? AppHelpers::dashboard('home') : 'index.php';
-        header('Location: ' . $dashboard . '?error=' . urlencode('Indique el torneo desde el Panel de Control.'));
+        $script_path = isset($_SERVER['SCRIPT_NAME']) ? $_SERVER['SCRIPT_NAME'] : 'index.php';
+        $target = $script_path . '?page=home&error=' . urlencode('Indique el torneo desde el Panel de Control.');
+        if (!headers_sent()) {
+            header('Location: ' . $target);
+            exit;
+        }
+        echo '<meta http-equiv="refresh" content="0;url=' . htmlspecialchars($target) . '"><p>Redirigiendo...</p>';
         exit;
     }
 }
@@ -315,7 +342,13 @@ if ($action === 'new') {
 // Validar que el admin tenga acceso al torneo
 if (!empty($filter_torneo)) {
     if (!Auth::canAccessTournament((int)$filter_torneo)) {
-        header('Location: index.php?page=invitations&error=' . urlencode('No tiene permisos para acceder a este torneo'));
+        $script_path = isset($_SERVER['SCRIPT_NAME']) ? $_SERVER['SCRIPT_NAME'] : 'index.php';
+        $target = $script_path . '?page=invitations&error=' . urlencode('No tiene permisos para acceder a este torneo');
+        if (!headers_sent()) {
+            header('Location: ' . $target);
+            exit;
+        }
+        echo '<meta http-equiv="refresh" content="0;url=' . htmlspecialchars($target) . '"><p>Redirigiendo...</p>';
         exit;
     }
 }
@@ -330,7 +363,13 @@ if ($action === 'reporte_pagos') {
     $club_id_rp = (int)($_GET['club_id'] ?? 0);
     $filter_torneo = $filter_torneo ?: (string)$torneo_id_rp;
     if ($torneo_id_rp <= 0 || $club_id_rp <= 0 || !Auth::canAccessTournament($torneo_id_rp)) {
-        header('Location: index.php?page=invitations&filter_torneo=' . (int)$filter_torneo . '&error=' . urlencode('Parámetros inválidos para el reporte de pagos.'));
+        $script_path = isset($_SERVER['SCRIPT_NAME']) ? $_SERVER['SCRIPT_NAME'] : 'index.php';
+        $target = $script_path . '?page=invitations&filter_torneo=' . (int)$filter_torneo . '&error=' . urlencode('Parámetros inválidos para el reporte de pagos.');
+        if (!headers_sent()) {
+            header('Location: ' . $target);
+            exit;
+        }
+        echo '<meta http-equiv="refresh" content="0;url=' . htmlspecialchars($target) . '"><p>Redirigiendo...</p>';
         exit;
     }
     try {

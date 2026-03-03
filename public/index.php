@@ -201,6 +201,26 @@ if ($page === 'torneo_gestion' && ($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'GET
     exit;
 }
 
+// invitations: redirects que requieren ejecutarse ANTES del layout (evita "headers already sent")
+if ($page === 'invitations' && ($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'GET') {
+    $inv_action = $_GET['action'] ?? 'list';
+    $inv_filter = $_GET['filter_torneo'] ?? $_GET['torneo_id'] ?? '';
+    $base = (defined('URL_BASE') && URL_BASE !== '') ? rtrim(URL_BASE, '/') : '';
+    $prefix = ($base !== '' ? $base . '/' : '');
+    $home_url = $prefix . 'index.php?page=home';
+    if ($inv_action === 'list' && $inv_filter === '') {
+        header('Location: ' . $home_url . '&error=' . urlencode('Acceda a Invitaciones desde el Panel de Control de un torneo.'));
+        exit;
+    }
+    if ($inv_action === 'new') {
+        $torneo_id_new = (int)($_GET['torneo_id'] ?? $_GET['filter_torneo'] ?? 0);
+        if ($torneo_id_new <= 0 || !Auth::canAccessTournament($torneo_id_new)) {
+            header('Location: ' . $home_url . '&error=' . urlencode('Indique el torneo desde el Panel de Control.'));
+            exit;
+        }
+    }
+}
+
 // organizaciones: admin_club sin id debe redirigir ANTES del layout (evita "headers already sent")
 if ($page === 'organizaciones' && ($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'GET' && !Auth::isAdminGeneral()) {
     $org_id_get = isset($_GET['id']) ? (int)$_GET['id'] : 0;
@@ -288,7 +308,9 @@ if ($page === 'directorio_clubes' && (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 
 }
 
 // Invitación clubes: acción "Invitar" un solo club (GET) — ejecutar antes de enviar output para poder redirigir
-if ($page === 'invitacion_clubes' && ($_SERVER['REQUEST_METHOD'] ?? '') === 'GET' && isset($_GET['action']) && $_GET['action'] === 'invitar_uno' && isset($_GET['directorio_id']) && isset($_GET['torneo_id'])) {
+$invitar_uno_club = isset($_GET['club_id']) && (int)$_GET['club_id'] > 0;
+$invitar_uno_dir = isset($_GET['directorio_id']) && (int)$_GET['directorio_id'] > 0;
+if ($page === 'invitacion_clubes' && ($_SERVER['REQUEST_METHOD'] ?? '') === 'GET' && isset($_GET['action']) && $_GET['action'] === 'invitar_uno' && isset($_GET['torneo_id']) && (int)$_GET['torneo_id'] > 0 && ($invitar_uno_club || $invitar_uno_dir)) {
     $module = __DIR__ . '/../modules/invitacion_clubes.php';
     if (file_exists($module)) {
         include $module;
