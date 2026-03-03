@@ -201,14 +201,16 @@ if ($_POST['action'] === 'register_player') {
                 throw new Exception('Ya existe una inscripción para esta cédula en este torneo');
             }
 
-            $inscrito_por = $current_user ? (int)$current_user['id'] : null;
+            $inscrito_por = $current_user && !empty($current_user['id']) ? (int)$current_user['id'] : null;
             $nac_insc = in_array($nacionalidad, ['V', 'E', 'J', 'P'], true) ? $nacionalidad : 'V';
             $ced_insc = preg_replace('/\D/', '', (string)$cedula);
+            $id_club_val = ($id_club_insc > 0) ? $id_club_insc : null;
+            $estatus_confirmado = 1;
             $stmt = $pdo->prepare("
                 INSERT INTO inscritos (id_usuario, torneo_id, id_club, estatus, inscrito_por, fecha_inscripcion, nacionalidad, cedula)
-                VALUES (?, ?, ?, 'confirmado', ?, NOW(), ?, ?)
+                VALUES (?, ?, ?, ?, ?, NOW(), ?, ?)
             ");
-            $stmt->execute([$id_usuario, $torneo_id, $id_club_insc, $inscrito_por, $nac_insc, $ced_insc]);
+            $stmt->execute([$id_usuario, $torneo_id, $id_club_val, $estatus_confirmado, $inscrito_por, $nac_insc, $ced_insc]);
             if (file_exists(__DIR__ . '/../lib/UserActivationHelper.php')) {
                 require_once __DIR__ . '/../lib/UserActivationHelper.php';
                 UserActivationHelper::activateUser($pdo, $id_usuario);
