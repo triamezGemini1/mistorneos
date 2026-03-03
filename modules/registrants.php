@@ -530,11 +530,8 @@ if (isset($_GET['ajax']) && $_GET['ajax'] === 'deuda') {
                         </a>
                         <?php endif; ?>
                         <a href="index.php?page=registrants_report<?= !empty($filter_torneo) ? '&filter_torneo=' . (int)$filter_torneo : '' ?><?= !empty($filter_clubs) ? '&' . http_build_query(['filter_clubs' => $filter_clubs]) : '' ?>" 
-                           class="btn btn-info me-2">
+                               class="btn btn-info me-2">
                             <i class="fas fa-file-alt me-2"></i>Reportes
-                        </a>
-                        <a href="index.php?page=registrants&action=new&torneo_id=<?= (int)($filter_torneo ?? 0) ?><?= $return_to !== 'index' ? '&return_to=' . urlencode($return_to) : '' ?>" class="btn btn-primary">
-                            <i class="fas fa-plus me-2"></i>Nuevo Inscrito
                         </a>
                     <?php endif; ?>
                 </div>
@@ -916,7 +913,6 @@ if (isset($_GET['ajax']) && $_GET['ajax'] === 'deuda') {
                         No hay inscritos que coincidan con los filtros seleccionados.
                     <?php else: ?>
                         No hay inscritos registrados en este torneo.
-                        <a href="index.php?page=registrants&action=new" class="alert-link">Crear el primer inscrito</a>
                     <?php endif; ?>
                 </div>
             <?php else: 
