@@ -1151,6 +1151,31 @@ function getModalidadLabel($modalidad) {
     </div>
 
 <?php elseif ($action === 'new' || $action === 'edit'): ?>
+    <?php
+    // admin_club sin organización no puede crear torneos
+    $puede_mostrar_form = true;
+    if ($action === 'new' && $user_role === 'admin_club' && empty($default_organizacion_id)) {
+        $puede_mostrar_form = false;
+    }
+    if ($action === 'new' && $user_role === 'admin_torneo' && empty($user_club_id)) {
+        $puede_mostrar_form = false;
+    }
+    ?>
+    <?php if (!$puede_mostrar_form): ?>
+        <div class="container-fluid py-4">
+            <div class="alert alert-warning">
+                <i class="fas fa-exclamation-triangle me-2"></i>
+                <?php if ($user_role === 'admin_club'): ?>
+                    No tiene una organización asignada. Contacte al administrador para poder crear torneos.
+                <?php else: ?>
+                    Su usuario no tiene un club asignado. Contacte al administrador para poder crear torneos.
+                <?php endif; ?>
+            </div>
+            <a href="<?= htmlspecialchars((isset($dashboard_href) && is_callable($dashboard_href)) ? $dashboard_href('torneo_gestion', ['action' => 'index']) : 'index.php?page=torneo_gestion&action=index') ?>" class="btn btn-secondary">
+                <i class="fas fa-arrow-left me-2"></i>Volver
+            </a>
+        </div>
+    <?php else: ?>
     <!-- Formulario -->
     <div class="d-flex justify-content-center align-items-center min-vh-100 py-5" style="background: linear-gradient(135deg, #1a365d 0%, #2d3748 100%);">
         <div class="card shadow-lg" style="max-width: 60%; width: 60%;">
@@ -1162,7 +1187,11 @@ function getModalidadLabel($modalidad) {
             </div>
             <div class="card-body">
             <?php
-            $form_action = 'index.php?page=tournaments&action=' . ($action === 'edit' ? 'update' : 'save');
+            $form_params = ['action' => $action === 'edit' ? 'update' : 'save'];
+            if ($action === 'edit') {
+                $form_params['id'] = (int)$tournament['id'];
+            }
+            $form_action = (isset($dashboard_href) && is_callable($dashboard_href)) ? $dashboard_href('tournaments', $form_params) : 'index.php?page=tournaments&action=' . ($action === 'edit' ? 'update&id=' . (int)$tournament['id'] : 'save');
             ?>
             <form method="POST" action="<?= htmlspecialchars($form_action) ?>" enctype="multipart/form-data">
                 <?= CSRF::input(); ?>
@@ -1579,7 +1608,7 @@ function getModalidadLabel($modalidad) {
                 <?php endif; ?>
                 
                 <div class="d-flex justify-content-between mt-4 pt-3 border-top">
-                    <a href="index.php?page=tournaments" class="btn btn-secondary">
+                    <a href="<?= htmlspecialchars((isset($dashboard_href) && is_callable($dashboard_href)) ? $dashboard_href('tournaments') : 'index.php?page=tournaments') ?>" class="btn btn-secondary">
                         <i class="fas fa-times me-2"></i>Cancelar
                     </a>
                     <button type="submit" class="btn btn-<?= $action === 'edit' ? 'warning' : 'success' ?>">
@@ -1861,5 +1890,6 @@ function getModalidadLabel($modalidad) {
     // Ejecutar cuando cambie el tipo de evento
     tipoEventoSelect?.addEventListener('change', actualizarRankingSegunTipoEvento);
     </script>
+    <?php endif; ?>
 <?php endif; ?>
 

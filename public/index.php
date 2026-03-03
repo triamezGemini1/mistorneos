@@ -186,7 +186,7 @@ $page = $_GET['page'] ?? 'home';
 $page = preg_replace('/[^a-zA-Z0-9_\/\-]/', '', $page);
 
 // Pre-despacho para solicitudes POST y GET con acciones que requieren redirección
-$action = $_GET['action'] ?? '';
+$action = trim((string)($_GET['action'] ?? ''));
 $actions_requiring_redirect = ['delete', 'save', 'update'];
 
 // torneo_gestion action=new/view/edit: redirigir a tournaments ANTES de cualquier output (evita "headers already sent" y página en blanco)
@@ -195,8 +195,26 @@ if ($page === 'torneo_gestion' && ($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'GET
     if ($action !== 'new' && isset($_GET['id']) && (int)$_GET['id'] > 0) {
         $params['id'] = (int)$_GET['id'];
     }
-    header('Location: index.php?' . http_build_query($params));
+    $base = (defined('URL_BASE') && URL_BASE !== '') ? rtrim(URL_BASE, '/') : '';
+    $redirect_url = ($base !== '' ? $base . '/' : '') . 'index.php?' . http_build_query($params);
+    header('Location: ' . $redirect_url);
     exit;
+}
+
+// organizaciones: admin_club sin id debe redirigir ANTES del layout (evita "headers already sent")
+if ($page === 'organizaciones' && ($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'GET' && !Auth::isAdminGeneral()) {
+    $org_id_get = isset($_GET['id']) ? (int)$_GET['id'] : 0;
+    if ($org_id_get <= 0) {
+        $user_org_id = Auth::getUserOrganizacionId();
+        $base = (defined('URL_BASE') && URL_BASE !== '') ? rtrim(URL_BASE, '/') : '';
+        $prefix = ($base !== '' ? $base . '/' : '');
+        if ($user_org_id) {
+            header('Location: ' . $prefix . 'index.php?page=organizaciones&id=' . (int)$user_org_id);
+            exit;
+        }
+        header('Location: ' . $prefix . 'index.php?page=mi_organizacion');
+        exit;
+    }
 }
 
 // Acciones que redirigen sin layout (evitan acceso directo a modules/ bloqueado por .htaccess)

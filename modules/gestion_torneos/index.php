@@ -37,7 +37,7 @@ $panel_sep = $use_standalone_list ? '?' : '&';
                     <a href="index.php?page=torneo_gestion&action=index" class="btn btn-outline-primary">
                         <i class="fas fa-eye me-1"></i>Ver y Editar Torneos
                     </a>
-                    <a href="index.php?page=torneo_gestion&action=new" class="btn btn-success">
+                    <a href="index.php?page=tournaments&action=new" class="btn btn-success">
                         <i class="fas fa-plus-circle me-1"></i>Crear Nuevo Torneo
                     </a>
                     <a href="index.php?page=estadisticas_torneos" class="btn btn-outline-info">
@@ -92,7 +92,7 @@ $panel_sep = $use_standalone_list ? '?' : '&';
                 <i class="fas fa-trophy fa-4x text-muted mb-3"></i>
                 <h5 class="card-title">No hay torneos para gestionar</h5>
                 <p class="text-muted">Crea un torneo primero para poder gestionarlo.</p>
-                <a href="index.php?page=torneo_gestion&action=new" class="btn btn-primary mt-3">
+                <a href="index.php?page=tournaments&action=new" class="btn btn-primary mt-3">
                     <i class="fas fa-plus mr-2"></i> Crear Nuevo Torneo
                 </a>
             </div>

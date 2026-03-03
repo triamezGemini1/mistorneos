@@ -756,12 +756,19 @@ try {
         case 'new':
         case 'view':
         case 'edit':
-            // Crear/ver/editar torneo: delegar al módulo tournaments
+            // Crear/ver/editar torneo: delegar al módulo tournaments. index.php debería redirigir ANTES del layout.
+            // Si llegamos aquí, usar meta refresh como fallback para evitar "headers already sent".
             $params = ['page' => 'tournaments', 'action' => $action];
             if ($action !== 'new' && isset($_GET['id']) && (int)$_GET['id'] > 0) {
                 $params['id'] = (int)$_GET['id'];
             }
-            header('Location: index.php?' . http_build_query($params));
+            $base = (defined('URL_BASE') && URL_BASE !== '') ? rtrim(URL_BASE, '/') . '/' : '';
+            $target = $base . 'index.php?' . http_build_query($params);
+            if (!headers_sent()) {
+                header('Location: ' . $target);
+                exit;
+            }
+            echo '<meta http-equiv="refresh" content="0;url=' . htmlspecialchars($target) . '"><p>Redirigiendo...</p>';
             exit;
 
         default:
