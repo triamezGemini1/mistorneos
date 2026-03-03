@@ -190,7 +190,7 @@ $is_panel_control_torneos = ($current_page === 'torneo_gestion' && ($_GET['actio
         }
         
         $torneo_action = $_GET['action'] ?? $_REQUEST['action'] ?? '';
-        $is_torneo_menu_active = $is_torneo_gestion || in_array($torneo_action, ['index', 'panel', 'panel_equipos', 'mesas', 'rondas', 'posiciones', 'galeria_fotos', 'inscripciones', 'notificaciones', 'inscribir_sitio', 'inscribir_equipo_sitio', 'gestionar_inscripciones_equipos', 'cuadricula', 'hojas_anotacion', 'registrar_resultados', 'registrar_resultados_v2', 'agregar_mesa', 'reasignar_mesa', 'podio', 'podios', 'podios_equipos', 'resultados_por_club', 'resumen_individual', 'equipos', 'verificar_actas', 'verificar_acta', 'verificar_actas_index', 'verificar_resultados']) || in_array($current_page, ['invitations', 'notificaciones_masivas']);
+        $is_torneo_menu_active = $is_torneo_gestion || in_array($torneo_action, ['index', 'panel', 'panel_equipos', 'mesas', 'rondas', 'posiciones', 'galeria_fotos', 'inscripciones', 'notificaciones', 'inscribir_sitio', 'inscribir_equipo_sitio', 'gestionar_inscripciones_equipos', 'sustituir_jugador', 'cuadricula', 'hojas_anotacion', 'registrar_resultados', 'registrar_resultados_v2', 'agregar_mesa', 'reasignar_mesa', 'podio', 'podios', 'podios_equipos', 'resultados_por_club', 'resumen_individual', 'equipos', 'verificar_actas', 'verificar_acta', 'verificar_actas_index', 'verificar_resultados']) || in_array($current_page, ['invitations', 'notificaciones_masivas']);
         $is_torneo_submenu_open = $torneo_id_selected > 0 || $is_torneo_menu_active;
         
         if ($torneo_id_selected > 0) {

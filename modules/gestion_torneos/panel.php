@@ -127,6 +127,20 @@
                                class="btn btn-sm btn-primary w-100">
                                 <i class="fas fa-clipboard-list mr-1"></i> Gestionar Inscripciones
                             </a>
+                            <?php
+                            $rondas_panel = [];
+                            try {
+                                $st = DB::pdo()->prepare("SELECT MAX(CAST(partida AS UNSIGNED)) AS ultima FROM partiresul WHERE id_torneo = ? AND mesa > 0");
+                                $st->execute([$torneo['id']]);
+                                $rondas_panel = $st->fetchColumn();
+                            } catch (Exception $e) {}
+                            $torneo_iniciado_panel = !empty($rondas_panel) && (int)$rondas_panel >= 1;
+                            if ($torneo_iniciado_panel): ?>
+                            <a href="index.php?page=torneo_gestion&action=sustituir_jugador&torneo_id=<?php echo $torneo['id']; ?>" 
+                               class="btn btn-sm btn-warning w-100 mt-1">
+                                <i class="fas fa-user-exchange mr-1"></i> Sustituir jugador retirado
+                            </a>
+                            <?php endif; ?>
                         <?php endif; ?>
                     <?php endif; ?>
                 </div>

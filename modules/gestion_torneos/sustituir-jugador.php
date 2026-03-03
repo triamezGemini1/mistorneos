@@ -18,7 +18,7 @@ if (!isset($torneo) || !isset($retirados)) {
 
 require_once __DIR__ . '/../../lib/InscritosHelper.php';
 
-$url_inscripciones = $base_url . ($use_standalone ? '?' : '&') . 'action=inscripciones&torneo_id=' . (int)$torneo['id'];
+$url_inscripciones = 'index.php?page=registrants&torneo_id=' . (int)$torneo['id'];
 $url_panel = $base_url . ($use_standalone ? '?' : '&') . 'action=panel&torneo_id=' . (int)$torneo['id'];
 ?>
 <link rel="stylesheet" href="assets/css/design-system.css">
@@ -34,7 +34,7 @@ $url_panel = $base_url . ($use_standalone ? '?' : '&') . 'action=panel&torneo_id
                 <ol class="breadcrumb">
                     <li class="breadcrumb-item"><a href="<?= $base_url ?>">Gestión de Torneos</a></li>
                     <li class="breadcrumb-item"><a href="<?= htmlspecialchars($url_panel) ?>"><?= htmlspecialchars($torneo['nombre']) ?></a></li>
-                    <li class="breadcrumb-item"><a href="<?= htmlspecialchars($url_inscripciones) ?>">Inscripciones</a></li>
+                    <li class="breadcrumb-item"><a href="<?= htmlspecialchars($url_inscripciones) ?>">Gestionar Inscripciones</a></li>
                     <li class="breadcrumb-item active">Sustituir jugador</li>
                 </ol>
             </nav>

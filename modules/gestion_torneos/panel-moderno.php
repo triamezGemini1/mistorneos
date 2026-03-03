@@ -487,6 +487,9 @@ tailwind.config = {
                         <?php if ($isLocked || $torneo_bloqueado_inscripciones): ?>
                         <div class="d-flex flex-column gap-1 mt-2">
                             <a href="<?php echo $base_url . ($use_standalone ? '?' : '&'); ?>action=activar_participantes&torneo_id=<?php echo (int)$torneo['id']; ?>" class="tw-btn bg-green-500 hover:bg-green-600 text-white"><i class="fas fa-user-check"></i> Activar participantes</a>
+                            <?php if (!$es_modalidad_equipos && $ultima_ronda >= 1): ?>
+                            <a href="index.php?page=torneo_gestion&action=sustituir_jugador&torneo_id=<?php echo (int)$torneo['id']; ?>" class="tw-btn bg-amber-500 hover:bg-amber-600 text-white"><i class="fas fa-user-exchange"></i> Sustituir jugador retirado</a>
+                            <?php endif; ?>
                         </div>
                         <?php endif; ?>
                         

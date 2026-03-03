@@ -762,6 +762,20 @@ if (isset($_GET['ajax']) && $_GET['ajax'] === 'deuda') {
                                class="btn btn-primary">
                                 <i class="fas fa-file-alt me-2"></i>Ir a Reportes
                             </a>
+                            <?php
+                            // Sustituir jugador retirado: solo cuando torneo iniciado y no es modalidad equipos
+                            $modalidad_sust = 0;
+                            if (!empty($filter_torneo)) {
+                                $st = DB::pdo()->prepare("SELECT modalidad FROM tournaments WHERE id = ?");
+                                $st->execute([(int)$filter_torneo]);
+                                $modalidad_sust = (int)($st->fetchColumn() ?? 0);
+                            }
+                            if (!empty($torneo_iniciado) && $torneo_iniciado && $modalidad_sust !== 3): ?>
+                            <a href="index.php?page=torneo_gestion&action=sustituir_jugador&torneo_id=<?= (int)$filter_torneo ?>" 
+                               class="btn btn-warning">
+                                <i class="fas fa-user-exchange me-2"></i>Sustituir jugador retirado
+                            </a>
+                            <?php endif; ?>
                             <?php else: ?>
                             <button type="button" class="btn btn-primary" disabled title="Primero debe seleccionar un torneo">
                                 <i class="fas fa-file-alt me-2"></i>Ir a Reportes
