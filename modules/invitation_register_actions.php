@@ -20,6 +20,15 @@ extract($data);
 $base = $base !== '' ? rtrim($base, '/') : rtrim(class_exists('AppHelpers') ? AppHelpers::getPublicUrl() : ($GLOBALS['APP_CONFIG']['app']['base_url'] ?? ''), '/');
 $same_url = $base . '/invitation/register?' . http_build_query(['token' => $token, 'torneo' => $torneo_id, 'club' => $club_id]);
 
+$inv_register_safe_redirect = function ($url) {
+    if (!headers_sent()) {
+        header('Location: ' . $url);
+        exit;
+    }
+    echo '<meta http-equiv="refresh" content="0;url=' . htmlspecialchars($url) . '"><p>Redirigiendo...</p>';
+    exit;
+};
+
 if ($_POST['action'] === 'retirar') {
     $cur = Auth::user();
     $can = $cur && ($form_enabled ?? false);
@@ -62,8 +71,7 @@ if ($_POST['action'] === 'retirar') {
     $params = ['token' => $token, 'torneo' => $torneo_id, 'club' => $club_id];
     if ($success_message !== '') $params['success'] = $success_message;
     if ($error_message !== '') $params['error'] = $error_message;
-    header('Location: ' . $base . '/invitation/register?' . http_build_query($params, '', '&', PHP_QUERY_RFC3986));
-    exit;
+    $inv_register_safe_redirect($base . '/invitation/register?' . http_build_query($params, '', '&', PHP_QUERY_RFC3986));
 }
 
 if ($_POST['action'] === 'register_player') {
@@ -222,8 +230,7 @@ if ($_POST['action'] === 'register_player') {
     $params = ['token' => $token, 'torneo' => $torneo_id, 'club' => $club_id];
     if ($success_message) $params['success'] = urlencode($success_message);
     if ($error_message) $params['error'] = urlencode($error_message);
-    header('Location: ' . $base . '/invitation/register?' . http_build_query($params));
-    exit;
+    $inv_register_safe_redirect($base . '/invitation/register?' . http_build_query($params));
 }
 
 // Inscripción por pareja (2 jugadores + nombre opcional). Mismo flujo que equipos pero con 2 jugadores.
@@ -354,6 +361,5 @@ if ($_POST['action'] === 'register_pair') {
     $params = ['token' => $token, 'torneo' => $torneo_id, 'club' => $club_id];
     if ($success_message !== '') $params['success'] = urlencode($success_message);
     if ($error_message !== '') $params['error'] = urlencode($error_message);
-    header('Location: ' . $base . '/invitation/register?' . http_build_query($params));
-    exit;
+    $inv_register_safe_redirect($base . '/invitation/register?' . http_build_query($params));
 }

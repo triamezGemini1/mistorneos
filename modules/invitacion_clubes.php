@@ -188,11 +188,22 @@ if ($torneo_id <= 0) {
     }
 }
 
+// Helper: redirección segura (evita "headers already sent" con meta refresh)
+$invitacion_safe_redirect = function ($url) {
+    if (!headers_sent()) {
+        header('Location: ' . $url);
+        exit;
+    }
+    echo '<meta http-equiv="refresh" content="0;url=' . htmlspecialchars($url) . '"><p>Redirigiendo...</p>';
+    exit;
+};
+
 // GET: invitar un solo club por línea (acción "Invitar" en cada fila)
 if ($torneo && $_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['action']) && $_GET['action'] === 'invitar_uno' && isset($_GET['club_id'])) {
     $club_id_one = (int)$_GET['club_id'];
     if ($club_id_one > 0 && Auth::canAccessTournament($torneo_id)) {
-        $build_redirect_one = function (array $params) use ($torneo_id) {
+        $sp = isset($_SERVER['SCRIPT_NAME']) ? $_SERVER['SCRIPT_NAME'] : 'index.php';
+        $build_redirect_one = function (array $params) use ($torneo_id, $sp) {
             $base = ['page' => 'invitacion_clubes', 'torneo_id' => $torneo_id];
             if (isset($_GET['p']) && (int)$_GET['p'] >= 1) {
                 $base['p'] = (int)$_GET['p'];
@@ -200,7 +211,7 @@ if ($torneo && $_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['action']) &&
             if (isset($_GET['per_page']) && (int)$_GET['per_page'] >= 10) {
                 $base['per_page'] = (int)$_GET['per_page'];
             }
-            return 'index.php?' . http_build_query(array_merge($base, $params));
+            return $sp . '?' . http_build_query(array_merge($base, $params));
         };
         try {
             $pdo = DB::pdo();
@@ -220,8 +231,7 @@ if ($torneo && $_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['action']) &&
                 $stmt = $pdo->prepare("SELECT id FROM {$tb_inv} WHERE torneo_id = ? AND club_id = ?");
                 $stmt->execute([$torneo_id, $club_id_one]);
                 if ($stmt->fetch()) {
-                    header('Location: ' . $build_redirect_one(['msg' => 'Ya estaba invitado.']));
-                    exit;
+                    $invitacion_safe_redirect($build_redirect_one(['msg' => 'Ya estaba invitado.']));
                 }
                 $admin_club_id = (int) (Auth::id() ?? 0);
                 $fechator = $torneo['fechator'] ?? date('Y-m-d');
@@ -246,8 +256,7 @@ if ($torneo && $_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['action']) &&
                 $placeholders = array_fill(0, count($inv_vals), '?');
                 $stmt = $pdo->prepare("INSERT INTO {$tb_inv} (" . implode(', ', $inv_cols) . ") VALUES (" . implode(', ', $placeholders) . ")");
                 $stmt->execute($inv_vals);
-                header('Location: ' . $build_redirect_one(['success' => '1', 'msg' => 'Invitación creada. Lista para enviar al celular.']));
-                exit;
+                $invitacion_safe_redirect($build_redirect_one(['success' => '1', 'msg' => 'Invitación creada. Lista para enviar al celular.']));
             }
         } catch (Exception $e) {
             if (function_exists('error_log')) {
@@ -258,8 +267,7 @@ if ($torneo && $_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['action']) &&
             if ($detail !== '' && strlen($detail) < 200) {
                 $errMsg .= ' ' . $detail;
             }
-            header('Location: ' . $build_redirect_one(['error' => $errMsg]));
-            exit;
+            $invitacion_safe_redirect($build_redirect_one(['error' => $errMsg]));
         }
     }
 }
@@ -269,10 +277,9 @@ if ($torneo && $_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) 
     // Evitar que cualquier salida accidental rompa el redirect (regla de oro: no echo/print_r antes de Location)
     ob_start();
 
-    // Redirección RELATIVA para que en producción (proxy/rewrite) vuelva al mismo entry point y se cargue el layout con CSS
-    $build_redirect = function (array $params) {
-        $q = http_build_query($params);
-        return 'index.php?' . $q;
+    $sp_post = isset($_SERVER['SCRIPT_NAME']) ? $_SERVER['SCRIPT_NAME'] : 'index.php';
+    $build_redirect = function (array $params) use ($sp_post) {
+        return $sp_post . '?' . http_build_query($params);
     };
 
     try {
@@ -282,8 +289,7 @@ if ($torneo && $_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) 
             error_log('Invitacion_clubes CSRF: ' . $e->getMessage());
         }
         @ob_end_clean();
-        header('Location: ' . $build_redirect(['page' => 'invitacion_clubes', 'torneo_id' => $torneo_id, 'error' => 'Sesión inválida o token expirado. Vuelva a intentar.']));
-        exit;
+        $invitacion_safe_redirect($build_redirect(['page' => 'invitacion_clubes', 'torneo_id' => $torneo_id, 'error' => 'Sesión inválida o token expirado. Vuelva a intentar.']));
     }
 
     $messages = [];
@@ -333,8 +339,7 @@ if ($torneo && $_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) 
             $params['msg'] = implode(' ', $messages);
         }
         @ob_end_clean();
-        header('Location: ' . $build_redirect($params));
-        exit;
+        $invitacion_safe_redirect($build_redirect($params));
     }
 
     $tb_inv = defined('TABLE_INVITATIONS') ? TABLE_INVITATIONS : 'invitaciones';
@@ -405,8 +410,7 @@ if ($torneo && $_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) 
             $params['error'] = implode(' ', $errores);
         }
         @ob_end_clean();
-        header('Location: ' . $build_redirect($params));
-        exit;
+        $invitacion_safe_redirect($build_redirect($params));
     } catch (Exception $e) {
         if (isset($pdo) && $pdo->inTransaction()) {
             $pdo->rollBack();
@@ -416,8 +420,7 @@ if ($torneo && $_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) 
         }
         @ob_end_clean();
         $params = ['page' => 'invitacion_clubes', 'torneo_id' => $torneo_id, 'error' => 'Error al crear invitaciones. Revise logs. ' . $e->getMessage()];
-        header('Location: ' . $build_redirect($params));
-        exit;
+        $invitacion_safe_redirect($build_redirect($params));
     }
 }
 
@@ -478,7 +481,8 @@ $fechator_fmt = $torneo && !empty($torneo['fechator']) ? date('d/m/Y', strtotime
                         <span><i class="fas fa-users me-2"></i>Clubes — marque los que desea invitar; en los ya invitados marque el cuadro para <strong>quitar</strong> la invitación</span>
                         <span class="badge bg-secondary"><?= count($ya_invitados) ?> ya invitados a este torneo</span>
                     </div>
-                    <form method="post" action="index.php?page=invitacion_clubes&torneo_id=<?= (int)$torneo_id ?>" id="formInvitar">
+                    <?php $form_action_sp = isset($_SERVER['SCRIPT_NAME']) ? $_SERVER['SCRIPT_NAME'] : 'index.php'; ?>
+                    <form method="post" action="<?= htmlspecialchars($form_action_sp) ?>?page=invitacion_clubes&torneo_id=<?= (int)$torneo_id ?>" id="formInvitar">
                         <?= CSRF::input() ?>
                         <input type="hidden" name="action" value="invitar_seleccionados">
                         <input type="hidden" name="acceso1" value="<?= htmlspecialchars(date('Y-m-d', strtotime(($torneo['fechator'] ?? 'today') . ' -30 days'))) ?>">
