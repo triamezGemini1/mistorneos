@@ -1187,11 +1187,13 @@ function getModalidadLabel($modalidad) {
             </div>
             <div class="card-body">
             <?php
-            $form_params = ['action' => $action === 'edit' ? 'update' : 'save'];
+            $form_params = ['page' => 'tournaments', 'action' => $action === 'edit' ? 'update' : 'save'];
             if ($action === 'edit') {
                 $form_params['id'] = (int)$tournament['id'];
             }
-            $form_action = (isset($dashboard_href) && is_callable($dashboard_href)) ? $dashboard_href('tournaments', $form_params) : 'index.php?page=tournaments&action=' . ($action === 'edit' ? 'update&id=' . (int)$tournament['id'] : 'save');
+            // Usar SCRIPT_NAME para garantizar que el POST llegue al mismo endpoint (evita fallos con base href o subcarpetas)
+            $script_path = isset($_SERVER['SCRIPT_NAME']) ? $_SERVER['SCRIPT_NAME'] : 'index.php';
+            $form_action = $script_path . '?' . http_build_query($form_params);
             ?>
             <form method="POST" action="<?= htmlspecialchars($form_action) ?>" enctype="multipart/form-data">
                 <?= CSRF::input(); ?>

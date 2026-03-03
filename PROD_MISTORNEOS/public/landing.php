@@ -1380,8 +1380,8 @@ foreach ($eventos_calendario as $ev) {
                             t.id as torneo_id,
                             t.nombre as torneo_nombre,
                             t.fechator,
-                            c.nombre as organizacion_nombre,
-                            c.id as club_id
+                            o.nombre as organizacion_nombre,
+                            o.id as club_id
                         FROM tournaments t
                         LEFT JOIN organizaciones o ON t.club_responsable = o.id
                         WHERE t.estatus = 1 
@@ -1400,7 +1400,7 @@ foreach ($eventos_calendario as $ev) {
                                 tp.*,
                                 t.nombre as torneo_nombre,
                                 t.fechator,
-                                c.nombre as organizacion_nombre
+                                o.nombre as organizacion_nombre
                             FROM club_photos tp
                             JOIN tournaments t ON tp.torneo_id = t.id
                             LEFT JOIN organizaciones o ON t.club_responsable = o.id

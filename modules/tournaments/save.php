@@ -518,20 +518,31 @@ try {
         $stmt_update->execute($file_updates);
     }
     
-    // Redirigir con éxito a la lista de torneos (URL absoluta para evitar pantalla en blanco)
+    // Redirigir con éxito a la lista de torneos
     $success_msg = 'Torneo creado exitosamente';
     $_SESSION['success'] = $success_msg;
-    $redirect_url = class_exists('AppHelpers') ? AppHelpers::dashboard('tournaments', ['success' => $success_msg]) : 'index.php?page=tournaments&success=' . urlencode($success_msg);
+    $script_path = isset($_SERVER['SCRIPT_NAME']) ? $_SERVER['SCRIPT_NAME'] : 'index.php';
+    $redirect_url = $script_path . '?page=tournaments&success=' . urlencode($success_msg);
     if (ob_get_level()) ob_end_clean();
-    header('Location: ' . $redirect_url, true, 302);
+    if (!headers_sent()) {
+        header('Location: ' . $redirect_url, true, 302);
+        exit;
+    }
+    echo '<meta http-equiv="refresh" content="0;url=' . htmlspecialchars($redirect_url) . '"><p>Torneo creado. Redirigiendo...</p>';
     exit;
 
 } catch (Exception $e) {
     $error_msg = $e->getMessage();
+    error_log('Tournaments save error: ' . $error_msg);
     $_SESSION['error'] = $error_msg;
-    $redirect_url = class_exists('AppHelpers') ? AppHelpers::dashboard('tournaments', ['action' => 'new', 'error' => $error_msg]) : 'index.php?page=tournaments&action=new&error=' . urlencode($error_msg);
+    $script_path = isset($_SERVER['SCRIPT_NAME']) ? $_SERVER['SCRIPT_NAME'] : 'index.php';
+    $redirect_url = $script_path . '?page=tournaments&action=new&error=' . urlencode($error_msg);
     if (ob_get_level()) ob_end_clean();
-    header('Location: ' . $redirect_url, true, 302);
+    if (!headers_sent()) {
+        header('Location: ' . $redirect_url, true, 302);
+        exit;
+    }
+    echo '<meta http-equiv="refresh" content="0;url=' . htmlspecialchars($redirect_url) . '"><p>Error: ' . htmlspecialchars($error_msg) . '. Redirigiendo...</p>';
     exit;
 }
 
