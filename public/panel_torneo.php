@@ -65,6 +65,8 @@ $org_logo_url = $org_logo ? AppHelpers::url('view_image.php', ['path' => $org_lo
     <link rel="stylesheet" href="assets/dashboard.css">
     <style>
         html, body { height: 100%; margin: 0; overflow: hidden; }
+        /* Panel de Control de Torneos: +1pt en todo el contenido */
+        body.panel-torneo-page { font-size: 1.083rem; }
         .panel-contenedor {
             overflow: hidden; display: flex; flex-direction: column;
             height: 100vh; box-sizing: border-box;
@@ -74,7 +76,7 @@ $org_logo_url = $org_logo ? AppHelpers::url('view_image.php', ['path' => $org_lo
         }
     </style>
 </head>
-<body>
+<body class="panel-torneo-page">
     <main class="panel-contenedor" style="width:90%;max-width:100%;margin:0 auto;background:#005c44;padding:0.85rem;">
         <div class="d-flex justify-content-between align-items-center mb-2 flex-shrink-0 gap-3">
             <?php if ($org_logo_url): ?>

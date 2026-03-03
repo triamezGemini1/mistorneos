@@ -2106,7 +2106,7 @@ select:focus {
   color: #333;
 }
 
-/* Panel de Control (page=home): aumentar tamaño de letra 1 punto en todo el contenido */
-body.page-panel-control {
-  font-size: calc(1em + 1pt);
+/* Panel de Control de Torneos (torneo_gestion + action=panel): aumentar tamaño de letra 1 punto */
+body.page-panel-control-torneos {
+  font-size: 1.083rem; /* 16px + 1pt ≈ 17.33px */
 }

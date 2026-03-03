@@ -493,9 +493,12 @@ $page_title = $page_title ?? 'Administrador de Torneos';
             padding: 0.375rem 0.75rem;
             font-size: 0.875rem;
         }
+
+        /* Panel de Control de Torneos: +1pt en todo el contenido */
+        body.page-panel-control-torneos { font-size: 1.083rem; }
     </style>
 </head>
-<body>
+<body class="<?= (isset($action) && in_array($action, ['panel', 'panel_equipos'], true)) ? 'page-panel-control-torneos' : '' ?>">
     <!-- Sidebar -->
     <nav class="admin-sidebar" id="adminSidebar">
         <div class="sidebar-header">
