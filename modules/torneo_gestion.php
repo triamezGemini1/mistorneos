@@ -5078,26 +5078,26 @@ function ejecutarReasignacion($torneo_id, $ronda, $mesa, $user_id, $is_admin_gen
             $mapaActual[$jugador['secuencia']] = $jugador;
         }
         
-        // Definir cambios según la opción
+        // Definir cambios según la opción (un solo swap por par: [origen, destino] evita deshacer el cambio)
         $cambios = [];
         switch ($opcion) {
-            case 1: // 1 con 3
-                $cambios = [[1, 3], [3, 1]];
+            case 1: // Intercambiar posición 1 con 3
+                $cambios = [[1, 3]];
                 break;
-            case 2: // 1 con 4
-                $cambios = [[1, 4], [4, 1]];
+            case 2: // Intercambiar posición 1 con 4
+                $cambios = [[1, 4]];
                 break;
-            case 3: // 2 con 3
-                $cambios = [[2, 3], [3, 2]];
+            case 3: // Intercambiar posición 2 con 3
+                $cambios = [[2, 3]];
                 break;
-            case 4: // 2 con 4
-                $cambios = [[2, 4], [4, 2]];
+            case 4: // Intercambiar posición 2 con 4
+                $cambios = [[2, 4]];
                 break;
-            case 5: // 1 con 3 y 2 con 4 (intercambio completo de parejas)
-                $cambios = [[1, 3], [3, 1], [2, 4], [4, 2]];
+            case 5: // Intercambio completo de parejas (1↔3, 2↔4)
+                $cambios = [[1, 3], [2, 4]];
                 break;
-            case 6: // 1 con 4 y 2 con 3 (intercambio cruzado)
-                $cambios = [[1, 4], [4, 1], [2, 3], [3, 2]];
+            case 6: // Intercambio cruzado (1↔4, 2↔3)
+                $cambios = [[1, 4], [2, 3]];
                 break;
         }
         
