@@ -329,9 +329,13 @@ if ($page === 'organizaciones') {
 }
 
 // Unificar Torneos: solo usar la vista del menú lateral (torneo_gestion). Acceso GET a page=tournaments redirige al panel.
+// Excepción: acciones new, view, edit se manejan en tournaments (crear/ver/editar torneo)
 if ($page === 'tournaments' && ($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'GET') {
-    header('Location: index.php?page=torneo_gestion&action=index' . (isset($_GET['error']) ? '&error=' . urlencode($_GET['error']) : '') . (isset($_GET['success']) ? '&success=' . urlencode($_GET['success']) : ''));
-    exit;
+    $tg_action = $_GET['action'] ?? 'index';
+    if ($tg_action === '' || $tg_action === 'index' || $tg_action === 'list') {
+        header('Location: index.php?page=torneo_gestion&action=index' . (isset($_GET['error']) ? '&error=' . urlencode($_GET['error']) : '') . (isset($_GET['success']) ? '&success=' . urlencode($_GET['success']) : ''));
+        exit;
+    }
 }
 
 // Incluir layout principal (para GET normal y páginas de visualización). $page ya está definida y saneada; el layout la usa para incluir el módulo correcto.

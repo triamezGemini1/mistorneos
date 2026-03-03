@@ -753,6 +753,17 @@ try {
             }
             break;
 
+        case 'new':
+        case 'view':
+        case 'edit':
+            // Crear/ver/editar torneo: delegar al módulo tournaments
+            $params = ['page' => 'tournaments', 'action' => $action];
+            if ($action !== 'new' && isset($_GET['id']) && (int)$_GET['id'] > 0) {
+                $params['id'] = (int)$_GET['id'];
+            }
+            header('Location: index.php?' . http_build_query($params));
+            exit;
+
         default:
             // Fallback para producción: si la acción es verificar_actas_index y no coincidió antes (p. ej. deploy antiguo)
             if ($action === 'verificar_actas_index') {
@@ -2243,7 +2254,8 @@ function obtenerDatosInscribirEquipoSitio($torneo_id) {
         'equipos_registrados' => $equipos_registrados,
         'total_jugadores_disponibles' => count($jugadores_disponibles),
         'total_equipos' => count($equipos_registrados),
-        'jugadores_por_equipo' => max(2, (int)($torneo['pareclub'] ?? 4))
+        'jugadores_por_equipo' => max(2, (int)($torneo['pareclub'] ?? 4)),
+        'is_admin_club' => $is_admin_club,
     ];
 }
 

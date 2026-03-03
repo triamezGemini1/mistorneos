@@ -233,6 +233,11 @@ $api_base_path = (function_exists('AppHelpers') ? AppHelpers::getPublicPath() : 
                                         <option value="" disabled>No hay clubes disponibles</option>
                                     <?php endif; ?>
                                 </select>
+                                <?php if (empty($clubes_disponibles) && !empty($is_admin_club ?? false)): ?>
+                                    <small class="text-muted d-block mt-1">
+                                        <a href="<?php echo (function_exists('AppHelpers') ? AppHelpers::dashboard('clubes_asociados') : 'index.php?page=clubes_asociados'); ?>">Crear club</a> en Clubes de la organización
+                                    </small>
+                                <?php endif; ?>
                             </div>
                             <div class="col-md-5">
                                 <input type="text" 
