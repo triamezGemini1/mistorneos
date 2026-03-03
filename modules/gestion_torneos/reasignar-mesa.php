@@ -206,7 +206,7 @@ $base_url = $use_standalone ? $script_actual : 'index.php?page=torneo_gestion';
                               class="card shadow"
                               onsubmit="event.preventDefault(); reasignarMesaConfirmar(event);">
                             <div class="card-body">
-                                <input type="hidden" name="csrf_token" value="<?php echo Auth::generateCsrfToken(); ?>">
+                                <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars(CSRF::token(), ENT_QUOTES); ?>">
                                 <input type="hidden" name="action" value="ejecutar_reasignacion">
                                 <input type="hidden" name="torneo_id" value="<?php echo $torneo['id']; ?>">
                                 <input type="hidden" name="ronda" value="<?php echo $ronda; ?>">

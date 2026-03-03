@@ -388,5 +388,11 @@ if ($page === 'tournaments' && ($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'GET') 
     }
 }
 
+// torneo_gestion POST: procesar ANTES del layout para evitar "headers already sent" al redirigir
+if ($page === 'torneo_gestion' && ($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
+    require_once __DIR__ . '/../modules/torneo_gestion.php';
+    exit;
+}
+
 // Incluir layout principal (para GET normal y páginas de visualización). $page ya está definida y saneada; el layout la usa para incluir el módulo correcto.
 include __DIR__ . "/includes/layout.php";
