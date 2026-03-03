@@ -276,7 +276,8 @@ class InvitationRegisterContext
             if (!$current_user) {
                 $base = class_exists('AppHelpers') ? rtrim(AppHelpers::getPublicUrl(), '/') : (rtrim(($GLOBALS['APP_CONFIG']['app']['base_url'] ?? ''), '/') ?: '');
                 if ($base !== '' && !empty($token)) {
-                    $_SESSION['url_retorno'] = $base . '/invitation/register?token=' . urlencode($token);
+                    $url_retorno_full = $base . '/invitation/register?' . http_build_query(['token' => $token, 'torneo' => $torneo_id, 'club' => $club_id]);
+                    $_SESSION['url_retorno'] = $url_retorno_full;
                     $_SESSION['invitation_token'] = $token;
                     $_SESSION['invitation_club_name'] = $invitation_data['club_name'] ?? 'Club';
                     if (!headers_sent()) {

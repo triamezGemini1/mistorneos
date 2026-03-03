@@ -279,10 +279,10 @@
                     if ($base_inv !== ''):
                     ?>
                     <div class="d-flex flex-wrap gap-2">
-                        <a href="<?= htmlspecialchars($base_inv) ?>/auth/login?<?= http_build_query(['return_url' => 'invitation/register?token=' . urlencode($token)]) ?>" class="btn btn-primary">
+                        <a href="<?= htmlspecialchars($base_inv) ?>/auth/login?<?= http_build_query(['return_url' => 'invitation/register?' . http_build_query(['token' => $token, 'torneo' => $torneo_id, 'club' => $club_id])]) ?>" class="btn btn-primary">
                             <i class="fas fa-sign-in-alt me-2"></i>Iniciar Sesión
                         </a>
-                        <a href="<?= htmlspecialchars($base_inv) ?>/join?token=<?= urlencode($token) ?>" class="btn btn-success">
+                        <a href="<?= htmlspecialchars($base_inv) ?>/join?<?= http_build_query(['token' => $token, 'torneo' => $torneo_id, 'club' => $club_id]) ?>" class="btn btn-success">
                             <i class="fas fa-user-plus me-2"></i>Registrarse
                         </a>
                     </div>

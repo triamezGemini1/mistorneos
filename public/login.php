@@ -42,12 +42,20 @@ if (isset($_SESSION['user'])) {
 // Solo tratar como "acceso por invitación" si la petición viene del flujo de invitación (return_url con invitation/register o join)
 $from_invitation_flow = $return_url && (strpos($return_url, 'invitation/register') !== false || strpos($return_url, 'join') !== false);
 
-// Captura del token de invitación desde cookie solo cuando vino del flujo de invitación (evitar confundir con login normal o admin)
-if ($from_invitation_flow && empty($_SESSION['invitation_token']) && !empty($_COOKIE['invitation_token']) && strlen(trim($_COOKIE['invitation_token'])) >= 32) {
+// Captura del token de invitación desde cookie o return_url cuando vino del flujo de invitación (evitar confundir con login normal o admin)
+if ($from_invitation_flow) {
     require_once __DIR__ . '/../lib/app_helpers.php';
-    $_SESSION['invitation_token'] = trim($_COOKIE['invitation_token']);
-    $_SESSION['url_retorno'] = rtrim(AppHelpers::getPublicUrl(), '/') . '/invitation/register?token=' . urlencode($_SESSION['invitation_token']);
-    $_SESSION['invitation_club_name'] = 'Club';
+    $entry_base = AppHelpers::getRequestEntryUrl();
+    if ($return_url !== '') {
+        $_SESSION['url_retorno'] = (strpos($return_url, 'http') === 0 || strpos($return_url, '/') === 0) ? $return_url : rtrim($entry_base, '/') . '/' . ltrim($return_url, '/');
+    }
+    if (empty($_SESSION['invitation_token']) && !empty($_COOKIE['invitation_token']) && strlen(trim($_COOKIE['invitation_token'])) >= 32) {
+        $_SESSION['invitation_token'] = trim($_COOKIE['invitation_token']);
+        if (empty($_SESSION['url_retorno'])) {
+            $_SESSION['url_retorno'] = rtrim($entry_base, '/') . '/invitation/register?token=' . urlencode($_SESSION['invitation_token']);
+        }
+        $_SESSION['invitation_club_name'] = 'Club';
+    }
 }
 
 if (!$from_invitation_flow) {

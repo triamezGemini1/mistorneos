@@ -18,9 +18,23 @@ $data = InvitationRegisterContext::load();
 extract($data);
 
 $base = $base !== '' ? rtrim($base, '/') : rtrim(class_exists('AppHelpers') ? AppHelpers::getPublicUrl() : ($GLOBALS['APP_CONFIG']['app']['base_url'] ?? ''), '/');
-$same_url = $base . '/invitation/register?' . http_build_query(['token' => $token, 'torneo' => $torneo_id, 'club' => $club_id]);
+$entry_base = class_exists('AppHelpers') ? AppHelpers::getRequestEntryUrl() : $base;
+$same_url = ($entry_base !== '' ? rtrim($entry_base, '/') . '/' : '') . 'invitation/register?' . http_build_query(['token' => $token, 'torneo' => $torneo_id, 'club' => $club_id]);
 
 $inv_register_safe_redirect = function ($url) {
+    if (session_status() === PHP_SESSION_ACTIVE) {
+        $params = session_get_cookie_params();
+        $sname = session_name();
+        $sid = session_id();
+        if ($sid !== '' && $sname !== '') {
+            $cookie_opts = ['expires' => 0, 'path' => '/', 'domain' => $params['domain'] ?? '', 'secure' => $params['secure'] ?? false, 'httponly' => $params['httponly'] ?? true, 'samesite' => $params['samesite'] ?? 'Lax'];
+            if (defined('URL_BASE') && URL_BASE !== '' && URL_BASE !== '/') {
+                @setcookie($sname, '', array_merge($cookie_opts, ['expires' => time() - 3600, 'path' => URL_BASE]));
+            }
+            @setcookie($sname, $sid, $cookie_opts);
+        }
+        if (function_exists('session_write_close')) session_write_close();
+    }
     if (!headers_sent()) {
         header('Location: ' . $url);
         exit;
@@ -71,7 +85,8 @@ if ($_POST['action'] === 'retirar') {
     $params = ['token' => $token, 'torneo' => $torneo_id, 'club' => $club_id];
     if ($success_message !== '') $params['success'] = $success_message;
     if ($error_message !== '') $params['error'] = $error_message;
-    $inv_register_safe_redirect($base . '/invitation/register?' . http_build_query($params, '', '&', PHP_QUERY_RFC3986));
+    $redirect_url = ($entry_base !== '' ? rtrim($entry_base, '/') . '/' : '') . 'invitation/register?' . http_build_query($params, '', '&', PHP_QUERY_RFC3986);
+    $inv_register_safe_redirect($redirect_url);
 }
 
 if ($_POST['action'] === 'register_player') {
@@ -234,7 +249,8 @@ if ($_POST['action'] === 'register_player') {
     $params = ['token' => $token, 'torneo' => $torneo_id, 'club' => $club_id];
     if ($success_message) $params['success'] = urlencode($success_message);
     if ($error_message) $params['error'] = urlencode($error_message);
-    $inv_register_safe_redirect($base . '/invitation/register?' . http_build_query($params));
+    $redirect_url = ($entry_base !== '' ? rtrim($entry_base, '/') . '/' : '') . 'invitation/register?' . http_build_query($params);
+    $inv_register_safe_redirect($redirect_url);
 }
 
 // Inscripción por pareja (2 jugadores + nombre opcional). Mismo flujo que equipos pero con 2 jugadores.
@@ -365,5 +381,6 @@ if ($_POST['action'] === 'register_pair') {
     $params = ['token' => $token, 'torneo' => $torneo_id, 'club' => $club_id];
     if ($success_message !== '') $params['success'] = urlencode($success_message);
     if ($error_message !== '') $params['error'] = urlencode($error_message);
-    $inv_register_safe_redirect($base . '/invitation/register?' . http_build_query($params));
+    $redirect_url = ($entry_base !== '' ? rtrim($entry_base, '/') . '/' : '') . 'invitation/register?' . http_build_query($params);
+    $inv_register_safe_redirect($redirect_url);
 }
