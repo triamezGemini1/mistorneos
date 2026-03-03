@@ -533,6 +533,10 @@ if (isset($_GET['ajax']) && $_GET['ajax'] === 'deuda') {
                                class="btn btn-info me-2">
                             <i class="fas fa-file-alt me-2"></i>Reportes
                         </a>
+                        <a href="index.php?page=registrants_report_retirados<?= !empty($filter_torneo) ? '&filter_torneo=' . (int)$filter_torneo : '' ?><?= !empty($filter_clubs) ? '&' . http_build_query(['filter_clubs' => $filter_clubs]) : '' ?>" 
+                               class="btn btn-warning text-dark me-2">
+                            <i class="fas fa-user-minus me-2"></i>Reporte Retirados
+                        </a>
                     <?php endif; ?>
                 </div>
             </div>

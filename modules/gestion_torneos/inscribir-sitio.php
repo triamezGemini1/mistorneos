@@ -170,6 +170,15 @@ require_once __DIR__ . '/../../lib/InscritosHelper.php';
                 
                 <!-- Tab: Búsqueda por Cédula -->
                 <div class="tab-pane fade" id="cedula" role="tabpanel">
+                    <div class="alert alert-light border mb-3">
+                        <strong><i class="fas fa-info-circle me-2 text-primary"></i>Cómo buscar por cédula:</strong>
+                        <ul class="mb-0 mt-2">
+                            <li>Ingrese solo los <strong>dígitos</strong> de la cédula (ej: <code>12345678</code>)</li>
+                            <li>O el <strong>ID de usuario</strong> si lo conoce (ej: <code>42</code>)</li>
+                            <li>También acepta formato con nacionalidad: <code>V12345678</code> o <code>E12345678</code></li>
+                            <li>Presione <strong>Buscar</strong> y luego <strong>Inscribir</strong> cuando aparezca el resultado</li>
+                        </ul>
+                    </div>
                     <div class="row">
                         <div class="col-md-8">
                             <div class="card">
@@ -252,20 +261,20 @@ require_once __DIR__ . '/../../lib/InscritosHelper.php';
     border-bottom: 1px solid #dee2e6;
 }
 #inscripcionTabs .nav-link {
-    background-color: #e9ecef;
-    color: #212529;
+    background-color: #e9ecef !important;
+    color: #212529 !important;
     border: 1px solid #dee2e6;
     border-bottom: none;
     margin-bottom: -1px;
-    font-weight: 500;
+    font-weight: 600;
 }
 #inscripcionTabs .nav-link:hover {
-    background-color: #dee2e6;
-    color: #212529;
+    background-color: #dee2e6 !important;
+    color: #0d6efd !important;
 }
 #inscripcionTabs .nav-link.active {
-    background-color: #fff;
-    color: #0d6efd;
+    background-color: #fff !important;
+    color: #0d6efd !important;
     border-color: #dee2e6 #dee2e6 #fff;
 }
 .table-row-hover {

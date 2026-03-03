@@ -109,7 +109,7 @@ $url_panel = $base_url . ($use_standalone ? '?' : '&') . 'action=panel&torneo_id
             </h5>
         </div>
         <div class="card-body">
-            <ul class="nav nav-tabs mb-4" id="sustitucionTabs" role="tablist">
+            <ul class="nav nav-tabs nav-tabs-sustituir mb-4" id="sustitucionTabs" role="tablist">
                 <li class="nav-item" role="presentation">
                     <button class="nav-link active" id="territorio-tab" data-bs-toggle="tab" data-bs-target="#territorio" type="button" role="tab">
                         <i class="fas fa-users me-2"></i>Atletas de Mi Territorio
@@ -173,6 +173,15 @@ $url_panel = $base_url . ($use_standalone ? '?' : '&') . 'action=panel&torneo_id
                 <div class="tab-pane fade" id="cedula" role="tabpanel">
                     <div class="row">
                         <div class="col-md-8">
+                            <div class="alert alert-light border mb-3">
+                                <strong><i class="fas fa-info-circle me-2 text-primary"></i>Cómo buscar por cédula:</strong>
+                                <ul class="mb-0 mt-2">
+                                    <li>Ingrese solo los <strong>dígitos</strong> de la cédula (ej: <code>12345678</code>)</li>
+                                    <li>O el <strong>ID de usuario</strong> si lo conoce (ej: <code>42</code>)</li>
+                                    <li>También acepta formato con nacionalidad: <code>V12345678</code> o <code>E12345678</code></li>
+                                    <li>Presione <strong>Buscar</strong> y luego <strong>Sustituir</strong> cuando aparezca el resultado</li>
+                                </ul>
+                            </div>
                             <div class="card">
                                 <div class="card-body">
                                     <div class="mb-3">
@@ -215,6 +224,29 @@ $url_panel = $base_url . ($use_standalone ? '?' : '&') . 'action=panel&torneo_id
 </div>
 
 <style>
+/* Pestañas con buen contraste: fondo claro y texto oscuro */
+.nav-tabs-sustituir.nav-tabs {
+    border-bottom: 2px solid #dee2e6;
+}
+.nav-tabs-sustituir .nav-link {
+    background-color: #e9ecef;
+    color: #212529;
+    border: 1px solid #dee2e6;
+    border-bottom: none;
+    margin-bottom: -2px;
+    font-weight: 600;
+}
+.nav-tabs-sustituir .nav-link:hover {
+    background-color: #dee2e6;
+    color: #0d6efd;
+    border-color: #dee2e6 #dee2e6 #e9ecef;
+}
+.nav-tabs-sustituir .nav-link.active {
+    background-color: #fff;
+    color: #0d6efd;
+    border-color: #dee2e6 #dee2e6 #fff;
+    border-bottom: 2px solid #fff;
+}
 .table-row-hover:hover { background-color: #e3f2fd !important; }
 </style>
 
