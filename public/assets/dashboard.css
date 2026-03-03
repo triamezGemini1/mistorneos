@@ -2105,3 +2105,8 @@ select:focus {
   line-height: 1.5;
   color: #333;
 }
+
+/* Panel de Control (page=home): aumentar tamaño de letra 1 punto en todo el contenido */
+body.page-panel-control {
+  font-size: calc(1em + 1pt);
+}

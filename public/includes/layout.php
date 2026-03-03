@@ -110,7 +110,7 @@ if (in_array($user['role'], ['admin_club', 'admin_general', 'admin_torneo'], tru
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" media="print" onload="this.media='all'">
   <noscript><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"></noscript>
 </head>
-<body class="bg-light">
+<body class="bg-light<?= ($current_page === 'home') ? ' page-panel-control' : '' ?>">
   <!-- Contenedor para notificaciones toast (Push + tarjeta visual) -->
   <div id="notification-container" aria-live="polite"></div>
 
