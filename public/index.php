@@ -189,6 +189,16 @@ $page = preg_replace('/[^a-zA-Z0-9_\/\-]/', '', $page);
 $action = $_GET['action'] ?? '';
 $actions_requiring_redirect = ['delete', 'save', 'update'];
 
+// torneo_gestion action=new/view/edit: redirigir a tournaments ANTES de cualquier output (evita "headers already sent" y página en blanco)
+if ($page === 'torneo_gestion' && ($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'GET' && in_array($action, ['new', 'view', 'edit'], true)) {
+    $params = ['page' => 'tournaments', 'action' => $action];
+    if ($action !== 'new' && isset($_GET['id']) && (int)$_GET['id'] > 0) {
+        $params['id'] = (int)$_GET['id'];
+    }
+    header('Location: index.php?' . http_build_query($params));
+    exit;
+}
+
 // Acciones que redirigen sin layout (evitan acceso directo a modules/ bloqueado por .htaccess)
 if ($page === 'admin_clubs' && $action === 'send_notification') {
     require_once __DIR__ . '/../modules/admin_clubs/send_notification.php';
