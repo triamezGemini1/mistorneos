@@ -1,14 +1,14 @@
 <?php
 /**
  * Reporte de identificación de jugadores.
- * Solo nombre, cédula e ID del torneo. Tarjetas 4cm × 4cm con borde y tipografía legible.
+ * Solo nombre, cédula e ID del jugador. Tarjetas 8cm × 8cm. 5 columnas × 6 filas por hoja.
  */
 
 $pdo = DB::pdo();
 $torneo_nombre = isset($torneo['nombre']) ? $torneo['nombre'] : 'Torneo';
 
 $stmt = $pdo->prepare("
-    SELECT i.id_usuario, i.torneo_id, u.nombre, u.cedula
+    SELECT i.id_usuario, u.nombre, u.cedula
     FROM inscritos i
     INNER JOIN usuarios u ON u.id = i.id_usuario
     WHERE i.torneo_id = ?
@@ -17,14 +17,25 @@ $stmt = $pdo->prepare("
 ");
 $stmt->execute([$torneo_id]);
 $jugadores = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+$url_panel = 'index.php?page=tournament_admin&torneo_id=' . (int)$torneo_id;
 ?>
 <style>
+.contenedor-pagina-tarjetas {
+    display: grid;
+    grid-template-columns: repeat(5, 8cm);
+    grid-template-rows: repeat(6, 8cm);
+    width: 40cm;
+    gap: 0;
+    page-break-after: always;
+}
+.contenedor-pagina-tarjetas:last-child { page-break-after: auto; }
 .tarjeta-id-lote {
-    width: 4cm;
-    height: 4cm;
-    border: 3px solid #333;
-    border-radius: 4px;
-    padding: 0.25cm;
+    width: 8cm;
+    height: 8cm;
+    border: 4px solid #333;
+    border-radius: 6px;
+    padding: 0.4cm;
     box-sizing: border-box;
     display: flex;
     flex-direction: column;
@@ -35,17 +46,24 @@ $jugadores = $stmt->fetchAll(PDO::FETCH_ASSOC);
     page-break-inside: avoid;
     background: #fff;
 }
-.tarjeta-id-lote .titulo-torneo { font-size: 9pt; font-weight: bold; color: #1565c0; margin-bottom: 0.2cm; line-height: 1.15; }
-.tarjeta-id-lote .nombre { font-size: 11pt; font-weight: bold; color: #212121; margin-bottom: 0.15cm; line-height: 1.2; }
-.tarjeta-id-lote .cedula { font-size: 10pt; color: #424242; margin-bottom: 0.15cm; }
-.tarjeta-id-lote .id-torneo { font-size: 10pt; font-weight: bold; color: #0d47a1; }
+.tarjeta-id-lote .titulo-torneo { font-size: 14pt; font-weight: bold; color: #1565c0; margin-bottom: 0.3cm; line-height: 1.2; }
+.tarjeta-id-lote .nombre { font-size: 16pt; font-weight: bold; color: #212121; margin-bottom: 0.25cm; line-height: 1.25; }
+.tarjeta-id-lote .cedula { font-size: 14pt; color: #424242; margin-bottom: 0.25cm; }
+.tarjeta-id-lote .id-jugador { font-size: 18pt; font-weight: bold; color: #0d47a1; }
 @media print {
-    body * { visibility: hidden; }
-    #area-impresion-tarjetas, #area-impresion-tarjetas * { visibility: visible; }
-    #area-impresion-tarjetas { position: absolute; left: 0; top: 0; width: 100%; padding: 0.5cm; }
     .no-print-id { display: none !important; }
+    .col-md-3 { display: none !important; }
+    .col-md-9 { max-width: 100% !important; flex: 0 0 100% !important; }
+    .card .card-body { padding: 0 !important; border: none !important; background: transparent !important; }
+    .card { border: none !important; box-shadow: none !important; background: transparent !important; }
+    @page { size: 40cm 48cm; margin: 0.5cm; }
 }
 </style>
+<div class="no-print-id mb-3">
+    <a href="<?= htmlspecialchars($url_panel) ?>" class="btn btn-outline-secondary btn-sm">
+        <i class="fas fa-arrow-left me-1"></i>Volver al panel de control
+    </a>
+</div>
 <div class="card">
     <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center no-print-id">
         <h6 class="mb-0"><i class="fas fa-address-card me-2"></i>Identificación de jugadores</h6>
@@ -57,20 +75,26 @@ $jugadores = $stmt->fetchAll(PDO::FETCH_ASSOC);
         <?php if (empty($jugadores)): ?>
             <p class="text-muted">No hay jugadores confirmados para este torneo.</p>
         <?php else: ?>
-            <p class="small text-muted no-print-id mb-3">Tarjetas 4cm × 4cm: nombre, cédula e ID del torneo.</p>
-            <div id="area-impresion-tarjetas" class="row g-2">
-                <?php foreach ($jugadores as $j):
-                    $nombre = htmlspecialchars($j['nombre'] ?? '—');
-                    $cedula = htmlspecialchars($j['cedula'] ?? '');
-                    $id_torneo = (int)($j['torneo_id'] ?? $torneo_id);
+            <p class="small text-muted mb-3 no-print-id">Tarjetas 8×8 cm: nombre, cédula, ID jugador. 5 columnas × 6 filas por hoja. Al imprimir solo se muestran las tarjetas.</p>
+            <div id="area-impresion-tarjetas">
+                <?php
+                $por_pagina = 30;
+                $paginas = array_chunk($jugadores, $por_pagina);
+                foreach ($paginas as $grupo):
                 ?>
-                <div class="col-6 col-md-4 col-lg-3">
+                <div class="contenedor-pagina-tarjetas">
+                    <?php foreach ($grupo as $j):
+                        $nombre = htmlspecialchars($j['nombre'] ?? '—');
+                        $cedula = htmlspecialchars($j['cedula'] ?? '');
+                        $id_jugador = (int)($j['id_usuario'] ?? 0);
+                    ?>
                     <div class="tarjeta-id-lote">
                         <div class="titulo-torneo"><?= htmlspecialchars($torneo_nombre) ?></div>
                         <div class="nombre"><?= $nombre ?></div>
                         <div class="cedula">C.I. <?= $cedula ?></div>
-                        <div class="id-torneo">ID Torneo: <?= $id_torneo ?></div>
+                        <div class="id-jugador">ID: <?= $id_jugador ?></div>
                     </div>
+                    <?php endforeach; ?>
                 </div>
                 <?php endforeach; ?>
             </div>

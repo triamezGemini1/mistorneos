@@ -10,6 +10,7 @@
 
 $pdo = DB::pdo();
 $base_url = app_base_url();
+$url_panel = 'index.php?page=tournament_admin&torneo_id=' . (int)$torneo_id;
 
 // URL principal para jugadores: acceso por cédula (recomendado para QR del torneo)
 $perfil_jugador_url = $base_url . '/public/perfil_jugador.php?torneo_id=' . $torneo_id;
@@ -43,6 +44,11 @@ function generarQRUrl($data, $size = 300) {
     .admin-menu, .navbar, .btn, .breadcrumb { display: none !important; }
 }
 </style>
+<div class="mb-3 no-print">
+    <a href="<?= htmlspecialchars($url_panel) ?>" class="btn btn-outline-secondary btn-sm">
+        <i class="fas fa-arrow-left me-1"></i>Volver al panel de control
+    </a>
+</div>
 <div id="qr-torneo-print-area" class="card">
     <div class="card-header bg-primary text-white d-flex flex-wrap align-items-center justify-content-between gap-2">
         <h5 class="mb-0">
