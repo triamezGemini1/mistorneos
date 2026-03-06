@@ -59,23 +59,20 @@ $url_panel = 'index.php?page=tournament_admin&torneo_id=' . (int)$torneo_id;
     @page { size: 40cm 48cm; margin: 0.5cm; }
 }
 </style>
-<div class="no-print-id mb-3">
-    <a href="<?= htmlspecialchars($url_panel) ?>" class="btn btn-outline-secondary btn-sm">
+<div class="no-print-id mb-3 d-flex align-items-center gap-2">
+    <a href="<?= htmlspecialchars($url_panel) ?>" class="btn btn-primary">
         <i class="fas fa-arrow-left me-1"></i>Volver al panel de control
     </a>
+    <button type="button" class="btn btn-outline-secondary" onclick="window.print();">
+        <i class="fas fa-print me-1"></i>Imprimir
+    </button>
 </div>
 <div class="card">
-    <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center no-print-id">
-        <h6 class="mb-0"><i class="fas fa-address-card me-2"></i>Identificación de jugadores</h6>
-        <button type="button" class="btn btn-light btn-sm" onclick="window.print();">
-            <i class="fas fa-print me-1"></i>Imprimir
-        </button>
-    </div>
     <div class="card-body">
         <?php if (empty($jugadores)): ?>
             <p class="text-muted">No hay jugadores confirmados para este torneo.</p>
         <?php else: ?>
-            <p class="small text-muted mb-3 no-print-id">Tarjetas 8×8 cm: nombre, cédula, ID jugador. 5 columnas × 6 filas por hoja. Al imprimir solo se muestran las tarjetas.</p>
+            <p class="small text-muted mb-3 no-print-id">Tarjetas 8×8 cm: nombre, cédula, ID jugador. 5 columnas × 6 filas por hoja.</p>
             <div id="area-impresion-tarjetas">
                 <?php
                 $por_pagina = 30;

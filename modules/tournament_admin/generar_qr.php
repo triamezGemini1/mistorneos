@@ -44,22 +44,15 @@ function generarQRUrl($data, $size = 300) {
     .admin-menu, .navbar, .btn, .breadcrumb { display: none !important; }
 }
 </style>
-<div class="mb-3 no-print">
-    <a href="<?= htmlspecialchars($url_panel) ?>" class="btn btn-outline-secondary btn-sm">
+<div class="mb-3 no-print d-flex align-items-center gap-2">
+    <a href="<?= htmlspecialchars($url_panel) ?>" class="btn btn-primary">
         <i class="fas fa-arrow-left me-1"></i>Volver al panel de control
     </a>
+    <button type="button" class="btn btn-outline-secondary" onclick="window.print();" title="Imprimir códigos QR">
+        <i class="fas fa-print me-1"></i>Imprimir
+    </button>
 </div>
 <div id="qr-torneo-print-area" class="card">
-    <div class="card-header bg-primary text-white d-flex flex-wrap align-items-center justify-content-between gap-2">
-        <h5 class="mb-0">
-            <i class="fas fa-qrcode me-2"></i>Generar Códigos QR para Acceso Público
-        </h5>
-        <div class="d-flex gap-2 no-print">
-            <button type="button" class="btn btn-light btn-sm" onclick="window.print();" title="Imprimir códigos QR">
-                <i class="fas fa-print me-1"></i>Imprimir
-            </button>
-        </div>
-    </div>
     <div class="card-body">
         <div class="alert alert-info">
             <i class="fas fa-info-circle me-2"></i>
