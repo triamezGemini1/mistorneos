@@ -480,6 +480,7 @@ tailwind.config = {
                                 <?php else: ?>
                                     <a href="index.php?page=registrants&torneo_id=<?php echo $torneo['id']; ?><?php echo $use_standalone ? '&return_to=panel_torneo' : ''; ?>" class="tw-btn bg-blue-500 hover:bg-blue-600 text-white"><i class="fas fa-clipboard-list"></i> Gestionar Inscripciones</a>
                                     <a href="<?php echo $base_url . ($use_standalone ? '?' : '&'); ?>action=inscribir_sitio&torneo_id=<?php echo $torneo['id']; ?>" class="tw-btn bg-amber-500 hover:bg-amber-600 text-white"><i class="fas fa-user-check"></i> Inscripción en Sitio</a>
+                                    <button type="button" class="tw-btn bg-indigo-500 hover:bg-indigo-600 text-white" data-bs-toggle="modal" data-bs-target="#modalImportacionMasiva" id="btnAbrirImportacionMasiva"><i class="fas fa-file-csv"></i> Importación masiva</button>
                                 <?php endif; ?>
                                 <a href="<?php echo $base_url . ($use_standalone ? '?' : '&'); ?>action=activar_participantes&torneo_id=<?php echo (int)$torneo['id']; ?>" class="tw-btn bg-green-500 hover:bg-green-600 text-white"><i class="fas fa-user-check"></i> Activar participantes</a>
                             </div>
@@ -732,6 +733,41 @@ tailwind.config = {
 
 </div>
 
+<!-- Modal Importación Masiva (solo torneos individuales) -->
+<div class="modal fade" id="modalImportacionMasiva" tabindex="-1" aria-labelledby="modalImportacionMasivaLabel" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header bg-indigo-600 text-white">
+                <h5 class="modal-title" id="modalImportacionMasivaLabel"><i class="fas fa-file-csv me-2"></i>Importación masiva</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+            </div>
+            <div class="modal-body">
+                <p class="text-muted small">Cargue un CSV con columnas para: nacionalidad, cédula, nombre, sexo, fecha_nac, telefono, email, club, entidad. Luego asigne cada columna del archivo al campo correspondiente.</p>
+                <p class="small mb-2"><strong>Semáforo (tras Validar):</strong> <span class="badge" style="background:#3b82f6">Azul</span> Ya inscrito (omitir) · <span class="badge" style="background:#eab308;color:#000">Amarillo</span> Usuario existe (solo inscribir) · <span class="badge" style="background:#22c55e">Verde</span> Todo nuevo (crear e inscribir) · <span class="badge bg-danger">Rojo</span> Error de datos</p>
+                <div class="mb-3">
+                    <label class="form-label">Archivo CSV</label>
+                    <input type="file" class="form-control" id="importMasivaFile" accept=".csv,text/csv,application/csv">
+                </div>
+                <div id="importMasivaMapping" class="mb-3 d-none">
+                    <h6 class="mb-2">Mapeo de columnas</h6>
+                    <div class="row g-2 flex-wrap" id="importMasivaMappingRow"></div>
+                </div>
+                <div id="importMasivaPreviewWrap" class="mb-3 d-none">
+                    <h6 class="mb-2">Vista previa <span class="badge bg-secondary" id="importMasivaPreviewCount">0</span> filas</h6>
+                    <div class="table-responsive" style="max-height: 280px; overflow-y: auto;">
+                        <table class="table table-sm table-bordered" id="importMasivaPreviewTable"></table>
+                    </div>
+                    <div class="mt-2">
+                        <button type="button" class="btn btn-outline-primary btn-sm" id="btnImportMasivaValidar"><i class="fas fa-check-double me-1"></i>Validar (semáforo)</button>
+                        <button type="button" class="btn btn-success btn-sm ms-2" id="btnImportMasivaProcesar"><i class="fas fa-play me-1"></i>Procesar importación</button>
+                    </div>
+                </div>
+                <div id="importMasivaLoading" class="d-none text-center py-3"><i class="fas fa-spinner fa-spin fa-2x text-primary"></i><p class="mt-2 mb-0">Procesando...</p></div>
+            </div>
+        </div>
+    </div>
+</div>
+
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     const formGenerarRonda = document.getElementById('form-generar-ronda');
@@ -889,4 +925,193 @@ async function confirmarCierreTorneo(event) {
         }
     });
 }
+
+// --- Importación masiva ---
+(function() {
+    const CAMPOS = ['nacionalidad','cedula','nombre','sexo','fecha_nac','telefono','email','club','entidad'];
+    const COLORS = { omitir: '#3b82f6', inscribir: '#eab308', crear_inscribir: '#22c55e', error: '#ef4444' };
+    let importMasivaHeaders = [];
+    let importMasivaRows = [];
+    let importMasivaValidacion = [];
+
+    function parseCSV(text) {
+        const lines = [];
+        let cur = '', inQuotes = false;
+        for (let i = 0; i < text.length; i++) {
+            const c = text[i];
+            if (c === '"') { inQuotes = !inQuotes; continue; }
+            if (!inQuotes && (c === '\n' || c === '\r')) {
+                if (c === '\r' && text[i+1] === '\n') i++;
+                if (cur.trim()) lines.push(cur);
+                cur = '';
+                continue;
+            }
+            cur += c;
+        }
+        if (cur.trim()) lines.push(cur);
+        return lines.map(function(line) {
+            const out = [];
+            let cell = '';
+            inQuotes = false;
+            for (let j = 0; j < line.length; j++) {
+                const c = line[j];
+                if (c === '"') { inQuotes = !inQuotes; continue; }
+                if (!inQuotes && (c === ',' || c === ';')) { out.push(cell.trim()); cell = ''; continue; }
+                cell += c;
+            }
+            out.push(cell.trim());
+            return out;
+        });
+    }
+
+    function getTorneoId() {
+        const m = window.location.href.match(/torneo_id=(\d+)/);
+        return m ? m[1] : (document.querySelector('input[name="torneo_id"]') && document.querySelector('input[name="torneo_id"]').value) || '';
+    }
+
+    function getCsrfToken() {
+        return document.querySelector('input[name="csrf_token"]') && document.querySelector('input[name="csrf_token"]').value || '';
+    }
+
+    document.getElementById('importMasivaFile').addEventListener('change', function(e) {
+        const file = e.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = function(ev) {
+            const text = (ev.target.result || '').replace(/\r\n/g, '\n');
+            const parsed = parseCSV(text);
+            if (parsed.length < 2) { alert('El archivo debe tener al menos cabecera y una fila.'); return; }
+            importMasivaHeaders = parsed[0];
+            importMasivaRows = parsed.slice(1);
+            const row = document.getElementById('importMasivaMappingRow');
+            row.innerHTML = '';
+            CAMPOS.forEach(function(campo) {
+                const div = document.createElement('div');
+                div.className = 'col-6 col-md-4 col-lg-3';
+                div.innerHTML = '<label class="form-label small mb-0">' + campo + '</label><select class="form-select form-select-sm map-select" data-campo="' + campo + '"><option value="">-- No usar --</option>' +
+                    importMasivaHeaders.map(function(h, i) { return '<option value="' + i + '">' + (h || 'Col ' + (i+1)) + '</option>'; }).join('') + '</select>';
+                row.appendChild(div);
+            });
+            document.getElementById('importMasivaMapping').classList.remove('d-none');
+            document.getElementById('importMasivaPreviewWrap').classList.remove('d-none');
+            document.getElementById('importMasivaPreviewCount').textContent = importMasivaRows.length;
+            buildPreviewTable();
+        };
+        reader.readAsText(file, 'UTF-8');
+    });
+
+    function buildPreviewTable() {
+        const map = {};
+        document.querySelectorAll('.map-select').forEach(function(s) {
+            const v = s.value;
+            if (v !== '') map[s.dataset.campo] = parseInt(v, 10);
+        });
+        const thead = ['#'].concat(CAMPOS);
+        const tbody = importMasivaRows.map(function(r, i) {
+            const row = [(i+1)];
+            CAMPOS.forEach(function(c) { row.push(map[c] !== undefined ? (r[map[c]] || '') : ''); });
+            return row;
+        });
+        const table = document.getElementById('importMasivaPreviewTable');
+        table.innerHTML = '<thead class="table-light"><tr>' + thead.map(function(h) { return '<th>' + h + '</th>'; }).join('') + '</tr></thead><tbody id="importMasivaTbody"></tbody>';
+        const tbodyEl = document.getElementById('importMasivaTbody');
+        tbody.forEach(function(row, i) {
+            const tr = document.createElement('tr');
+            tr.dataset.index = i;
+            tr.innerHTML = row.map(function(cell) { return '<td>' + (cell !== undefined && cell !== null ? String(cell) : '') + '</td>'; }).join('');
+            tbodyEl.appendChild(tr);
+        });
+        importMasivaValidacion = [];
+    }
+
+    document.querySelector('#importMasivaMappingRow') && document.querySelector('#importMasivaMappingRow').addEventListener('change', function() {
+        if (importMasivaRows.length) buildPreviewTable();
+    });
+
+    function getFilasMapeadas() {
+        const map = {};
+        document.querySelectorAll('.map-select').forEach(function(s) {
+            const v = s.value;
+            if (v !== '') map[s.dataset.campo] = parseInt(v, 10);
+        });
+        return importMasivaRows.map(function(r) {
+            const obj = {};
+            CAMPOS.forEach(function(c) {
+                if (map[c] !== undefined) obj[c] = r[map[c]] != null ? String(r[map[c]]).trim() : '';
+            });
+            return obj;
+        });
+    }
+
+    document.getElementById('btnImportMasivaValidar').addEventListener('click', function() {
+        const filas = getFilasMapeadas();
+        if (!filas.length) { alert('No hay filas para validar.'); return; }
+        const fd = new FormData();
+        fd.append('action', 'validar');
+        fd.append('torneo_id', getTorneoId());
+        fd.append('filas', JSON.stringify(filas));
+        fd.append('csrf_token', getCsrfToken());
+        document.getElementById('importMasivaLoading').classList.remove('d-none');
+        fetch('api/tournament_import_masivo.php', { method: 'POST', body: fd })
+            .then(function(r) { return r.json(); })
+            .then(function(data) {
+                document.getElementById('importMasivaLoading').classList.add('d-none');
+                if (!data.success) { alert(data.error || 'Error al validar'); return; }
+                importMasivaValidacion = data.validacion || [];
+                const tbody = document.getElementById('importMasivaTbody');
+                if (tbody) {
+                    [].forEach.call(tbody.querySelectorAll('tr'), function(tr, i) {
+                        const v = importMasivaValidacion[i];
+                        tr.style.backgroundColor = v && COLORS[v.estado] ? COLORS[v.estado] : '';
+                        tr.style.color = v && v.estado === 'error' ? '#fff' : (v && COLORS[v.estado] ? '#fff' : '');
+                        tr.title = v ? v.mensaje : '';
+                    });
+                }
+            })
+            .catch(function() { document.getElementById('importMasivaLoading').classList.add('d-none'); alert('Error de conexión'); });
+    });
+
+    document.getElementById('btnImportMasivaProcesar').addEventListener('click', function() {
+        const filas = getFilasMapeadas();
+        if (!filas.length) { alert('No hay filas para procesar.'); return; }
+        const fd = new FormData();
+        fd.append('action', 'importar');
+        fd.append('torneo_id', getTorneoId());
+        fd.append('filas', JSON.stringify(filas));
+        fd.append('csrf_token', getCsrfToken());
+        document.getElementById('importMasivaLoading').classList.remove('d-none');
+        fetch('api/tournament_import_masivo.php', { method: 'POST', body: fd })
+            .then(function(r) { return r.json(); })
+            .then(function(data) {
+                document.getElementById('importMasivaLoading').classList.add('d-none');
+                if (!data.success) { alert(data.error || 'Error'); return; }
+                const tieneErrores = data.errores && data.errores.length > 0;
+                const html = '<p>Procesados: <strong>' + (data.procesados || 0) + '</strong></p><p>Nuevos (creados e inscritos): <strong>' + (data.nuevos || 0) + '</strong></p><p>Omitidos (ya inscritos): <strong>' + (data.omitidos || 0) + '</strong></p>' +
+                    (tieneErrores ? '<p class="text-danger">Errores: ' + data.errores.length + '</p>' : '');
+                const opts = {
+                    title: 'Importación finalizada',
+                    html: html,
+                    icon: tieneErrores ? 'warning' : 'success',
+                    confirmButtonText: 'Aceptar'
+                };
+                if (tieneErrores && data.archivo_errores_base64) {
+                    opts.showDenyButton = true;
+                    opts.denyButtonText = 'Descargar reporte de errores';
+                    opts.denyButtonColor = '#6b7280';
+                }
+                Swal.fire(opts).then(function(res) {
+                    if (res.isDenied && data.archivo_errores_base64) {
+                        const blob = new Blob([atob(data.archivo_errores_base64)], { type: 'text/csv;charset=utf-8' });
+                        const a = document.createElement('a');
+                        a.href = URL.createObjectURL(blob);
+                        a.download = 'errores_importacion_' + (new Date().toISOString().slice(0,10)) + '.csv';
+                        a.click();
+                        URL.revokeObjectURL(a.href);
+                    }
+                    if (data.success && (data.procesados > 0 || data.omitidos > 0)) window.location.reload();
+                });
+            })
+            .catch(function() { document.getElementById('importMasivaLoading').classList.add('d-none'); alert('Error de conexión'); });
+    });
+})();
 </script>
