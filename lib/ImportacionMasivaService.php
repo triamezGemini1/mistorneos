@@ -199,7 +199,7 @@ class ImportacionMasivaService
                         $club = $clubRepo->findByName($clubNombre);
                         if ($club === null) {
                             try {
-                                $idClub = $clubRepo->create(['nombre' => $clubNombre, 'siglas' => null, 'ciudad' => null, 'estado' => null]);
+                                $idClub = $clubRepo->create(['nombre' => $clubNombre]);
                             } catch (Throwable $e) {
                                 $errores[] = ['fila' => $filaNum, 'cedula' => $cedula, 'motivo' => 'No se pudo crear club: ' . $e->getMessage()];
                                 continue;

@@ -69,21 +69,28 @@ class ClubRepository
     }
 
     /**
-     * Crea un nuevo club
+     * Crea un nuevo club.
+     * Usa solo columnas existentes en la tabla clubes (nombre, direccion, delegado, telefono, email, estatus, organizacion_id, entidad, logo).
      */
     public function create(array $data): int
     {
+        $cols = ['nombre', 'estatus'];
+        $placeholders = ['?', '?'];
+        $values = [$data['nombre'], $data['estatus'] ?? 1];
+
+        $opt = ['direccion' => null, 'delegado' => null, 'telefono' => null, 'email' => null, 'organizacion_id' => null, 'entidad' => 0, 'logo' => null];
+        foreach (array_keys($opt) as $key) {
+            if (array_key_exists($key, $data)) {
+                $cols[] = $key;
+                $placeholders[] = '?';
+                $values[] = $data[$key];
+            }
+        }
+
         $stmt = $this->pdo->prepare(
-            "INSERT INTO clubes (nombre, siglas, ciudad, estado, logo_path, created_at) 
-             VALUES (?, ?, ?, ?, ?, NOW())"
+            "INSERT INTO clubes (" . implode(', ', $cols) . ") VALUES (" . implode(', ', $placeholders) . ")"
         );
-        $stmt->execute([
-            $data['nombre'],
-            $data['siglas'] ?? null,
-            $data['ciudad'] ?? null,
-            $data['estado'] ?? null,
-            $data['logo_path'] ?? null
-        ]);
+        $stmt->execute($values);
         return (int) $this->pdo->lastInsertId();
     }
 
@@ -95,7 +102,7 @@ class ClubRepository
         $fields = [];
         $values = [];
         
-        $allowedFields = ['nombre', 'siglas', 'ciudad', 'estado', 'logo_path', 'telefono', 'email'];
+        $allowedFields = ['nombre', 'direccion', 'delegado', 'telefono', 'email', 'logo', 'estatus', 'organizacion_id', 'entidad'];
         
         foreach ($allowedFields as $field) {
             if (array_key_exists($field, $data)) {
