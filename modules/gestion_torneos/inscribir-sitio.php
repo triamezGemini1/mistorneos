@@ -65,111 +65,9 @@ require_once __DIR__ . '/../../lib/InscritosHelper.php';
             </h5>
         </div>
         <div class="card-body">
-            <!-- Pestañas para elegir método de inscripción -->
-            <ul class="nav nav-tabs mb-4" id="inscripcionTabs" role="tablist">
-                <li class="nav-item" role="presentation">
-                    <button class="nav-link active" id="territorio-tab" data-bs-toggle="tab" data-bs-target="#territorio" type="button" role="tab">
-                        <i class="fas fa-users me-2"></i>Atletas de Mi Territorio
-                    </button>
-                </li>
-                <li class="nav-item" role="presentation">
-                    <button class="nav-link" id="cedula-tab" data-bs-toggle="tab" data-bs-target="#cedula" type="button" role="tab">
-                        <i class="fas fa-id-card me-2"></i>Buscar por Cédula/ID
-                    </button>
-                </li>
-            </ul>
-            
             <div class="tab-content" id="inscripcionTabsContent">
-                <!-- Tab: Atletas del Territorio -->
-                <div class="tab-pane fade show active" id="territorio" role="tabpanel">
-                    <!-- Listados: Disponibles e Inscritos -->
-                    <div class="row">
-                        <!-- Listado de Disponibles -->
-                        <div class="col-md-6">
-                            <div class="card">
-                                <div class="card-header bg-primary text-white">
-                                    <h6 class="mb-0">
-                                        <i class="fas fa-list me-2"></i>Atletas Disponibles
-                                        <span class="badge bg-light text-dark ms-2" id="count_disponibles"><?= count($usuarios_disponibles) ?></span>
-                                    </h6>
-                                </div>
-                                <div class="card-body" style="max-height: 500px; overflow-y: auto;">
-                                    <div class="table-responsive">
-                                        <table class="table table-hover table-sm mb-0">
-                                            <thead class="table-light">
-                                                <tr>
-                                                    <th>Nombre</th>
-                                                    <th>ID Usuario</th>
-                                                    <th>Club</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody id="tbody_disponibles">
-                                                <?php foreach ($usuarios_disponibles as $usuario): 
-                                                    $nombre_completo = !empty($usuario['nombre']) ? $usuario['nombre'] : $usuario['username'];
-                                                ?>
-                                                    <tr style="cursor: pointer;" 
-                                                        class="table-row-hover"
-                                                        data-id="<?= $usuario['id'] ?>"
-                                                        data-nombre="<?= htmlspecialchars($nombre_completo) ?>"
-                                                        data-cedula="<?= htmlspecialchars($usuario['cedula'] ?? '') ?>"
-                                                        data-club-id="<?= $usuario['club_id'] ?? '' ?>">
-                                                        <td><strong><?= htmlspecialchars($nombre_completo) ?></strong></td>
-                                                        <td><code><?= $usuario['id'] ?></code></td>
-                                                        <td><?= !empty($usuario['club_nombre']) ? htmlspecialchars($usuario['club_nombre']) : '<span class="text-muted">N/A</span>' ?></td>
-                                                    </tr>
-                                                <?php endforeach; ?>
-                                            </tbody>
-                                        </table>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <!-- Listado de Inscritos -->
-                        <div class="col-md-6">
-                            <div class="card">
-                                <div class="card-header bg-success text-white">
-                                    <h6 class="mb-0">
-                                        <i class="fas fa-check-circle me-2"></i>Atletas Inscritos
-                                        <span class="badge bg-light text-dark ms-2" id="count_inscritos"><?= count($usuarios_inscritos) ?></span>
-                                    </h6>
-                                </div>
-                                <div class="card-body" style="max-height: 500px; overflow-y: auto;">
-                                    <div class="table-responsive">
-                                        <table class="table table-hover table-sm mb-0">
-                                            <thead class="table-light">
-                                                <tr>
-                                                    <th>Nombre</th>
-                                                    <th>ID Usuario</th>
-                                                    <th>Club</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody id="tbody_inscritos">
-                                                <?php foreach ($usuarios_inscritos as $inscrito): 
-                                                    $nombre_completo = !empty($inscrito['nombre']) ? $inscrito['nombre'] : $inscrito['username'];
-                                                ?>
-                                                    <tr style="cursor: pointer;" 
-                                                        class="table-row-hover"
-                                                        data-id="<?= $inscrito['id_usuario'] ?>"
-                                                        data-nombre="<?= htmlspecialchars($nombre_completo) ?>"
-                                                        data-cedula="<?= htmlspecialchars($inscrito['cedula'] ?? '') ?>"
-                                                        data-club-id="<?= $inscrito['id_club'] ?? '' ?>">
-                                                        <td><strong><?= htmlspecialchars($nombre_completo) ?></strong></td>
-                                                        <td><code><?= $inscrito['id_usuario'] ?></code></td>
-                                                        <td><?= !empty($inscrito['club_nombre']) ? htmlspecialchars($inscrito['club_nombre']) : '<span class="text-muted">N/A</span>' ?></td>
-                                                    </tr>
-                                                <?php endforeach; ?>
-                                            </tbody>
-                                        </table>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                
-                <!-- Tab: Búsqueda por Cédula -->
-                <div class="tab-pane fade" id="cedula" role="tabpanel">
+                <!-- Búsqueda por Cédula (único método) -->
+                <div class="tab-pane fade show active" id="cedula" role="tabpanel">
                     <div class="alert alert-light border mb-3">
                         <strong><i class="fas fa-info-circle me-2 text-primary"></i>Cómo buscar por cédula:</strong>
                         <ul class="mb-0 mt-2">
@@ -372,13 +270,12 @@ document.addEventListener('DOMContentLoaded', function() {
             rowElement.style.pointerEvents = 'auto';
             
             if (data.success) {
-                // Mover fila de disponibles a inscritos
-                const newRow = rowElement.cloneNode(true);
-                newRow.style.animation = 'fadeIn 0.3s';
-                tbodyInscritos.appendChild(newRow);
-                rowElement.remove();
-                
-                // Actualizar contadores
+                if (tbodyInscritos) {
+                    const newRow = rowElement.cloneNode(true);
+                    newRow.style.animation = 'fadeIn 0.3s';
+                    tbodyInscritos.appendChild(newRow);
+                    rowElement.remove();
+                }
                 updateCounters();
                 
                 // Mostrar mensaje de éxito
@@ -468,11 +365,10 @@ document.addEventListener('DOMContentLoaded', function() {
     function updateCounters() {
         const countDisponibles = document.getElementById('count_disponibles');
         const countInscritos = document.getElementById('count_inscritos');
-        
-        if (countDisponibles) {
+        if (countDisponibles && tbodyDisponibles) {
             countDisponibles.textContent = tbodyDisponibles.children.length;
         }
-        if (countInscritos) {
+        if (countInscritos && tbodyInscritos) {
             countInscritos.textContent = tbodyInscritos.children.length;
         }
     }
@@ -663,6 +559,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     
     function agregarFilaInscrito(id, nombre, cedula, clubId) {
+        if (!tbodyInscritos) return;
         const newRow = document.createElement('tr');
         newRow.style.cursor = 'pointer';
         newRow.className = 'table-row-hover';
