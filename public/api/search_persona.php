@@ -78,7 +78,7 @@ try {
     foreach ($cedula_variantes as $c) {
         if ($c === '') continue;
         try {
-            $stmt = $pdo->prepare("SELECT id, nacionalidad, nombre, sexo, fechnac, celular, email FROM usuarios WHERE cedula = ? LIMIT 1");
+            $stmt = $pdo->prepare("SELECT id, username, nacionalidad, nombre, cedula, sexo, fechnac, celular, email, club_id FROM usuarios WHERE cedula = ? LIMIT 1");
             $stmt->execute([$c]);
             $persona = $stmt->fetch(PDO::FETCH_ASSOC);
             if ($persona) {
@@ -97,13 +97,16 @@ try {
                     'mensaje' => 'Datos encontrados en la plataforma. Revise y pulse Inscribir.',
                     'persona' => [
                         'id' => (int) ($persona['id'] ?? 0),
+                        'username' => $persona['username'] ?? '',
                         'nacionalidad' => $persona['nacionalidad'] ?? 'V',
                         'nombre' => $persona['nombre'] ?? '',
+                        'cedula' => $persona['cedula'] ?? $c,
                         'sexo' => $persona['sexo'] ?? '',
                         'fechnac' => $fechnac,
                         'celular' => $celular,
                         'telefono' => $celular,
-                        'email' => $persona['email'] ?? ''
+                        'email' => $persona['email'] ?? '',
+                        'club_id' => (int)($persona['club_id'] ?? 0)
                     ]
                 ]);
                 exit;

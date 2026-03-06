@@ -2526,7 +2526,12 @@ function obtenerDatosInscribirSitio($torneo_id, $user_id, $is_admin_general) {
     $usuarios_disponibles = array_filter($usuarios_territorio, function($u) use ($usuarios_inscritos_ids) {
         return !in_array($u['id'], $usuarios_inscritos_ids);
     });
-    
+    // Filtrar disponibles por club_id = 13 (listado de atletas del club)
+    $club_id_disponibles = 13;
+    $usuarios_disponibles = array_values(array_filter($usuarios_disponibles, function($u) use ($club_id_disponibles) {
+        return (int)($u['club_id'] ?? 0) === $club_id_disponibles;
+    }));
+
     // Obtener lista de clubes (solo del territorio del administrador)
     $clubes_disponibles = [];
     if ($is_admin_general) {
