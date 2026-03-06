@@ -73,8 +73,8 @@ try {
             'omitidos' => $result['omitidos'],
             'errores' => $result['errores'],
         ];
-        if ($result['csv_errores'] !== '') {
-            $payload['archivo_errores_base64'] = base64_encode($result['csv_errores']);
+        if (isset($result['txt_errores']) && $result['txt_errores'] !== '') {
+            $payload['archivo_errores_base64'] = base64_encode($result['txt_errores']);
         }
         echo json_encode($payload);
         exit;

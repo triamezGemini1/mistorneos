@@ -51,7 +51,8 @@ class ImportacionMasivaService
             $s = is_string($v) ? trim($v) : (string) $v;
             return $s;
         };
-        $nacionalidad = strtoupper($trim($fila['nacionalidad'] ?? ''));
+        $nacionalidadRaw = $trim($fila['nacionalidad'] ?? '');
+        $nacionalidad = strtoupper($nacionalidadRaw);
         if (!in_array($nacionalidad, ['V', 'E', 'J', 'P'], true)) {
             $nacionalidad = 'V';
         }
@@ -66,17 +67,20 @@ class ImportacionMasivaService
         $telefono = $trim($fila['telefono'] ?? $fila['celular'] ?? '');
         $email = $trim($fila['email'] ?? '');
         $clubNombre = $trim($fila['club'] ?? $fila['club_nombre'] ?? '');
-        $organizacion = isset($fila['organizacion']) ? (int) $fila['organizacion'] : (isset($fila['entidad']) ? (int) $fila['entidad'] : null);
-
-        if ($cedula === '' || strlen($cedula) < 4) {
-            return ['normalized' => [], 'error' => 'Cédula inválida o faltante (mín. 4 dígitos)'];
-        }
-        if ($nombre === '' || strlen($nombre) < 2) {
-            return ['normalized' => [], 'error' => 'Nombre obligatorio (mín. 2 caracteres)'];
-        }
+        $organizacion = isset($fila['organizacion']) ? $fila['organizacion'] : (isset($fila['entidad']) ? $fila['entidad'] : null);
         $organizacionVal = ($organizacion !== null && $organizacion !== '') ? (int) $organizacion : 0;
-        if ($clubNombre === '' || $organizacionVal < 1) {
-            return ['normalized' => [], 'error' => 'Falta Organización o Club (Campos obligatorios)'];
+
+        $camposObligatorios = [
+            'nacionalidad' => $nacionalidadRaw === '' ? 'Nacionalidad' : null,
+            'cedula' => ($cedula === '' || strlen($cedula) < 4) ? 'Cédula' : null,
+            'nombre' => ($nombre === '' || strlen($nombre) < 2) ? 'Nombre' : null,
+            'club' => $clubNombre === '' ? 'Club' : null,
+            'organizacion' => $organizacionVal < 1 ? 'Organización' : null,
+        ];
+        foreach ($camposObligatorios as $campo => $nombreCampo) {
+            if ($nombreCampo !== null) {
+                return ['normalized' => [], 'error' => 'Campo obligatorio ' . $nombreCampo . ' ausente'];
+            }
         }
 
         $normalized = [
@@ -278,18 +282,19 @@ class ImportacionMasivaService
             }
         }
 
-        $csvErrores = '';
+        $txtErrores = '';
         if (!empty($errores)) {
             $bom = "\xEF\xBB\xBF";
-            $csvErrores = $bom . "Fila;Cédula;Motivo\n";
+            $lines = [];
             foreach ($errores as $err) {
-                $fila = (int) $err['fila'];
+                $numFila = (int) $err['fila'];
                 $cedula = self::asegurarUtf8((string) ($err['cedula'] ?? ''));
-                $motivo = self::asegurarUtf8(str_replace(["\r", "\n", ";"], [' ', ' ', ','], (string) ($err['motivo'] ?? '')));
-                $csvErrores .= sprintf("%d;%s;%s\n", $fila, $cedula, $motivo);
+                $motivo = self::asegurarUtf8(str_replace(["\r", "\n"], [' ', ' '], (string) ($err['motivo'] ?? '')));
+                $lines[] = sprintf("Fila %d - Cédula: %s - Motivo: %s", $numFila, $cedula, $motivo);
             }
-            if (!mb_check_encoding($csvErrores, 'UTF-8')) {
-                $csvErrores = mb_convert_encoding($csvErrores, 'UTF-8', mb_detect_encoding($csvErrores, ['UTF-8', 'ISO-8859-1', 'Windows-1252'], true) ?: 'UTF-8');
+            $txtErrores = $bom . implode("\n", $lines) . "\n";
+            if (!mb_check_encoding($txtErrores, 'UTF-8')) {
+                $txtErrores = mb_convert_encoding($txtErrores, 'UTF-8', mb_detect_encoding($txtErrores, ['UTF-8', 'ISO-8859-1', 'Windows-1252'], true) ?: 'UTF-8');
             }
         }
 
@@ -298,7 +303,7 @@ class ImportacionMasivaService
             'nuevos' => $nuevos,
             'omitidos' => $omitidos,
             'errores' => $errores,
-            'csv_errores' => $csvErrores,
+            'txt_errores' => $txtErrores,
         ];
     }
 }

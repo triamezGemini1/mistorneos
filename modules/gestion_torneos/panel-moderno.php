@@ -742,11 +742,11 @@ tailwind.config = {
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Cerrar"></button>
             </div>
             <div class="modal-body">
-                <p class="text-muted small">Cargue un CSV con columnas para: nacionalidad, cédula, nombre, sexo, fecha_nac, telefono, email, <strong>club</strong>, <strong>organización</strong>. <strong>Organización y Club son obligatorios</strong> en todas las filas. El archivo se detecta en UTF-8, ISO-8859-1 o Windows-1252 y se convierte a UTF-8 (nombres con tildes o eñes se procesan correctamente). Asigne cada columna al campo (si el archivo tiene "entidad" o "organización", asígnela a Organización).</p>
+                <p class="text-muted small">Cargue un archivo <strong>Excel (.xls / 97-2003 o .xlsx)</strong> o CSV. Campos obligatorios: <strong>nacionalidad, cédula, nombre, club, organización</strong>. Si falta cualquiera, la fila se rechaza. Asigne cada columna al campo (entidad/organización se asocian a Organización).</p>
                 <p class="small mb-2"><strong>Semáforo (tras Validar):</strong> <span class="badge" style="background:#3b82f6">Azul</span> Ya inscrito (omitir) · <span class="badge" style="background:#eab308;color:#000">Amarillo</span> Usuario existe (solo inscribir) · <span class="badge" style="background:#22c55e">Verde</span> Todo nuevo (crear e inscribir) · <span class="badge bg-danger">Rojo</span> Error de datos</p>
                 <div class="mb-3">
                     <label class="form-label">Archivo CSV</label>
-                    <input type="file" class="form-control" id="importMasivaFile" accept=".csv,text/csv,application/csv">
+                    <input type="file" class="form-control" id="importMasivaFile" accept=".xls,.xlsx,.csv,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,text/csv">
                 </div>
                 <div id="importMasivaMapping" class="mb-3 d-none">
                     <h6 class="mb-2">Mapeo de columnas</h6>
@@ -995,36 +995,66 @@ async function confirmarCierreTorneo(event) {
     document.getElementById('importMasivaFile').addEventListener('change', function(e) {
         const file = e.target.files[0];
         if (!file) return;
-        const reader = new FileReader();
-        reader.onload = function(ev) {
-            var buffer = ev.target.result;
-            var text = detectEncodingAndDecode(buffer);
-            text = text.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
-            const parsed = parseCSV(text);
-            if (parsed.length < 2) { alert('El archivo debe tener al menos cabecera y una fila.'); return; }
-            importMasivaHeaders = parsed[0];
-            importMasivaRows = parsed.slice(1);
-            const row = document.getElementById('importMasivaMappingRow');
-            row.innerHTML = '';
-            CAMPOS.forEach(function(campo) {
-                const div = document.createElement('div');
-                div.className = 'col-6 col-md-4 col-lg-3';
-                var label = (CAMPOS_LABEL[campo] || campo);
-                var opts = importMasivaHeaders.map(function(h, i) {
-                    var head = (h || 'Col ' + (i+1)).trim().toLowerCase();
-                    var selected = (campo === 'organizacion' && (head === 'entidad' || head === 'organizacion' || head === 'organización')) ? ' selected' : '';
-                    return '<option value="' + i + '"' + selected + '>' + (h || 'Col ' + (i+1)) + '</option>';
-                }).join('');
-                div.innerHTML = '<label class="form-label small mb-0">' + label + '</label><select class="form-select form-select-sm map-select" data-campo="' + campo + '"><option value="">-- No usar --</option>' + opts + '</select>';
-                row.appendChild(div);
-            });
-            document.getElementById('importMasivaMapping').classList.remove('d-none');
-            document.getElementById('importMasivaPreviewWrap').classList.remove('d-none');
-            document.getElementById('importMasivaPreviewCount').textContent = importMasivaRows.length;
-            buildPreviewTable();
-        };
-        reader.readAsArrayBuffer(file);
+        var ext = (file.name.split('.').pop() || '').toLowerCase();
+        document.getElementById('importMasivaLoading').classList.remove('d-none');
+        if (ext === 'xls' || ext === 'xlsx' || ext === 'csv') {
+            var fd = new FormData();
+            fd.append('archivo', file);
+            fd.append('csrf_token', getCsrfToken());
+            fetch('api/tournament_import_parse.php', { method: 'POST', body: fd })
+                .then(function(r) { return r.json(); })
+                .then(function(data) {
+                    document.getElementById('importMasivaLoading').classList.add('d-none');
+                    if (!data.success) { alert(data.error || 'Error al leer el archivo'); return; }
+                    importMasivaHeaders = data.headers || [];
+                    importMasivaRows = data.rows || [];
+                    if (importMasivaHeaders.length === 0 || importMasivaRows.length === 0) {
+                        alert('El archivo debe tener cabecera y al menos una fila de datos.');
+                        return;
+                    }
+                    applyParsedData();
+                })
+                .catch(function() {
+                    document.getElementById('importMasivaLoading').classList.add('d-none');
+                    alert('Error de conexión al procesar el archivo.');
+                });
+        } else {
+            var reader = new FileReader();
+            reader.onload = function(ev) {
+                var buffer = ev.target.result;
+                var text = detectEncodingAndDecode(buffer);
+                text = text.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+                var parsed = parseCSV(text);
+                document.getElementById('importMasivaLoading').classList.add('d-none');
+                if (parsed.length < 2) { alert('El archivo debe tener al menos cabecera y una fila.'); return; }
+                importMasivaHeaders = parsed[0];
+                importMasivaRows = parsed.slice(1);
+                applyParsedData();
+            };
+            reader.readAsArrayBuffer(file);
+        }
     });
+
+    function applyParsedData() {
+        const row = document.getElementById('importMasivaMappingRow');
+        row.innerHTML = '';
+        CAMPOS.forEach(function(campo) {
+            const div = document.createElement('div');
+            div.className = 'col-6 col-md-4 col-lg-3';
+            var label = (CAMPOS_LABEL[campo] || campo);
+            var opts = importMasivaHeaders.map(function(h, i) {
+                var head = (String(h || 'Col ' + (i+1))).trim().toLowerCase();
+                var selected = (campo === 'organizacion' && (head === 'entidad' || head === 'organizacion' || head === 'organización')) ? ' selected' : '';
+                return '<option value="' + i + '"' + selected + '>' + (h || 'Col ' + (i+1)) + '</option>';
+            }).join('');
+            div.innerHTML = '<label class="form-label small mb-0">' + label + '</label><select class="form-select form-select-sm map-select" data-campo="' + campo + '"><option value="">-- No usar --</option>' + opts + '</select>';
+            row.appendChild(div);
+        });
+        document.getElementById('importMasivaMapping').classList.remove('d-none');
+        document.getElementById('importMasivaPreviewWrap').classList.remove('d-none');
+        document.getElementById('importMasivaPreviewCount').textContent = importMasivaRows.length;
+        buildPreviewTable();
+    }
 
     function buildPreviewTable() {
         const map = {};
@@ -1132,11 +1162,10 @@ async function confirmarCierreTorneo(event) {
                 Swal.fire(opts).then(function(res) {
                     if (res.isDenied && data.archivo_errores_base64) {
                         var bin = atob(data.archivo_errores_base64);
-                        var bom = '\uFEFF';
-                        var blob = new Blob([bom + bin], { type: 'text/csv;charset=utf-8' });
+                        var blob = new Blob([bin], { type: 'text/plain;charset=utf-8' });
                         const a = document.createElement('a');
                         a.href = URL.createObjectURL(blob);
-                        a.download = 'log_errores_importacion_' + (new Date().toISOString().slice(0,10)) + '.csv';
+                        a.download = 'log_errores_importacion_' + (new Date().toISOString().slice(0,10)) + '.txt';
                         a.click();
                         URL.revokeObjectURL(a.href);
                     }
