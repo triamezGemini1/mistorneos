@@ -72,14 +72,14 @@ class ImportacionMasivaService
 
         $camposObligatorios = [
             'nacionalidad' => $nacionalidadRaw === '' ? 'Nacionalidad' : null,
-            'cedula' => ($cedula === '' || strlen($cedula) < 4) ? 'Cédula' : null,
+            'cedula' => ($cedula === '' || strlen($cedula) < 4) ? 'Cédula (mín. 4 dígitos)' : null,
             'nombre' => ($nombre === '' || strlen($nombre) < 2) ? 'Nombre' : null,
             'club' => $clubNombre === '' ? 'Club' : null,
             'organizacion' => $organizacionVal < 1 ? 'Organización' : null,
         ];
         foreach ($camposObligatorios as $campo => $nombreCampo) {
             if ($nombreCampo !== null) {
-                return ['normalized' => [], 'error' => 'Campo obligatorio ' . $nombreCampo . ' ausente'];
+                return ['normalized' => [], 'error' => 'Campo obligatorio ' . $nombreCampo . ' ausente o inválido'];
             }
         }
 
@@ -145,13 +145,15 @@ class ImportacionMasivaService
 
     /**
      * Procesa la importación en lotes. Transacciones por lote.
-     * @return array{procesados: int, nuevos: int, omitidos: int, errores: list<array{fila: int, cedula: string, motivo: string}>, csv_errores: string}
+     * Los fallos de validación (cedula, nombre, club, organizacion) se registran en $errores (errores_importacion).
+     * @return array{procesados: int, nuevos: int, omitidos: int, errores: list<array{fila: int, cedula: string, motivo: string}>, txt_errores: string}
      */
     public static function procesarImportacion(PDO $pdo, int $torneoId, array $filas, int $inscritoPor): array
     {
         $procesados = 0;
         $nuevos = 0;
         $omitidos = 0;
+        /** @var list<array{fila: int, cedula: string, motivo: string}> errores de importación por fila */
         $errores = [];
         $clubRepo = new ClubRepository($pdo);
 

@@ -85,37 +85,39 @@ try {
                 $rows[] = array_slice($cells, 0, $numHeaders);
             }
         }
-    } else {
-        require_once __DIR__ . '/../../vendor/autoload.php';
-        $reader = \PhpOffice\PhpSpreadsheet\IOFactory::createReader($ext === 'xls' ? 'Xls' : 'Xlsx');
-        $reader->setReadDataOnly(true);
-        $spreadsheet = $reader->load($tmpPath);
-        $sheet = $spreadsheet->getActiveSheet();
-        $maxRow = $sheet->getHighestRow();
-        $maxCol = $sheet->getHighestColumn();
-        $maxColIndex = \PhpOffice\PhpSpreadsheet\Cell\Coordinate::columnIndexFromString($maxCol);
-
-        for ($r = 1; $r <= $maxRow; $r++) {
-            $rowCells = [];
-            for ($c = 1; $c <= $maxColIndex; $c++) {
-                $cell = $sheet->getCellByColumnAndRow($c, $r);
-                $val = $cell->getValue();
-                if ($val instanceof \PhpOffice\PhpSpreadsheet\RichText\RichText) {
-                    $val = $val->getPlainText();
-                }
-                if ($val !== null && is_float($val) && (int) $val == $val) {
-                    $val = (int) $val;
-                }
-                $rowCells[] = $asegurarUtf8($val);
-            }
-            if ($r === 1) {
-                $headers = $rowCells;
-            } else {
-                $rows[] = $rowCells;
-            }
+    } elseif ($ext === 'xls') {
+        require_once __DIR__ . '/../../libs/SimpleXLS.php';
+        $xls = SimpleXLS::parse($tmpPath);
+        if (!$xls) {
+            $err = SimpleXLS::parseError();
+            throw new RuntimeException($err ?: 'Error al leer el archivo .xls');
         }
-        $spreadsheet->disconnectWorksheets();
-        unset($spreadsheet, $reader);
+        $xls->setOutputEncoding('UTF-8');
+        $allRows = $xls->rows(0);
+        if (empty($allRows)) {
+            throw new RuntimeException('El archivo no contiene filas');
+        }
+        $headers = array_map($asegurarUtf8, $allRows[0]);
+        $numCols = count($headers);
+        for ($i = 1, $n = count($allRows); $i < $n; $i++) {
+            $rowCells = $allRows[$i];
+            $rowCells = array_map(function ($v) use ($asegurarUtf8) {
+                if ($v !== null && is_float($v) && (int) $v == $v) {
+                    $v = (int) $v;
+                }
+                return $asegurarUtf8($v);
+            }, $rowCells);
+            while (count($rowCells) < $numCols) {
+                $rowCells[] = '';
+            }
+            $rows[] = array_slice($rowCells, 0, $numCols);
+        }
+    } else {
+        echo json_encode([
+            'success' => false,
+            'error' => 'Formato .xlsx no disponible sin Composer. Use .xls (Excel 97-2003) o CSV.',
+        ]);
+        exit;
     }
 
     echo json_encode([
