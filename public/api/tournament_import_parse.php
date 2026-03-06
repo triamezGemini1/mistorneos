@@ -48,6 +48,8 @@ $asegurarUtf8 = static function ($v): string {
         return '';
     }
     $s = trim((string) $v);
+    $s = str_replace("\xEF\xBB\xBF", '', $s);
+    $s = trim($s);
     if ($s === '') {
         return '';
     }
@@ -97,9 +99,14 @@ try {
         if (empty($allRows)) {
             throw new RuntimeException('El archivo no contiene filas');
         }
-        $headers = array_map($asegurarUtf8, $allRows[0]);
+        $skipDecorativeRows = 3;
+        $headerRowIndex = $skipDecorativeRows;
+        if (count($allRows) < $headerRowIndex + 1) {
+            throw new RuntimeException('El archivo debe tener al menos 4 filas (cabecera en fila 4, datos desde fila 5)');
+        }
+        $headers = array_map($asegurarUtf8, $allRows[$headerRowIndex]);
         $numCols = count($headers);
-        for ($i = 1, $n = count($allRows); $i < $n; $i++) {
+        for ($i = $headerRowIndex + 1, $n = count($allRows); $i < $n; $i++) {
             $rowCells = $allRows[$i];
             $rowCells = array_map(function ($v) use ($asegurarUtf8) {
                 if ($v !== null && is_float($v) && (int) $v == $v) {

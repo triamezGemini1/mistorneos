@@ -931,6 +931,12 @@ async function confirmarCierreTorneo(event) {
     const CAMPOS = ['nacionalidad','cedula','nombre','sexo','fecha_nac','telefono','email','club','organizacion'];
     const CAMPOS_LABEL = { organizacion: 'Organización' };
     const COLORS = { omitir: '#3b82f6', inscribir: '#eab308', crear_inscribir: '#22c55e', error: '#ef4444' };
+    const CAMPO_ALIASES = {
+        nombre: ['nombre', 'nombres y apellidos', 'nombres', 'nombres y apellido'],
+        cedula: ['cedula', 'cédula', 'cedula de identidad'],
+        organizacion: ['organizacion', 'organización', 'entidad', 'asociacion', 'asociación'],
+        club: ['club', 'club_nombre', 'club nombre']
+    };
     let importMasivaHeaders = [];
     let importMasivaRows = [];
     let importMasivaValidacion = [];
@@ -1044,7 +1050,9 @@ async function confirmarCierreTorneo(event) {
             var label = (CAMPOS_LABEL[campo] || campo);
             var opts = importMasivaHeaders.map(function(h, i) {
                 var head = (String(h || 'Col ' + (i+1))).trim().toLowerCase();
-                var selected = (campo === 'organizacion' && (head === 'entidad' || head === 'organizacion' || head === 'organización')) ? ' selected' : '';
+                var aliases = CAMPO_ALIASES[campo];
+                var selected = aliases && aliases.indexOf(head) !== -1 ? ' selected' : '';
+                if (!selected && campo === 'organizacion' && (head === 'entidad' || head === 'organizacion' || head === 'organización' || head === 'asociacion' || head === 'asociación')) selected = ' selected';
                 return '<option value="' + i + '"' + selected + '>' + (h || 'Col ' + (i+1)) + '</option>';
             }).join('');
             div.innerHTML = '<label class="form-label small mb-0">' + label + '</label><select class="form-select form-select-sm map-select" data-campo="' + campo + '"><option value="">-- No usar --</option>' + opts + '</select>';
@@ -1099,6 +1107,9 @@ async function confirmarCierreTorneo(event) {
                     obj[c] = val;
                 }
             });
+            if (obj.nacionalidad === undefined || obj.nacionalidad === '') {
+                obj.nacionalidad = 'V';
+            }
             return obj;
         });
     }
