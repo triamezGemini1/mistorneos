@@ -742,7 +742,7 @@ tailwind.config = {
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Cerrar"></button>
             </div>
             <div class="modal-body">
-                <p class="text-muted small">Cargue un CSV con columnas para: nacionalidad, cédula, nombre, sexo, fecha_nac, telefono, email, club, organización. El archivo se detecta en UTF-8, ISO-8859-1 o Windows-1252 y se convierte a UTF-8. Asigne cada columna al campo (si el archivo tiene "entidad" o "organización", asígnela a Organización).</p>
+                <p class="text-muted small">Cargue un CSV con columnas para: nacionalidad, cédula, nombre, sexo, fecha_nac, telefono, email, <strong>club</strong>, <strong>organización</strong>. <strong>Organización y Club son obligatorios</strong> en todas las filas. El archivo se detecta en UTF-8, ISO-8859-1 o Windows-1252 y se convierte a UTF-8 (nombres con tildes o eñes se procesan correctamente). Asigne cada columna al campo (si el archivo tiene "entidad" o "organización", asígnela a Organización).</p>
                 <p class="small mb-2"><strong>Semáforo (tras Validar):</strong> <span class="badge" style="background:#3b82f6">Azul</span> Ya inscrito (omitir) · <span class="badge" style="background:#eab308;color:#000">Amarillo</span> Usuario existe (solo inscribir) · <span class="badge" style="background:#22c55e">Verde</span> Todo nuevo (crear e inscribir) · <span class="badge bg-danger">Rojo</span> Error de datos</p>
                 <div class="mb-3">
                     <label class="form-label">Archivo CSV</label>

@@ -74,6 +74,10 @@ class ImportacionMasivaService
         if ($nombre === '' || strlen($nombre) < 2) {
             return ['normalized' => [], 'error' => 'Nombre obligatorio (mín. 2 caracteres)'];
         }
+        $organizacionVal = ($organizacion !== null && $organizacion !== '') ? (int) $organizacion : 0;
+        if ($clubNombre === '' || $organizacionVal < 1) {
+            return ['normalized' => [], 'error' => 'Falta Organización o Club (Campos obligatorios)'];
+        }
 
         $normalized = [
             'nacionalidad' => $nacionalidad,
@@ -84,7 +88,7 @@ class ImportacionMasivaService
             'telefono' => $telefono,
             'email' => $email,
             'club_nombre' => $clubNombre,
-            'entidad' => $organizacion,
+            'entidad' => $organizacionVal,
         ];
         return ['normalized' => $normalized, 'error' => null];
     }
@@ -125,9 +129,9 @@ class ImportacionMasivaService
                 continue;
             }
 
-            // c) Todo nuevo: crear usuario e inscribir (requiere club)
-            if ($n['club_nombre'] === '') {
-                $resultado[] = ['fila' => $filaNum, 'estado' => self::ESTADO_ERROR, 'mensaje' => 'Club obligatorio para registro nuevo'];
+            // c) Todo nuevo: crear usuario e inscribir (Organización y Club ya validados en normalizarFila)
+            if ($n['club_nombre'] === '' || (int) ($n['entidad'] ?? 0) < 1) {
+                $resultado[] = ['fila' => $filaNum, 'estado' => self::ESTADO_ERROR, 'mensaje' => 'Falta Organización o Club (Campos obligatorios)'];
                 continue;
             }
             $resultado[] = ['fila' => $filaNum, 'estado' => self::ESTADO_CREAR_INSCRIBIR, 'mensaje' => 'Se creará usuario e inscribirá'];
@@ -179,10 +183,11 @@ class ImportacionMasivaService
                     $idClubInscrito = $rowUser && !empty($rowUser['club_id']) ? (int) $rowUser['club_id'] : null;
 
                     if ($idUsuario === null) {
-                        // c) Crear club si no existe
-                        $clubNombre = $n['club_nombre'];
-                        if ($clubNombre === '') {
-                            $errores[] = ['fila' => $filaNum, 'cedula' => $cedula, 'motivo' => 'Club obligatorio para registro nuevo'];
+                        // c) Organización y Club obligatorios; crear club si no existe (nombre en UTF-8, blindaje Mojibake)
+                        $clubNombre = self::asegurarUtf8($n['club_nombre'] ?? '');
+                        $organizacionVal = (int) ($n['entidad'] ?? 0);
+                        if ($clubNombre === '' || $organizacionVal < 1) {
+                            $errores[] = ['fila' => $filaNum, 'cedula' => $cedula, 'motivo' => 'Organización/Club obligatorio ausente'];
                             continue;
                         }
                         $club = $clubRepo->findByName($clubNombre);
