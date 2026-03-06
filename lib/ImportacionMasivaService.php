@@ -189,7 +189,7 @@ class ImportacionMasivaService
                     $idClubInscrito = $rowUser && !empty($rowUser['club_id']) ? (int) $rowUser['club_id'] : null;
 
                     if ($idUsuario === null) {
-                        // c) Organización y Club obligatorios; crear club si no existe (nombre en UTF-8, blindaje Mojibake)
+                        // c) Organización y Club obligatorios; el club debe existir (no se crean clubes desde esta importación)
                         $clubNombre = self::asegurarUtf8($n['club_nombre'] ?? '');
                         $organizacionVal = (int) ($n['entidad'] ?? 0);
                         if ($clubNombre === '' || $organizacionVal < 1) {
@@ -198,12 +198,12 @@ class ImportacionMasivaService
                         }
                         $club = $clubRepo->findByName($clubNombre);
                         if ($club === null) {
-                            try {
-                                $idClub = $clubRepo->create(['nombre' => $clubNombre]);
-                            } catch (Throwable $e) {
-                                $errores[] = ['fila' => $filaNum, 'cedula' => $cedula, 'motivo' => 'No se pudo crear club: ' . $e->getMessage()];
+                            $clubById = is_numeric($clubNombre) ? $clubRepo->findById((int) $clubNombre) : null;
+                            if ($clubById === null) {
+                                $errores[] = ['fila' => $filaNum, 'cedula' => $cedula, 'motivo' => 'Club no encontrado (debe existir previamente): ' . $clubNombre];
                                 continue;
                             }
+                            $idClub = (int) $clubById['id'];
                         } else {
                             $idClub = (int) $club['id'];
                         }
