@@ -46,7 +46,7 @@ function generarQRUrl($data, $size = 300) {
 </style>
 <div class="mb-3 no-print d-flex align-items-center gap-2">
     <a href="<?= htmlspecialchars($url_panel) ?>" class="btn btn-primary">
-        <i class="fas fa-arrow-left me-1"></i>Volver al panel de control
+        <i class="fas fa-arrow-left me-1"></i>Volver al panel
     </a>
     <button type="button" class="btn btn-outline-secondary" onclick="window.print();" title="Imprimir códigos QR">
         <i class="fas fa-print me-1"></i>Imprimir

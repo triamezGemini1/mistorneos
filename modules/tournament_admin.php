@@ -359,12 +359,15 @@ $error_message = $_GET['error'] ?? null;
                             </div>
                         <?php endif; ?>
                         <?php
-                        $url_retorno = 'index.php?page=tournament_admin&torneo_id=' . (int)$torneo_id;
-                        $texto_retorno = 'Retorno al panel';
+                        $acciones_impresion = ['generar_qr', 'imprimir_qr_lote', 'reporte_identificacion_jugadores'];
+                        $mostrar_retorno_layout = !in_array($menu_action, $acciones_impresion, true);
+                        if ($mostrar_retorno_layout):
+                            $url_retorno = 'index.php?page=tournament_admin&torneo_id=' . (int)$torneo_id;
                         ?>
                         <a href="<?= htmlspecialchars($url_retorno) ?>" class="btn btn-light btn-lg">
-                            <i class="fas fa-arrow-left me-2"></i><?= $texto_retorno ?>
+                            <i class="fas fa-arrow-left me-2"></i>Volver al panel
                         </a>
+                        <?php endif; ?>
                         <?php if ($puede_finalizar): ?>
                             <button type="button" class="btn btn-danger btn-lg ms-2" id="btnCerrarTorneo" title="Finalizar Torneo">
                                 <i class="fas fa-lock me-2"></i>Finalizar Torneo

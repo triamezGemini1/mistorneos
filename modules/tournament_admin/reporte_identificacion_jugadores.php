@@ -56,12 +56,13 @@ $url_panel = 'index.php?page=tournament_admin&torneo_id=' . (int)$torneo_id;
     .col-md-9 { max-width: 100% !important; flex: 0 0 100% !important; }
     .card .card-body { padding: 0 !important; border: none !important; background: transparent !important; }
     .card { border: none !important; box-shadow: none !important; background: transparent !important; }
+    .tarjeta-id-lote .titulo-torneo { display: none !important; }
     @page { size: 40cm 48cm; margin: 0.5cm; }
 }
 </style>
 <div class="no-print-id mb-3 d-flex align-items-center gap-2">
     <a href="<?= htmlspecialchars($url_panel) ?>" class="btn btn-primary">
-        <i class="fas fa-arrow-left me-1"></i>Volver al panel de control
+        <i class="fas fa-arrow-left me-1"></i>Volver al panel
     </a>
     <button type="button" class="btn btn-outline-secondary" onclick="window.print();">
         <i class="fas fa-print me-1"></i>Imprimir
@@ -72,7 +73,6 @@ $url_panel = 'index.php?page=tournament_admin&torneo_id=' . (int)$torneo_id;
         <?php if (empty($jugadores)): ?>
             <p class="text-muted">No hay jugadores confirmados para este torneo.</p>
         <?php else: ?>
-            <p class="small text-muted mb-3 no-print-id">Tarjetas 8×8 cm: nombre, cédula, ID jugador. 5 columnas × 6 filas por hoja.</p>
             <div id="area-impresion-tarjetas">
                 <?php
                 $por_pagina = 30;
