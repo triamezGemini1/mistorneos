@@ -2443,72 +2443,100 @@ function obtenerDatosInscribirParejaSitio($torneo_id) {
 }
 
 /**
- * Obtiene datos para inscribir jugador en sitio
+ * Obtiene datos para inscribir jugador en sitio.
+ * Sincroniza numfvd de atletas a usuarios (por cédula). Lista usuarios por código de entidad, ordenados por numfvd y activos.
  */
 function obtenerDatosInscribirSitio($torneo_id, $user_id, $is_admin_general) {
     $pdo = DB::pdo();
-    
+
     $stmt = $pdo->prepare("SELECT * FROM tournaments WHERE id = ?");
     $stmt->execute([$torneo_id]);
     $torneo = $stmt->fetch(PDO::FETCH_ASSOC);
-    
-    // Obtener información del usuario actual y su club
+
     $current_user = Auth::user();
     $user_club_id = $current_user['club_id'] ?? null;
+    $user_entidad = (int)($current_user['entidad'] ?? 0);
     $is_admin_club = Auth::isAdminClub();
-    
-    // Obtener usuarios del territorio del administrador
+    $torneo_entidad = (int)($torneo['entidad'] ?? 0);
+
+    $tiene_numfvd = (bool) @$pdo->query("SHOW COLUMNS FROM usuarios LIKE 'numfvd'")->fetch();
+    $existe_atletas = false;
+    try {
+        @$pdo->query("SELECT 1 FROM atletas LIMIT 1");
+        $existe_atletas = true;
+    } catch (Throwable $e) {
+        // tabla atletas no existe
+    }
+
+    if ($tiene_numfvd && $existe_atletas) {
+        $pdo->exec("
+            UPDATE usuarios u
+            INNER JOIN atletas a ON (
+                TRIM(REPLACE(REPLACE(REPLACE(REPLACE(u.cedula,'V',''),'E',''),'J',''),'P','')) = TRIM(REPLACE(REPLACE(REPLACE(REPLACE(COALESCE(a.cedula,''),'V',''),'E',''),'J',''),'P',''))
+                OR u.cedula = a.cedula
+            )
+            SET u.numfvd = NULLIF(TRIM(a.numfvd), '')
+            WHERE a.numfvd IS NOT NULL AND TRIM(a.numfvd) != ''
+        ");
+    }
+
+    $orderBy = $tiene_numfvd
+        ? "ORDER BY COALESCE(u.numfvd, '') ASC, COALESCE(u.nombre, u.username) ASC"
+        : "ORDER BY COALESCE(u.nombre, u.username) ASC";
+    $activoCond = "(u.status = 'approved' OR u.status = 1 OR u.status = 0)";
     $usuarios_territorio = [];
-    
+
+    $entidad_filtro = $user_entidad > 0 ? $user_entidad : ($torneo_entidad > 0 ? $torneo_entidad : null);
+    $tiene_entidad_col = (bool) @$pdo->query("SHOW COLUMNS FROM usuarios LIKE 'entidad'")->fetch();
+
     if ($is_admin_general) {
-        // Admin general: todos los usuarios (solo afiliados)
-        $stmt = $pdo->query("
-            SELECT u.id, u.username, u.nombre, u.cedula, c.nombre as club_nombre, c.id as club_id
+        $sql = "
+            SELECT u.id, u.username, u.nombre, u.cedula, c.nombre as club_nombre, c.id as club_id" . ($tiene_numfvd ? ", u.numfvd" : "") . "
             FROM usuarios u
             LEFT JOIN clubes c ON u.club_id = c.id
-            WHERE u.role = 'usuario' 
-              AND (u.status = 'approved' OR u.status = 1)
-            ORDER BY COALESCE(u.nombre, u.username) ASC
-        ");
+            WHERE u.role = 'usuario' AND " . $activoCond;
+        if ($tiene_entidad_col && $entidad_filtro !== null) {
+            $sql .= " AND u.entidad = " . (int) $entidad_filtro;
+        }
+        $sql .= " " . $orderBy;
+        $stmt = $pdo->query($sql);
         $usuarios_territorio = $stmt->fetchAll(PDO::FETCH_ASSOC);
     } else if ($user_club_id) {
         if ($is_admin_club) {
-            // Admin_club: usuarios de su club y clubes supervisados
             require_once __DIR__ . '/../lib/ClubHelper.php';
             $clubes_supervisados = ClubHelper::getClubesSupervised($user_club_id);
             $clubes_ids = array_merge([$user_club_id], $clubes_supervisados);
-            
             if (!empty($clubes_ids)) {
                 $placeholders = str_repeat('?,', count($clubes_ids) - 1) . '?';
-                $stmt = $pdo->prepare("
-                    SELECT u.id, u.username, u.nombre, u.cedula, c.nombre as club_nombre, c.id as club_id
+                $sql = "
+                    SELECT u.id, u.username, u.nombre, u.cedula, c.nombre as club_nombre, c.id as club_id" . ($tiene_numfvd ? ", u.numfvd" : "") . "
                     FROM usuarios u
                     LEFT JOIN clubes c ON u.club_id = c.id
-                    WHERE u.role = 'usuario' 
-                      AND (u.status = 'approved' OR u.status = 1)
-                      AND u.club_id IN ($placeholders)
-                    ORDER BY COALESCE(u.nombre, u.username) ASC
-                ");
+                    WHERE u.role = 'usuario' AND " . $activoCond . " AND u.club_id IN ($placeholders)";
+                if ($tiene_entidad_col && $entidad_filtro !== null) {
+                    $sql .= " AND u.entidad = " . (int) $entidad_filtro;
+                }
+                $sql .= " " . $orderBy;
+                $stmt = $pdo->prepare($sql);
                 $stmt->execute($clubes_ids);
                 $usuarios_territorio = $stmt->fetchAll(PDO::FETCH_ASSOC);
             }
         } else {
-            // Admin_torneo: solo usuarios de su club
-            $stmt = $pdo->prepare("
-                SELECT u.id, u.username, u.nombre, u.cedula, c.nombre as club_nombre, c.id as club_id
+            $sql = "
+                SELECT u.id, u.username, u.nombre, u.cedula, c.nombre as club_nombre, c.id as club_id" . ($tiene_numfvd ? ", u.numfvd" : "") . "
                 FROM usuarios u
                 LEFT JOIN clubes c ON u.club_id = c.id
-                WHERE u.role = 'usuario' 
-                  AND (u.status = 'approved' OR u.status = 1)
-                  AND u.club_id = ?
-                ORDER BY COALESCE(u.nombre, u.username) ASC
-            ");
+                WHERE u.role = 'usuario' AND " . $activoCond . " AND u.club_id = ?";
+            if ($tiene_entidad_col && $entidad_filtro !== null) {
+                $sql .= " AND u.entidad = " . (int) $entidad_filtro;
+            }
+            $sql .= " " . $orderBy;
+            $stmt = $pdo->prepare($sql);
             $stmt->execute([$user_club_id]);
             $usuarios_territorio = $stmt->fetchAll(PDO::FETCH_ASSOC);
         }
     }
-    
-    // Obtener usuarios ya inscritos
+
     $stmt = $pdo->prepare("
         SELECT i.id_usuario, i.estatus, i.id_club,
                u.id, u.username, u.nombre, u.cedula, c.nombre as club_nombre
@@ -2521,15 +2549,9 @@ function obtenerDatosInscribirSitio($torneo_id, $user_id, $is_admin_general) {
     $stmt->execute([$torneo_id]);
     $usuarios_inscritos = $stmt->fetchAll(PDO::FETCH_ASSOC);
     $usuarios_inscritos_ids = array_column($usuarios_inscritos, 'id_usuario');
-    
-    // Separar usuarios disponibles e inscritos
-    $usuarios_disponibles = array_filter($usuarios_territorio, function($u) use ($usuarios_inscritos_ids) {
+
+    $usuarios_disponibles = array_values(array_filter($usuarios_territorio, function ($u) use ($usuarios_inscritos_ids) {
         return !in_array($u['id'], $usuarios_inscritos_ids);
-    });
-    // Filtrar disponibles por club_id = 13 (listado de atletas del club)
-    $club_id_disponibles = 13;
-    $usuarios_disponibles = array_values(array_filter($usuarios_disponibles, function($u) use ($club_id_disponibles) {
-        return (int)($u['club_id'] ?? 0) === $club_id_disponibles;
     }));
 
     // Obtener lista de clubes (solo del territorio del administrador)
