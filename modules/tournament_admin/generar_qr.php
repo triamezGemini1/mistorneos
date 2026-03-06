@@ -285,16 +285,16 @@ function generarQRUrl($data, $size = 300) {
             </div>
         </div>
         
-        <!-- Imprimir en lote: tarjetas personales (entrega al confirmar participación) -->
+        <!-- Imprimir en lote: tarjetas personales (solo datos, sin QR) -->
         <div class="card mt-4 no-print">
             <div class="card-header bg-success text-white">
-                <h6 class="mb-0"><i class="fas fa-id-card me-2"></i>Tarjetas QR personales (entrega al confirmar participación)</h6>
+                <h6 class="mb-0"><i class="fas fa-id-card me-2"></i>Tarjetas personales (identificación)</h6>
             </div>
             <div class="card-body">
-                <p class="text-muted small mb-2">Imprima en lote una tarjeta por cada jugador confirmado con: torneo, nombre, ID y código QR para acceder a su perfil.</p>
+                <p class="text-muted small mb-2">Imprima en lote una tarjeta 4×4 cm por jugador confirmado con: nombre, cédula e ID del torneo (sin QR). También disponible en el menú: <strong>Identificación de jugadores</strong>.</p>
                 <a href="index.php?page=tournament_admin&torneo_id=<?= (int)$torneo_id ?>&action=imprimir_qr_lote" 
                    class="btn btn-success" target="_blank" rel="noopener">
-                    <i class="fas fa-print me-1"></i>Imprimir en lote tarjetas personales
+                    <i class="fas fa-print me-1"></i>Imprimir tarjetas personales (solo datos)
                 </a>
             </div>
         </div>

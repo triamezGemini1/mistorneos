@@ -1,8 +1,7 @@
 <?php
 /**
- * Imprimir en lote: tarjetas personales por jugador confirmado.
- * Si el QR es el mismo para todos (acceso por cédula), no se imprime el QR.
- * Solo se imprimen: nombre, cédula, ID del torneo. Tarjeta 4cm x 4cm, borde, tipografía legible.
+ * Reporte de identificación de jugadores.
+ * Solo nombre, cédula e ID del torneo. Tarjetas 4cm × 4cm con borde y tipografía legible.
  */
 
 $pdo = DB::pdo();
@@ -44,12 +43,12 @@ $jugadores = $stmt->fetchAll(PDO::FETCH_ASSOC);
     body * { visibility: hidden; }
     #area-impresion-tarjetas, #area-impresion-tarjetas * { visibility: visible; }
     #area-impresion-tarjetas { position: absolute; left: 0; top: 0; width: 100%; padding: 0.5cm; }
-    .no-print-lote { display: none !important; }
+    .no-print-id { display: none !important; }
 }
 </style>
 <div class="card">
-    <div class="card-header bg-success text-white d-flex justify-content-between align-items-center no-print-lote">
-        <h6 class="mb-0"><i class="fas fa-id-card me-2"></i>Tarjetas personales (solo datos — sin QR)</h6>
+    <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center no-print-id">
+        <h6 class="mb-0"><i class="fas fa-address-card me-2"></i>Identificación de jugadores</h6>
         <button type="button" class="btn btn-light btn-sm" onclick="window.print();">
             <i class="fas fa-print me-1"></i>Imprimir
         </button>
@@ -58,7 +57,7 @@ $jugadores = $stmt->fetchAll(PDO::FETCH_ASSOC);
         <?php if (empty($jugadores)): ?>
             <p class="text-muted">No hay jugadores confirmados para este torneo.</p>
         <?php else: ?>
-            <p class="small text-muted no-print-lote mb-3">Tarjetas de 4cm × 4cm: nombre, cédula e ID del torneo. Sin QR (mismo enlace para todos).</p>
+            <p class="small text-muted no-print-id mb-3">Tarjetas 4cm × 4cm: nombre, cédula e ID del torneo.</p>
             <div id="area-impresion-tarjetas" class="row g-2">
                 <?php foreach ($jugadores as $j):
                     $nombre = htmlspecialchars($j['nombre'] ?? '—');

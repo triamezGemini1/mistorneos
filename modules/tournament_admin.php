@@ -597,6 +597,14 @@ $error_message = $_GET['error'] ?? null;
                         <strong>QR Personal</strong>
                     </a>
                     <?php endif; ?>
+                    
+                    <?php if ($mostrar('generar_qr')): ?>
+                    <a href="index.php?page=tournament_admin&torneo_id=<?= $torneo_id ?>&action=reporte_identificacion_jugadores" 
+                       class="menu-item d-block text-decoration-none text-dark <?= $menu_action === 'reporte_identificacion_jugadores' ? 'active' : '' ?>">
+                        <i class="fas fa-address-card"></i>
+                        <strong>Identificación de jugadores</strong>
+                    </a>
+                    <?php endif; ?>
                 </div>
             </div>
 
