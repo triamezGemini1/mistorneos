@@ -25,19 +25,38 @@ class ImportacionMasivaService
     public const TAMANO_LOTE = 20;
 
     /**
+     * Asegura que una cadena esté en UTF-8 (evita Mojibake en reportes).
+     */
+    private static function asegurarUtf8(string $s): string
+    {
+        if ($s === '') {
+            return $s;
+        }
+        $enc = mb_detect_encoding($s, ['UTF-8', 'ISO-8859-1', 'Windows-1252'], true);
+        if ($enc && $enc !== 'UTF-8') {
+            $s = mb_convert_encoding($s, 'UTF-8', $enc);
+        }
+        return $s;
+    }
+
+    /**
      * Normaliza y valida una fila para importación.
+     * Acepta 'organizacion' o 'entidad' en entrada; internamente se guarda en columna `entidad`.
+     * Cédula: solo dígitos (preg_replace residuos invisibles).
      * @return array{normalized: array, error: string|null}
      */
     public static function normalizarFila(array $fila, int $indiceFila): array
     {
         $trim = static function ($v) {
-            return is_string($v) ? trim($v) : (string) $v;
+            $s = is_string($v) ? trim($v) : (string) $v;
+            return $s;
         };
         $nacionalidad = strtoupper($trim($fila['nacionalidad'] ?? ''));
         if (!in_array($nacionalidad, ['V', 'E', 'J', 'P'], true)) {
             $nacionalidad = 'V';
         }
-        $cedula = preg_replace('/\D/', '', $trim($fila['cedula'] ?? ''));
+        $cedulaRaw = $trim($fila['cedula'] ?? '');
+        $cedula = preg_replace('/[^0-9]/', '', $cedulaRaw);
         $nombre = $trim($fila['nombre'] ?? '');
         $sexo = strtoupper($trim($fila['sexo'] ?? 'M'));
         if (!in_array($sexo, ['M', 'F', 'O'], true)) {
@@ -47,7 +66,7 @@ class ImportacionMasivaService
         $telefono = $trim($fila['telefono'] ?? $fila['celular'] ?? '');
         $email = $trim($fila['email'] ?? '');
         $clubNombre = $trim($fila['club'] ?? $fila['club_nombre'] ?? '');
-        $entidad = isset($fila['entidad']) ? (int) $fila['entidad'] : null;
+        $organizacion = isset($fila['organizacion']) ? (int) $fila['organizacion'] : (isset($fila['entidad']) ? (int) $fila['entidad'] : null);
 
         if ($cedula === '' || strlen($cedula) < 4) {
             return ['normalized' => [], 'error' => 'Cédula inválida o faltante (mín. 4 dígitos)'];
@@ -65,7 +84,7 @@ class ImportacionMasivaService
             'telefono' => $telefono,
             'email' => $email,
             'club_nombre' => $clubNombre,
-            'entidad' => $entidad,
+            'entidad' => $organizacion,
         ];
         return ['normalized' => $normalized, 'error' => null];
     }
@@ -136,7 +155,8 @@ class ImportacionMasivaService
                     $filaNum = $idx + 1;
                     $norm = self::normalizarFila($fila, $filaNum);
                     if ($norm['error'] !== null) {
-                        $errores[] = ['fila' => $filaNum, 'cedula' => $fila['cedula'] ?? '', 'motivo' => $norm['error']];
+                        $cedulaLog = preg_replace('/[^0-9]/', '', (string) ($fila['cedula'] ?? ''));
+                        $errores[] = ['fila' => $filaNum, 'cedula' => $cedulaLog, 'motivo' => $norm['error']];
                         continue;
                     }
                     $n = $norm['normalized'];
@@ -194,7 +214,7 @@ class ImportacionMasivaService
                         $password = strlen($cedula) >= 6 ? $cedula : str_pad($cedula, 6, '0', STR_PAD_LEFT);
                         $fechnac = $n['fechnac'] !== '' ? $n['fechnac'] : null;
 
-                        $create = Security::createUser([
+                        $createData = [
                             'username' => $username,
                             'password' => $password,
                             'role' => 'usuario',
@@ -207,7 +227,11 @@ class ImportacionMasivaService
                             'celular' => $n['telefono'],
                             'club_id' => $idClub,
                             '_allow_club_for_usuario' => true,
-                        ]);
+                        ];
+                        if ($n['entidad'] !== null && $n['entidad'] > 0) {
+                            $createData['entidad'] = (int) $n['entidad'];
+                        }
+                        $create = Security::createUser($createData);
                         if (!empty($create['errors'])) {
                             $errores[] = ['fila' => $filaNum, 'cedula' => $cedula, 'motivo' => implode(', ', $create['errors'])];
                             continue;
@@ -243,18 +267,25 @@ class ImportacionMasivaService
                 $pdo->rollBack();
                 foreach ($lote as $idx => $fila) {
                     $filaNum = $idx + 1;
-                    $errores[] = ['fila' => $filaNum, 'cedula' => $fila['cedula'] ?? '', 'motivo' => 'Error en lote: ' . $e->getMessage()];
+                    $cedulaLog = preg_replace('/[^0-9]/', '', (string) ($fila['cedula'] ?? ''));
+                    $errores[] = ['fila' => $filaNum, 'cedula' => $cedulaLog, 'motivo' => 'Error en lote: ' . $e->getMessage()];
                 }
             }
         }
 
         $csvErrores = '';
         if (!empty($errores)) {
-            $csvErrores = "Fila;Cédula;Motivo\n";
+            $bom = "\xEF\xBB\xBF";
+            $csvErrores = $bom . "Fila;Cédula;Motivo\n";
             foreach ($errores as $err) {
-                $csvErrores .= sprintf("%d;%s;%s\n", $err['fila'], $err['cedula'], str_replace(["\r", "\n", ";"], [' ', ' ', ','], $err['motivo']));
+                $fila = (int) $err['fila'];
+                $cedula = self::asegurarUtf8((string) ($err['cedula'] ?? ''));
+                $motivo = self::asegurarUtf8(str_replace(["\r", "\n", ";"], [' ', ' ', ','], (string) ($err['motivo'] ?? '')));
+                $csvErrores .= sprintf("%d;%s;%s\n", $fila, $cedula, $motivo);
             }
-            $csvErrores = mb_convert_encoding($csvErrores, 'UTF-8', 'UTF-8');
+            if (!mb_check_encoding($csvErrores, 'UTF-8')) {
+                $csvErrores = mb_convert_encoding($csvErrores, 'UTF-8', mb_detect_encoding($csvErrores, ['UTF-8', 'ISO-8859-1', 'Windows-1252'], true) ?: 'UTF-8');
+            }
         }
 
         return [

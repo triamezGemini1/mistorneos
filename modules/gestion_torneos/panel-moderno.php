@@ -742,7 +742,7 @@ tailwind.config = {
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Cerrar"></button>
             </div>
             <div class="modal-body">
-                <p class="text-muted small">Cargue un CSV con columnas para: nacionalidad, cédula, nombre, sexo, fecha_nac, telefono, email, club, entidad. Luego asigne cada columna del archivo al campo correspondiente.</p>
+                <p class="text-muted small">Cargue un CSV con columnas para: nacionalidad, cédula, nombre, sexo, fecha_nac, telefono, email, club, organización. El archivo se detecta en UTF-8, ISO-8859-1 o Windows-1252 y se convierte a UTF-8. Asigne cada columna al campo (si el archivo tiene "entidad" o "organización", asígnela a Organización).</p>
                 <p class="small mb-2"><strong>Semáforo (tras Validar):</strong> <span class="badge" style="background:#3b82f6">Azul</span> Ya inscrito (omitir) · <span class="badge" style="background:#eab308;color:#000">Amarillo</span> Usuario existe (solo inscribir) · <span class="badge" style="background:#22c55e">Verde</span> Todo nuevo (crear e inscribir) · <span class="badge bg-danger">Rojo</span> Error de datos</p>
                 <div class="mb-3">
                     <label class="form-label">Archivo CSV</label>
@@ -928,11 +928,30 @@ async function confirmarCierreTorneo(event) {
 
 // --- Importación masiva ---
 (function() {
-    const CAMPOS = ['nacionalidad','cedula','nombre','sexo','fecha_nac','telefono','email','club','entidad'];
+    const CAMPOS = ['nacionalidad','cedula','nombre','sexo','fecha_nac','telefono','email','club','organizacion'];
+    const CAMPOS_LABEL = { organizacion: 'Organización' };
     const COLORS = { omitir: '#3b82f6', inscribir: '#eab308', crear_inscribir: '#22c55e', error: '#ef4444' };
     let importMasivaHeaders = [];
     let importMasivaRows = [];
     let importMasivaValidacion = [];
+
+    function detectEncodingAndDecode(buffer) {
+        var bytes = new Uint8Array(buffer);
+        var utf8 = new TextDecoder('utf-8').decode(bytes);
+        var mojibakePattern = /Ã[Âª©®¯°±²³´µ¶·¸¹º»¼½¾¿ÀÁÂÃÄÅÆÇÈÉÊËÌÍÎÏ]/;
+        if (mojibakePattern.test(utf8) || (utf8.indexOf('Ã') !== -1 && utf8.indexOf('©') !== -1)) {
+            try {
+                return new TextDecoder('windows-1252').decode(bytes);
+            } catch (e) {
+                try {
+                    return new TextDecoder('iso-8859-1').decode(bytes);
+                } catch (e2) {
+                    return utf8;
+                }
+            }
+        }
+        return utf8;
+    }
 
     function parseCSV(text) {
         const lines = [];
@@ -978,7 +997,9 @@ async function confirmarCierreTorneo(event) {
         if (!file) return;
         const reader = new FileReader();
         reader.onload = function(ev) {
-            const text = (ev.target.result || '').replace(/\r\n/g, '\n');
+            var buffer = ev.target.result;
+            var text = detectEncodingAndDecode(buffer);
+            text = text.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
             const parsed = parseCSV(text);
             if (parsed.length < 2) { alert('El archivo debe tener al menos cabecera y una fila.'); return; }
             importMasivaHeaders = parsed[0];
@@ -988,8 +1009,13 @@ async function confirmarCierreTorneo(event) {
             CAMPOS.forEach(function(campo) {
                 const div = document.createElement('div');
                 div.className = 'col-6 col-md-4 col-lg-3';
-                div.innerHTML = '<label class="form-label small mb-0">' + campo + '</label><select class="form-select form-select-sm map-select" data-campo="' + campo + '"><option value="">-- No usar --</option>' +
-                    importMasivaHeaders.map(function(h, i) { return '<option value="' + i + '">' + (h || 'Col ' + (i+1)) + '</option>'; }).join('') + '</select>';
+                var label = (CAMPOS_LABEL[campo] || campo);
+                var opts = importMasivaHeaders.map(function(h, i) {
+                    var head = (h || 'Col ' + (i+1)).trim().toLowerCase();
+                    var selected = (campo === 'organizacion' && (head === 'entidad' || head === 'organizacion' || head === 'organización')) ? ' selected' : '';
+                    return '<option value="' + i + '"' + selected + '>' + (h || 'Col ' + (i+1)) + '</option>';
+                }).join('');
+                div.innerHTML = '<label class="form-label small mb-0">' + label + '</label><select class="form-select form-select-sm map-select" data-campo="' + campo + '"><option value="">-- No usar --</option>' + opts + '</select>';
                 row.appendChild(div);
             });
             document.getElementById('importMasivaMapping').classList.remove('d-none');
@@ -997,7 +1023,7 @@ async function confirmarCierreTorneo(event) {
             document.getElementById('importMasivaPreviewCount').textContent = importMasivaRows.length;
             buildPreviewTable();
         };
-        reader.readAsText(file, 'UTF-8');
+        reader.readAsArrayBuffer(file);
     });
 
     function buildPreviewTable() {
@@ -1006,7 +1032,7 @@ async function confirmarCierreTorneo(event) {
             const v = s.value;
             if (v !== '') map[s.dataset.campo] = parseInt(v, 10);
         });
-        const thead = ['#'].concat(CAMPOS);
+        const thead = ['#'].concat(CAMPOS.map(function(c) { return CAMPOS_LABEL[c] || c; }));
         const tbody = importMasivaRows.map(function(r, i) {
             const row = [(i+1)];
             CAMPOS.forEach(function(c) { row.push(map[c] !== undefined ? (r[map[c]] || '') : ''); });
@@ -1037,7 +1063,11 @@ async function confirmarCierreTorneo(event) {
         return importMasivaRows.map(function(r) {
             const obj = {};
             CAMPOS.forEach(function(c) {
-                if (map[c] !== undefined) obj[c] = r[map[c]] != null ? String(r[map[c]]).trim() : '';
+                if (map[c] !== undefined) {
+                    var val = r[map[c]];
+                    val = val != null ? String(val).trim() : '';
+                    obj[c] = val;
+                }
             });
             return obj;
         });
@@ -1096,15 +1126,17 @@ async function confirmarCierreTorneo(event) {
                 };
                 if (tieneErrores && data.archivo_errores_base64) {
                     opts.showDenyButton = true;
-                    opts.denyButtonText = 'Descargar reporte de errores';
+                    opts.denyButtonText = 'Descargar Log de Errores';
                     opts.denyButtonColor = '#6b7280';
                 }
                 Swal.fire(opts).then(function(res) {
                     if (res.isDenied && data.archivo_errores_base64) {
-                        const blob = new Blob([atob(data.archivo_errores_base64)], { type: 'text/csv;charset=utf-8' });
+                        var bin = atob(data.archivo_errores_base64);
+                        var bom = '\uFEFF';
+                        var blob = new Blob([bom + bin], { type: 'text/csv;charset=utf-8' });
                         const a = document.createElement('a');
                         a.href = URL.createObjectURL(blob);
-                        a.download = 'errores_importacion_' + (new Date().toISOString().slice(0,10)) + '.csv';
+                        a.download = 'log_errores_importacion_' + (new Date().toISOString().slice(0,10)) + '.csv';
                         a.click();
                         URL.revokeObjectURL(a.href);
                     }
