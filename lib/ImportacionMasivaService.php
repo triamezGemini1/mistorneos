@@ -72,14 +72,14 @@ class ImportacionMasivaService
 
         $camposObligatorios = [
             'nacionalidad' => $nacionalidadRaw === '' ? 'Nacionalidad' : null,
-            'cedula' => ($cedula === '' || strlen($cedula) < 4) ? 'Cédula (mín. 4 dígitos)' : null,
+            'cedula' => ($cedula === '' || strlen($cedula) < 4) ? 'Cedula (min. 4 digitos)' : null,
             'nombre' => ($nombre === '' || strlen($nombre) < 2) ? 'Nombre' : null,
             'club' => $clubNombre === '' ? 'Club' : null,
-            'organizacion' => $organizacionVal < 1 ? 'Organización' : null,
+            'organizacion' => $organizacionVal < 1 ? 'Organizacion' : null,
         ];
         foreach ($camposObligatorios as $campo => $nombreCampo) {
             if ($nombreCampo !== null) {
-                return ['normalized' => [], 'error' => 'Campo obligatorio ' . $nombreCampo . ' ausente o inválido'];
+                return ['normalized' => [], 'error' => 'Campo obligatorio ' . $nombreCampo . ' ausente o invalido'];
             }
         }
 
@@ -193,7 +193,7 @@ class ImportacionMasivaService
                         $clubNombre = self::asegurarUtf8($n['club_nombre'] ?? '');
                         $organizacionVal = (int) ($n['entidad'] ?? 0);
                         if ($clubNombre === '' || $organizacionVal < 1) {
-                            $errores[] = ['fila' => $filaNum, 'cedula' => $cedula, 'motivo' => 'Organización/Club obligatorio ausente'];
+                            $errores[] = ['fila' => $filaNum, 'cedula' => $cedula, 'motivo' => 'Organizacion/Club obligatorio ausente'];
                             continue;
                         }
                         $club = $clubRepo->findByName($clubNombre);
@@ -290,9 +290,11 @@ class ImportacionMasivaService
             $lines = [];
             foreach ($errores as $err) {
                 $numFila = (int) $err['fila'];
-                $cedula = self::asegurarUtf8((string) ($err['cedula'] ?? ''));
-                $motivo = self::asegurarUtf8(str_replace(["\r", "\n"], [' ', ' '], (string) ($err['motivo'] ?? '')));
-                $lines[] = sprintf("Fila %d - Cédula: %s - Motivo: %s", $numFila, $cedula, $motivo);
+                $cedula = (string) ($err['cedula'] ?? '');
+                $cedula = preg_replace('/[^0-9]/', '', $cedula);
+                $motivo = str_replace(["\r", "\n"], [' ', ' '], (string) ($err['motivo'] ?? ''));
+                $motivo = self::asegurarUtf8($motivo);
+                $lines[] = sprintf("Fila %d - Cedula: %s - Motivo: %s", $numFila, $cedula, $motivo);
             }
             $txtErrores = $bom . implode("\n", $lines) . "\n";
             if (!mb_check_encoding($txtErrores, 'UTF-8')) {

@@ -99,10 +99,32 @@ try {
         if (empty($allRows)) {
             throw new RuntimeException('El archivo no contiene filas');
         }
-        $skipDecorativeRows = 3;
-        $headerRowIndex = $skipDecorativeRows;
+        $headerRowIndex = null;
+        $headerKeywords = ['nacionalidad', 'cedula', 'cédula', 'nombre', 'club', 'organizacion', 'organización', 'sexo', 'telefono', 'email'];
+        for ($r = 0, $max = min(4, count($allRows)); $r < $max; $r++) {
+            $row = $allRows[$r];
+            $cells = array_map(function ($c) {
+                return trim(mb_strtolower((string) $c));
+            }, $row);
+            $match = 0;
+            foreach ($cells as $cell) {
+                foreach ($headerKeywords as $kw) {
+                    if ($cell === $kw || ($cell !== '' && strpos($cell, $kw) !== false)) {
+                        $match++;
+                        break;
+                    }
+                }
+            }
+            if ($match >= 2) {
+                $headerRowIndex = $r;
+                break;
+            }
+        }
+        if ($headerRowIndex === null) {
+            $headerRowIndex = 3;
+        }
         if (count($allRows) < $headerRowIndex + 1) {
-            throw new RuntimeException('El archivo debe tener al menos 4 filas (cabecera en fila 4, datos desde fila 5)');
+            throw new RuntimeException('El archivo debe tener cabecera (nacionalidad, CEDULA, nombre, etc.) y al menos una fila de datos');
         }
         $headers = array_map($asegurarUtf8, $allRows[$headerRowIndex]);
         $numCols = count($headers);
