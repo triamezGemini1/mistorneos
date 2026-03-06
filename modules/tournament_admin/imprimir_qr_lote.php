@@ -18,7 +18,7 @@ $stmt = $pdo->prepare("
 $stmt->execute([$torneo_id]);
 $jugadores = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-$url_panel = 'index.php?page=tournament_admin&torneo_id=' . (int)$torneo_id;
+$url_panel = 'index.php?page=tournament_admin&action=dashboard&torneo_id=' . (int)$torneo_id;
 ?>
 <style>
 .contenedor-pagina-tarjetas {
@@ -48,8 +48,8 @@ $url_panel = 'index.php?page=tournament_admin&torneo_id=' . (int)$torneo_id;
 }
 .tarjeta-id-lote .titulo-torneo { font-size: 14pt; font-weight: bold; color: #1565c0; margin-bottom: 0.3cm; line-height: 1.2; }
 .tarjeta-id-lote .nombre { font-size: 16pt; font-weight: bold; color: #212121; margin-bottom: 0.25cm; line-height: 1.25; }
-.tarjeta-id-lote .cedula { font-size: 14pt; color: #424242; margin-bottom: 0.25cm; }
-.tarjeta-id-lote .id-jugador { font-size: 18pt; font-weight: bold; color: #0d47a1; }
+.tarjeta-id-lote .cedula { font-size: 28pt; color: #424242; margin-bottom: 0.25cm; }
+.tarjeta-id-lote .id-jugador { font-size: 36pt; font-weight: bold; color: #0d47a1; }
 @media print {
     .no-print-lote { display: none !important; }
     .col-md-3 { display: none !important; }

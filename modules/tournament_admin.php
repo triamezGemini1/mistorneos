@@ -362,7 +362,7 @@ $error_message = $_GET['error'] ?? null;
                         $acciones_impresion = ['generar_qr', 'imprimir_qr_lote', 'reporte_identificacion_jugadores'];
                         $mostrar_retorno_layout = !in_array($menu_action, $acciones_impresion, true);
                         if ($mostrar_retorno_layout):
-                            $url_retorno = 'index.php?page=tournament_admin&torneo_id=' . (int)$torneo_id;
+                            $url_retorno = 'index.php?page=tournament_admin&action=dashboard&torneo_id=' . (int)$torneo_id;
                         ?>
                         <a href="<?= htmlspecialchars($url_retorno) ?>" class="btn btn-light btn-lg">
                             <i class="fas fa-arrow-left me-2"></i>Volver al panel

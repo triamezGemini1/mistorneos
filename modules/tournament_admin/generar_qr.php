@@ -10,7 +10,7 @@
 
 $pdo = DB::pdo();
 $base_url = app_base_url();
-$url_panel = 'index.php?page=tournament_admin&torneo_id=' . (int)$torneo_id;
+$url_panel = 'index.php?page=tournament_admin&action=dashboard&torneo_id=' . (int)$torneo_id;
 
 // URL principal para jugadores: acceso por cédula (recomendado para QR del torneo)
 $perfil_jugador_url = $base_url . '/public/perfil_jugador.php?torneo_id=' . $torneo_id;
