@@ -65,17 +65,17 @@ require_once __DIR__ . '/../../lib/InscritosHelper.php';
         <div class="card-body px-2 px-md-3">
             <p class="small text-muted mb-2">Búsqueda: inscritos → usuarios → BD externa. Al salir de cédula se busca automáticamente.</p>
 
-            <!-- Línea 1: Nacionalidad (25%), Cédula (50%), Club (resto), Estado inicial (50%) -->
-            <div class="insc-sitio-fila insc-sitio-linea-busqueda mb-2">
-                <div class="insc-sitio-campo insc-sitio-nac-25">
+            <!-- Una sola línea: Nacionalidad, Cédula, Club, y (al tener resultado) Nombre, Sexo, Inscribir, Otra búsqueda. Estatus siempre confirmado. -->
+            <div class="insc-sitio-fila insc-sitio-una-linea mb-2" id="insc_sitio_linea_principal">
+                <div class="insc-sitio-campo insc-sitio-nac">
                     <label class="form-label small mb-0">Nacionalidad</label>
                     <input type="text" id="select_nacionalidad_cedula" class="form-control form-control-sm" placeholder="V" value="V" maxlength="1" title="V, E, J o P" autocomplete="off">
                 </div>
-                <div class="insc-sitio-campo insc-sitio-cedula-50">
+                <div class="insc-sitio-campo insc-sitio-cedula">
                     <label class="form-label small mb-0">Cédula <span class="text-danger">*</span></label>
                     <input type="text" id="input_cedula" class="form-control form-control-sm" placeholder="Solo números" maxlength="15" inputmode="numeric" autocomplete="off">
                 </div>
-                <div class="insc-sitio-campo insc-sitio-club-resto">
+                <div class="insc-sitio-campo insc-sitio-club">
                     <label class="form-label small mb-0">Club</label>
                     <select id="select_club_cedula" class="form-select form-select-sm">
                         <option value="">-- Usar club del usuario --</option>
@@ -84,39 +84,25 @@ require_once __DIR__ . '/../../lib/InscritosHelper.php';
                         <?php endforeach; ?>
                     </select>
                 </div>
-                <div class="insc-sitio-campo insc-sitio-estado-50">
-                    <label class="form-label small mb-0">Estado inicial</label>
-                    <select id="select_estatus_cedula" class="form-select form-select-sm">
-                        <?php foreach (InscritosHelper::getEstatusFormOptions() as $opt): ?>
-                            <option value="<?= $opt['value'] ?>" <?= $opt['value'] == 1 ? 'selected' : '' ?>><?= $opt['label'] ?></option>
-                        <?php endforeach; ?>
+                <div class="insc-sitio-campo insc-sitio-resultado d-none" id="wrap_acciones_cedula">
+                    <label class="form-label small mb-0">Nombre</label>
+                    <input type="text" id="input_nombre_line" class="form-control form-control-sm" placeholder="Se completa al buscar" readonly>
+                </div>
+                <div class="insc-sitio-campo insc-sitio-resultado d-none" id="wrap_sexo_cedula">
+                    <label class="form-label small mb-0">Sexo</label>
+                    <select id="select_sexo_line" class="form-select form-select-sm">
+                        <option value="M">M</option>
+                        <option value="F">F</option>
+                        <option value="O">O</option>
                     </select>
+                </div>
+                <div class="insc-sitio-campo insc-sitio-resultado d-none d-flex align-items-end gap-1" id="wrap_btn_inscribir_cedula">
+                    <button type="button" class="btn btn-success btn-sm" id="btn_inscribir_cedula"><i class="fas fa-save me-1"></i>Inscribir</button>
+                    <button type="button" class="btn btn-outline-secondary btn-sm" id="btn_otra_busqueda_cedula" title="Otra búsqueda"><i class="fas fa-redo"></i></button>
                 </div>
             </div>
 
             <div id="mensaje_formulario_cedula" class="small mb-2 d-none" role="alert"></div>
-
-            <!-- Línea 2: Datos de búsqueda encontrada (Nombre 25%, Sexo, botones) -->
-            <div class="insc-sitio-linea-resultado mb-2 d-none" id="wrap_acciones_cedula">
-                <div class="insc-sitio-fila flex-wrap align-items-end">
-                    <div class="insc-sitio-campo insc-sitio-nombre-25">
-                        <label class="form-label small mb-0">Nombre</label>
-                        <input type="text" id="input_nombre_line" class="form-control form-control-sm" placeholder="Se completa al buscar" readonly>
-                    </div>
-                    <div class="insc-sitio-campo">
-                        <label class="form-label small mb-0">Sexo</label>
-                        <select id="select_sexo_line" class="form-select form-select-sm">
-                            <option value="M">M</option>
-                            <option value="F">F</option>
-                            <option value="O">O</option>
-                        </select>
-                    </div>
-                    <div class="insc-sitio-campo d-flex align-items-end gap-1">
-                        <button type="button" class="btn btn-success btn-sm" id="btn_inscribir_cedula"><i class="fas fa-save me-1"></i>Inscribir</button>
-                        <button type="button" class="btn btn-outline-secondary btn-sm" id="btn_otra_busqueda_cedula" title="Otra búsqueda"><i class="fas fa-redo"></i></button>
-                    </div>
-                </div>
-            </div>
 
             <!-- Formulario nuevo (no encontrado en usuarios ni BD externa) -->
             <div id="form_nuevo_usuario_inscribir" class="d-none card border-warning mt-2">
@@ -195,18 +181,16 @@ require_once __DIR__ . '/../../lib/InscritosHelper.php';
 </div>
 
 <style>
-.insc-sitio-fila { display: flex; flex-wrap: nowrap; align-items: flex-end; gap: 0.5rem; }
-.insc-sitio-linea-busqueda { flex-wrap: wrap; width: 100%; }
+.insc-sitio-fila { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 0.5rem; }
+.insc-sitio-una-linea { width: 100%; }
 .insc-sitio-campo { min-width: 0; }
-/* Línea 1: nacionalidad 25%, cédula 50%, club resto, estado inicial 50% */
-.insc-sitio-nac-25 { flex: 0 1 25%; max-width: 25%; }
-.insc-sitio-cedula-50 { flex: 0 1 50%; max-width: 50%; }
-.insc-sitio-club-resto { flex: 1 1 0; min-width: 80px; }
-.insc-sitio-estado-50 { flex: 0 1 50%; max-width: 50%; }
-/* Línea 2 resultado: nombre 25% */
-.insc-sitio-linea-resultado .insc-sitio-campo { flex: 0 0 auto; }
-.insc-sitio-nombre-25 { flex: 0 1 25%; max-width: 25%; }
 .insc-sitio-campo .form-control, .insc-sitio-campo .form-select { width: 100%; }
+/* Una línea: tamaños flexibles al espacio disponible */
+.insc-sitio-nac { flex: 0 1 8%; min-width: 3rem; }
+.insc-sitio-cedula { flex: 0 1 18%; min-width: 5rem; }
+.insc-sitio-club { flex: 1 1 20%; min-width: 6rem; }
+.insc-sitio-resultado { flex: 0 1 18%; min-width: 4rem; }
+.insc-sitio-resultado#wrap_btn_inscribir_cedula { flex: 0 0 auto; }
 .table-row-hover:hover { background-color: #e3f2fd !important; }
 @media (min-width: 768px) {
   .ds-inscripcion .card-body { padding-left: 0.75rem; padding-right: 0.75rem; }
@@ -252,8 +236,10 @@ require_once __DIR__ . '/../../lib/InscritosHelper.php';
         if ($('form_email')) $('form_email').value = p.email || '';
     }
     function showInscribir(show) {
-        var w = $('wrap_acciones_cedula');
-        if (w) w.classList.toggle('d-none', !show);
+        ['wrap_acciones_cedula', 'wrap_sexo_cedula', 'wrap_btn_inscribir_cedula'].forEach(function(id) {
+            var w = $(id);
+            if (w) w.classList.toggle('d-none', !show);
+        });
     }
     function showFormNuevo(show) {
         var w = $('form_nuevo_usuario_inscribir');
@@ -379,7 +365,7 @@ require_once __DIR__ . '/../../lib/InscritosHelper.php';
         fd.append('torneo_id', TORNEOS_ID);
         fd.append('id_usuario', idUsuario);
         if (clubId) fd.append('id_club', clubId);
-        fd.append('estatus', $('select_estatus_cedula') ? $('select_estatus_cedula').value : '1');
+        fd.append('estatus', '1');
         fd.append('csrf_token', CSRF_TOKEN);
         if (rowEl) { rowEl.style.opacity = '0.5'; rowEl.style.pointerEvents = 'none'; }
         fetch(API_URL, { method: 'POST', body: fd })
@@ -457,7 +443,7 @@ require_once __DIR__ . '/../../lib/InscritosHelper.php';
                 fd.append('torneo_id', TORNEOS_ID);
                 fd.append('id_usuario', usuarioEncontrado.id);
                 fd.append('id_club', clubId);
-                fd.append('estatus', $('select_estatus_cedula') ? $('select_estatus_cedula').value : '1');
+                fd.append('estatus', '1');
                 fd.append('csrf_token', CSRF_TOKEN);
                 fetch(API_URL, { method: 'POST', body: fd })
                     .then(function(r) { return r.json(); })
