@@ -348,11 +348,14 @@ $error_message = $_GET['error'] ?? null;
                         // El botón solo se habilita si todas las rondas están completas
                         $puede_finalizar = !$torneo_finalizado && $puede_acceder && $rondas_completadas;
                         ?>
+                        <?php
+                        $es_reporte_tarjetas = in_array($menu_action, ['imprimir_qr_lote', 'reporte_identificacion_jugadores'], true);
+                        ?>
                         <?php if ($torneo_finalizado): ?>
                             <span class="badge bg-danger fs-6 mb-2 d-block">
                                 <i class="fas fa-lock me-2"></i>Torneo Finalizado
                             </span>
-                        <?php elseif (!$rondas_completadas): ?>
+                        <?php elseif (!$rondas_completadas && !$es_reporte_tarjetas): ?>
                             <div class="alert alert-warning mb-2 p-2" style="font-size: 0.85rem;">
                                 <i class="fas fa-info-circle me-1"></i>
                                 <small><?= htmlspecialchars($mensaje_rondas) ?></small>
@@ -362,7 +365,8 @@ $error_message = $_GET['error'] ?? null;
                         $acciones_impresion = ['generar_qr', 'imprimir_qr_lote', 'reporte_identificacion_jugadores'];
                         $mostrar_retorno_layout = !in_array($menu_action, $acciones_impresion, true);
                         if ($mostrar_retorno_layout):
-                            $url_retorno = 'index.php?page=tournament_admin&action=dashboard&torneo_id=' . (int)$torneo_id;
+                            $base_retorno = function_exists('app_base_url') ? rtrim(app_base_url(), '/') . '/public' : '';
+                            $url_retorno = ($base_retorno !== '' ? $base_retorno . '/' : '') . 'index.php?page=tournament_admin&action=dashboard&torneo_id=' . (int)$torneo_id;
                         ?>
                         <a href="<?= htmlspecialchars($url_retorno) ?>" class="btn btn-light btn-lg">
                             <i class="fas fa-arrow-left me-2"></i>Volver al panel

@@ -347,7 +347,11 @@ if ($is_admin_general) {
                                 </div>
 
                                 <div class="mt-3">
-                                    <a href="index.php?page=tournament_admin&torneo_id=<?= (int)$torneo_id ?>&action=panel" class="btn btn-secondary"><i class="fas fa-times me-2"></i>Volver al panel</a>
+                                    <?php
+                                    $base_ins = function_exists('app_base_url') ? rtrim(app_base_url(), '/') . '/public' : '';
+                                    $url_panel_ins = ($base_ins !== '' ? $base_ins . '/' : '') . 'index.php?page=tournament_admin&action=dashboard&torneo_id=' . (int)$torneo_id;
+                                    ?>
+                                    <a href="<?= htmlspecialchars($url_panel_ins) ?>" class="btn btn-secondary"><i class="fas fa-times me-2"></i>Volver al panel</a>
                                 </div>
                             </div>
                         </div>

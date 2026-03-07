@@ -22,7 +22,8 @@ $stmt = $pdo->prepare("
 $stmt->execute([$torneo_id]);
 $jugadores = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-$url_panel = 'index.php?page=tournament_admin&action=dashboard&torneo_id=' . (int)$torneo_id;
+$base = function_exists('app_base_url') ? rtrim(app_base_url(), '/') . '/public' : '';
+$url_panel = ($base !== '' ? $base . '/' : '') . 'index.php?page=tournament_admin&action=dashboard&torneo_id=' . (int)$torneo_id;
 ?>
 <style>
 * { margin: 0; padding: 0; box-sizing: border-box; }
