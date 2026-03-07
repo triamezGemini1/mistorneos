@@ -8,7 +8,7 @@ $pdo = DB::pdo();
 $torneo_nombre = isset($torneo['nombre']) ? $torneo['nombre'] : 'Torneo';
 
 $stmt = $pdo->prepare("
-    SELECT i.id_usuario, u.nombre, u.cedula, u.username
+    SELECT i.id_usuario, u.nombre, u.cedula, u.username AS usuario_login
     FROM inscritos i
     INNER JOIN usuarios u ON u.id = i.id_usuario
     WHERE i.torneo_id = ?
@@ -46,7 +46,7 @@ $url_panel = rtrim($base_url, '/') . '/' . basename($script) . '?page=torneo_ges
 .cuadricula-tarjetas-grid {
     display: grid;
     grid-template-columns: repeat(5, 3.6cm);
-    grid-template-rows: repeat(6, 4cm);
+    grid-template-rows: repeat(6, 4.2cm);
     gap: 0;
     border-collapse: collapse;
     width: 100%;
@@ -57,7 +57,7 @@ $url_panel = rtrim($base_url, '/') . '/' . basename($script) . '?page=torneo_ges
 
 .tarjeta-id {
     width: 3.6cm;
-    height: 4cm;
+    min-height: 4cm;
     box-sizing: border-box;
     border: 0.5mm solid #000;
     display: flex;
@@ -69,11 +69,12 @@ $url_panel = rtrim($base_url, '/') . '/' . basename($script) . '?page=torneo_ges
     page-break-inside: avoid;
     background: #fff;
     padding: 1.5mm;
+    overflow: visible;
 }
-.tarjeta-id .nombre { font-size: 10.5pt; font-weight: bold; color: #212121; margin-bottom: 1mm; line-height: 1.1; }
-.tarjeta-id .usuario { font-size: 8.5pt; color: #616161; margin-bottom: 0.5mm; }
-.tarjeta-id .cedula { font-size: 14.7pt; font-weight: bold; color: #424242; margin-bottom: 1mm; }
-.tarjeta-id .id-jugador { font-size: 19.6pt; font-weight: bold; color: #0d47a1; margin-bottom: 0.5mm; }
+.tarjeta-id .nombre { font-size: 10.5pt; font-weight: bold; color: #212121; margin-bottom: 0.5mm; line-height: 1.1; }
+.tarjeta-id .usuario { font-size: 9pt; color: #37474f; margin-bottom: 0.5mm; }
+.tarjeta-id .cedula { font-size: 13pt; font-weight: bold; color: #424242; margin-bottom: 0.5mm; }
+.tarjeta-id .id-jugador { font-size: 18pt; font-weight: bold; color: #0d47a1; margin-bottom: 0; }
 
 @media print {
     @page { size: letter; margin: 1cm; }
@@ -109,13 +110,13 @@ $url_panel = rtrim($base_url, '/') . '/' . basename($script) . '?page=torneo_ges
                     <div class="cuadricula-tarjetas-grid">
                         <?php foreach ($grupo as $j):
                             $nombre = htmlspecialchars($j['nombre'] ?? '—');
-                            $usuario = htmlspecialchars($j['username'] ?? '—');
+                            $usuario = htmlspecialchars(trim($j['usuario_login'] ?? $j['username'] ?? $j['usuario'] ?? '') ?: '—');
                             $cedula = htmlspecialchars(formatear_cedula_tarjeta($j['cedula'] ?? ''));
                             $id_jugador = (int)($j['id_usuario'] ?? 0);
                         ?>
                         <div class="tarjeta-id">
                             <div class="nombre"><?= $nombre ?></div>
-                            <div class="usuario"><?= $usuario ?></div>
+                            <div class="usuario">Usuario: <?= $usuario ?></div>
                             <div class="cedula"><?= $cedula ?></div>
                             <div class="id-jugador"><?= $id_jugador ?></div>
                         </div>
