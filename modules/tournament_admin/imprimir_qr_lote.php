@@ -36,8 +36,8 @@ $url_panel = 'index.php?page=tournament_admin&action=dashboard&torneo_id=' . (in
 
 .cuadricula-tarjetas-grid {
     display: grid;
-    grid-template-columns: repeat(5, 3.5cm);
-    grid-template-rows: repeat(6, 3.5cm);
+    grid-template-columns: repeat(5, 3.6cm);
+    grid-template-rows: repeat(6, 4cm);
     gap: 0;
     border-collapse: collapse;
     width: 100%;
@@ -47,8 +47,8 @@ $url_panel = 'index.php?page=tournament_admin&action=dashboard&torneo_id=' . (in
 .cuadricula-tarjetas-grid:last-child { page-break-after: auto; }
 
 .tarjeta-id {
-    width: 3.5cm;
-    height: 3.5cm;
+    width: 3.6cm;
+    height: 4cm;
     box-sizing: border-box;
     border: 0.5mm solid #000;
     display: flex;
@@ -61,10 +61,9 @@ $url_panel = 'index.php?page=tournament_admin&action=dashboard&torneo_id=' . (in
     background: #fff;
     padding: 1.5mm;
 }
-.tarjeta-id .nombre { font-size: 7pt; font-weight: bold; color: #212121; margin-bottom: 1mm; line-height: 1.1; }
-.tarjeta-id .cedula { font-size: 14pt; color: #424242; margin-bottom: 1mm; }
-.tarjeta-id .id-jugador { font-size: 28pt; font-weight: bold; color: #0d47a1; margin-bottom: 0.5mm; }
-.tarjeta-id .club { font-size: 5pt; color: #555; margin-bottom: 0.5mm; }
+.tarjeta-id .nombre { font-size: 10.5pt; font-weight: bold; color: #212121; margin-bottom: 1mm; line-height: 1.1; }
+.tarjeta-id .cedula { font-size: 9.8pt; color: #424242; margin-bottom: 1mm; }
+.tarjeta-id .id-jugador { font-size: 19.6pt; font-weight: bold; color: #0d47a1; margin-bottom: 0.5mm; }
 .tarjeta-id .organizacion { font-size: 5pt; color: #666; }
 
 @media print {
@@ -103,14 +102,12 @@ $url_panel = 'index.php?page=tournament_admin&action=dashboard&torneo_id=' . (in
                             $nombre = htmlspecialchars($j['nombre'] ?? '—');
                             $cedula = htmlspecialchars($j['cedula'] ?? '');
                             $id_jugador = (int)($j['id_usuario'] ?? 0);
-                            $club = htmlspecialchars($j['club_nombre'] ?? '—');
                             $organizacion = htmlspecialchars($j['organizacion_nombre'] ?? '—');
                         ?>
                         <div class="tarjeta-id">
                             <div class="nombre"><?= $nombre ?></div>
                             <div class="cedula">C.I. <?= $cedula ?></div>
                             <div class="id-jugador"><?= $id_jugador ?></div>
-                            <div class="club"><?= $club ?></div>
                             <div class="organizacion"><?= $organizacion ?></div>
                         </div>
                         <?php endforeach; ?>
