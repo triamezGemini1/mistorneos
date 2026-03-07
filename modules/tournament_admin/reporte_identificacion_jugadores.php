@@ -8,7 +8,8 @@ $pdo = DB::pdo();
 $torneo_nombre = isset($torneo['nombre']) ? $torneo['nombre'] : 'Torneo';
 
 $stmt = $pdo->prepare("
-    SELECT i.id_usuario, u.nombre, u.cedula, u.username AS usuario_login
+    SELECT i.id_usuario, u.nombre, u.cedula,
+           (SELECT u2.username FROM usuarios u2 WHERE u2.cedula = u.cedula AND TRIM(COALESCE(u2.username, '')) != '' LIMIT 1) AS usuario_login
     FROM inscritos i
     INNER JOIN usuarios u ON u.id = i.id_usuario
     WHERE i.torneo_id = ?
