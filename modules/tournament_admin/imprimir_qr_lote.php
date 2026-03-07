@@ -1,7 +1,7 @@
 <?php
 /**
  * Vista de impresión: tarjetas de identificación en cuadrícula (estilo asignación de mesas).
- * Papel CARTA. Tarjeta 3,5cm × 3,5cm. 5 columnas × 6 filas (30 por hoja). Sin encabezado al imprimir.
+ * Papel CARTA. Tarjeta 4,3cm × 4cm. 4 columnas × 6 filas (24 por hoja). Sin encabezado al imprimir.
  */
 
 $pdo = DB::pdo();
@@ -46,7 +46,7 @@ $url_panel = rtrim($base_url, '/') . '/' . basename($script) . '?page=torneo_ges
 
 .cuadricula-tarjetas-grid {
     display: grid;
-    grid-template-columns: repeat(5, 3.6cm);
+    grid-template-columns: repeat(4, 4.3cm);
     grid-template-rows: repeat(6, 4cm);
     gap: 0;
     border-collapse: collapse;
@@ -57,7 +57,7 @@ $url_panel = rtrim($base_url, '/') . '/' . basename($script) . '?page=torneo_ges
 .cuadricula-tarjetas-grid:last-child { page-break-after: auto; }
 
 .tarjeta-id {
-    width: 3.6cm;
+    width: 4.3cm;
     min-height: 4cm;
     box-sizing: border-box;
     border: 0.5mm solid #000;
@@ -72,7 +72,7 @@ $url_panel = rtrim($base_url, '/') . '/' . basename($script) . '?page=torneo_ges
     padding: 1.5mm;
 }
 .tarjeta-id .nombre { font-size: 10.5pt; font-weight: bold; color: #212121; margin-bottom: 0.5mm; line-height: 1.1; }
-.tarjeta-id .tarjeta-username { font-size: 9pt; color: #37474f; margin-bottom: 0.5mm; display: block; }
+.tarjeta-id .tarjeta-username { font-size: 10pt; font-weight: bold; color: #37474f; margin-bottom: 0.5mm; display: block; }
 .tarjeta-id .cedula { font-size: 13pt; font-weight: bold; color: #424242; margin-bottom: 0.5mm; }
 .tarjeta-id .id-jugador { font-size: 18pt; font-weight: bold; color: #0d47a1; margin-bottom: 0; }
 
@@ -103,7 +103,7 @@ $url_panel = rtrim($base_url, '/') . '/' . basename($script) . '?page=torneo_ges
             <div class="cuadricula-tarjetas-container">
                 <div id="area-impresion-tarjetas">
                     <?php
-                    $por_pagina = 30;
+                    $por_pagina = 24;
                     $paginas = array_chunk($jugadores, $por_pagina);
                     foreach ($paginas as $grupo):
                     ?>
@@ -117,7 +117,7 @@ $url_panel = rtrim($base_url, '/') . '/' . basename($script) . '?page=torneo_ges
                         ?>
                         <div class="tarjeta-id">
                             <div class="nombre"><?= $nombre ?></div>
-                            <div class="tarjeta-username" style="font-size: 9pt; color: #37474f; display: block !important; visibility: visible !important;">Usuario: <?= $usuario ?></div>
+                            <div class="tarjeta-username" style="font-size: 10pt; font-weight: bold; color: #37474f; display: block !important; visibility: visible !important;"><?= $usuario ?></div>
                             <div class="cedula"><?= $cedula ?></div>
                             <div class="id-jugador"><?= $id_jugador ?></div>
                         </div>
