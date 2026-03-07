@@ -8,7 +8,7 @@ $pdo = DB::pdo();
 $torneo_nombre = isset($torneo['nombre']) ? $torneo['nombre'] : 'Torneo';
 
 $stmt = $pdo->prepare("
-    SELECT i.id_usuario, u.nombre, u.cedula
+    SELECT i.id_usuario, u.nombre, u.cedula, u.username
     FROM inscritos i
     INNER JOIN usuarios u ON u.id = i.id_usuario
     WHERE i.torneo_id = ?
@@ -71,6 +71,7 @@ $url_panel = rtrim($base_url, '/') . '/' . basename($script) . '?page=torneo_ges
     padding: 1.5mm;
 }
 .tarjeta-id .nombre { font-size: 10.5pt; font-weight: bold; color: #212121; margin-bottom: 1mm; line-height: 1.1; }
+.tarjeta-id .usuario { font-size: 8.5pt; color: #616161; margin-bottom: 0.5mm; }
 .tarjeta-id .cedula { font-size: 14.7pt; font-weight: bold; color: #424242; margin-bottom: 1mm; }
 .tarjeta-id .id-jugador { font-size: 19.6pt; font-weight: bold; color: #0d47a1; margin-bottom: 0.5mm; }
 
@@ -108,11 +109,13 @@ $url_panel = rtrim($base_url, '/') . '/' . basename($script) . '?page=torneo_ges
                     <div class="cuadricula-tarjetas-grid">
                         <?php foreach ($grupo as $j):
                             $nombre = htmlspecialchars($j['nombre'] ?? '—');
+                            $usuario = htmlspecialchars($j['username'] ?? '—');
                             $cedula = htmlspecialchars(formatear_cedula_tarjeta($j['cedula'] ?? ''));
                             $id_jugador = (int)($j['id_usuario'] ?? 0);
                         ?>
                         <div class="tarjeta-id">
                             <div class="nombre"><?= $nombre ?></div>
+                            <div class="usuario"><?= $usuario ?></div>
                             <div class="cedula"><?= $cedula ?></div>
                             <div class="id-jugador"><?= $id_jugador ?></div>
                         </div>
