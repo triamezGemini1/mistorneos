@@ -13,10 +13,18 @@ $stmt = $pdo->prepare("
     INNER JOIN usuarios u ON u.id = i.id_usuario
     WHERE i.torneo_id = ?
     AND (i.estatus = 1 OR i.estatus = 2 OR i.estatus = '1' OR i.estatus = 'confirmado')
-    ORDER BY u.nombre ASC
+    ORDER BY u.cedula ASC
 ");
 $stmt->execute([$torneo_id]);
 $jugadores = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+function formatear_cedula_tarjeta($valor) {
+    $digits = preg_replace('/\D/', '', (string)$valor);
+    if (strlen($digits) >= 8) {
+        return substr($digits, 0, 2) . '.' . substr($digits, 2, 3) . '.' . substr($digits, 5, 3);
+    }
+    return $valor !== '' && $valor !== null ? $valor : '—';
+}
 
 $script = $_SERVER['SCRIPT_NAME'] ?? 'index.php';
 $base_url = ((!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http') . '://' . ($_SERVER['HTTP_HOST'] ?? '') . dirname($script);
@@ -97,7 +105,7 @@ $url_panel = rtrim($base_url, '/') . '/' . basename($script) . '?page=tournament
                     <div class="cuadricula-tarjetas-grid">
                         <?php foreach ($grupo as $j):
                             $nombre = htmlspecialchars($j['nombre'] ?? '—');
-                            $cedula = htmlspecialchars($j['cedula'] ?? '');
+                            $cedula = htmlspecialchars(formatear_cedula_tarjeta($j['cedula'] ?? ''));
                             $id_jugador = (int)($j['id_usuario'] ?? 0);
                         ?>
                         <div class="tarjeta-id">
