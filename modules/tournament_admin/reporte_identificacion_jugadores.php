@@ -8,7 +8,7 @@ $pdo = DB::pdo();
 $torneo_nombre = isset($torneo['nombre']) ? $torneo['nombre'] : 'Torneo';
 
 $stmt = $pdo->prepare("
-    SELECT i.id_usuario, u.nombre, u.cedula, u.username
+    SELECT i.id_usuario, u.nombre, u.cedula, u.username AS user_login
     FROM inscritos i
     INNER JOIN usuarios u ON u.id = i.id_usuario
     WHERE i.torneo_id = ?
@@ -17,6 +17,10 @@ $stmt = $pdo->prepare("
 ");
 $stmt->execute([$torneo_id]);
 $jugadores = $stmt->fetchAll(PDO::FETCH_ASSOC);
+// Normalizar claves a minúsculas por si PDO devuelve otro caso
+$jugadores = array_map(function ($row) {
+    return array_change_key_case($row, CASE_LOWER);
+}, $jugadores);
 
 function formatear_cedula_tarjeta($valor) {
     $digits = preg_replace('/\D/', '', (string)$valor);
@@ -110,14 +114,14 @@ $url_panel = rtrim($base_url, '/') . '/' . basename($script) . '?page=torneo_ges
                     <div class="cuadricula-tarjetas-grid">
                         <?php foreach ($grupo as $j):
                             $nombre = htmlspecialchars($j['nombre'] ?? '—');
-                            $username = isset($j['username']) ? trim((string)$j['username']) : '';
+                            $username = trim((string)($j['user_login'] ?? $j['username'] ?? ''));
                             $usuario = $username !== '' ? htmlspecialchars($username) : '—';
                             $cedula = htmlspecialchars(formatear_cedula_tarjeta($j['cedula'] ?? ''));
                             $id_jugador = (int)($j['id_usuario'] ?? 0);
                         ?>
                         <div class="tarjeta-id">
                             <div class="nombre"><?= $nombre ?></div>
-                            <div class="tarjeta-username">Usuario: <?= $usuario ?></div>
+                            <div class="tarjeta-username" style="font-size: 9pt; color: #37474f; display: block !important; visibility: visible !important;">Usuario: <?= $usuario ?></div>
                             <div class="cedula"><?= $cedula ?></div>
                             <div class="id-jugador"><?= $id_jugador ?></div>
                         </div>
