@@ -275,6 +275,19 @@ $error_message = $_GET['error'] ?? null;
         }
     </style>
 
+<?php
+$acciones_solo_reporte = ['generar_qr', 'imprimir_qr_lote', 'reporte_identificacion_jugadores'];
+if (in_array($menu_action, $acciones_solo_reporte, true)) {
+    $action_file = __DIR__ . '/tournament_admin/' . $menu_action . '.php';
+    if (file_exists($action_file)) {
+        echo '<div class="container-fluid py-3">';
+        require $action_file;
+        echo '</div>';
+    } else {
+        require __DIR__ . '/tournament_admin/dashboard.php';
+    }
+} else {
+?>
 <div class="container-fluid">
         <!-- Header de Identificación Superior -->
         <div class="tournament-header">
@@ -724,4 +737,6 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 });
 </script>
-
+<?php
+}
+?>
