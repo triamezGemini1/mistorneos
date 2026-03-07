@@ -13,22 +13,25 @@ $stmt = $pdo->prepare("
     INNER JOIN usuarios u ON u.id = i.id_usuario
     WHERE i.torneo_id = ?
     AND (i.estatus = 1 OR i.estatus = 2 OR i.estatus = '1' OR i.estatus = 'confirmado')
-    ORDER BY u.cedula ASC
+    ORDER BY CAST(TRIM(REPLACE(REPLACE(u.cedula, '.', ''), ' ', '')) AS UNSIGNED) ASC
 ");
 $stmt->execute([$torneo_id]);
 $jugadores = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
 function formatear_cedula_tarjeta($valor) {
     $digits = preg_replace('/\D/', '', (string)$valor);
-    if (strlen($digits) >= 8) {
-        return substr($digits, 0, 2) . '.' . substr($digits, 2, 3) . '.' . substr($digits, 5, 3);
+    if ($digits === '') {
+        return $valor !== '' && $valor !== null ? $valor : '—';
     }
-    return $valor !== '' && $valor !== null ? $valor : '—';
+    if (strlen($digits) < 8) {
+        $digits = str_pad($digits, 8, '0', STR_PAD_LEFT);
+    }
+    return substr($digits, 0, 2) . '.' . substr($digits, 2, 3) . '.' . substr($digits, 5, 3);
 }
 
 $script = $_SERVER['SCRIPT_NAME'] ?? 'index.php';
 $base_url = ((!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http') . '://' . ($_SERVER['HTTP_HOST'] ?? '') . dirname($script);
-$url_panel = rtrim($base_url, '/') . '/' . basename($script) . '?page=tournament_admin&action=dashboard&torneo_id=' . (int)$torneo_id;
+$url_panel = rtrim($base_url, '/') . '/' . basename($script) . '?page=torneo_gestion&action=panel&torneo_id=' . (int)$torneo_id;
 ?>
 <style>
 * { margin: 0; padding: 0; box-sizing: border-box; }

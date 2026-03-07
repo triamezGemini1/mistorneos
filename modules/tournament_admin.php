@@ -366,7 +366,7 @@ $error_message = $_GET['error'] ?? null;
                         $mostrar_retorno_layout = !in_array($menu_action, $acciones_impresion, true);
                         if ($mostrar_retorno_layout):
                             $base_retorno = function_exists('app_base_url') ? rtrim(app_base_url(), '/') . '/public' : '';
-                            $url_retorno = ($base_retorno !== '' ? $base_retorno . '/' : '') . 'index.php?page=tournament_admin&action=dashboard&torneo_id=' . (int)$torneo_id;
+                            $url_retorno = ($base_retorno !== '' ? $base_retorno . '/' : '') . 'index.php?page=torneo_gestion&action=panel&torneo_id=' . (int)$torneo_id;
                         ?>
                         <a href="<?= htmlspecialchars($url_retorno) ?>" class="btn btn-light btn-lg">
                             <i class="fas fa-arrow-left me-2"></i>Volver al panel
