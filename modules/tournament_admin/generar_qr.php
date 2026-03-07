@@ -10,8 +10,9 @@
 
 $pdo = DB::pdo();
 $base_url = app_base_url();
-$base = function_exists('app_base_url') ? rtrim(app_base_url(), '/') . '/public' : '';
-$url_panel = ($base !== '' ? $base . '/' : '') . 'index.php?page=tournament_admin&action=dashboard&torneo_id=' . (int)$torneo_id;
+$script = $_SERVER['SCRIPT_NAME'] ?? 'index.php';
+$base_url = ((!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http') . '://' . ($_SERVER['HTTP_HOST'] ?? '') . dirname($script);
+$url_panel = rtrim($base_url, '/') . '/' . basename($script) . '?page=tournament_admin&action=dashboard&torneo_id=' . (int)$torneo_id;
 
 // URL principal para jugadores: acceso por cédula (recomendado para QR del torneo)
 $perfil_jugador_url = $base_url . '/public/perfil_jugador.php?torneo_id=' . $torneo_id;

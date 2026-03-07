@@ -8,13 +8,9 @@ $pdo = DB::pdo();
 $torneo_nombre = isset($torneo['nombre']) ? $torneo['nombre'] : 'Torneo';
 
 $stmt = $pdo->prepare("
-    SELECT i.id_usuario, u.nombre, u.cedula,
-           c.nombre AS club_nombre,
-           o.nombre AS organizacion_nombre
+    SELECT i.id_usuario, u.nombre, u.cedula
     FROM inscritos i
     INNER JOIN usuarios u ON u.id = i.id_usuario
-    LEFT JOIN clubes c ON c.id = COALESCE(i.id_club, u.club_id)
-    LEFT JOIN organizaciones o ON o.id = c.organizacion_id
     WHERE i.torneo_id = ?
     AND (i.estatus = 1 OR i.estatus = 2 OR i.estatus = '1' OR i.estatus = 'confirmado')
     ORDER BY u.nombre ASC
@@ -22,8 +18,9 @@ $stmt = $pdo->prepare("
 $stmt->execute([$torneo_id]);
 $jugadores = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-$base = function_exists('app_base_url') ? rtrim(app_base_url(), '/') . '/public' : '';
-$url_panel = ($base !== '' ? $base . '/' : '') . 'index.php?page=tournament_admin&action=dashboard&torneo_id=' . (int)$torneo_id;
+$script = $_SERVER['SCRIPT_NAME'] ?? 'index.php';
+$base_url = ((!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http') . '://' . ($_SERVER['HTTP_HOST'] ?? '') . dirname($script);
+$url_panel = rtrim($base_url, '/') . '/' . basename($script) . '?page=tournament_admin&action=dashboard&torneo_id=' . (int)$torneo_id;
 ?>
 <style>
 * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -63,9 +60,8 @@ $url_panel = ($base !== '' ? $base . '/' : '') . 'index.php?page=tournament_admi
     padding: 1.5mm;
 }
 .tarjeta-id .nombre { font-size: 10.5pt; font-weight: bold; color: #212121; margin-bottom: 1mm; line-height: 1.1; }
-.tarjeta-id .cedula { font-size: 9.8pt; color: #424242; margin-bottom: 1mm; }
+.tarjeta-id .cedula { font-size: 14.7pt; font-weight: bold; color: #424242; margin-bottom: 1mm; }
 .tarjeta-id .id-jugador { font-size: 19.6pt; font-weight: bold; color: #0d47a1; margin-bottom: 0.5mm; }
-.tarjeta-id .organizacion { font-size: 5pt; color: #666; }
 
 @media print {
     @page { size: letter; margin: 1cm; }
@@ -103,13 +99,11 @@ $url_panel = ($base !== '' ? $base . '/' : '') . 'index.php?page=tournament_admi
                             $nombre = htmlspecialchars($j['nombre'] ?? '—');
                             $cedula = htmlspecialchars($j['cedula'] ?? '');
                             $id_jugador = (int)($j['id_usuario'] ?? 0);
-                            $organizacion = htmlspecialchars($j['organizacion_nombre'] ?? '—');
                         ?>
                         <div class="tarjeta-id">
                             <div class="nombre"><?= $nombre ?></div>
-                            <div class="cedula">C.I. <?= $cedula ?></div>
+                            <div class="cedula"><?= $cedula ?></div>
                             <div class="id-jugador"><?= $id_jugador ?></div>
-                            <div class="organizacion"><?= $organizacion ?></div>
                         </div>
                         <?php endforeach; ?>
                     </div>
