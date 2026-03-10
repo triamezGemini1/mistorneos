@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 require_once __DIR__ . '/../config/bootstrap.php';
 require_once __DIR__ . '/../config/db_config.php';
 require_once __DIR__ . '/../config/csrf.php';
@@ -317,8 +317,8 @@ if ($invitation_data && !$error_message && $club_authenticated) {
                             <div class="col-md-3">
                                 <div class="logo-container">
                                     <?php if ($organizer_club_data && $organizer_club_data['logo']): ?>
-                                        <img src="<?= htmlspecialchars($organizer_club_data['logo']) ?>" 
-                                             alt="Club Organizador" 
+                                        <img src="<?= htmlspecialchars(class_exists('AppHelpers') ? AppHelpers::imageUrl($organizer_club_data['logo']) : $organizer_club_data['logo']) ?>"
+                                             alt="Club Organizador"
                                              class="img-fluid">
                                     <?php else: ?>
                                         <i class="fas fa-building text-muted fs-1"></i>
@@ -352,8 +352,8 @@ if ($invitation_data && !$error_message && $club_authenticated) {
                             <div class="col-md-3">
                                 <div class="logo-container">
                                     <?php if ($club_data && $club_data['logo']): ?>
-                                        <img src="<?= htmlspecialchars($club_data['logo']) ?>" 
-                                             alt="Club Invitado" 
+                                        <img src="<?= htmlspecialchars(class_exists('AppHelpers') ? AppHelpers::imageUrl($club_data['logo']) : $club_data['logo']) ?>"
+                                             alt="Club Invitado"
                                              class="img-fluid">
                                     <?php else: ?>
                                         <i class="fas fa-building text-muted fs-1"></i>

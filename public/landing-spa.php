@@ -416,7 +416,7 @@ try {
                 <div class="logos-clientes-row mb-4">
                     <template v-for="r in 2" :key="'r1-'+r">
                         <div v-for="(logo, idx) in logosFila1" :key="'1-'+r+'-'+idx" class="logo-item">
-                            <img :src="baseUrl + 'view_image.php?path=' + encodeURIComponent(logo.path)" :alt="logo.nombre" loading="lazy" @error="$event.target.style.display='none'; $event.target.nextElementSibling&&$event.target.nextElementSibling.classList.remove('hidden')">
+                            <img :src="logo.url || (baseUrl + 'view_image.php?path=' + encodeURIComponent(logo.path))" :alt="logo.nombre" loading="lazy" @error="$event.target.style.display='none'; $event.target.nextElementSibling&&$event.target.nextElementSibling.classList.remove('hidden')">
                             <span class="hidden text-xl font-bold text-primary-600">{{ logo.nombre }}</span>
                         </div>
                     </template>
@@ -424,7 +424,7 @@ try {
                 <div class="logos-clientes-row">
                     <template v-for="r in 2" :key="'r2-'+r">
                         <div v-for="(logo, idx) in logosFila2" :key="'2-'+r+'-'+idx" class="logo-item">
-                            <img :src="baseUrl + 'view_image.php?path=' + encodeURIComponent(logo.path)" :alt="logo.nombre" loading="lazy" @error="$event.target.style.display='none'; $event.target.nextElementSibling&&$event.target.nextElementSibling.classList.remove('hidden')">
+                            <img :src="logo.url || (baseUrl + 'view_image.php?path=' + encodeURIComponent(logo.path))" :alt="logo.nombre" loading="lazy" @error="$event.target.style.display='none'; $event.target.nextElementSibling&&$event.target.nextElementSibling.classList.remove('hidden')">
                             <span class="hidden text-xl font-bold text-primary-600">{{ logo.nombre }}</span>
                         </div>
                     </template>

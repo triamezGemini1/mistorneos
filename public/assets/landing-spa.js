@@ -257,8 +257,8 @@ createApp({
         const logoUrl = ref(window.APP_CONFIG?.logoUrl || '');
         const effectiveLogoUrl = computed(() => {
             if (logoUrl.value) return logoUrl.value;
-            const b = baseUrl.value || '';
-            return b ? b.replace(/\/public\/?$/, '') + '/lib/Assets/mislogos/logo4.png' : '';
+            const b = (baseUrl.value || '').replace(/\/$/, '');
+            return b ? b + '/view_image.php?path=' + encodeURIComponent('lib/Assets/mislogos/logo4.png') : '';
         });
 
         onMounted(() => {

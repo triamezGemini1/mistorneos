@@ -107,7 +107,14 @@ class AppHelpers {
         if (defined('URL_BASE') && URL_BASE !== '' && URL_BASE !== '/') {
             $scheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
             $host = $_SERVER['HTTP_HOST'] ?? 'localhost';
-            return $scheme . '://' . $host . rtrim(URL_BASE, '/');
+            $path = rtrim(URL_BASE, '/');
+            // Si la petición es a public/api/..., la base debe ser public/, no public/api/
+            if (preg_match('#^(.*/public)/api(/.*)?$#', $path)) {
+                $path = preg_replace('#^(.*/public)/api(/.*)?$#', '$1', $path);
+            } elseif (preg_match('#^(.*)/api$#', $path)) {
+                $path = preg_replace('#^(.*)/api$#', '$1', $path);
+            }
+            return $scheme . '://' . $host . $path;
         }
         return rtrim(self::getBaseUrl(), '/') . '/public';
     }

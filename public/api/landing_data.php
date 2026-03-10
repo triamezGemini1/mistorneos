@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 /**
  * API Landing - Datos para la SPA de la landing page
  * GET: Retorna todos los datos necesarios para renderizar la landing
@@ -22,7 +22,8 @@ if ($_SERVER['REQUEST_METHOD'] !== 'GET') {
     exit;
 }
 
-$baseUrl = rtrim(app_base_url(), '/') . '/public/';
+// URL base absoluta (misma que la web) para que logos e imágenes carguen en cualquier entorno
+$baseUrl = rtrim(class_exists('AppHelpers') ? AppHelpers::getPublicUrl() : (rtrim(app_base_url(), '/') . '/public'), '/') . '/';
 $entidadParam = isset($_GET['entidad']) ? (int)$_GET['entidad'] : 0;
 
 function getAficheUrlApi($torneo, $baseUrl) {
@@ -35,6 +36,9 @@ function getAficheUrlApi($torneo, $baseUrl) {
 
 function getLogoOrganizacionUrlApi($evento, $baseUrl) {
     if (!empty($evento['organizacion_logo'])) {
+        if (class_exists('AppHelpers')) {
+            return AppHelpers::imageUrl($evento['organizacion_logo']);
+        }
         return $baseUrl . 'view_image.php?path=' . rawurlencode($evento['organizacion_logo']);
     }
     return null;
@@ -161,6 +165,7 @@ try {
     } catch (Exception $e) {}
 
     // Logos de clientes: desde clubes + upload/logos (fallback) + upload/logos_clientes/
+    // Incluir 'url' absoluta para que el frontend muestre la imagen sin depender de baseUrl
     $logos_clientes = [];
     try {
         $stmt = $pdo->prepare("SELECT id, nombre, logo FROM clubes WHERE logo IS NOT NULL AND logo != '' AND (estatus = 1 OR estatus = '1') ORDER BY nombre ASC");
@@ -168,7 +173,8 @@ try {
         while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
             $path = trim((string)($row['logo'] ?? ''));
             if ($path !== '') {
-                $logos_clientes[] = ['nombre' => $row['nombre'] ?? 'Club', 'path' => $path];
+                $url = class_exists('AppHelpers') ? AppHelpers::imageUrl($path) : ($baseUrl . 'view_image.php?path=' . rawurlencode($path));
+                $logos_clientes[] = ['nombre' => $row['nombre'] ?? 'Club', 'path' => $path, 'url' => $url];
             }
         }
     } catch (Exception $e) {}
@@ -180,7 +186,9 @@ try {
                 if ($f->isDot() || !$f->isFile()) continue;
                 $ext = strtolower($f->getExtension());
                 if (in_array($ext, $extensions, true)) {
-                    $logos_clientes[] = ['nombre' => pathinfo($f->getFilename(), PATHINFO_FILENAME), 'path' => 'upload/logos/' . $f->getFilename()];
+                    $path = 'upload/logos/' . $f->getFilename();
+                    $url = class_exists('AppHelpers') ? AppHelpers::imageUrl($path) : ($baseUrl . 'view_image.php?path=' . rawurlencode($path));
+                    $logos_clientes[] = ['nombre' => pathinfo($f->getFilename(), PATHINFO_FILENAME), 'path' => $path, 'url' => $url];
                 }
             }
         }
@@ -191,7 +199,9 @@ try {
             if ($f->isDot() || !$f->isFile()) continue;
             $ext = strtolower($f->getExtension());
             if (in_array($ext, ['png', 'jpg', 'jpeg', 'gif', 'webp', 'svg'], true)) {
-                $logos_clientes[] = ['nombre' => pathinfo($f->getFilename(), PATHINFO_FILENAME), 'path' => 'upload/logos_clientes/' . $f->getFilename()];
+                $path = 'upload/logos_clientes/' . $f->getFilename();
+                $url = class_exists('AppHelpers') ? AppHelpers::imageUrl($path) : ($baseUrl . 'view_image.php?path=' . rawurlencode($path));
+                $logos_clientes[] = ['nombre' => pathinfo($f->getFilename(), PATHINFO_FILENAME), 'path' => $path, 'url' => $url];
             }
         }
     }

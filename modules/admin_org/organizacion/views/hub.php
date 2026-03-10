@@ -3,9 +3,7 @@
  * Vista: Hub de Organización - Resumen para admin_club
  * Muestra logo, nombre, estadísticas y accesos rápidos.
  */
-$logo_url = !empty($organizacion['logo'])
-    ? AppHelpers::url('view_image.php', ['path' => $organizacion['logo']])
-    : AppHelpers::url('view_image.php', ['path' => 'lib/Assets/mislogos/logo4.png']);
+$logo_url = !empty($organizacion['logo']) ? AppHelpers::imageUrl($organizacion['logo']) : AppHelpers::getAppLogo();
 $url_gestionar_clubes = AppHelpers::dashboard('clubes_asociados');
 $url_ver_torneos = 'index.php?page=torneo_gestion&action=index';
 $url_ver_estructura = AppHelpers::dashboard('organizaciones', ['id' => $organizacion['id']]);

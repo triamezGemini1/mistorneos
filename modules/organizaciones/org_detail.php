@@ -1,7 +1,7 @@
 <?php
-$logo_url = $organizacion['logo']
-    ? AppHelpers::url('view_image.php', ['path' => $organizacion['logo']])
-    : AppHelpers::url('view_image.php', ['path' => 'lib/Assets/mislogos/logo4.png']);
+$logo_url = !empty($organizacion['logo'])
+    ? AppHelpers::imageUrl($organizacion['logo'])
+    : AppHelpers::getAppLogo();
 $stats_clubes = count($clubes);
 $stats_torneos = 0;
 $stats_afiliados = 0;
