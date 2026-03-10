@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 require_once __DIR__ . '/../config/session_start_early.php';
 /** Login: usuario del log = valor enviado en esa petición en el formulario. */
 ob_start();
@@ -73,14 +73,18 @@ if ($from_invitation_flow && !empty($_SESSION['invitation_club_name'])) {
 }
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    // El usuario SIEMPRE viene solo del campo del formulario (name="username"). Cada línea del log corresponde a UNA petición HTTP.
     $username = trim($_POST['username'] ?? '');
-    $password = $_POST['password'] ?? ''; // NO hacer trim al password
-    error_log("Login intent - valor enviado en esta petición como 'username': " . ($username === '' ? '(vacío)' : "'" . $username . "'"));
+    $password = $_POST['password'] ?? '';
+    error_log("Login intent - username: " . ($username === '' ? '(vacío)' : "'" . $username . "'"));
 
-    require_once __DIR__ . '/../config/auth.php';
-    
-    $login_ok = Auth::login($username, $password);
+    try {
+        require_once __DIR__ . '/../config/auth.php';
+        $login_ok = Auth::login($username, $password);
+    } catch (Throwable $e) {
+        error_log("login.php POST: " . $e->getMessage() . " en " . $e->getFile() . ":" . $e->getLine());
+        $error = 'Error al procesar el inicio de sesión. Intenta de nuevo.';
+        $login_ok = false;
+    }
     error_log('[SESSION] Auth::login resultado=' . ($login_ok ? 'true' : 'false') . ' | username=' . $username);
     if ($login_ok) {
         require_once __DIR__ . '/../lib/app_helpers.php';
@@ -143,10 +147,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         $redirect = !empty($_POST['return_url']) ? trim($_POST['return_url']) : ($return_url ?: '');
         $entry_base = AppHelpers::getRequestEntryUrl();
+        if ($entry_base === '' && defined('URL_BASE') && URL_BASE !== '') {
+            $scheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
+            $entry_base = $scheme . '://' . ($_SERVER['HTTP_HOST'] ?? 'localhost') . rtrim(URL_BASE, '/');
+        }
         $target_url = ($redirect && preg_match('#^[a-zA-Z0-9_\-/\.\?=&]+$#', $redirect) && !preg_match('#^(https?|javascript|data):#i', $redirect) && (strpos($redirect, '?') !== false || strpos($redirect, '.php') !== false))
             ? ((strpos($redirect, 'http') === 0 || strpos($redirect, '/') === 0) ? $redirect : $entry_base . '/' . ltrim($redirect, '/'))
             : $entry_base . '/index.php';
-        error_log('[SESSION] login OK -> redirect | target=' . $target_url . ' | session_id=' . session_id());
+        if ($target_url === '' || $target_url === '/index.php') {
+            $target_url = (defined('URL_BASE') && URL_BASE !== '') ? rtrim(AppHelpers::getPublicUrl(), '/') . '/index.php' : $entry_base . '/index.php';
+        }
+        error_log('[SESSION] login OK -> redirect | target=' . $target_url . ' | entry_base=' . $entry_base . ' | session_id=' . session_id());
         if (getenv('SESSION_DEBUG')) error_log('[SESSION_DEBUG] login.php | entry_base=' . $entry_base . ' | session_id=' . session_id());
         $params = session_get_cookie_params();
         $sname = session_name();
@@ -163,17 +174,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if ($sid !== '') {
             setcookie($sname, $sid, $cookie_opts);
         }
+        $redirect_target = $entry_base . '/index.php';
         if ($redirect && preg_match('#^[a-zA-Z0-9_\-/\.\?=&]+$#', $redirect) && !preg_match('#^(https?|javascript|data):#i', $redirect)) {
             if (strpos($redirect, '?') !== false || strpos($redirect, '.php') !== false) {
-                $target = (strpos($redirect, 'http') === 0 || strpos($redirect, '/') === 0)
+                $redirect_target = (strpos($redirect, 'http') === 0 || strpos($redirect, '/') === 0)
                     ? $redirect
                     : $entry_base . '/' . ltrim($redirect, '/');
-                header("Location: " . $target, true, 302);
-            } else {
-                header("Location: " . $entry_base . "/index.php", true, 302);
             }
-        } else {
-            header("Location: " . $entry_base . "/index.php", true, 302);
+        }
+        if ($redirect_target !== '' && !headers_sent()) {
+            header("Location: " . $redirect_target, true, 302);
         }
         exit;
     } else {
