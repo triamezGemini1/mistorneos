@@ -1,21 +1,34 @@
-﻿<?php
-require_once __DIR__ . '/../config/session_start_early.php';
+<?php
 /**
  * Punto de entrada principal de la aplicación
  * - Rutas modernas: /auth/login, /dashboard, /api/... (usando Router)
  * - Rutas legacy: ?page=xxx (compatibilidad hacia atrás)
  */
-require_once __DIR__ . '/../config/bootstrap.php';
-require_once __DIR__ . '/../config/csrf.php';
-require_once __DIR__ . '/../config/auth.php';
+$configDir = __DIR__ . '/../config';
+if (!is_dir($configDir) || !is_readable($configDir . '/bootstrap.php')) {
+    header('Content-Type: text/html; charset=utf-8');
+    http_response_code(500);
+    echo '<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Error</title></head><body style="font-family:sans-serif;padding:2rem;max-width:600px;margin:0 auto;">';
+    echo '<h1>Error de configuración</h1><p>No se encuentra la carpeta <code>config/</code> junto a <code>public/</code>. En producción hay que desplegar el proyecto completo (raíz con config/, public/, includes/), no solo la carpeta public.</p>';
+    echo '<p><a href="check_pruebas.php">Diagnóstico</a></p></body></html>';
+    exit;
+}
 
-// Conexión única (db_config evita múltiples conexiones si un script llama a otro)
 try {
-    require_once __DIR__ . '/../config/db_config.php';
+    require_once $configDir . '/session_start_early.php';
+    require_once $configDir . '/bootstrap.php';
+    require_once $configDir . '/csrf.php';
+    require_once $configDir . '/auth.php';
+    require_once $configDir . '/db_config.php';
 } catch (Throwable $e) {
-    error_log("index.php: Error cargando conexión - " . $e->getMessage());
-    http_response_code(503);
-    include __DIR__ . '/error_service_unavailable.php';
+    error_log("index.php: " . $e->getMessage() . " en " . $e->getFile() . ":" . $e->getLine());
+    if (!headers_sent()) {
+        http_response_code(500);
+        header('Content-Type: text/html; charset=utf-8');
+    }
+    $msg = (defined('APP_DEBUG') && APP_DEBUG) ? $e->getMessage() : 'Error al cargar la aplicación. Revisa el log del servidor.';
+    echo '<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Error</title></head><body style="font-family:sans-serif;padding:2rem;max-width:600px;margin:0 auto;">';
+    echo '<h1>No se pudo cargar la aplicación</h1><p>' . htmlspecialchars($msg) . '</p></body></html>';
     exit;
 }
 
