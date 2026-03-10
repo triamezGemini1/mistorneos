@@ -78,36 +78,26 @@ if (in_array($user['role'], ['admin_club', 'admin_general', 'admin_torneo'], tru
     }
 }
 
+$header_title = $dashboard_org ? 'Dashboard - ' . htmlspecialchars($dashboard_org['nombre']) : 'Dashboard - La Estación del Dominó';
 ?>
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8">
-  <?php include_once __DIR__ . '/../../core/includes/header_meta.php'; ?>
+<?php include_once __DIR__ . '/../../includes/header.php'; ?>
   <base href="<?= htmlspecialchars($layout_asset_base) ?>/">
-  <title><?= $dashboard_org ? 'Dashboard - ' . htmlspecialchars($dashboard_org['nombre']) : 'Dashboard - La Estación del Dominó' ?></title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes">
-  <meta name="theme-color" content="#1a365d">
-  
   <!-- SEO Meta Tags -->
   <meta name="description" content="Panel de administración de La Estación del Dominó - Gestión de torneos, inscripciones y resultados">
   <meta name="robots" content="noindex, nofollow">
   <meta name="language" content="es">
-  
   <!-- Preconnect: conexiones tempranas a CDNs -->
   <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
   <link rel="preconnect" href="https://cdnjs.cloudflare.com" crossorigin>
   <link rel="preconnect" href="https://fonts.googleapis.com" crossorigin>
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  
-  <!-- Bootstrap -->
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
-  <!-- Estilos custom -->
   <link rel="stylesheet" href="<?= htmlspecialchars($layout_asset_base) ?>/assets/dashboard.css">
-  <!-- Google Fonts: carga diferida -->
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" media="print" onload="this.media='all'">
   <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"></noscript>
-  <!-- Iconos: carga diferida -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" media="print" onload="this.media='all'">
   <noscript><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"></noscript>
 </head>
@@ -653,4 +643,4 @@ if (str_ends_with($app_base_for_js, '/public')) {
   <script src="<?= htmlspecialchars($layout_asset_base) ?>/assets/dashboard-init.js" defer></script>
 <?php
 $layout_asset_base = $layout_asset_base ?? '';
-include_once __DIR__ . '/../../core/includes/footer.php';
+include_once __DIR__ . '/../../includes/footer.php';

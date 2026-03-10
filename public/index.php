@@ -124,28 +124,13 @@ if ($useModernRouter) {
 // =================================================================
 // MODO 2: RUTAS LEGACY (?page=xxx) - Compatibilidad
 // =================================================================
-// La sesión se inicia en config/bootstrap.php (requerido arriba). No redirigir a landing si el usuario está autenticado.
-
-// Verificar autenticación: sesión inválida → redirigir a URL_BASE . login.php (subcarpeta)
+// Verificación de sesión antes de cargar recursos pesados (centralizada en auth_service).
 try {
+    require_once __DIR__ . '/../config/auth_service.php';
+    AuthService::requireAuth();
     $user = Auth::user();
-    if (getenv('SESSION_DEBUG')) error_log('[SESSION_DEBUG] index.php | comprobando auth | session_id=' . session_id() . ' | has_user=' . ($user ? 'si' : 'no') . ' | script=' . ($_SERVER['SCRIPT_NAME'] ?? ''));
-    if (!$user) {
-        $login_url = (defined('URL_BASE') ? URL_BASE : '') . 'login.php';
-        if ($login_url === 'login.php') {
-            $login_url = (dirname($_SERVER['SCRIPT_NAME'] ?? '') !== '.' ? rtrim(dirname($_SERVER['SCRIPT_NAME']), '/') . '/' : '') . 'login.php';
-            if ($login_url !== '' && $login_url[0] !== '/') {
-                $login_url = '/' . $login_url;
-            }
-        }
-        error_log('[SESSION] index.php SIN usuario -> redirect a login | login_url=' . $login_url . ' | cookie_recibida=' . (isset($_COOKIE[session_name()]) ? 'si' : 'no') . ' | session_id=' . session_id());
-        if (getenv('SESSION_DEBUG')) error_log('[SESSION_DEBUG] index.php | script=' . ($_SERVER['SCRIPT_NAME'] ?? ''));
-        header('Location: ' . $login_url, true, 302);
-        exit;
-    }
     if (getenv('SESSION_DEBUG')) error_log('[SESSION_DEBUG] index.php | usuario OK | id=' . ($user['id'] ?? '') . ' | role=' . ($user['role'] ?? ''));
 } catch (Throwable $e) {
-    // Si hay error fatal (ej: MySQL no disponible), mostrar página de error
     error_log("Error en index.php: " . $e->getMessage());
     http_response_code(503);
     include __DIR__ . '/error_service_unavailable.php';

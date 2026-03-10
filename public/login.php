@@ -4,7 +4,7 @@ require_once __DIR__ . '/../config/session_start_early.php';
 ob_start();
 try {
     require_once __DIR__ . '/../config/bootstrap.php';
-    require_once __DIR__ . '/../config/db.php';
+    require_once __DIR__ . '/../config/db_config.php';
 } catch (Throwable $e) {
     error_log("login.php: Error cargando conexión - " . $e->getMessage());
     ob_end_clean();
@@ -89,7 +89,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         // Reclamación de token de invitación: vincular usuario y redirigir al formulario
         if (!empty($_SESSION['invitation_token'])) {
-            require_once __DIR__ . '/../config/db.php';
+            require_once __DIR__ . '/../config/db_config.php';
             $tb_inv = defined('TABLE_INVITATIONS') ? TABLE_INVITATIONS : 'invitaciones';
             $token = $_SESSION['invitation_token'];
             $return_url = $_SESSION['url_retorno'] ?? '';
@@ -216,8 +216,11 @@ ob_end_clean();
 <html lang="es">
 <?php
 $header_title = 'Iniciar Sesión - La Estación del Dominó';
-require_once __DIR__ . '/includes/header.php';
+include_once __DIR__ . '/../includes/header.php';
 ?>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   <style>
     body {
       font-family: 'Inter', sans-serif;
@@ -356,4 +359,4 @@ require_once __DIR__ . '/includes/header.php';
       }
     }
   </script>
-<?php require_once __DIR__ . '/includes/footer.php'; ?>
+<?php include_once __DIR__ . '/../includes/footer.php'; ?>

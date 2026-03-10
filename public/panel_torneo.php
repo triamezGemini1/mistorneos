@@ -5,16 +5,13 @@
  */
 require_once __DIR__ . '/../config/bootstrap.php';
 require_once __DIR__ . '/../config/csrf.php';
-require_once __DIR__ . '/../config/db.php';
+require_once __DIR__ . '/../config/db_config.php';
+require_once __DIR__ . '/../config/auth_service.php';
 require_once __DIR__ . '/../config/auth.php';
 require_once __DIR__ . '/../lib/app_helpers.php';
-
-$user = Auth::user();
-if (!$user) {
-    header('Location: login.php');
-    exit;
-}
+AuthService::requireAuth();
 Auth::requireRole(['admin_general', 'admin_torneo', 'admin_club']);
+$user = Auth::user();
 
 $torneo_id = isset($_GET['torneo_id']) ? (int)$_GET['torneo_id'] : 0;
 
