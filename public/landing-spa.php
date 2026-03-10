@@ -1,20 +1,28 @@
-﻿<?php
+<?php
 /**
  * Landing Page SPA - La Estación del Dominó (OFICIAL)
  * Single Page Application con Vue 3 para mejor UX
  * URL oficial: .../public/landing-spa.php
+ * Base y logo vía AppHelpers para que funcionen en /pruebas/public, /mistorneos_beta/public, etc.
  */
-
-require_once __DIR__ . '/../config/bootstrap.php';
-require_once __DIR__ . '/../lib/app_helpers.php';
-
-$app_base = rtrim(app_base_url(), '/');
-$base_url = $app_base . '/public/';
-$api_url = $base_url . 'api/landing_data.php';
-$logo_url = class_exists('AppHelpers') ? AppHelpers::getAppLogo() : ($app_base . '/public/view_image.php?path=' . rawurlencode('lib/Assets/mislogos/logo4.png'));
-$entidad_param = isset($_GET['entidad']) ? (int)$_GET['entidad'] : 0;
-if ($entidad_param > 0) {
-    $api_url .= '?entidad=' . $entidad_param;
+try {
+    require_once __DIR__ . '/../config/bootstrap.php';
+    require_once __DIR__ . '/../lib/app_helpers.php';
+    $base_url = rtrim(class_exists('AppHelpers') ? AppHelpers::getPublicUrl() : (rtrim(app_base_url(), '/') . '/public'), '/') . '/';
+    $api_url = $base_url . 'api/landing_data.php';
+    $logo_url = class_exists('AppHelpers') ? AppHelpers::getAppLogo() : ($base_url . 'view_image.php?path=' . rawurlencode('lib/Assets/mislogos/logo4.png'));
+    $entidad_param = isset($_GET['entidad']) ? (int)$_GET['entidad'] : 0;
+    if ($entidad_param > 0) {
+        $api_url .= '?entidad=' . $entidad_param;
+    }
+} catch (Throwable $e) {
+    error_log('landing-spa.php: ' . $e->getMessage() . ' en ' . $e->getFile() . ':' . $e->getLine());
+    if (!headers_sent()) {
+        http_response_code(500);
+        header('Content-Type: text/html; charset=utf-8');
+    }
+    echo '<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Error</title></head><body><p>Error al cargar la página. <a href="login.php">Ir al login</a></p></body></html>';
+    exit;
 }
 ?>
 <!DOCTYPE html>

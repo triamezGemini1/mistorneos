@@ -345,7 +345,7 @@ include_once __DIR__ . '/../includes/header.php';
               </div>
             </form>
             <div class="text-center mt-3">
-              <a href="<?= htmlspecialchars(AppHelpers::url('landing.php')) ?>" class="text-muted text-decoration-none small">
+              <a href="<?= htmlspecialchars(rtrim(AppHelpers::getRequestEntryUrl(), '/') . '/landing.php') ?>" class="text-muted text-decoration-none small">
                 <i class="fas fa-arrow-left me-1"></i>Volver al inicio
               </a>
             </div>
