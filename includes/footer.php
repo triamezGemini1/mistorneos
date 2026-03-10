@@ -1,7 +1,7 @@
 <?php
 /**
- * Cierre de body/html y scripts JS globales (rutas absolutas CDN).
- * Único punto para pie de página y scripts compartidos.
+ * Cierres de etiquetas </body></html> y scripts JS globales (rutas absolutas CDN).
+ * Único punto para pie de página y scripts compartidos; evita HTML repetido en vistas.
  * Variable opcional: $layout_asset_base (para scripts locales con base absoluta).
  */
 if (!isset($layout_asset_base) || $layout_asset_base === '') {

@@ -1,8 +1,9 @@
 <?php
 /**
- * Servicio centralizado de sesión y control de acceso.
- * Las páginas de gestión deben invocar AuthService::requireAuth() antes de cargar
- * recursos pesados (BD, layout, módulos) para mantener TTFB bajo y evitar trabajo innecesario.
+ * Gestión centralizada de sesiones y seguridad.
+ * Encapsula el control de acceso para que las páginas de gestión (p. ej. torneo_gestion,
+ * panel_torneo, admin_torneo) verifiquen la sesión de forma estandarizada antes de cargar
+ * recursos pesados (BD, layout, módulos), manteniendo TTFB bajo.
  *
  * Uso:
  *   require_once __DIR__ . '/../config/auth_service.php';

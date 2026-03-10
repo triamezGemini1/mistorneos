@@ -1,11 +1,11 @@
 <?php
 /**
- * Conexión única a la base de datos (PDO/MySQL).
- * Punto central para todas las páginas: require_once __DIR__ . '/../config/db_config.php'; luego DB::pdo().
+ * Conexión única y optimizada a la base de datos (PDO; compatible con uso tipo MySQLi vía PDO).
+ * Punto central: require_once __DIR__ . '/../config/db_config.php'; luego DB::pdo().
  *
- * Optimizado para grandes volúmenes (p. ej. 32M registros): conexión lazy, timeouts acotados,
- * prepared statements y fetch asociativo. Las consultas pesadas deben usar LIMIT/indexes
- * en la capa de aplicación; la conexión no degrada el TTFB.
+ * Preparada para consultas rápidas sobre tablas extensas (p. ej. 32M registros): conexión lazy,
+ * timeouts acotados (5s), prepared statements y fetch asociativo. La conexión no degrada el TTFB
+ * (objetivo ~67ms); las consultas pesadas deben usar LIMIT/índices en la capa de aplicación.
  *
  * Soporta dos conexiones:
  * - Principal (mistorneos): torneos, usuarios, inscripciones, resultados
