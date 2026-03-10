@@ -1,8 +1,8 @@
 <?php
 /**
- * Cabecera común: estructura HTML superior, metadatos y assets (mistorneos).
- * SOLUCIÓN DE RENDIMIENTO: favicon en ruta absoluta para evitar 404 y retraso ~190ms en tests de red.
- * <title> y recursos visuales reflejan la identidad de mistorneos (La Estación del Dominó).
+ * Cabecera común: estructura HTML superior, metadatos y carga de assets (mistorneos).
+ * SOLUCIÓN DE RENDIMIENTO: favicon en ruta absoluta para evitar 404 y retraso ~190ms (logs Pingdom).
+ * Recursos visuales y <title> reflejan la identidad de mistorneos.
  * Uso: definir $header_title opcional; luego include_once __DIR__ . '/../includes/header.php';
  * No cierra </head> para que la página pueda añadir estilos o meta adicionales.
  */

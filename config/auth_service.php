@@ -1,9 +1,8 @@
 <?php
 /**
- * Gestión centralizada de sesiones y seguridad.
- * Encapsula el control de acceso para que las páginas de gestión (p. ej. torneo_gestion,
- * panel_torneo, admin_torneo) verifiquen la sesión de forma estandarizada antes de cargar
- * recursos pesados (BD, layout, módulos), manteniendo TTFB bajo.
+ * Gestión centralizada de sesiones y protección de rutas.
+ * Encapsula session_start() (vía session_start_early) y la verificación de identidad para que
+ * páginas como torneo_gestion sean seguras y ligeras: verificación antes de cargar BD/layout.
  *
  * Uso:
  *   require_once __DIR__ . '/../config/auth_service.php';
@@ -11,6 +10,9 @@
  */
 if (!defined('APP_BOOTSTRAPPED')) {
     require_once __DIR__ . '/bootstrap.php';
+}
+if (session_status() === PHP_SESSION_NONE) {
+    require_once __DIR__ . '/session_start_early.php';
 }
 require_once __DIR__ . '/auth.php';
 
