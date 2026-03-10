@@ -2,8 +2,9 @@
 <IfModule mod_rewrite.c>
     RewriteEngine On
 
-    # Si el servidor está en un subdirectorio (ej. /mistorneos), descomenta y ajusta:
-    # RewriteBase /mistorneos/
+    # En producción bajo /pruebas/ (ej. laestaciondeldominohoy.com/pruebas/) descomenta:
+    # RewriteBase /pruebas/
+    # Si está en otro subdirectorio (ej. /mistorneos): RewriteBase /mistorneos/
 
     # Bloquear acceso directo a archivos sensibles
     RewriteRule ^\.env - [F,L]
