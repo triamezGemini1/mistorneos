@@ -39,26 +39,19 @@ class Auth {
     if (!headers_sent()) {
       $params = session_get_cookie_params();
       
-      // Eliminar la cookie de sesi�n principal
-      setcookie(session_name(), '', time() - 42000,
-        $params["path"], $params["domain"],
-        $params["secure"], $params["httponly"]
-      );
-      
-      // Eliminar otras cookies relacionadas con la sesi�n si existen
-      if (isset($_COOKIE[session_name()])) {
-        unset($_COOKIE[session_name()]);
+      $name = session_name();
+      $expire = time() - 42000;
+      setcookie($name, '', $expire, $params["path"], $params["domain"], $params["secure"], $params["httponly"]);
+      // Eliminar también cookie con path=/ por si la sesión se inició con session_start_early (index.php)
+      if (defined('URL_BASE') && URL_BASE !== '' && URL_BASE !== '/') {
+        setcookie($name, '', $expire, '/', $params["domain"], $params["secure"], $params["httponly"]);
       }
-      
-      // Limpiar headers adicionales para seguridad
-      header_remove('Set-Cookie');
     }
-    
-    // Limpiar array de cookies
+
     if (isset($_COOKIE)) {
-      foreach ($_COOKIE as $name => $value) {
-        if (strpos($name, session_name()) === 0) {
-          unset($_COOKIE[$name]);
+      foreach (array_keys($_COOKIE) as $cname) {
+        if ($cname === session_name() || strpos($cname, session_name()) === 0) {
+          unset($_COOKIE[$cname]);
         }
       }
     }
