@@ -92,7 +92,7 @@ if (!defined('URL_BASE')) {
 if (session_status() === PHP_SESSION_ACTIVE && (getenv('SESSION_DEBUG') || defined('SESSION_DEBUG'))) {
     error_log('[SESSION_DEBUG] bootstrap.php | sesión ya activa (session_start_early), no se inicia de nuevo | id=' . session_id());
 }
-if (session_status() === PHP_SESSION_NONE) {
+if (session_status() === PHP_SESSION_NONE && !headers_sent()) {
     $cookie_path = (URL_BASE !== '' && URL_BASE !== '/') ? URL_BASE : '/';
     session_set_cookie_params([
         'lifetime' => 0, // Sesión expira al cerrar el navegador

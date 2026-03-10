@@ -5,6 +5,10 @@ if (session_status() === PHP_SESSION_ACTIVE) {
     if ($session_debug) error_log('[SESSION_DEBUG] session_start_early.php | sesión ya activa, saliendo');
     return;
 }
+if (headers_sent()) {
+    if ($session_debug) error_log('[SESSION_DEBUG] session_start_early.php | headers already sent, skip');
+    return;
+}
 // Usar path='/' para que la cookie se envíe en toda la ruta (evita pérdida de sesión en subcarpetas tipo /mistorneos_beta/public/)
 $path = '/';
 $secure = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') || (!empty($_SERVER['HTTP_X_FORWARDED_PROTO']) && $_SERVER['HTTP_X_FORWARDED_PROTO'] === 'https');
