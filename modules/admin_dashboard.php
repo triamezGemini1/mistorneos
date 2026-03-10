@@ -28,10 +28,15 @@ if ($user_role === 'admin_general' && $view === 'home') {
     $data['stats'] = array_merge($data['stats'] ?? [], OrganizacionesData::loadStatsGlobales());
 }
 
-$view_file = __DIR__ . '/../public/includes/views/dashboard/' . basename($view) . '.php';
-
+$views_base = (defined('APP_ROOT') && APP_ROOT !== '')
+    ? (rtrim(APP_ROOT, '/\\') . '/public/includes/views/dashboard')
+    : (__DIR__ . '/../public/includes/views/dashboard');
+$view_file = $views_base . '/' . basename($view) . '.php';
 if (!is_file($view_file)) {
-    $view_file = __DIR__ . '/../public/includes/views/dashboard/home.php';
+    $view_file = $views_base . '/home.php';
+}
+if (!is_file($view_file)) {
+    throw new RuntimeException('Vista de dashboard no encontrada: ' . $views_base);
 }
 
 extract(array_merge($data, [

@@ -34,7 +34,7 @@ if (isset($_SESSION['user'])) {
             : $entry_base . '/' . ltrim($return_url, '/');
         header("Location: " . $target, true, 302);
     } else {
-        header("Location: " . $entry_base . "/index.php", true, 302);
+        header("Location: " . $entry_base . "/index.php?page=home", true, 302);
     }
     exit;
 }
@@ -174,7 +174,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if ($sid !== '') {
             setcookie($sname, $sid, $cookie_opts);
         }
-        $redirect_target = $entry_base . '/index.php';
+        $redirect_target = $entry_base . '/index.php?page=home';
         if ($redirect && preg_match('#^[a-zA-Z0-9_\-/\.\?=&]+$#', $redirect) && !preg_match('#^(https?|javascript|data):#i', $redirect)) {
             if (strpos($redirect, '?') !== false || strpos($redirect, '.php') !== false) {
                 $redirect_target = (strpos($redirect, 'http') === 0 || strpos($redirect, '/') === 0)

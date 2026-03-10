@@ -1,7 +1,16 @@
 <?php
 // layout.php
 // La autenticación ya se verificó en index.php. Usar $page pasado por index.php para no perder la página en entornos donde $_GET se pierde (proxy/beta).
-$user = $_SESSION['user'];
+$user = $_SESSION['user'] ?? null;
+if (!$user || !is_array($user)) {
+    if (!headers_sent()) {
+        require_once __DIR__ . '/../../config/auth_service.php';
+        AuthService::requireAuth();
+        exit;
+    }
+    echo '<div class="container p-4"><div class="alert alert-warning">Sesión no válida. <a href="' . (class_exists('AppHelpers') ? AppHelpers::getPublicUrl() . '/login.php' : 'login.php') . '">Iniciar sesión</a>.</div></div>';
+    return;
+}
 $current_page = (isset($page) && $page !== '') ? $page : ($_GET['page'] ?? 'home');
 
 // Base URL para CSS/JS (carpeta public/) — evita doble public/public
@@ -600,15 +609,22 @@ if ($from_url !== '') {
         <?php if ($current_page !== 'home'): ?>
         <div id="global-volver-container"></div>
         <?php endif; ?>
-        <?php 
+        <?php
         $content = __DIR__ . "/../../modules/$current_page.php";
-        if (file_exists($content)) {
-          include $content;
-        } else {
-          if (function_exists('error_log')) {
-            error_log("index.php: Página no reconocida page=" . ($current_page ?: '(vacío)') . ", se muestra 404.");
+        try {
+          if (file_exists($content)) {
+            include $content;
+          } else {
+            if (function_exists('error_log')) {
+              error_log("layout: Página no reconocida page=" . ($current_page ?: '(vacío)') . ", 404.");
+            }
+            include __DIR__ . "/../../modules/404.php";
           }
-          include __DIR__ . "/../../modules/404.php";
+        } catch (Throwable $e) {
+          error_log("layout: Error en página '{$current_page}': " . $e->getMessage() . " en " . $e->getFile() . ":" . $e->getLine());
+          echo '<div class="alert alert-danger mx-3"><strong>Error al cargar Inicio.</strong> ';
+          echo (defined('APP_DEBUG') && APP_DEBUG) ? htmlspecialchars($e->getMessage()) : 'Revisa el log del servidor o contacta al administrador.';
+          echo '</div>';
         }
         ?>
       </main>
