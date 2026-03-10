@@ -3,9 +3,10 @@ require_once __DIR__ . '/../config/session_start_early.php';
 /** Login: usuario del log = valor enviado en esa petición en el formulario. */
 ob_start();
 try {
-    require_once __DIR__ . '/../core/includes/config.php';
+    require_once __DIR__ . '/../config/bootstrap.php';
+    require_once __DIR__ . '/../config/db.php';
 } catch (Throwable $e) {
-    error_log("login.php: Error cargando config - " . $e->getMessage());
+    error_log("login.php: Error cargando conexión - " . $e->getMessage());
     ob_end_clean();
     http_response_code(503);
     include __DIR__ . '/error_service_unavailable.php';
@@ -213,15 +214,10 @@ ob_end_clean();
 ?>
 <!DOCTYPE html>
 <html lang="es">
-<head>
-  <meta charset="UTF-8">
-  <?php include_once __DIR__ . '/../core/includes/header.php'; ?>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes">
-  <meta name="theme-color" content="#1a365d">
-  <title>Iniciar Sesión - La Estación del Dominó</title>
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
-  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<?php
+$header_title = 'Iniciar Sesión - La Estación del Dominó';
+require_once __DIR__ . '/includes/header.php';
+?>
   <style>
     body {
       font-family: 'Inter', sans-serif;
@@ -360,4 +356,4 @@ ob_end_clean();
       }
     }
   </script>
-<?php include_once __DIR__ . '/../core/includes/footer.php'; ?>
+<?php require_once __DIR__ . '/includes/footer.php'; ?>

@@ -1,7 +1,8 @@
 <?php
 /**
- * Clase DB - Gestión de conexiones a base de datos
- * 
+ * Conexión a base de datos (único punto de acceso PDO/MySQL).
+ * Todas las páginas deben usar: require_once __DIR__ . '/../config/db.php'; y luego DB::pdo().
+ *
  * Soporta dos conexiones:
  * - Principal (mistorneos): Torneos, usuarios, inscripciones, resultados
  * - Secundaria (fvdadmin): Datos de apoyo para búsquedas
