@@ -83,6 +83,7 @@ if (in_array($user['role'], ['admin_club', 'admin_general', 'admin_torneo'], tru
 <html lang="es">
 <head>
   <meta charset="UTF-8">
+  <?php include_once __DIR__ . '/../../core/includes/header_meta.php'; ?>
   <base href="<?= htmlspecialchars($layout_asset_base) ?>/">
   <title><?= $dashboard_org ? 'Dashboard - ' . htmlspecialchars($dashboard_org['nombre']) : 'Dashboard - La Estación del Dominó' ?></title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes">
@@ -650,5 +651,6 @@ if (str_ends_with($app_base_for_js, '/public')) {
   <script src="<?= htmlspecialchars($layout_asset_base) ?>/assets/breadcrumb-back.js" defer></script>
   <script src="<?= htmlspecialchars($layout_asset_base) ?>/assets/single-tab-enforcer.js" defer></script>
   <script src="<?= htmlspecialchars($layout_asset_base) ?>/assets/dashboard-init.js" defer></script>
-</body>
-</html>
+<?php
+$layout_asset_base = $layout_asset_base ?? '';
+include_once __DIR__ . '/../../core/includes/footer.php';

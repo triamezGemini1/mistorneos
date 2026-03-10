@@ -3,10 +3,9 @@ require_once __DIR__ . '/../config/session_start_early.php';
 /** Login: usuario del log = valor enviado en esa petición en el formulario. */
 ob_start();
 try {
-    require __DIR__ . '/../config/bootstrap.php';
-    require __DIR__ . '/../config/db.php';
+    require_once __DIR__ . '/../core/includes/config.php';
 } catch (Throwable $e) {
-    error_log("login.php: Error cargando bootstrap/DB - " . $e->getMessage());
+    error_log("login.php: Error cargando config - " . $e->getMessage());
     ob_end_clean();
     http_response_code(503);
     include __DIR__ . '/error_service_unavailable.php';
@@ -216,6 +215,7 @@ ob_end_clean();
 <html lang="es">
 <head>
   <meta charset="UTF-8">
+  <?php include_once __DIR__ . '/../core/includes/header.php'; ?>
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes">
   <meta name="theme-color" content="#1a365d">
   <title>Iniciar Sesión - La Estación del Dominó</title>
@@ -360,5 +360,4 @@ ob_end_clean();
       }
     }
   </script>
-</body>
-</html>
+<?php include_once __DIR__ . '/../core/includes/footer.php'; ?>

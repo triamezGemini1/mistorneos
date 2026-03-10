@@ -9,11 +9,11 @@ require_once __DIR__ . '/../config/bootstrap.php';
 require_once __DIR__ . '/../config/csrf.php';
 require_once __DIR__ . '/../config/auth.php';
 
-// Cargar DB con manejo de errores: mostrar página de error en vez de morir silenciosamente
+// Conexión centralizada (core/includes/config.php = bootstrap + db)
 try {
-    require_once __DIR__ . '/../config/db.php';
+    require_once __DIR__ . '/../core/includes/config.php';
 } catch (Throwable $e) {
-    error_log("index.php: Error cargando DB - " . $e->getMessage());
+    error_log("index.php: Error cargando config - " . $e->getMessage());
     http_response_code(503);
     include __DIR__ . '/error_service_unavailable.php';
     exit;

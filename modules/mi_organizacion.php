@@ -10,6 +10,7 @@ if (!defined('APP_BOOTSTRAPPED')) {
 require_once __DIR__ . '/../config/auth.php';
 require_once __DIR__ . '/../config/db.php';
 require_once __DIR__ . '/../lib/file_upload.php';
+require_once __DIR__ . '/../lib/security.php';
 
 // Solo admin_club y admin_general pueden acceder
 Auth::requireRole(['admin_club', 'admin_general']);
@@ -86,6 +87,56 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
         ");
         $stmt->execute([$nombre, $direccion, $responsable, $telefono, $email, $entidad, $admin_user_id]);
         header('Location: index.php?page=mi_organizacion&success=' . urlencode('Organización creada correctamente'));
+        exit;
+    } catch (Exception $e) {
+        $error = $e->getMessage();
+    }
+}
+
+// Procesar activación de organización inactiva: asignar usuario y contraseña (solo admin_general)
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'activar_guardar' && $is_admin_general) {
+    try {
+        $org_id = (int)($_POST['organizacion_id'] ?? 0);
+        $admin_user_id = (int)($_POST['admin_user_id'] ?? 0);
+        $password = (string)($_POST['password'] ?? '');
+        $password_confirm = (string)($_POST['password_confirm'] ?? '');
+        if ($org_id <= 0 || $admin_user_id <= 0) {
+            throw new Exception('Organización y usuario son requeridos');
+        }
+        if (strlen($password) < 6) {
+            throw new Exception('La contraseña debe tener al menos 6 caracteres');
+        }
+        if ($password !== $password_confirm) {
+            throw new Exception('Las contraseñas no coinciden');
+        }
+        $pdo = DB::pdo();
+        $stmt = $pdo->prepare("SELECT id, entidad, estatus FROM organizaciones WHERE id = ?");
+        $stmt->execute([$org_id]);
+        $org = $stmt->fetch(PDO::FETCH_ASSOC);
+        if (!$org || (int)$org['estatus'] !== 0) {
+            throw new Exception('Organización no encontrada o ya está activa');
+        }
+        $stmt = $pdo->prepare("SELECT id FROM usuarios WHERE id = ?");
+        $stmt->execute([$admin_user_id]);
+        if (!$stmt->fetch()) {
+            throw new Exception('Usuario no encontrado');
+        }
+        $password_hash = Security::hashPassword($password);
+        $entidad_org = (int)$org['entidad'];
+        $pdo->beginTransaction();
+        try {
+            $pdo->prepare("UPDATE organizaciones SET estatus = 1, admin_user_id = ?, updated_at = NOW() WHERE id = ?")->execute([$admin_user_id, $org_id]);
+            $pdo->prepare("UPDATE usuarios SET role = 'admin_club', password_hash = ?, entidad = ? WHERE id = ?")->execute([$password_hash, $entidad_org, $admin_user_id]);
+            $pdo->commit();
+        } catch (Exception $e) {
+            $pdo->rollBack();
+            throw $e;
+        }
+        $return_extra = '';
+        if (($_GET['return_to'] ?? '') === 'organizaciones' && !empty($_GET['entidad_id'])) {
+            $return_extra = '&entidad_id=' . (int)$_GET['entidad_id'];
+        }
+        header('Location: index.php?page=organizaciones' . $return_extra . '&success=' . urlencode('Organización activada. Usuario asignado y contraseña actualizada.'));
         exit;
     } catch (Exception $e) {
         $error = $e->getMessage();
@@ -211,11 +262,11 @@ if ($is_admin_general) {
         ");
         $lista_organizaciones = $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
-    if ($action_get === 'new') {
+    if ($action_get === 'new' || $action_get === 'activar') {
         $stmt = DB::pdo()->query("
             SELECT u.id, u.nombre, u.username, u.email
             FROM usuarios u
-            LEFT JOIN organizaciones o ON o.admin_user_id = u.id
+            LEFT JOIN organizaciones o ON o.admin_user_id = u.id AND o.estatus = 1
             WHERE u.role = 'admin_club' AND u.status = 0 AND o.id IS NULL
             ORDER BY u.nombre ASC
         ");
@@ -293,7 +344,9 @@ if ($organizacion) {
         </div>
     <?php endif; ?>
 
-    <?php if ($is_admin_general && $action_get === 'new'): ?>
+    <?php if ($is_admin_general && $action_get === 'activar' && $organizacion && (int)($organizacion['estatus'] ?? 1) === 0): ?>
+        <?php include __DIR__ . '/admin_org/organizacion/views/mi_organizacion_form_activar.php'; ?>
+    <?php elseif ($is_admin_general && $action_get === 'new'): ?>
         <?php include __DIR__ . '/admin_org/organizacion/views/mi_organizacion_form_nueva.php'; ?>
     <?php elseif ($is_admin_general && !$organizacion): ?>
         <?php include __DIR__ . '/admin_org/organizacion/views/mi_organizacion_lista.php'; ?>
