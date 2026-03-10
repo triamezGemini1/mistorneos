@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 /**
  * API: Buscar persona por cédula o por usuario (nombre de usuario) para el módulo de usuarios.
  * Para registrar Admin Torneo / Operador: buscar en afiliados (usuarios del club) por cédula o usuario;
@@ -7,7 +7,7 @@
  */
 
 require_once __DIR__ . '/../../config/bootstrap.php';
-require_once __DIR__ . '/../../config/db.php';
+require_once __DIR__ . '/../../config/db_config.php';
 
 header('Content-Type: application/json; charset=utf-8');
 

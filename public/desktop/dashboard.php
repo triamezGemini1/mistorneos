@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 /**
  * Dashboard Desktop: información de la organización y estadísticas. Sin listado de torneos.
  * Entrada principal tras el login.

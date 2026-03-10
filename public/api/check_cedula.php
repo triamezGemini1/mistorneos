@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 /**
  * Endpoint para verificar si una cédula ya está inscrita en el torneo (tabla inscritos + usuarios).
  * Si está inscrito: retorna exists=true y mensaje "Jugador ya registrado".
@@ -6,7 +6,7 @@
  */
 
 require_once __DIR__ . '/../../config/bootstrap.php';
-require_once __DIR__ . '/../../config/db.php';
+require_once __DIR__ . '/../../config/db_config.php';
 
 header('Content-Type: application/json; charset=utf-8');
 

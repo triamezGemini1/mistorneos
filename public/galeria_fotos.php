@@ -1,11 +1,11 @@
-<?php
+﻿<?php
 /**
  * Galería Pública de Fotos de Torneos
  * Accesible sin login, con filtros por club y torneo
  */
 
 require_once __DIR__ . '/../config/bootstrap.php';
-require_once __DIR__ . '/../config/db.php';
+require_once __DIR__ . '/../config/db_config.php';
 require_once __DIR__ . '/../lib/app_helpers.php';
 
 // Función helper para construir URL de imagen

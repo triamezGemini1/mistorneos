@@ -1,11 +1,11 @@
-<?php
+﻿<?php
 /**
  * Consulta Pública de Información de Torneo
  * Permite a los jugadores consultar toda la información relacionada con su participación
  */
 
 require_once __DIR__ . '/../config/bootstrap.php';
-require_once __DIR__ . '/../config/db.php';
+require_once __DIR__ . '/../config/db_config.php';
 
 $pdo = DB::pdo();
 $base_url = app_base_url();

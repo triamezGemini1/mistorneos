@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 /**
  * Reasignar Mesa (Desktop) — Intercambiar posiciones de jugadores en una mesa.
  * Misma lógica que la web: opciones 1-6 de intercambio de secuencias en partiresul.

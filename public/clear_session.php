@@ -1,10 +1,10 @@
-<?php
+ï»¿<?php
 require __DIR__ . '/../config/bootstrap.php';
 
-// Limpiar todas las variables de sesión
+// Limpiar todas las variables de sesiï¿½n
 $_SESSION = array();
 
-// Destruir la cookie de sesión
+// Destruir la cookie de sesiï¿½n
 if (ini_get("session.use_cookies")) {
     $params = session_get_cookie_params();
     setcookie(session_name(), '', time() - 42000,
@@ -13,11 +13,11 @@ if (ini_get("session.use_cookies")) {
     );
 }
 
-// Destruir la sesión
+// Destruir la sesiï¿½n
 session_destroy();
 
-echo "<h1>Sesión Limpiada</h1>";
-echo "<p>La sesión ha sido limpiada exitosamente.</p>";
+echo "<h1>Sesiï¿½n Limpiada</h1>";
+echo "<p>La sesiï¿½n ha sido limpiada exitosamente.</p>";
 echo "<p><a href='login.php'>Ir al Login</a></p>";
-echo "<p><a href='test_auth.php'>Probar Autenticación</a></p>";
+echo "<p><a href='test_auth.php'>Probar Autenticaciï¿½n</a></p>";
 ?>

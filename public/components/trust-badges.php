@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 /**
  * Componente Trust Badges - Certificaciones de seguridad
  * Variables globales: $SITE_NAME (desde config.php)

@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 /**
  * Componente Contact Form - Formulario de comentarios y lista
  * Variables globales: $user, $pdo, app_base_url()

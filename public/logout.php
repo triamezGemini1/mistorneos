@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 require __DIR__ . '/../config/bootstrap.php';
 require __DIR__ . '/../config/auth.php';
 

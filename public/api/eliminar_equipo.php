@@ -1,11 +1,11 @@
-<?php
+﻿<?php
 /**
  * API: Eliminar/Retirar equipo del torneo
  * Permite retirar equipos completos o incompletos
  * Los jugadores quedarán liberados (codigo_equipo = NULL) y disponibles para otros equipos
  */
 require_once __DIR__ . '/../../config/bootstrap.php';
-require_once __DIR__ . '/../../config/db.php';
+require_once __DIR__ . '/../../config/db_config.php';
 require_once __DIR__ . '/../../config/auth.php';
 require_once __DIR__ . '/../../config/csrf.php';
 

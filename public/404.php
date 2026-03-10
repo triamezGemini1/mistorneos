@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 /**
  * Página 404 Personalizada
  * Muestra un mensaje amigable cuando se accede a una URL que no existe

@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 /**
  * Endpoint público para inscribir/desinscribir jugadores
  * Actúa como proxy para api/tournament_admin_toggle_inscripcion.php

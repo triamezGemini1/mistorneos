@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 require_once __DIR__ . '/../config/session_start_early.php';
 /** Login: usuario del log = valor enviado en esa petición en el formulario. */
 ob_start();

@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 /**
  * Búsqueda rápida para Inscripción en Sitio (solo tabla usuarios).
  * Redirige a la lógica en api/search_usuario_inscripcion_sitio.php

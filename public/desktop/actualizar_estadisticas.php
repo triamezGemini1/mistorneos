@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 /**
  * Actualizar Estadísticas (Desktop). Ejecuta core/logica_torneo.php actualizarEstadisticasInscritos().
  * GET/POST: torneo_id. Redirige a panel_torneo.php?torneo_id=X (Panel de Control del Torneo). No redirige a registro ni raíz.

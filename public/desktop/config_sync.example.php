@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 /**
  * Ejemplo: copiar a config_sync.php y ajustar.
  * SYNC_API_KEY debe ser el mismo que en .env (raíz del proyecto).

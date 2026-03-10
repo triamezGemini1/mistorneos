@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 /**
  * Búsqueda de persona por nacionalidad + cédula. Cuatro bloques separados, cada uno con una acción clara.
  * Usado por: Formulario de Invitación e Inscripción en Sitio.
@@ -13,7 +13,7 @@
 declare(strict_types=1);
 
 require_once __DIR__ . '/../../config/bootstrap.php';
-require_once __DIR__ . '/../../config/db.php';
+require_once __DIR__ . '/../../config/db_config.php';
 
 header('Content-Type: application/json; charset=utf-8');
 

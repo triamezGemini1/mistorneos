@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 /**
  * Redirección al landing con directriz de cierre de sesión
  */

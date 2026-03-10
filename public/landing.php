@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 /**
  * Landing Page Pública - La Estación del Dominó
  * Redirige a la landing oficial (SPA): landing-spa.php

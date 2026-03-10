@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 /**
  * Configuración y funciones helper para el procesamiento de imágenes simples.
  * Usa la función central image_url() para que las imágenes se muestren en cualquier contexto.

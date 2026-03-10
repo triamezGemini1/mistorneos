@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 /**
  * Configuración de la Landing Page - Variables centralizadas
  * Incluir antes de los componentes para tenerlas disponibles

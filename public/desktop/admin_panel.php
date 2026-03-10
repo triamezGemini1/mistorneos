@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 /**
  * Panel de control simplificado (Desktop): torneos, inscritos, mesas y puntajes sobre SQLite.
  */

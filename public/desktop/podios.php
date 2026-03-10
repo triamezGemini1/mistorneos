@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 /**
  * Podios (Desktop). Redirige a posiciones; en una versión futura podría mostrar solo podio.
  */

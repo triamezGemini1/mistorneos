@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 /**
  * Guardar resultados de mesa (Desktop) — Pasos 6 y 7 del ciclo.
  *

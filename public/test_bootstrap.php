@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 /**
  * Test de bootstrap completo
  * ELIMINAR DESPUÉS DE USAR

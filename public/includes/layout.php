@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 // layout.php
 // La autenticación ya se verificó en index.php. Usar $page pasado por index.php para no perder la página en entornos donde $_GET se pierde (proxy/beta).
 $user = $_SESSION['user'];

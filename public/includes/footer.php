@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 /**
  * Delega en el footer central (raíz). Cierre </body></html> y scripts globales.
  */

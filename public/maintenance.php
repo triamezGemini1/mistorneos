@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 /**
  * Página de Mantenimiento
  * Muestra un mensaje amigable mientras el sitio está en mantenimiento

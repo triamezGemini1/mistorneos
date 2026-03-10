@@ -1,12 +1,14 @@
-<?php
+﻿<?php
 /**
  * Reportar Pago de Inscripción
  * Permite a usuarios reportar el pago de su inscripción en un torneo
  */
 
 require_once __DIR__ . '/../config/bootstrap.php';
-require_once __DIR__ . '/../config/db.php';
+require_once __DIR__ . '/../config/db_config.php';
+require_once __DIR__ . '/../config/auth_service.php';
 require_once __DIR__ . '/../config/auth.php';
+AuthService::requireAuth();
 
 $payment_id = (int)($_GET['payment_id'] ?? 0);
 

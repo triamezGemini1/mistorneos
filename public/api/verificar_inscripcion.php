@@ -1,10 +1,10 @@
-<?php
+﻿<?php
 /**
  * Endpoint para verificar si un usuario ya está inscrito en un evento
  */
 
 require_once __DIR__ . '/../../config/bootstrap.php';
-require_once __DIR__ . '/../../config/db.php';
+require_once __DIR__ . '/../../config/db_config.php';
 
 header('Content-Type: application/json; charset=utf-8');
 

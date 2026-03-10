@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 /**
  * Página independiente del Administrador de Torneos
  * Diseño moderno, práctico y responsive

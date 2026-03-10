@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 /**
  * Test temporal - ELIMINAR DESPUÉS DE USAR
  */

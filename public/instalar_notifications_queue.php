@@ -1,11 +1,11 @@
-<?php
+﻿<?php
 /**
  * Script de instalación: crea la tabla notifications_queue y opcionalmente telegram_chat_id en usuarios.
  * Ejecutar una sola vez desde el navegador: http://tu-dominio/mistorneos/public/instalar_notifications_queue.php
  * Eliminar o proteger este archivo después de usarlo.
  */
 require_once __DIR__ . '/../config/bootstrap.php';
-require_once __DIR__ . '/../config/db.php';
+require_once __DIR__ . '/../config/db_config.php';
 
 header('Content-Type: text/html; charset=UTF-8');
 

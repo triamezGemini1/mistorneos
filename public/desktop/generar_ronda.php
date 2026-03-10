@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 /**
  * Generar Ronda (Desktop) — Pasos 3 y 8 del ciclo.
  * Invoca core/logica_torneo.php (generarRonda), que a su vez usa:

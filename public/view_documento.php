@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 /**
  * Visor y descarga de documentos oficiales (PDF, etc.) desde upload/documentos_oficiales/
  * Uso: view_documento.php?path=nombre.pdf (consulta en línea) o ?path=nombre.pdf&download=1 (descarga)

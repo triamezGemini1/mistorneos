@@ -1,11 +1,11 @@
-<?php
+﻿<?php
 /**
  * Página Pública de Inscripción en Torneo
  * Permite a usuarios registrados inscribirse en un torneo
  */
 
 require_once __DIR__ . '/../config/bootstrap.php';
-require_once __DIR__ . '/../config/db.php';
+require_once __DIR__ . '/../config/db_config.php';
 require_once __DIR__ . '/../config/auth.php';
 require_once __DIR__ . '/../config/csrf.php';
 

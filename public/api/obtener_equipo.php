@@ -1,9 +1,9 @@
-<?php
+﻿<?php
 /**
  * API: Obtener datos de un equipo con sus jugadores
  */
 require_once __DIR__ . '/../../config/bootstrap.php';
-require_once __DIR__ . '/../../config/db.php';
+require_once __DIR__ . '/../../config/db_config.php';
 require_once __DIR__ . '/../../config/auth.php';
 require_once __DIR__ . '/../../lib/EquiposHelper.php';
 

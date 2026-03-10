@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 /**
  * Publicación de Resultados - Tabla de clasificación (Desktop).
  * Replica la lógica de recalcularPosiciones() para mostrar la tabla con los mismos criterios de desempate que la web.

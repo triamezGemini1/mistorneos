@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 /**
  * Logos Wall - Banner multilínea con ~40 logos en 3 filas.
  * Infinite loop con parallax sutil, mask-image en bordes, lazy loading y GPU.

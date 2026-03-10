@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 /**
  * Pull inicial: obtiene jugadores y tablas maestras (entidad, organizaciones, clubes) del servidor e inserta/actualiza en SQLite local.
  */

@@ -1,11 +1,11 @@
-<?php
+﻿<?php
 /**
  * Inscripción Pública para Eventos Masivos
  * Permite a cualquier usuario inscribirse en eventos masivos desde su dispositivo móvil
  */
 
 require_once __DIR__ . '/../config/bootstrap.php';
-require_once __DIR__ . '/../config/db.php';
+require_once __DIR__ . '/../config/db_config.php';
 require_once __DIR__ . '/../config/csrf.php';
 require_once __DIR__ . '/../lib/app_helpers.php';
 require_once __DIR__ . '/../lib/security.php';

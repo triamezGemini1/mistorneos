@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 require_once __DIR__ . '/../config/session_start_early.php';
 /**
  * Punto de entrada principal de la aplicación
@@ -9,9 +9,9 @@ require_once __DIR__ . '/../config/bootstrap.php';
 require_once __DIR__ . '/../config/csrf.php';
 require_once __DIR__ . '/../config/auth.php';
 
-// Conexión a base de datos (único punto: config/db.php)
+// Conexión única (db_config evita múltiples conexiones si un script llama a otro)
 try {
-    require_once __DIR__ . '/../config/db.php';
+    require_once __DIR__ . '/../config/db_config.php';
 } catch (Throwable $e) {
     error_log("index.php: Error cargando conexión - " . $e->getMessage());
     http_response_code(503);

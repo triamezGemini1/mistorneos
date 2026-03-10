@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 /**
  * Componente Hero - Sección principal de bienvenida (layout compacto)
  * Dos columnas: texto y CTA a la izquierda, imagen/media a la derecha

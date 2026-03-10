@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 /**
  * Componente Header - Navbar + Menú flotante lateral
  * Variables globales: $user, app_base_url(), $SITE_NAME (desde config.php)

@@ -1,11 +1,13 @@
-<?php
+﻿<?php
 /**
  * Endpoint para la campanita: devuelve el número de notificaciones web pendientes del usuario.
  * Con ?format=json devuelve también la última notificación pendiente (para toast/Push).
  */
 require_once __DIR__ . '/../config/bootstrap.php';
-require_once __DIR__ . '/../config/db.php';
+require_once __DIR__ . '/../config/db_config.php';
+require_once __DIR__ . '/../config/auth_service.php';
 require_once __DIR__ . '/../config/auth.php';
+AuthService::requireAuth();
 
 if (session_status() === PHP_SESSION_NONE) {
     session_start();

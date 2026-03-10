@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 /**
  * Vista de Torneos Realizados (Histórico)
  * Muestra tarjetas con torneos finalizados, organización responsable y podio (1°, 2°, 3°).
@@ -6,7 +6,7 @@
  */
 
 require_once __DIR__ . '/../config/bootstrap.php';
-require_once __DIR__ . '/../config/db.php';
+require_once __DIR__ . '/../config/db_config.php';
 require_once __DIR__ . '/../lib/app_helpers.php';
 require_once __DIR__ . '/../lib/LandingDataService.php';
 require_once __DIR__ . '/../lib/UrlHelper.php';

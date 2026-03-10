@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 /**
  * API: Guardar/Crear equipo con sus jugadores
  */
@@ -52,7 +52,7 @@ try {
     // Cargar archivos requeridos con manejo de errores
     $requiredFiles = [
         'bootstrap' => __DIR__ . '/../../config/bootstrap.php',
-        'db' => __DIR__ . '/../../config/db.php',
+        'db' => __DIR__ . '/../../config/db_config.php',
         'auth' => __DIR__ . '/../../config/auth.php',
         'csrf' => __DIR__ . '/../../config/csrf.php',
         'EquiposHelper' => __DIR__ . '/../../lib/EquiposHelper.php'

@@ -1,15 +1,11 @@
 <?php
 
 require_once __DIR__ . '/../config/bootstrap.php';
+require_once __DIR__ . '/../config/auth_service.php';
 require_once __DIR__ . '/../config/auth.php';
 require_once __DIR__ . '/../config/environment.php';
-
-// Verificar que el usuario est� autenticado
+AuthService::requireAuth();
 $user = Auth::user();
-if (!$user) {
-    header("Location: " . AppHelpers::url('login.php'));
-    exit;
-}
 ?>
 <!DOCTYPE html>
 <html lang="es">

@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 /** Redirige a login local si no hay sesión desktop. Incluir al inicio de páginas que requieran acceso. */
 if (session_status() === PHP_SESSION_NONE) {
     session_start();

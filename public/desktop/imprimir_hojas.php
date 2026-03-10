@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 /**
  * Paso 5: Imprimir Hojas de Anotación (Desktop).
  * Una hoja por mesa con el diseño: encabezado (torneo | Ronda - Mesa),

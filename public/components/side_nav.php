@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 /**
  * Menú de Anclaje Rápido - Navegación lateral flotante con iconos
  * Permite saltar entre secciones sin scroll manual

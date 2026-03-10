@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 /**
  * Visor centralizado de imágenes.
  * Sirve archivos de imagen de forma segura desde upload/ y evita rutas rotas.

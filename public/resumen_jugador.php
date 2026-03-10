@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 /**
  * Resumen individual del jugador (público).
  * Muestra toda la trayectoria de partidas con toda la información una por una.
@@ -11,7 +11,7 @@ header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
 header('Pragma: no-cache');
 
 require_once __DIR__ . '/../config/bootstrap.php';
-require_once __DIR__ . '/../config/db.php';
+require_once __DIR__ . '/../config/db_config.php';
 require_once __DIR__ . '/../lib/app_helpers.php';
 require_once __DIR__ . '/../lib/InscritosPartiresulHelper.php';
 

@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 declare(strict_types=1);
 /**
  * SPA móvil: Perfil jugador por QR + Cédula (solo inscritos).

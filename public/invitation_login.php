@@ -1,7 +1,7 @@
-<?php
+﻿<?php
 
 if (!defined('APP_BOOTSTRAPPED')) { require __DIR__ . '/../config/bootstrap.php'; }
-require_once __DIR__ . '/../config/db.php';
+require_once __DIR__ . '/../config/db_config.php';
 require_once __DIR__ . '/../config/auth.php';
 
 // Obtener par�metros de la URL de invitaci�n

@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 /**
  * Eliminar última ronda (Desktop). Borra registros de partiresul para la ronda indicada.
  */

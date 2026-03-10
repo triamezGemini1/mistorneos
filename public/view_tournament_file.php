@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 /**
  * Sirve archivos adjuntos del torneo (afiche, invitación, normas/condiciones)
  * de forma segura desde upload/tournaments/

@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 /**
  * Endpoint para guardar torneos
  * Permite que admin_club cree torneos sin ser bloqueado por .htaccess

@@ -1,13 +1,9 @@
-<?php
+﻿<?php
 require_once __DIR__ . '/../config/bootstrap.php';
-require_once __DIR__ . '/../config/db.php';
+require_once __DIR__ . '/../config/db_config.php';
+require_once __DIR__ . '/../config/auth_service.php';
 require_once __DIR__ . '/../config/auth.php';
-
-// Verificar autenticación
-if (!isset($_SESSION['user'])) {
-    header('Location: ' . AppHelpers::url('login.php'));
-    exit;
-}
+AuthService::requireAuth();
 
 $user = $_SESSION['user'];
 $pdo = DB::pdo();

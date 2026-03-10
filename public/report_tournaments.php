@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 /**
  * Reporte de Torneos en PDF
  * Genera un reporte completo de los torneos registrados
@@ -7,10 +7,11 @@
 
 
 require_once __DIR__ . '/../config/bootstrap.php';
+require_once __DIR__ . '/../config/db_config.php';
+require_once __DIR__ . '/../config/auth_service.php';
 require_once __DIR__ . '/../config/auth.php';
-require_once __DIR__ . '/../config/db.php';
 require_once __DIR__ . '/../lib/report_generator.php';
-
+AuthService::requireAuth();
 Auth::requireRole(['admin_general', 'admin_torneo']);
 
 try {

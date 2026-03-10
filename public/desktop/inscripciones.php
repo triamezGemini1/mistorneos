@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 /**
  * Administración de inscripciones (Desktop).
  * Igual que web: listado con estatus (disponibles, inscritos, confirmados, retirados, pendientes),

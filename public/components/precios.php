@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 /**
  * Componente Precios - Sección de planes o tarifas
  * Variables globales disponibles: $user, app_base_url()

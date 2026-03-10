@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 /**
  * Registro de Resultados (Desktop) — Replica del formulario web con sidebar y tabla completa.
  * Carga: torneo, rondas, mesas (completadas/pendientes), jugadores de la mesa actual.

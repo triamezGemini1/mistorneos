@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 $target = __DIR__ . '/../../../modules/invitations/show.php';
 if (!file_exists($target)) {
   http_response_code(500);

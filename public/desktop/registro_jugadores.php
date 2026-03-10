@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 /**
  * Registro de jugadores (Desktop). Solo se muestra al acceder explícitamente.
  * Formulario de registro inline (colapsable), lista de jugadores y sincronización.

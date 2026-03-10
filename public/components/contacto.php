@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 /**
  * Componente Contacto - Footer con información de contacto
  * Variables globales disponibles: $user, app_base_url()

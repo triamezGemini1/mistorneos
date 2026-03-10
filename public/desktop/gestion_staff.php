@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 /**
  * Gestión de Staff: activar/desactivar administradores (toggle is_active).
  * Solo el Master Admin (MASTER_ADMIN_EMAIL o MASTER_ADMIN_ID en config_sync.php) puede usar los interruptores.

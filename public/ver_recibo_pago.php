@@ -1,11 +1,11 @@
-<?php
+﻿<?php
 /**
  * Ver Recibo/Estado del Pago
  * Permite a usuarios ver el estado de sus pagos reportados
  */
 
 require_once __DIR__ . '/../config/bootstrap.php';
-require_once __DIR__ . '/../config/db.php';
+require_once __DIR__ . '/../config/db_config.php';
 require_once __DIR__ . '/../lib/app_helpers.php';
 
 $pdo = DB::pdo();

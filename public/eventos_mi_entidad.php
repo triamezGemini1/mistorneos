@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 /**
  * Página de Eventos por Entidad/Club
  * Muestra torneos programados según la entidad/club del usuario autenticado

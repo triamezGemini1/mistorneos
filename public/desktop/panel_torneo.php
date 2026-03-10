@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 /**
  * Panel de Torneo (Desktop) – Modelo simplificado de la web.
  * Misma estructura en 3 bloques: Gestión de Mesas | Operaciones | Resultados.

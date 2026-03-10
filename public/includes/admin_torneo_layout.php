@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 /**
  * Layout específico para el Administrador de Torneos
  * Diseño moderno, práctico y responsive
@@ -545,7 +545,7 @@ $page_title = $page_title ?? 'Administrador de Torneos';
             // Si no tenemos la modalidad del torneo, obtenerla de la base de datos
             if ($torneo_id_safe > 0 && $torneo_modalidad === null) {
                 try {
-                    require_once __DIR__ . '/../../config/db.php';
+                    require_once __DIR__ . '/../../config/db_config.php';
                     $stmt = DB::pdo()->prepare("SELECT modalidad, nombre FROM tournaments WHERE id = ?");
                     $stmt->execute([$torneo_id_safe]);
                     $torneo_data = $stmt->fetch(PDO::FETCH_ASSOC);

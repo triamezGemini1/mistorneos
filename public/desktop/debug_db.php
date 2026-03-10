@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 /**
  * Depuración: muestra todos los registros de jugadores (tabla usuarios) de la base SQLite local.
  * Solo para desarrollo; en producción conviene restringir el acceso.

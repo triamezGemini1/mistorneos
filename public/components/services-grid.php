@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 /**
  * Componente Services Grid - Cuadrícula de servicios (¿Qué Ofrecemos?)
  * Variables globales: $user, app_base_url()

@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 /**
  * Delegado: usa la BD central (mistorneos/desktop/data/mistorneos_local.db).
  * Misma conexión y esquema que desktop/core para que CLI e interfaz web compartan datos.

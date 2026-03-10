@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 $torneo_id = 1;
 $partida_filtro = 0;
 $mesa_filtro = 0;

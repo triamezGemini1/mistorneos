@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 /**
  * Landing Page SPA - La Estación del Dominó (OFICIAL)
  * Single Page Application con Vue 3 para mejor UX

@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 /**
  * Endpoint del servidor web: recibe POST con JSON de jugadores y los inserta/actualiza en MySQL.
  * Usado por la app desktop (export_to_web.php) para subir registros locales.
@@ -8,7 +8,7 @@ declare(strict_types=1);
 header('Content-Type: application/json; charset=utf-8');
 
 require_once __DIR__ . '/../../config/bootstrap.php';
-require_once __DIR__ . '/../../config/db.php';
+require_once __DIR__ . '/../../config/db_config.php';
 
 $apiKey = trim((string)($_SERVER['HTTP_X_API_KEY'] ?? $_GET['api_key'] ?? ''));
 error_log('[sync_api] API key recibida (longitud ' . strlen($apiKey) . '): ' . (strlen($apiKey) > 0 ? substr($apiKey, 0, 4) . '...' : '(vacía)'));

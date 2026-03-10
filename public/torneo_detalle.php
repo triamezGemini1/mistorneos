@@ -1,11 +1,11 @@
-<?php
+﻿<?php
 /**
  * Página de Detalles de un Torneo
  * Muestra información completa del torneo
  */
 
 require_once __DIR__ . '/../config/bootstrap.php';
-require_once __DIR__ . '/../config/db.php';
+require_once __DIR__ . '/../config/db_config.php';
 require_once __DIR__ . '/../lib/app_helpers.php';
 require_once __DIR__ . '/../lib/UrlHelper.php';
 

@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 /**
  * Índice Desktop — redirige al dashboard. El registro de jugadores está en registro_jugadores.php
  * y solo se muestra cuando se accede explícitamente (menú "Registro de jugador").

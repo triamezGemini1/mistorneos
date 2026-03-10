@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 /**
  * Delega en la cabecera central (raíz). Favicon: /mistorneos_beta/favicon.ico
  * Uso: definir $header_title opcional; luego include_once __DIR__ . '/includes/header.php';

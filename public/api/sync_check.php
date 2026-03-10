@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 /**
  * Comprobación de ruta: devuelve JSON si este archivo se ejecuta.
  * Sube este archivo y fetch_jugadores.php a public/api/ en el servidor.

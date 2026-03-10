@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 /**
  * Componente Footer - Pie de página con contacto
  * Variables globales: $SITE_NAME, $SITE_TAGLINE, $SITE_EMAIL (desde config.php), app_base_url()

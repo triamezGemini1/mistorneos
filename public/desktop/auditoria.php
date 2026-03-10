@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 /**
  * Panel de Auditoría: lista cronológica de acciones (registro de jugadores, cambio de estado de torneos).
  * Filtros: por organización y por administrador. Los registros se sincronizan a la web.

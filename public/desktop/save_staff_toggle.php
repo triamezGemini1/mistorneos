@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 /**
  * Guarda el cambio de is_active para un administrador. Marca sync_status = 0.
  * Solo el Master Admin (MASTER_ADMIN_EMAIL o MASTER_ADMIN_ID) puede ejecutar.

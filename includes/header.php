@@ -12,6 +12,8 @@ $header_title = $header_title ?? 'La Estación del Dominó';
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes">
   <meta name="theme-color" content="#1a365d">
+  <!-- Favicon ligero (<10 KB) evita retraso ~189 ms; .ico como respaldo -->
+  <link rel="icon" type="image/png" sizes="32x32" href="/mistorneos_beta/favicon.png">
   <link rel="icon" type="image/x-icon" href="/mistorneos_beta/favicon.ico">
   <title><?= htmlspecialchars($header_title) ?></title>
   <meta name="description" content="mistorneos - La Estación del Dominó. Gestión de torneos, inscripciones y resultados.">

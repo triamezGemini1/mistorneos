@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 /**
  * Verificación de sesión Desktop: asegura que desktop_user y entidad_id siguen activos
  * mientras el usuario navega. Útil para llamadas AJAX o para validar que la sesión no expiró.

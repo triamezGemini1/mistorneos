@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 /**
  * Página standalone del Panel de Control del Torneo.
  * Un solo contenedor: botón Volver + contenido del panel (sin menú lateral, sin duplicación).

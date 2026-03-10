@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 /**
  * API: Búsqueda definitiva para inscripción en sitio (una sola petición).
  *
@@ -10,7 +10,7 @@
  * Parámetros: torneo_id, nacionalidad, cedula (solo número).
  */
 require_once __DIR__ . '/../../config/bootstrap.php';
-require_once __DIR__ . '/../../config/db.php';
+require_once __DIR__ . '/../../config/db_config.php';
 require_once __DIR__ . '/../../config/auth.php';
 
 header('Content-Type: application/json; charset=utf-8');

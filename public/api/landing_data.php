@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 /**
  * API Landing - Datos para la SPA de la landing page
  * GET: Retorna todos los datos necesarios para renderizar la landing
@@ -6,7 +6,7 @@
  */
 
 require_once __DIR__ . '/../../config/bootstrap.php';
-require_once __DIR__ . '/../../config/db.php';
+require_once __DIR__ . '/../../config/db_config.php';
 require_once __DIR__ . '/../../config/auth.php';
 require_once __DIR__ . '/../../config/csrf.php';
 require_once __DIR__ . '/../../lib/app_helpers.php';

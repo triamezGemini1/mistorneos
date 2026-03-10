@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 /**
  * Reporte de clasificación del torneo (ranking).
  * Página pública, optimizada para dispositivos móviles.
@@ -7,7 +7,7 @@
 declare(strict_types=1);
 
 require_once __DIR__ . '/../config/bootstrap.php';
-require_once __DIR__ . '/../config/db.php';
+require_once __DIR__ . '/../config/db_config.php';
 require_once __DIR__ . '/../lib/app_helpers.php';
 
 $torneo_id = isset($_GET['torneo_id']) ? (int)$_GET['torneo_id'] : 0;

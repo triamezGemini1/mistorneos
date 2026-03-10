@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 /**
  * Registro de jugador en base de datos local (SQLite) — app desktop / Offline-First.
  * Usa tablas maestras (entidad, organizaciones, clubes) y session_context.json para valores por defecto.

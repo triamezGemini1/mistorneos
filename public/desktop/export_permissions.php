@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 /**
  * Sube al servidor remoto los cambios de is_active de los administradores (staff con sync_status = 0).
  * Así el bloqueo es efectivo en la web de inmediato.

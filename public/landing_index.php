@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 /**
  * Landing Page Modular - Estructura con include_once
  * Requiere: config.php cargado, $user, $pdo, app_base_url() disponibles
