@@ -2452,6 +2452,9 @@ function obtenerDatosInscribirSitio($torneo_id, $user_id, $is_admin_general) {
     $stmt = $pdo->prepare("SELECT * FROM tournaments WHERE id = ?");
     $stmt->execute([$torneo_id]);
     $torneo = $stmt->fetch(PDO::FETCH_ASSOC);
+    if (!$torneo || empty($torneo['id'])) {
+        throw new Exception('Torneo no encontrado.');
+    }
 
     $current_user = Auth::user();
     $user_club_id = $current_user['club_id'] ?? null;

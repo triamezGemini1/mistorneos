@@ -11,8 +11,12 @@ $base_url = $use_standalone ? $script_actual : 'index.php?page=torneo_gestion';
 
 extract($view_data ?? []);
 
-if (!isset($torneo) || !isset($usuarios_disponibles) || !isset($usuarios_inscritos)) {
-    echo '<div class="alert alert-danger">Error: No se pudieron cargar los datos necesarios.</div>';
+$torneo = $torneo ?? null;
+$usuarios_disponibles = $usuarios_disponibles ?? [];
+$usuarios_inscritos = $usuarios_inscritos ?? [];
+
+if (empty($torneo) || !is_array($torneo) || !isset($torneo['id'])) {
+    echo '<div class="alert alert-danger">Error: No se encontró el torneo o no se pudieron cargar los datos. <a href="' . htmlspecialchars($base_url) . '">Volver a Gestión de Torneos</a>.</div>';
     return;
 }
 
