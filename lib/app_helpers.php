@@ -273,11 +273,15 @@ class AppHelpers {
     }
     
     /**
-     * Obtiene la URL del logo principal (logo4.png en lib/Assets).
-     * Se sirve vía view_image.php porque lib/ está fuera de public/.
+     * Obtiene la URL del logo principal.
+     * Prioridad: public/assets/logo.png (estático) si existe; si no, view_image.php con lib/Assets/mislogos/logo4.png.
      */
     public static function getAppLogo(): string {
-        return self::getPublicUrl() . '/view_image.php?path=' . rawurlencode('lib/Assets/mislogos/logo4.png');
+        $publicLogo = __DIR__ . '/../public/assets/logo.png';
+        if (is_file($publicLogo)) {
+            return rtrim(self::getPublicUrl(), '/') . '/assets/logo.png';
+        }
+        return rtrim(self::getPublicUrl(), '/') . '/view_image.php?path=' . rawurlencode('lib/Assets/mislogos/logo4.png');
     }
     
     /**

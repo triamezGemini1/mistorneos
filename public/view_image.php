@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 /**
  * Visor centralizado de imágenes.
  * Sirve archivos de imagen de forma segura desde upload/ y evita rutas rotas.
@@ -41,10 +41,19 @@ if ($real_path === false || $real_base === false || strpos($real_path, $real_bas
 }
 
 if (!is_file($real_path)) {
-    http_response_code(404);
-    header('Content-Type: text/plain; charset=UTF-8');
-    echo 'Imagen no encontrada';
-    exit;
+    // Fallback: logo principal; si no existe en lib/Assets, usar favicon de public/
+    if ($path === 'lib/Assets/mislogos/logo4.png') {
+        $fallback = __DIR__ . '/favicon.png';
+        if (is_file($fallback)) {
+            $real_path = realpath($fallback);
+        }
+    }
+    if (!is_file($real_path)) {
+        http_response_code(404);
+        header('Content-Type: text/plain; charset=UTF-8');
+        echo 'Imagen no encontrada';
+        exit;
+    }
 }
 
 $ext = strtolower(pathinfo($real_path, PATHINFO_EXTENSION));
