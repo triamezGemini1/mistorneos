@@ -505,6 +505,7 @@ a:hover {
   position: sticky;
   top: 0;
   z-index: var(--z-sticky);
+  overflow: visible; /* permite que el dropdown del usuario se muestre fuera del navbar */
   backdrop-filter: blur(10px);
   background: rgba(255, 255, 255, 0.95) !important;
 }
@@ -603,6 +604,11 @@ a:hover {
   margin-top: 0.5rem;
   background: var(--white);
   min-width: 200px;
+  z-index: 1050; /* por encima del navbar para que el menú usuario se vea */
+}
+
+.navbar .dropdown-menu {
+  z-index: 1060;
 }
 
 .dropdown-item {

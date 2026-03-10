@@ -6,6 +6,14 @@
   'use strict';
 
   function initDashboard() {
+    // Inicializar dropdown del menú de usuario (por si la auto-inicialización de Bootstrap falla)
+    var userDropdown = document.getElementById('user-menu-dropdown');
+    if (userDropdown && typeof bootstrap !== 'undefined' && bootstrap.Dropdown) {
+      try {
+        bootstrap.Dropdown.getOrCreateInstance(userDropdown);
+      } catch (e) { /* ignorar */ }
+    }
+
     // Mover alertas del contenido a la zona superpuesta (no desplazan el layout)
     var flashContainer = document.getElementById('app-flash-messages');
     var main = document.querySelector('main');

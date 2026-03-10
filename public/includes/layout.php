@@ -570,13 +570,13 @@ if ($from_url !== '') {
             </a>
             <?php endif; ?>
             
-            <!-- Usuario -->
-            <div class="dropdown">
-              <button class="btn btn-outline-primary dropdown-toggle" type="button" data-bs-toggle="dropdown">
+            <!-- Usuario: data-bs-boundary="viewport" evita que el menú se recorte por overflow en ancestros -->
+            <div class="dropdown" id="user-menu-dropdown" data-bs-boundary="viewport">
+              <button class="btn btn-outline-primary dropdown-toggle" type="button" id="userMenuButton" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">
                 <i class="fas fa-user me-2"></i>
                 <?= htmlspecialchars($user['username']) ?>
               </button>
-              <ul class="dropdown-menu dropdown-menu-end">
+              <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userMenuButton">
                 <li><span class="dropdown-item-text text-muted">Rol: <?= htmlspecialchars($user['role']) ?></span></li>
                 <?php if ($user['role'] === 'admin_club'): ?>
                 <li><a class="dropdown-item" href="<?= htmlspecialchars($dashboard_href('mi_organizacion')) ?>"><i class="fas fa-building me-2"></i>Perfil de la organización</a></li>
@@ -631,7 +631,7 @@ if ($from_url !== '') {
     </div>
   </div>
 
-  <!-- Bootstrap JS -->
+  <!-- Bootstrap JS (una sola carga; footer.php no lo repite si $layout_already_loaded_bootstrap está definido) -->
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js" defer></script>
   <!-- SweetAlert2: mensajes modales; ?v= para cache-busting -->
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11?v=4.0" defer></script>
@@ -659,4 +659,5 @@ if (str_ends_with($app_base_for_js, '/public')) {
   <script src="<?= htmlspecialchars($layout_asset_base) ?>/assets/dashboard-init.js" defer></script>
 <?php
 $layout_asset_base = $layout_asset_base ?? '';
+$layout_already_loaded_bootstrap = true; // Evitar doble carga de Bootstrap (rompe dropdown del usuario)
 include_once __DIR__ . '/../../includes/footer.php';
