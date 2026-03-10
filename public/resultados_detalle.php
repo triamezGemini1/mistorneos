@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 /**
  * Página de Resultados de un Torneo
  * Utiliza el mismo modelo de Posiciones del Panel de Control
@@ -200,7 +200,7 @@ $total_pages = ceil($total_posiciones / $per_page);
     <meta property="og:url" content="<?= htmlspecialchars(app_base_url() . '/public/resultados_detalle.php?torneo_id=' . $torneo_id) ?>">
     <meta property="og:title" content="Resultados: <?= htmlspecialchars($torneo_data['nombre']) ?>">
     <meta property="og:description" content="Clasificación y resultados del torneo de dominó <?= htmlspecialchars($torneo_data['nombre']) ?>">
-    <meta property="og:image" content="<?= htmlspecialchars(app_base_url() . '/lib/Assets/mislogos/logo4.png') ?>">
+    <meta property="og:image" content="<?= htmlspecialchars(AppHelpers::getAppLogo()) ?>">
     
     <!-- Twitter -->
     <meta name="twitter:card" content="summary_large_image">

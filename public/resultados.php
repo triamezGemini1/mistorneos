@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 /**
  * Página Pública de Resultados de Eventos
  * Listado completo de eventos con paginación
@@ -88,7 +88,7 @@ $clases = [1 => 'Abierto', 2 => 'Por Categorías'];
     <meta property="og:url" content="<?= htmlspecialchars(app_base_url() . '/public/resultados.php') ?>">
     <meta property="og:title" content="Resultados de Torneos - La Estación del Dominó">
     <meta property="og:description" content="Consulta los resultados de todos los torneos de dominó realizados en Venezuela.">
-    <meta property="og:image" content="<?= htmlspecialchars(app_base_url() . '/lib/Assets/mislogos/logo4.png') ?>">
+    <meta property="og:image" content="<?= htmlspecialchars(AppHelpers::getAppLogo()) ?>">
     
     <!-- Twitter -->
     <meta name="twitter:card" content="summary_large_image">

@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 require_once __DIR__ . '/../config/bootstrap.php';
 require_once __DIR__ . '/../config/db_config.php';
 require_once __DIR__ . '/../config/auth_service.php';
@@ -633,7 +633,7 @@ $tiene_telegram = !empty($telegram_chat_id_actual);
         <div class="container">
             <a class="navbar-brand d-flex align-items-center" href="<?= $base_url ?>/public/user_portal.php">
                 <?php 
-                $logo_url = app_base_url() . '/lib/Assets/mislogos/logo4.png';
+                $logo_url = AppHelpers::getAppLogo();
                 ?>
                 <img src="<?= htmlspecialchars($logo_url) ?>" alt="La Estación del Dominó" class="me-2" style="height: 35px;">
                 Portal del Jugador
@@ -891,7 +891,7 @@ $tiene_telegram = !empty($telegram_chat_id_actual);
                                         <div class="club-card">
                                             <div class="club-icon">
                                                 <?php 
-                                                $logo_url = app_base_url() . '/lib/Assets/mislogos/logo4.png';
+                                                $logo_url = AppHelpers::getAppLogo();
                                                 ?>
                                                 <img src="<?= htmlspecialchars($logo_url) ?>" alt="La Estación del Dominó" style="height: 40px;">
                                             </div>

@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 
 require_once __DIR__ . '/../config/bootstrap.php';
 require_once __DIR__ . '/../config/db_config.php';
@@ -717,7 +717,7 @@ $form_enabled = $is_admin_general || $is_admin_torneo || $is_admin_club;
                 <p class="subtitle" style="font-size: 1.35em;">Servicio exclusivo para clubes afiliados</p>
             </div>
             <div class="header-right">
-                <img src="<?= app_base_url() ?>/led/logo4.jpeg" alt="Logo de la Estaci�n" class="station-logo">
+                <img src="<?= htmlspecialchars(AppHelpers::getAppLogo()) ?>" alt="Logo de la Estaci�n" class="station-logo">
             </div>
         </div>
 

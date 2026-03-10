@@ -1241,9 +1241,9 @@ function getModalidadLabel($modalidad) {
                             <p class="mb-0 fs-5 fw-bold"><?= htmlspecialchars($action === 'edit' ? ($tournament['organizacion_nombre'] ?? '') : ($default_organizacion_nombre ?? '—')) ?></p>
                         </div>
                         <?php endif; ?>
-                        <?php if (!empty($form_org_logo) && $base_asset !== ''): ?>
+                        <?php if (!empty($form_org_logo) && class_exists('AppHelpers')): ?>
                         <div class="flex-shrink-0">
-                            <img src="<?= htmlspecialchars($base_asset . '/' . ltrim($form_org_logo, '/')) ?>" alt="Logo" class="rounded" style="max-height: 60px; max-width: 120px; object-fit: contain;">
+                            <img src="<?= htmlspecialchars(AppHelpers::imageUrl($form_org_logo)) ?>" alt="Logo" class="rounded" style="max-height: 60px; max-width: 120px; object-fit: contain;">
                         </div>
                         <?php endif; ?>
                     </div>

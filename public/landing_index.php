@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 /**
  * Landing Page Modular - Estructura con include_once
  * Requiere: config.php cargado, $user, $pdo, app_base_url() disponibles
@@ -7,7 +7,7 @@ $META_TITLE = $META_TITLE ?? 'La Estación del Dominó';
 $META_DESCRIPTION = $META_DESCRIPTION ?? 'Plataforma integral para gestión de torneos de dominó en Venezuela';
 $META_KEYWORDS = $META_KEYWORDS ?? 'dominó, torneos, venezuela';
 $SITE_URL = $SITE_URL ?? (rtrim(app_base_url(), '/') . '/public/landing.php');
-$OG_IMAGE = $OG_IMAGE ?? (rtrim(app_base_url(), '/') . '/lib/Assets/mislogos/logo4.png');
+$OG_IMAGE = $OG_IMAGE ?? (class_exists('AppHelpers') ? AppHelpers::getAppLogo() : (rtrim(app_base_url(), '/') . '/public/view_image.php?path=' . rawurlencode('lib/Assets/mislogos/logo4.png')));
 ?>
 <!DOCTYPE html>
 <html lang="es" class="scroll-smooth">

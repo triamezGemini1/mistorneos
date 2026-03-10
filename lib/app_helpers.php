@@ -295,11 +295,10 @@ class AppHelpers {
     }
 
     /**
-     * URL centralizada para mostrar cualquier imagen (logos, fotos, etc.).
-     * Usa view_image.php para servir la imagen de forma segura; la URL es relativa
-     * al documento actual, así que funciona con cualquier base (public/, mistorneos/public/, etc.).
-     * @param string|null $path Ruta relativa al proyecto, ej: upload/logos/logo_1.jpg
-     * @return string URL para usar en src="..." o string vacío si no hay path
+     * URL absoluta para cualquier imagen (logos, fotos, etc.) en todas las pantallas.
+     * Usa view_image.php; la URL es absoluta para que funcione con cualquier subpath (/pruebas/public/, /mistorneos_beta/public/, etc.).
+     * @param string|null $path Ruta relativa al proyecto, ej: upload/logos/logo_1.jpg o lib/Assets/mislogos/logo4.png
+     * @return string URL completa para src="..." o string vacío si no hay path
      */
     public static function imageUrl(?string $path): string {
         if ($path === null || $path === '') {
@@ -309,7 +308,7 @@ class AppHelpers {
             return $path;
         }
         $path = ltrim($path, '/\\');
-        return 'view_image.php?path=' . rawurlencode($path);
+        return rtrim(self::getPublicUrl(), '/') . '/view_image.php?path=' . rawurlencode($path);
     }
 }
 

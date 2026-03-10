@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 /**
  * Registro de Usuario por Club
  *
@@ -347,8 +347,8 @@ $landing_url = AppHelpers::url('go_landing.php');
                                     <div class="col-md-6 mb-3">
                                         <a href="?step=3&entidad=<?= $entidad_id ?>&org=<?= (int)$org['id'] ?>" class="select-card">
                                             <div class="d-flex align-items-center">
-                                                <?php if (!empty($org['logo']) && file_exists(__DIR__ . '/../' . $org['logo'])): ?>
-                                                    <img src="<?= htmlspecialchars($base_url . '/' . $org['logo']) ?>" alt="" class="card-logo me-3">
+                                                <?php if (!empty($org['logo'])): ?>
+                                                    <img src="<?= htmlspecialchars(AppHelpers::imageUrl($org['logo'])) ?>" alt="" class="card-logo me-3">
                                                 <?php else: ?>
                                                     <div class="card-logo-placeholder me-3"><i class="fas fa-building"></i></div>
                                                 <?php endif; ?>

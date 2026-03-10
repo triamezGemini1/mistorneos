@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 // layout.php
 // La autenticación ya se verificó en index.php. Usar $page pasado por index.php para no perder la página en entornos donde $_GET se pierde (proxy/beta).
 $user = $_SESSION['user'];
@@ -509,8 +509,8 @@ if ($from_url !== '') {
               $topbar_org = ['nombre' => 'La Estación del Dominó', 'logo' => null];
             }
             $topbar_logo_src = !empty($topbar_org['logo'])
-              ? $layout_asset_base . '/view_image.php?path=' . rawurlencode($topbar_org['logo'])
-              : $layout_asset_base . '/view_image.php?path=' . rawurlencode('lib/Assets/mislogos/logo4.png');
+              ? AppHelpers::imageUrl($topbar_org['logo'])
+              : AppHelpers::getAppLogo();
             $topbar_nombre = htmlspecialchars($topbar_org['nombre']);
             ?>
             <img src="<?= htmlspecialchars($topbar_logo_src) ?>" alt="<?= $topbar_nombre ?>" height="32" class="me-2 d-none d-md-inline-block" style="object-fit: contain;">

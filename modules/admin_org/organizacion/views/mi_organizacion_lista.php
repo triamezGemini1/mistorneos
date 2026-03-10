@@ -39,7 +39,7 @@
                             <tr class="<?= $org_activa ? '' : 'table-secondary' ?>">
                                 <td>
                                     <?php if ($org['logo']): 
-                                        $logo_tbl = AppHelpers::url('view_image.php', ['path' => $org['logo']]);
+                                        $logo_tbl = AppHelpers::imageUrl($org['logo']);
                                     ?>
                                         <img src="<?= htmlspecialchars($logo_tbl) ?>" alt="Logo" class="rounded" style="width: 40px; height: 40px; object-fit: cover;">
                                     <?php else: ?>
