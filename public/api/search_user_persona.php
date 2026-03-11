@@ -1,15 +1,22 @@
-﻿<?php
+<?php
 /**
  * API: Buscar persona por cédula o por usuario (nombre de usuario) para el módulo de usuarios.
  * Para registrar Admin Torneo / Operador: buscar en afiliados (usuarios del club) por cédula o usuario;
  * si existe → asignar rol; si no existe pero está en solicitudes_afiliacion → debe registrarse primero.
  * Misma lógica que api/search_user_persona.php (raíz) para que la búsqueda funcione desde public/.
  */
+if (ob_get_level()) {
+    ob_end_clean();
+}
+ob_start();
 
 require_once __DIR__ . '/../../config/bootstrap.php';
 require_once __DIR__ . '/../../config/db_config.php';
 
-header('Content-Type: application/json; charset=utf-8');
+ob_end_clean();
+if (!headers_sent()) {
+    header('Content-Type: application/json; charset=utf-8');
+}
 
 $cedula = trim($_GET['cedula'] ?? '');
 $nacionalidad = trim($_GET['nacionalidad'] ?? 'V');
