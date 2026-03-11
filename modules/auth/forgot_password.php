@@ -70,8 +70,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             if ($user) {
                 $token = bin2hex(random_bytes(32));
-                $pdo->prepare("UPDATE usuarios SET recovery_token = ? WHERE id = ?")->execute([$token, Auth::id()]);
-                $reset_link = "http://" . $_SERVER['HTTP_HOST'] . "/modules/auth/reset_password.php?token=" . $token;
+                $user_id = (int) $user['id'];
+                $pdo->prepare("UPDATE usuarios SET recovery_token = ? WHERE id = ?")->execute([$token, $user_id]);
+                $base = class_exists('AppHelpers') ? rtrim(AppHelpers::getPublicUrl(), '/') : '';
+                if ($base === '' && !empty($_SERVER['HTTP_HOST'])) {
+                    $scheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
+                    $base = $scheme . '://' . $_SERVER['HTTP_HOST'] . (strpos($_SERVER['SCRIPT_NAME'] ?? '', 'public') !== false ? dirname($_SERVER['SCRIPT_NAME']) : '/public');
+                }
+                $reset_link = rtrim($base, '/') . '/reset_password.php?token=' . urlencode($token);
 
                 $mailer = crearMailer();
                 if ($mailer) {

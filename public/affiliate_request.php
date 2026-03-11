@@ -266,6 +266,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $error = 'El nombre de la organización es requerido';
     } elseif (!$es_usuario_registrado && (empty($username) || empty($password))) {
         $error = 'Nombre de usuario y contraseña son requeridos para nuevos usuarios';
+    } elseif ($es_usuario_registrado && trim($password) !== '' && (strlen($password) < 6 || $password !== $password_confirm)) {
+        $error = 'Si actualiza la contraseña debe tener al menos 6 caracteres y coincidir con la confirmación';
     } elseif ($tipo_post === 'particular' && $entidad <= 0) {
         $error = 'Debe seleccionar la entidad';
     } elseif (!empty($rif) && strlen($rif) < 6) {
@@ -279,6 +281,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $stmt->execute([$username]);
         if ($stmt->fetch()) {
             $error = 'El nombre de usuario ya está en uso';
+        }
+    } elseif ($es_usuario_registrado && trim($username) !== '' && $username !== ($usuario_existente['username'] ?? '')) {
+        // Usuario existente que quiere cambiar username: no debe estar en uso por otro
+        $stmt = $pdo->prepare("SELECT id FROM usuarios WHERE username = ? AND id != ?");
+        $stmt->execute([$username, $usuario_existente['id']]);
+        if ($stmt->fetch()) {
+            $error = 'El nombre de usuario ya está en uso por otra cuenta';
         }
     } elseif (!empty($email) && !filter_var($email, FILTER_VALIDATE_EMAIL)) {
         $error = 'El email no es válido';
@@ -303,11 +312,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $username_solicitud = $username;
 
                 if ($es_usuario_registrado) {
-                    // Usuario ya registrado: solo crear la solicitud de la organización. No modificar datos del usuario.
+                    // Usuario ya registrado: forzar actualización de usuario y contraseña en la tabla usuarios con los datos del formulario.
                     $user_id_solicitud = (int) $usuario_existente['id'];
-                    $username_solicitud = $usuario_existente['username'];
-                    // Placeholder para password_hash (columna NOT NULL): no se usa cuando hay user_id; al aprobar solo se vincula la org.
-                    $password_hash = password_hash('', PASSWORD_DEFAULT);
+                    $username_solicitud = trim($username) !== '' ? $username : $usuario_existente['username'];
+                    $nueva_password = (trim($password) !== '' && strlen($password) >= 6);
+                    $password_hash = $nueva_password ? password_hash($password, PASSWORD_DEFAULT) : password_hash('', PASSWORD_DEFAULT);
+                    // Actualizar credenciales en usuarios: siempre username si cambió; password solo si ingresó una nueva
+                    if ($nueva_password) {
+                        $pdo->prepare("UPDATE usuarios SET username = ?, password_hash = ? WHERE id = ?")->execute([$username_solicitud, $password_hash, $user_id_solicitud]);
+                    } else {
+                        $pdo->prepare("UPDATE usuarios SET username = ? WHERE id = ?")->execute([$username_solicitud, $user_id_solicitud]);
+                    }
                 } else {
                     // Usuario nuevo: crear registro en usuarios (pendiente) con nacionalidad desde persona
                     $nacionalidad_usuarios = in_array($nacionalidad, ['V', 'E', 'J', 'P'], true) ? $nacionalidad : 'V';

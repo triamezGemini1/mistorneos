@@ -93,7 +93,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             </form>
             <div class="mt-3 d-flex justify-content-between">
               <a href="<?= htmlspecialchars(AppHelpers::url('login.php')) ?>" class="small text-decoration-none"><i class="fas fa-arrow-left me-1"></i>Volver al login</a>
-              <a href="<?= htmlspecialchars(AppHelpers::url('modules/auth/forgot_password.php')) ?>" class="small text-decoration-none">Recuperar contraseña</a>
+              <a href="<?= htmlspecialchars(AppHelpers::url('forgot_password.php')) ?>" class="small text-decoration-none">Recuperar contraseña</a>
             </div>
             <div class="mt-3">
               <small class="text-muted">Si no recuerdas estos datos, escribe al administrador general solicitando ayuda.</small>
