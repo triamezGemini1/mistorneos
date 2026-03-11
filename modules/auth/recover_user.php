@@ -91,9 +91,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 <i class="fas fa-search me-1"></i>Buscar mi usuario
               </button>
             </form>
+            <?php
+            $entry_dir = rtrim(dirname($_SERVER['SCRIPT_NAME'] ?? ''), '/');
+            $login_href = $entry_dir . '/login.php';
+            $forgot_href = $entry_dir . '/forgot_password.php';
+            ?>
             <div class="mt-3 d-flex justify-content-between">
-              <a href="<?= htmlspecialchars(AppHelpers::url('login.php')) ?>" class="small text-decoration-none"><i class="fas fa-arrow-left me-1"></i>Volver al login</a>
-              <a href="<?= htmlspecialchars(AppHelpers::url('forgot_password.php')) ?>" class="small text-decoration-none">Recuperar contraseña</a>
+              <a href="<?= htmlspecialchars($login_href) ?>" class="small text-decoration-none"><i class="fas fa-arrow-left me-1"></i>Volver al login</a>
+              <a href="<?= htmlspecialchars($forgot_href) ?>" class="small text-decoration-none">Recuperar contraseña</a>
             </div>
             <div class="mt-3">
               <small class="text-muted">Si no recuerdas estos datos, escribe al administrador general solicitando ayuda.</small>

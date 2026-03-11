@@ -18,8 +18,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $hash = password_hash($new_password, PASSWORD_DEFAULT);
         $user_id = (int) $user['id'];
         $pdo->prepare("UPDATE usuarios SET password_hash = ?, recovery_token = NULL WHERE id = ?")->execute([$hash, $user_id]);
-        $login_url = class_exists('AppHelpers') ? AppHelpers::url('login.php') : 'login.php';
-        header('Location: ' . $login_url . '?reset=1');
+        $entry_dir = rtrim(dirname($_SERVER['SCRIPT_NAME'] ?? ''), '/');
+        $scheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
+        $host = $_SERVER['HTTP_HOST'] ?? 'localhost';
+        $login_url = $scheme . '://' . $host . $entry_dir . '/login.php?reset=1';
+        header('Location: ' . $login_url);
         exit;
     }
 }
