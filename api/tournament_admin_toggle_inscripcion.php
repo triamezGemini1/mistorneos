@@ -13,7 +13,13 @@ require_once __DIR__ . '/../lib/security.php';
 
 header('Content-Type: application/json; charset=utf-8');
 
-Auth::requireRole(['admin_general', 'admin_torneo', 'admin_club']);
+// Comprobar rol sin redirigir (las peticiones fetch deben recibir JSON, no redirect a access_denied)
+$u = Auth::user();
+$roles_permitidos = ['admin_general', 'admin_torneo', 'admin_club'];
+if (!$u || !in_array($u['role'] ?? '', $roles_permitidos, true)) {
+    echo json_encode(['success' => false, 'error' => 'No autorizado para esta sección. Inicie sesión con un perfil de administrador (club, torneo o general).']);
+    exit;
+}
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     echo json_encode(['success' => false, 'error' => 'Método no permitido']);

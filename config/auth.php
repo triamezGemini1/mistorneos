@@ -277,7 +277,7 @@ class Auth {
       return true;
     }
     
-    // Admin club: verifica por organización (club_responsable = ID de organización)
+    // Admin club: verifica por organización (club_responsable = ID de organización) o por club de la organización
     if (self::isAdminClub()) {
       $org_id = self::getUserOrganizacionId();
       
@@ -286,7 +286,6 @@ class Auth {
       }
       
       try {
-        // club_responsable ahora contiene el ID de la organización
         $stmt = DB::pdo()->prepare("SELECT club_responsable FROM tournaments WHERE id = ?");
         $stmt->execute([$tournament_id]);
         $tournament = $stmt->fetch();
@@ -295,7 +294,15 @@ class Auth {
           return false;
         }
         
-        return $tournament['club_responsable'] == $org_id;
+        $resp = (int)($tournament['club_responsable'] ?? 0);
+        if ($resp <= 0) return false;
+        // Directo: el torneo está a cargo de la organización del usuario
+        if ($resp == $org_id) return true;
+        // Legacy: club_responsable puede ser un club_id; verificar si ese club pertenece a la org del usuario
+        $stmt2 = DB::pdo()->prepare("SELECT 1 FROM clubes WHERE id = ? AND organizacion_id = ? AND estatus = 1 LIMIT 1");
+        $stmt2->execute([$resp, $org_id]);
+        if ($stmt2->fetch()) return true;
+        return false;
       } catch (Exception $e) {
         return false;
       }
