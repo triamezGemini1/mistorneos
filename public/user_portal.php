@@ -1,4 +1,7 @@
 <?php
+/**
+ * Portal de usuario. Patrón en bloque: db_config → auth_service → requireAuth.
+ */
 require_once __DIR__ . '/../config/bootstrap.php';
 require_once __DIR__ . '/../config/db_config.php';
 require_once __DIR__ . '/../config/auth_service.php';

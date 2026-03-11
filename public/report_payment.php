@@ -1,15 +1,15 @@
-﻿<?php
+<?php
 /**
  * Reportar Pago de Inscripción
- * Permite a usuarios reportar el pago de su inscripción en un torneo
+ * Patrón en bloque: db_config → auth_service → requireAuth. Interfaz: header/footer unificados.
  */
-
 require_once __DIR__ . '/../config/bootstrap.php';
 require_once __DIR__ . '/../config/db_config.php';
 require_once __DIR__ . '/../config/auth_service.php';
 require_once __DIR__ . '/../config/auth.php';
 AuthService::requireAuth();
 
+$base_url = function_exists('app_base_url') ? app_base_url() : '';
 $payment_id = (int)($_GET['payment_id'] ?? 0);
 
 if ($payment_id <= 0) {
@@ -94,13 +94,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
         $error_message = 'Error al reportar pago: ' . $e->getMessage();
     }
 }
+
+$header_title = 'Reportar Pago - ' . htmlspecialchars($payment['torneo_nombre'] ?? 'Pago');
 ?>
 <!DOCTYPE html>
 <html lang="es">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Reportar Pago - <?= htmlspecialchars($payment['torneo_nombre']) ?></title>
+<?php include_once __DIR__ . '/../includes/header.php'; ?>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <style>
@@ -233,7 +232,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
             <?php endif; ?>
             
             <div class="text-center mt-4">
-                <a href="tournament_register.php?torneo_id=<?= $payment['torneo_id'] ?>" class="btn btn-secondary">
+                <a href="<?= htmlspecialchars(rtrim($base_url, '/') . '/tournament_register.php?torneo_id=' . (int)$payment['torneo_id']) ?>" class="btn btn-secondary">
                     <i class="fas fa-arrow-left me-2"></i>Volver
                 </a>
             </div>
@@ -258,6 +257,5 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
     // Trigger on load
     document.getElementById('tipo_pago').dispatchEvent(new Event('change'));
     </script>
-</body>
-</html>
+<?php include_once __DIR__ . '/../includes/footer.php'; ?>
 

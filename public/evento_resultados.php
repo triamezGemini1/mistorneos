@@ -1,13 +1,7 @@
-﻿<?php
+<?php
 /**
- * Página pública de Resultados de Evento - Dinámica y completa
- * Permite a los interesados consultar en cualquier momento:
- * - Información del torneo
- * - Rondas ejecutadas / faltantes
- * - Clasificación general individual
- * - Resultados por club
- * - Resultados por equipos (resumido y detallado) si aplica
- * - Enlaces al resumen individual de cada jugador
+ * Página pública de Resultados de Evento.
+ * Patrón en bloque: db_config (conexión única). Sin requireAuth (acceso público a resultados).
  */
 
 require_once __DIR__ . '/../config/bootstrap.php';

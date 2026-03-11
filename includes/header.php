@@ -6,7 +6,7 @@
  * No cierra </head> para que la página pueda añadir estilos o meta adicionales.
  */
 $header_title = $header_title ?? 'La Estación del Dominó';
-// Ruta base para favicon y assets. Favicon ligero: /mistorneos_beta/public/favicon.png (≤10KB; evitar .ico 363KB)
+// Favicon: EXCLUSIVAMENTE PNG (favicon.png ~88ms). No usar favicon.ico (363KB). Innegociable para rendimiento.
 $header_asset_base = '';
 if (defined('URL_BASE') && URL_BASE !== '' && URL_BASE !== '/') {
     $header_asset_base = rtrim(URL_BASE, '/');
@@ -18,13 +18,14 @@ if ($header_asset_base === null || $header_asset_base === '') {
     $header_asset_base = '/mistorneos_beta/public';
 }
 $header_asset_base = rtrim($header_asset_base, '/');
+// Favicon: siempre ruta absoluta al PNG ligero (ej. /mistorneos_beta/public/favicon.png)
 $header_favicon_url = $header_asset_base . '/favicon.png';
 ?>
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes">
   <meta name="theme-color" content="#1a365d">
-  <!-- Favicon ligero: ruta absoluta a PNG (ej. /mistorneos_beta/public/favicon.png). Ejecutar make_favicon.php para generar. -->
+  <!-- Favicon: solo PNG (favicon.png). Nunca .ico. Ejecutar make_favicon.php para generar. -->
   <link rel="icon" type="image/png" sizes="32x32" href="<?= htmlspecialchars($header_favicon_url) ?>">
   <title><?= htmlspecialchars($header_title) ?></title>
   <meta name="description" content="mistorneos - La Estación del Dominó. Gestión de torneos, inscripciones y resultados.">

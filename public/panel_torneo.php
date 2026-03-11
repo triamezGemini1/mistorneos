@@ -1,7 +1,6 @@
-﻿<?php
+<?php
 /**
- * Página standalone del Panel de Control del Torneo.
- * Un solo contenedor: botón Volver + contenido del panel (sin menú lateral, sin duplicación).
+ * Panel de Control del Torneo. Patrón en bloque: db_config → auth_service → requireAuth.
  */
 require_once __DIR__ . '/../config/bootstrap.php';
 require_once __DIR__ . '/../config/csrf.php';

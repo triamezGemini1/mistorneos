@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 /**
  * Reporte de Clubes en PDF - Versi�n P�blica
  * Accesible directamente desde: public/report_clubs.php
@@ -11,9 +11,8 @@ require_once __DIR__ . '/../config/db_config.php';
 require_once __DIR__ . '/../config/auth_service.php';
 require_once __DIR__ . '/../config/auth.php';
 AuthService::requireAuth();
-require_once __DIR__ . '/../lib/report_generator.php';
-
 Auth::requireRole(['admin_general', 'admin_torneo']);
+require_once __DIR__ . '/../lib/report_generator.php';
 
 try {
     $pdo = DB::pdo();

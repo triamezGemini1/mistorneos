@@ -1,6 +1,6 @@
-﻿<?php
+<?php
 /**
- * Delega en la cabecera central (raíz). Favicon: /mistorneos_beta/favicon.ico
+ * Delega en la cabecera central (raíz). Favicon: ruta absoluta a PNG ligero (ej. /mistorneos_beta/public/favicon.png).
  * Uso: definir $header_title opcional; luego include_once __DIR__ . '/includes/header.php';
  */
 include_once __DIR__ . '/../../includes/header.php';

@@ -2597,7 +2597,8 @@ function obtenerDatosSustituirJugador($torneo_id, $user_id, $is_admin_general) {
 }
 
 /**
- * Guarda inscripción de jugador en sitio
+ * Guarda inscripción de jugador en sitio.
+ * Usa conexión centralizada (DB::pdo()) y validaciones por ID (usuarios, clubes, inscritos) para aprovechar índices.
  */
 function guardarInscripcionSitio($torneo_id, $user_id, $is_admin_general) {
     try {

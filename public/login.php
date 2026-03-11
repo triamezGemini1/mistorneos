@@ -1,6 +1,9 @@
 <?php
+/**
+ * Login: patrón en bloque (configuración → conexión única). Sin requireAuth por ser página pública.
+ * Usa includes/header.php e includes/footer.php unificados.
+ */
 require_once __DIR__ . '/../config/session_start_early.php';
-/** Login: usuario del log = valor enviado en esa petición en el formulario. */
 ob_start();
 try {
     require_once __DIR__ . '/../config/bootstrap.php';

@@ -72,3 +72,14 @@ echo "Creado: " . $pngPath . " (" . number_format($size) . " bytes). Objetivo: <
 if ($size > 10 * 1024) {
     echo "Aviso: el PNG supera 10 KB. Considere usar 16x16 o comprimir más.\n";
 }
+
+// Evitar que se sirva favicon.ico (363KB): renombrar a favicon_OLD.ico para mantener solo PNG (~88ms).
+$oldIco = $publicDir . '/favicon_OLD.ico';
+if (file_exists($icoPath)) {
+    if (file_exists($oldIco)) {
+        @unlink($oldIco);
+    }
+    if (@rename($icoPath, $oldIco)) {
+        echo "favicon.ico renombrado a favicon_OLD.ico (no se sirve; solo se usa favicon.png).\n";
+    }
+}

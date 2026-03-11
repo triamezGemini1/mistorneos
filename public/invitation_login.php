@@ -1,6 +1,10 @@
 <?php
-
-if (!defined('APP_BOOTSTRAPPED')) { require __DIR__ . '/../config/bootstrap.php'; }
+/**
+ * Login por invitación (token). Patrón en bloque: conexión única; sin requireAuth (acceso por token).
+ */
+if (!defined('APP_BOOTSTRAPPED')) {
+    require_once __DIR__ . '/../config/bootstrap.php';
+}
 require_once __DIR__ . '/../config/db_config.php';
 require_once __DIR__ . '/../config/auth.php';
 
