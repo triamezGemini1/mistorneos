@@ -11,6 +11,8 @@ if (($_GET['return_to'] ?? '') === 'organizaciones' && $entidad_id > 0) {
 }
 $url_volver = $return_extra !== '' ? 'index.php?page=organizaciones&entidad_id=' . $entidad_id : 'index.php?page=mi_organizacion&id=' . $org_id;
 $form_action = 'index.php?page=mi_organizacion&id=' . $org_id . $return_extra;
+// URL absoluta de la API de búsqueda (mismo criterio que admin_torneo_operadores y users/list)
+$api_search_url = (class_exists('AppHelpers') ? rtrim(AppHelpers::getPublicUrl(), '/') : '') . '/api/search_user_persona.php';
 ?>
 <div class="card shadow-sm">
     <div class="card-header bg-warning text-dark">
@@ -154,12 +156,10 @@ $form_action = 'index.php?page=mi_organizacion&id=' . $org_id . $return_extra;
 
 <script>
 (function() {
-    // URL de la API relativa al documento actual (index.php) para evitar error de conexión con subcarpetas
+    // URL absoluta de la API inyectada desde PHP (evita error de conexión con subcarpetas / mistorneos_beta/public)
+    var API_SEARCH_URL = '<?= htmlspecialchars($api_search_url ?? '', ENT_QUOTES, 'UTF-8') ?>';
     function getApiSearchUrl() {
-        var path = window.location.pathname || '';
-        var idx = path.lastIndexOf('/');
-        if (idx !== -1) path = path.substring(0, idx + 1);
-        return path + 'api/search_user_persona.php';
+        return API_SEARCH_URL || (window.location.pathname.replace(/\/[^/]*$/, '') + '/api/search_user_persona.php');
     }
 
     var btnBuscar = document.getElementById('btn_buscar_responsable');
