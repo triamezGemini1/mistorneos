@@ -61,9 +61,10 @@ $entidades_options = loadEntidadesOptions();
 function cargarOrganizacionesParaSelector(): array {
     try {
         $pdo = DB::pdo();
-        // Asegurar que la tabla exista (creación mínima si no existe, para que el selector pueda usarla cuando haya datos)
-        $exists = $pdo->query("SHOW TABLES LIKE 'organizaciones'")->rowCount() > 0;
-        if (!$exists) {
+        // Comprobar existencia de la tabla con fetch (rowCount no es fiable en SELECT con algunos drivers)
+        $stmtTable = $pdo->query("SHOW TABLES LIKE 'organizaciones'");
+        $tableExists = $stmtTable && $stmtTable->fetch() !== false;
+        if (!$tableExists) {
             $pdo->exec("
                 CREATE TABLE IF NOT EXISTS organizaciones (
                     id INT NOT NULL AUTO_INCREMENT,
@@ -84,13 +85,53 @@ function cargarOrganizacionesParaSelector(): array {
                 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
             ");
         }
-        $stmt = $pdo->query("
-            SELECT id, nombre, COALESCE(entidad, 0) AS entidad 
-            FROM organizaciones 
-            WHERE estatus = 1 AND (admin_user_id IS NULL OR admin_user_id = 0) 
-            ORDER BY nombre ASC
-        ");
-        return $stmt ? $stmt->fetchAll(PDO::FETCH_ASSOC) : [];
+        // Intentar consulta con condición de responsable sin asignar (admin_user_id NULL o 0)
+        try {
+            $stmt = $pdo->query("
+                SELECT id, nombre, COALESCE(entidad, 0) AS entidad 
+                FROM organizaciones 
+                WHERE estatus = 1 AND (admin_user_id IS NULL OR admin_user_id = 0) 
+                ORDER BY nombre ASC
+            ");
+            if ($stmt) {
+                $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+                return is_array($rows) ? $rows : [];
+            }
+        } catch (Exception $e) {
+            // Si falla (ej. columna admin_user_id no existe o tipo distinto), intentar asegurar columna y repetir
+            try {
+                $cols = $pdo->query("SHOW COLUMNS FROM organizaciones")->fetchAll(PDO::FETCH_ASSOC);
+                $hasAdmin = false;
+                foreach ($cols as $c) {
+                    if (strtolower($c['Field'] ?? '') === 'admin_user_id') {
+                        $hasAdmin = true;
+                        break;
+                    }
+                }
+                if (!$hasAdmin) {
+                    $pdo->exec("ALTER TABLE organizaciones ADD COLUMN admin_user_id INT NULL DEFAULT NULL AFTER entidad");
+                }
+                $stmt = $pdo->query("
+                    SELECT id, nombre, COALESCE(entidad, 0) AS entidad 
+                    FROM organizaciones 
+                    WHERE estatus = 1 AND (admin_user_id IS NULL OR admin_user_id = 0) 
+                    ORDER BY nombre ASC
+                ");
+                if ($stmt) {
+                    $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+                    return is_array($rows) ? $rows : [];
+                }
+            } catch (Exception $e2) {
+                error_log("affiliate_request: fallback organizaciones: " . $e2->getMessage());
+            }
+            // Último recurso: todas las activas (el backend validará al enviar)
+            $stmt = $pdo->query("SELECT id, nombre, COALESCE(entidad, 0) AS entidad FROM organizaciones WHERE estatus = 1 ORDER BY nombre ASC");
+            if ($stmt) {
+                $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+                return is_array($rows) ? $rows : [];
+            }
+        }
+        return [];
     } catch (Exception $e) {
         error_log("affiliate_request: error cargando organizaciones para selector: " . $e->getMessage());
         return [];
@@ -624,11 +665,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                 <input type="hidden" name="fechnac" id="fechnac" value="<?= htmlspecialchars($preservar ? ($post['fechnac'] ?? '') : '') ?>">
                                 
                                 <?php if ($form_tipo === 'asociacion'): ?>
-                                <!-- Formulario Asociación: selector de organización (mismo criterio: estatus=1 y sin admin_user_id) -->
+                                <!-- Formulario Asociación: selector de organización (estatus=1 y sin admin_user_id); ancho reducido 60% -->
                                 <h6 class="section-title"><i class="fas fa-sitemap me-2"></i>Seleccionar Asociación</h6>
-                                <div class="mb-4">
+                                <div class="mb-4" style="max-width: 40%;">
                                     <label class="form-label">Asociación / Organización *</label>
-                                    <select name="organizacion_id" id="organizacion_id" class="form-select" required>
+                                    <select name="organizacion_id" id="organizacion_id" class="form-select" required style="width: 100%; max-width: 100%;">
                                         <option value="">-- Seleccione la asociación a la que desea quedar asignado --</option>
                                         <?php foreach ($organizaciones_sin_asignar as $org): ?>
                                             <option value="<?= (int)$org['id'] ?>" <?= ($preservar && isset($post['organizacion_id']) && (string)$post['organizacion_id'] === (string)$org['id']) ? 'selected' : '' ?>>
@@ -636,9 +677,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                             </option>
                                         <?php endforeach; ?>
                                     </select>
-                                    <small class="text-muted"><?= count($organizaciones_sin_asignar) ?> disponible(s) — solo asociaciones activas sin responsable asignado.</small>
+                                    <small class="text-muted d-block mt-1"><?= count($organizaciones_sin_asignar) ?> disponible(s) — solo asociaciones activas sin responsable asignado.</small>
                                     <?php if (empty($organizaciones_sin_asignar)): ?>
-                                        <div class="alert alert-warning mt-2 mb-0">
+                                        <div class="alert alert-warning mt-2 mb-0 small">
                                             <i class="fas fa-info-circle me-1"></i>
                                             No hay asociaciones cargadas para elegir, o todas tienen ya un responsable asignado.
                                             Las asociaciones deben ser dadas de alta por el administrador (Mi Organización / Organizaciones) para que aparezcan aquí. Contacte al administrador si su asociación no figura en la lista.
