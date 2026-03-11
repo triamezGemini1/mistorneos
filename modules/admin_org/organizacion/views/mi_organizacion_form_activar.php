@@ -240,7 +240,7 @@ $form_action = 'index.php?page=mi_organizacion&id=' . $org_id . $return_extra;
             .then(function(r) {
                 if (!r.ok) throw new Error('HTTP ' + r.status);
                 var ct = (r.headers.get('Content-Type') || '').toLowerCase();
-                if (ct.indexOf('application/json') === -1) throw new Error('Respuesta no JSON (¿sesión expirada?)');
+                if (ct.indexOf('application/json') === -1) throw new Error('NO_JSON');
                 return r.json();
             })
             .then(function(data) {
@@ -278,7 +278,7 @@ $form_action = 'index.php?page=mi_organizacion&id=' . $org_id . $return_extra;
             .catch(function(err) {
                 console.error(err);
                 var msg = 'Error de conexión. Intente de nuevo.';
-                if (err.message && err.message.indexOf('sesión') !== -1) msg = 'Sesión expirada o no válida. Recargue la página e inicie sesión de nuevo.';
+                if (err.message === 'NO_JSON') msg = 'El servidor no devolvió una respuesta válida. Compruebe su conexión e intente de nuevo.';
                 else if (err.message && err.message.indexOf('HTTP') === 0) msg = 'Error del servidor (' + err.message + ').';
                 resultadoDiv.innerHTML = '<div class="alert alert-danger py-2"><i class="fas fa-times-circle me-1"></i>' + msg + '</div>';
             });
