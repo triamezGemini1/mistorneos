@@ -280,9 +280,26 @@ $base_public_abs = (class_exists('AppHelpers') && method_exists('AppHelpers', 'g
         showFormNuevo(false);
         usuarioEncontrado = null;
 
-        fetch(BUSCAR_API + '?torneo_id=' + TORNEOS_ID + '&nacionalidad=' + encodeURIComponent(nac) + '&cedula=' + encodeURIComponent(ced))
-            .then(function(r) { return r.json(); })
+        var controller = typeof AbortController !== 'undefined' ? new AbortController() : null;
+        var timeoutId = controller ? window.setTimeout(function() { controller.abort(); }, 20000) : null;
+        var fetchOpts = { credentials: 'same-origin', cache: 'no-store' };
+        if (controller) fetchOpts.signal = controller.signal;
+
+        fetch(BUSCAR_API + '?torneo_id=' + TORNEOS_ID + '&nacionalidad=' + encodeURIComponent(nac) + '&cedula=' + encodeURIComponent(ced), fetchOpts)
+            .then(function(r) {
+                if (timeoutId) window.clearTimeout(timeoutId);
+                return r.text().then(function(text) {
+                    var data;
+                    try { data = text ? JSON.parse(text) : {}; } catch (e) { data = { accion: 'error', mensaje: r.status >= 400 ? ('Error del servidor (' + r.status + ')') : 'Respuesta no válida.' }; }
+                    return data;
+                });
+            })
             .then(function(data) {
+                if ((data.accion || data.status) === 'error') {
+                    isSearching = false;
+                    msg(data.mensaje || data.error || 'Error del servidor. Intente de nuevo.', 'danger');
+                    return;
+                }
                 isSearching = false;
                 var accion = (data.accion || data.status || '').toLowerCase();
                 if (accion === 'ya_inscrito') {
@@ -328,9 +345,11 @@ $base_public_abs = (class_exists('AppHelpers') && method_exists('AppHelpers', 'g
                 }
                 msgHide();
             })
-            .catch(function() {
+            .catch(function(err) {
+                if (timeoutId) window.clearTimeout(timeoutId);
                 isSearching = false;
-                msg('Error de conexión.', 'danger');
+                var isTimeout = err && err.name === 'AbortError';
+                msg(isTimeout ? 'La búsqueda tardó demasiado. Intente de nuevo.' : 'Error de conexión. Compruebe la red o intente de nuevo.', 'danger');
             });
     }
 

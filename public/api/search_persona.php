@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 /**
  * Búsqueda de persona por nacionalidad + cédula. Cuatro bloques separados, cada uno con una acción clara.
  * Usado por: Formulario de Invitación e Inscripción en Sitio.
@@ -12,10 +12,23 @@
  */
 declare(strict_types=1);
 
-require_once __DIR__ . '/../../config/bootstrap.php';
-require_once __DIR__ . '/../../config/db_config.php';
-
 header('Content-Type: application/json; charset=utf-8');
+
+try {
+    require_once __DIR__ . '/../../config/bootstrap.php';
+    require_once __DIR__ . '/../../config/db_config.php';
+} catch (Throwable $e) {
+    error_log("search_persona.php init: " . $e->getMessage() . " en " . $e->getFile() . ":" . $e->getLine());
+    http_response_code(500);
+    echo json_encode([
+        'accion' => 'error',
+        'status' => 'error',
+        'encontrado' => false,
+        'mensaje' => 'Error al conectar. Intente de nuevo.',
+        'error' => $e->getMessage()
+    ]);
+    exit;
+}
 
 $input = array_merge($_GET, $_POST);
 $cedula_raw = isset($input['cedula']) ? trim((string) $input['cedula']) : '';
@@ -120,6 +133,7 @@ try {
     // ─── BLOQUE 3: PERSONAS. Si existe en base externa → una sola acción: encontrado_persona (persona sin id; front rellena; al enviar se crea usuario e inscribe). ───
     if (file_exists(__DIR__ . '/../../config/persona_database.php')) {
         error_log("search_persona.php - BLOQUE PERSONAS: Buscando en base externa");
+        @set_time_limit(15); // evitar bloqueo indefinido si la BD externa tarda (p. ej. 32M registros)
         require_once __DIR__ . '/../../config/persona_database.php';
         try {
             $database = new PersonaDatabase();
