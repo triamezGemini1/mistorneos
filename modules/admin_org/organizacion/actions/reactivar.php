@@ -41,10 +41,10 @@ if (($_GET['return_to'] ?? '') === 'organizaciones' && $entidad_id > 0) {
     $return_extra = '&return_to=organizaciones&entidad_id=' . $entidad_id;
 }
 
-// Si está inactiva, ir al formulario para asignar usuario y contraseña
+// Si está inactiva, ir al formulario de reactivación (sin búsqueda de usuario; los datos ya se validaron en la solicitud de afiliación)
 if ((int)$org['estatus'] === 0) {
     ob_end_clean();
-    header('Location: ' . $base . 'index.php?page=mi_organizacion&id=' . $id . '&action=activar' . $return_extra);
+    header('Location: ' . $base . 'index.php?page=mi_organizacion&id=' . $id . '&action=activar&from=reactivar' . $return_extra);
     exit;
 }
 

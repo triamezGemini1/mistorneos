@@ -2,6 +2,7 @@
 /**
  * Vista: Activar organización inactiva — buscar responsable por nacionalidad + cédula,
  * asignar usuario existente o registrar nuevo (desde BD externa / solicitudes / manual).
+ * Cuando from=reactivar: solo reactivar (sin búsqueda); los datos ya se validaron en la solicitud de afiliación.
  */
 $org_id = (int)($organizacion['id'] ?? 0);
 $return_extra = '';
@@ -11,12 +12,31 @@ if (($_GET['return_to'] ?? '') === 'organizaciones' && $entidad_id > 0) {
 }
 $url_volver = $return_extra !== '' ? 'index.php?page=organizaciones&entidad_id=' . $entidad_id : 'index.php?page=mi_organizacion&id=' . $org_id;
 $form_action = 'index.php?page=mi_organizacion&id=' . $org_id . $return_extra;
+$es_reactivacion = (($_GET['from'] ?? '') === 'reactivar');
 ?>
 <div class="card shadow-sm">
-    <div class="card-header bg-warning text-dark">
-        <i class="fas fa-unlock-alt me-2"></i>Activar organización
+    <div class="card-header <?= $es_reactivacion ? 'bg-success text-white' : 'bg-warning text-dark' ?>">
+        <i class="fas fa-unlock-alt me-2"></i><?= $es_reactivacion ? 'Reactivar organización' : 'Activar organización' ?>
     </div>
     <div class="card-body">
+        <?php if ($es_reactivacion): ?>
+        <p class="text-muted">La organización se desactivó anteriormente. Al reactivar no es necesario buscar usuario: los datos del responsable ya fueron validados en la solicitud de afiliación. Solo confirme la reactivación.</p>
+        <?php if (!empty($error)): ?>
+            <div class="alert alert-danger"><?= htmlspecialchars($error) ?></div>
+        <?php endif; ?>
+        <form method="POST" action="<?= htmlspecialchars($form_action) ?>">
+            <input type="hidden" name="action" value="activar_reactivar">
+            <input type="hidden" name="organizacion_id" value="<?= $org_id ?>">
+            <div class="mb-3">
+                <label class="form-label">Organización</label>
+                <input type="text" class="form-control" value="<?= htmlspecialchars($organizacion['nombre'] ?? '') ?>" readonly disabled>
+            </div>
+            <div class="d-flex justify-content-between mt-3">
+                <a href="<?= htmlspecialchars($url_volver) ?>" class="btn btn-outline-secondary"><i class="fas fa-arrow-left me-1"></i>Volver</a>
+                <button type="submit" class="btn btn-success"><i class="fas fa-check-circle me-1"></i>Reactivar organización</button>
+            </div>
+        </form>
+        <?php else: ?>
         <p class="text-muted">Busque al responsable por <strong>nacionalidad y cédula</strong>. Si está en la plataforma podrá asignarlo; si no, podrá registrarlo desde la base externa o ingresar los datos manualmente.</p>
         <?php if (!empty($error)): ?>
             <div class="alert alert-danger"><?= htmlspecialchars($error) ?></div>
@@ -149,9 +169,11 @@ $form_action = 'index.php?page=mi_organizacion&id=' . $org_id . $return_extra;
             <button type="submit" class="btn btn-outline-success btn-sm"><i class="fas fa-check me-1"></i>Asignar y activar</button>
         </form>
         <?php endif; ?>
+        <?php endif; ?>
     </div>
 </div>
 
+<?php if (!$es_reactivacion): ?>
 <script>
 (function() {
     // Misma página (index.php) con page=api_search_user_persona → misma sesión, sin "sesión expirada"
@@ -299,3 +321,4 @@ $form_action = 'index.php?page=mi_organizacion&id=' . $org_id . $return_extra;
     }
 })();
 </script>
+<?php endif; ?>

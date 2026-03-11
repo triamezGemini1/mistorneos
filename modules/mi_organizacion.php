@@ -93,6 +93,28 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
     }
 }
 
+// Procesar solo reactivación (sin búsqueda de usuario): estatus=1, se usa cuando se llega desde "Reactivar" (datos ya validados en afiliación)
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'activar_reactivar' && $is_admin_general) {
+    $org_id_react = (int)($_POST['organizacion_id'] ?? 0);
+    if ($org_id_react > 0) {
+        try {
+            $stmt = DB::pdo()->prepare("UPDATE organizaciones SET estatus = 1, updated_at = NOW() WHERE id = ? AND estatus = 0");
+            $stmt->execute([$org_id_react]);
+            if ($stmt->rowCount() > 0) {
+                $return_extra = (($_GET['return_to'] ?? '') === 'organizaciones' && !empty($_GET['entidad_id'])) ? '&entidad_id=' . (int)$_GET['entidad_id'] : '';
+                $base = (defined('URL_BASE') && URL_BASE !== '') ? rtrim(URL_BASE, '/') . '/' : '';
+                header('Location: ' . $base . 'index.php?page=organizaciones' . $return_extra . '&success=' . urlencode('Organización reactivada correctamente.'));
+                exit;
+            }
+        } catch (Exception $e) {
+            $error = $e->getMessage();
+        }
+    }
+    if (empty($error)) {
+        $error = 'No se pudo reactivar la organización.';
+    }
+}
+
 // Procesar activación de organización inactiva: asignar usuario existente o crear nuevo responsable (solo admin_general)
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'activar_guardar' && $is_admin_general) {
     try {
