@@ -53,6 +53,50 @@ function loadEntidadesOptions(): array {
 
 $entidades_options = loadEntidadesOptions();
 
+/**
+ * Carga las organizaciones disponibles para el selector de asociaciones en la solicitud de afiliación.
+ * Solo incluye organizaciones activas (estatus=1) que aún no tienen responsable asignado (admin_user_id NULL o 0).
+ * La tabla organizaciones debe existir y estar poblada por el administrador para que aparezcan opciones.
+ */
+function cargarOrganizacionesParaSelector(): array {
+    try {
+        $pdo = DB::pdo();
+        // Asegurar que la tabla exista (creación mínima si no existe, para que el selector pueda usarla cuando haya datos)
+        $exists = $pdo->query("SHOW TABLES LIKE 'organizaciones'")->rowCount() > 0;
+        if (!$exists) {
+            $pdo->exec("
+                CREATE TABLE IF NOT EXISTS organizaciones (
+                    id INT NOT NULL AUTO_INCREMENT,
+                    nombre VARCHAR(255) NOT NULL,
+                    direccion VARCHAR(255) NULL,
+                    responsable VARCHAR(100) NULL,
+                    telefono VARCHAR(50) NULL,
+                    email VARCHAR(100) NULL,
+                    entidad INT NOT NULL DEFAULT 0,
+                    admin_user_id INT NULL,
+                    logo VARCHAR(255) NULL,
+                    estatus TINYINT NOT NULL DEFAULT 1,
+                    created_at TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
+                    updated_at TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                    PRIMARY KEY (id),
+                    KEY idx_estatus (estatus),
+                    KEY idx_admin_user_id (admin_user_id)
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+            ");
+        }
+        $stmt = $pdo->query("
+            SELECT id, nombre 
+            FROM organizaciones 
+            WHERE estatus = 1 AND (admin_user_id IS NULL OR admin_user_id = 0) 
+            ORDER BY nombre ASC
+        ");
+        return $stmt ? $stmt->fetchAll(PDO::FETCH_ASSOC) : [];
+    } catch (Exception $e) {
+        error_log("affiliate_request: error cargando organizaciones para selector: " . $e->getMessage());
+        return [];
+    }
+}
+
 // Crear tabla si no existe
 try {
     $pdo->exec("
@@ -146,12 +190,8 @@ try {
     // Ignorar errores de alteración
 }
 
-// Organizaciones sin asignar (para formulario de asociación): estatus=1 y sin admin_user_id
-$organizaciones_sin_asignar = [];
-try {
-    $stmt = $pdo->query("SELECT id, nombre FROM organizaciones WHERE estatus = 1 AND (admin_user_id IS NULL OR admin_user_id = 0) ORDER BY nombre ASC");
-    $organizaciones_sin_asignar = $stmt ? $stmt->fetchAll(PDO::FETCH_ASSOC) : [];
-} catch (Exception $e) {}
+// Cargar asociaciones para el selector (formulario tipo asociación): organizaciones activas sin responsable asignado
+$organizaciones_sin_asignar = cargarOrganizacionesParaSelector();
 
 $error = '';
 $success = '';
@@ -582,7 +622,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                         <?php endforeach; ?>
                                     </select>
                                     <?php if (empty($organizaciones_sin_asignar)): ?>
-                                        <div class="alert alert-warning mt-2 mb-0">No hay asociaciones disponibles sin asignar. Todas tienen ya un responsable. Contacte al administrador.</div>
+                                        <div class="alert alert-warning mt-2 mb-0">
+                                            <i class="fas fa-info-circle me-1"></i>
+                                            No hay asociaciones cargadas para elegir, o todas tienen ya un responsable asignado.
+                                            Las asociaciones deben ser dadas de alta por el administrador (Mi Organización / Organizaciones) para que aparezcan aquí. Contacte al administrador si su asociación no figura en la lista.
+                                        </div>
                                     <?php endif; ?>
                                 </div>
                                 <p class="text-muted small">La asociación seleccionada debe estar registrada y sin responsable asignado. Al aprobar la solicitud quedará como administrador de esa asociación.</p>
