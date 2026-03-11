@@ -85,7 +85,7 @@ function cargarOrganizacionesParaSelector(): array {
             ");
         }
         $stmt = $pdo->query("
-            SELECT id, nombre 
+            SELECT id, nombre, COALESCE(entidad, 0) AS entidad 
             FROM organizaciones 
             WHERE estatus = 1 AND (admin_user_id IS NULL OR admin_user_id = 0) 
             ORDER BY nombre ASC
@@ -609,18 +609,37 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                 <input type="hidden" name="fechnac" id="fechnac" value="<?= htmlspecialchars($preservar ? ($post['fechnac'] ?? '') : '') ?>">
                                 
                                 <?php if ($form_tipo === 'asociacion'): ?>
-                                <!-- Formulario Asociación: selector de organización -->
+                                <!-- Formulario Asociación: selector de organización (solo disponibles) -->
                                 <h6 class="section-title"><i class="fas fa-sitemap me-2"></i>Seleccionar Asociación</h6>
+                                <p class="text-muted small mb-2">Solo se muestran asociaciones disponibles (sin responsable asignado). Use los filtros para localizar la suya.</p>
+                                <div class="row mb-2">
+                                    <div class="col-md-6 mb-2">
+                                        <label class="form-label">Filtrar por entidad</label>
+                                        <select id="filtro_entidad_asoc" class="form-select form-select-sm">
+                                            <option value="">— Todas las entidades —</option>
+                                            <?php if (!empty($entidades_options)): ?>
+                                                <?php foreach ($entidades_options as $ent): ?>
+                                                    <option value="<?= htmlspecialchars($ent['codigo']) ?>"><?= htmlspecialchars($ent['nombre'] ?? $ent['codigo']) ?></option>
+                                                <?php endforeach; ?>
+                                            <?php endif; ?>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-6 mb-2">
+                                        <label class="form-label">Buscar por nombre</label>
+                                        <input type="text" id="filtro_nombre_asoc" class="form-control form-control-sm" placeholder="Escriba para filtrar..." autocomplete="off">
+                                    </div>
+                                </div>
                                 <div class="mb-4">
                                     <label class="form-label">Asociación / Organización *</label>
                                     <select name="organizacion_id" id="organizacion_id" class="form-select" required>
                                         <option value="">-- Seleccione la asociación a la que desea quedar asignado --</option>
                                         <?php foreach ($organizaciones_sin_asignar as $org): ?>
-                                            <option value="<?= (int)$org['id'] ?>" <?= ($preservar && isset($post['organizacion_id']) && (string)$post['organizacion_id'] === (string)$org['id']) ? 'selected' : '' ?>>
+                                            <option value="<?= (int)$org['id'] ?>" data-entidad="<?= (int)($org['entidad'] ?? 0) ?>" data-nombre="<?= htmlspecialchars($org['nombre']) ?>" <?= ($preservar && isset($post['organizacion_id']) && (string)$post['organizacion_id'] === (string)$org['id']) ? 'selected' : '' ?>>
                                                 <?= htmlspecialchars($org['nombre']) ?>
                                             </option>
                                         <?php endforeach; ?>
                                     </select>
+                                    <small class="text-muted" id="contador_asoc_visible"><?= count($organizaciones_sin_asignar) ?> disponible(s)</small>
                                     <?php if (empty($organizaciones_sin_asignar)): ?>
                                         <div class="alert alert-warning mt-2 mb-0">
                                             <i class="fas fa-info-circle me-1"></i>
@@ -880,6 +899,34 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     togglePasswordConfirm.setAttribute('aria-label', type === 'password' ? 'Mostrar contraseña' : 'Ocultar contraseña');
                 });
             }
+
+            // Filtro selector de asociaciones: solo mostrar disponibles que coincidan con entidad y nombre
+            const selAsoc = document.getElementById('organizacion_id');
+            const filtroEntidad = document.getElementById('filtro_entidad_asoc');
+            const filtroNombre = document.getElementById('filtro_nombre_asoc');
+            const contadorAsoc = document.getElementById('contador_asoc_visible');
+            function aplicarFiltroAsociaciones() {
+                if (!selAsoc) return;
+                const entidadVal = (filtroEntidad && filtroEntidad.value) ? String(filtroEntidad.value).trim() : '';
+                const nombreVal = (filtroNombre && filtroNombre.value) ? String(filtroNombre.value).trim().toLowerCase() : '';
+                let visibles = 0;
+                const opts = selAsoc.querySelectorAll('option[value][data-entidad]');
+                opts.forEach(function(opt) {
+                    const entidadOpt = String(opt.getAttribute('data-entidad') || '');
+                    const nombreOpt = (opt.getAttribute('data-nombre') || opt.textContent || '').toLowerCase();
+                    const cumpleEntidad = !entidadVal || entidadOpt === entidadVal;
+                    const cumpleNombre = !nombreVal || nombreOpt.indexOf(nombreVal) !== -1;
+                    const show = cumpleEntidad && cumpleNombre;
+                    opt.style.display = show ? '' : 'none';
+                    opt.disabled = !show;
+                    if (show) visibles++;
+                });
+                if (contadorAsoc) contadorAsoc.textContent = visibles + ' disponible(s)';
+                var selected = selAsoc.querySelector('option:checked');
+                if (selected && selected.disabled) selAsoc.value = '';
+            }
+            if (filtroEntidad) filtroEntidad.addEventListener('change', aplicarFiltroAsociaciones);
+            if (filtroNombre) filtroNombre.addEventListener('input', aplicarFiltroAsociaciones);
         });
         
     function actualizarIndicadorNacionalidad(valor) {
