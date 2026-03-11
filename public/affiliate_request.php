@@ -231,9 +231,6 @@ try {
     // Ignorar errores de alteración
 }
 
-// Cargar asociaciones para el selector (formulario tipo asociación): organizaciones activas sin responsable asignado
-$organizaciones_sin_asignar = cargarOrganizacionesParaSelector();
-
 $error = '';
 $success = '';
 $tipo_solicitud = isset($_GET['tipo']) && in_array($_GET['tipo'], ['asociacion', 'particular'], true) ? $_GET['tipo'] : null;
@@ -242,7 +239,60 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     CSRF::validate();
     
     $tipo_post = isset($_POST['tipo_solicitud']) && in_array($_POST['tipo_solicitud'], ['asociacion', 'particular'], true) ? $_POST['tipo_solicitud'] : 'particular';
-    $organizacion_id_post = $tipo_post === 'asociacion' ? (int)($_POST['organizacion_id'] ?? 0) : null;
+    // Asociación: el selector envía entidad (codigo); resolver a organizacion_id (buscar o crear organización por entidad)
+    $organizacion_id_post = null;
+    if ($tipo_post === 'asociacion') {
+        $asociacion_entidad = trim((string)($_POST['asociacion_entidad'] ?? ''));
+        if ($asociacion_entidad !== '') {
+            $entidad_codigo = is_numeric($asociacion_entidad) ? (int)$asociacion_entidad : $asociacion_entidad;
+            $entidad_nombre = null;
+            foreach (loadEntidadesOptions() as $ent) {
+                $cod = $ent['codigo'] ?? $ent['id'] ?? null;
+                if ($cod === $entidad_codigo || (string)$cod === (string)$entidad_codigo) {
+                    $entidad_nombre = $ent['nombre'] ?? '';
+                    break;
+                }
+            }
+            if ($entidad_nombre === null) {
+                try {
+                    $cols = $pdo->query("SHOW COLUMNS FROM entidad")->fetchAll(PDO::FETCH_ASSOC);
+                    $codeCol = 'codigo';
+                    $nameCol = 'nombre';
+                    foreach ($cols as $c) {
+                        $f = strtolower($c['Field'] ?? '');
+                        if (in_array($f, ['codigo', 'id', 'code'], true)) $codeCol = $c['Field'];
+                        if (in_array($f, ['nombre', 'descripcion'], true)) $nameCol = $c['Field'];
+                    }
+                    $stmt = $pdo->prepare("SELECT {$nameCol} AS nombre FROM entidad WHERE {$codeCol} = ? LIMIT 1");
+                    $stmt->execute([$entidad_codigo]);
+                    $row = $stmt->fetch(PDO::FETCH_ASSOC);
+                    $entidad_nombre = $row['nombre'] ?? '';
+                } catch (Exception $e) {}
+            }
+            $entidad_nombre = $entidad_nombre ?: 'Asociación ' . $entidad_codigo;
+            try {
+                $stmt = $pdo->prepare("SELECT id FROM organizaciones WHERE estatus = 1 AND (admin_user_id IS NULL OR admin_user_id = 0) AND (entidad = ? OR entidad = ?) LIMIT 1");
+                $stmt->execute([$entidad_codigo, (int)$entidad_codigo]);
+                $org = $stmt->fetch(PDO::FETCH_ASSOC);
+                if ($org) {
+                    $organizacion_id_post = (int)$org['id'];
+                } else {
+                    $entidad_int = (int) $entidad_codigo;
+                    try {
+                        $ins = $pdo->prepare("INSERT INTO organizaciones (nombre, entidad, admin_user_id, estatus, created_at, updated_at) VALUES (?, ?, NULL, 1, NOW(), NOW())");
+                        $ins->execute([$entidad_nombre, $entidad_int]);
+                        $organizacion_id_post = (int) $pdo->lastInsertId();
+                    } catch (Exception $e) {
+                        $ins = $pdo->prepare("INSERT INTO organizaciones (nombre, entidad, admin_user_id, estatus) VALUES (?, ?, 0, 1)");
+                        $ins->execute([$entidad_nombre, $entidad_int]);
+                        $organizacion_id_post = (int) $pdo->lastInsertId();
+                    }
+                }
+            } catch (Exception $e) {
+                error_log("affiliate_request: resolver entidad a organizacion: " . $e->getMessage());
+            }
+        }
+    }
     
     // Nacionalidad solo puede venir de la consulta por cédula (BD externa); no hay select, es obligatorio que venga cargada
     $nacionalidad = strtoupper(trim((string)($_POST['nacionalidad'] ?? '')));
@@ -665,24 +715,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                 <input type="hidden" name="fechnac" id="fechnac" value="<?= htmlspecialchars($preservar ? ($post['fechnac'] ?? '') : '') ?>">
                                 
                                 <?php if ($form_tipo === 'asociacion'): ?>
-                                <!-- Formulario Asociación: selector de organización (estatus=1 y sin admin_user_id); ancho reducido 60% -->
+                                <!-- Selector de asociación: opciones desde tabla entidad (nombres de entidades/asociaciones) -->
                                 <h6 class="section-title"><i class="fas fa-sitemap me-2"></i>Seleccionar Asociación</h6>
                                 <div class="mb-4" style="max-width: 40%;">
                                     <label class="form-label">Asociación / Organización *</label>
-                                    <select name="organizacion_id" id="organizacion_id" class="form-select" required style="width: 100%; max-width: 100%;">
+                                    <select name="asociacion_entidad" id="asociacion_entidad" class="form-select" required style="width: 100%; max-width: 100%;">
                                         <option value="">-- Seleccione la asociación a la que desea quedar asignado --</option>
-                                        <?php foreach ($organizaciones_sin_asignar as $org): ?>
-                                            <option value="<?= (int)$org['id'] ?>" <?= ($preservar && isset($post['organizacion_id']) && (string)$post['organizacion_id'] === (string)$org['id']) ? 'selected' : '' ?>>
-                                                <?= htmlspecialchars($org['nombre']) ?>
-                                            </option>
+                                        <?php foreach ($entidades_options as $ent): 
+                                            $cod = $ent['codigo'] ?? $ent['id'] ?? '';
+                                            $nom = $ent['nombre'] ?? $cod;
+                                            $sel = $preservar && isset($post['asociacion_entidad']) && (string)($post['asociacion_entidad'] ?? '') === (string)$cod;
+                                        ?>
+                                            <option value="<?= htmlspecialchars($cod) ?>" <?= $sel ? 'selected' : '' ?>><?= htmlspecialchars($nom) ?></option>
                                         <?php endforeach; ?>
                                     </select>
-                                    <small class="text-muted d-block mt-1"><?= count($organizaciones_sin_asignar) ?> disponible(s) — solo asociaciones activas sin responsable asignado.</small>
-                                    <?php if (empty($organizaciones_sin_asignar)): ?>
+                                    <small class="text-muted d-block mt-1">Listado desde entidades. Al aprobar la solicitud quedará como responsable de la asociación seleccionada.</small>
+                                    <?php if (empty($entidades_options)): ?>
                                         <div class="alert alert-warning mt-2 mb-0 small">
                                             <i class="fas fa-info-circle me-1"></i>
-                                            No hay asociaciones cargadas para elegir, o todas tienen ya un responsable asignado.
-                                            Las asociaciones deben ser dadas de alta por el administrador (Mi Organización / Organizaciones) para que aparezcan aquí. Contacte al administrador si su asociación no figura en la lista.
+                                            No hay entidades cargadas. Contacte al administrador para dar de alta las entidades (asociaciones).
                                         </div>
                                     <?php endif; ?>
                                 </div>
