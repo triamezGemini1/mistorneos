@@ -93,15 +93,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
     }
 }
 
-// Procesar activación de organización inactiva: asignar usuario y contraseña (solo admin_general)
+// Procesar activación de organización inactiva: asignar usuario existente o crear nuevo responsable (solo admin_general)
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'activar_guardar' && $is_admin_general) {
     try {
         $org_id = (int)($_POST['organizacion_id'] ?? 0);
         $admin_user_id = (int)($_POST['admin_user_id'] ?? 0);
+        $crear_responsable = (int)($_POST['crear_responsable'] ?? 0);
         $password = (string)($_POST['password'] ?? '');
         $password_confirm = (string)($_POST['password_confirm'] ?? '');
-        if ($org_id <= 0 || $admin_user_id <= 0) {
-            throw new Exception('Organización y usuario son requeridos');
+        if ($org_id <= 0) {
+            throw new Exception('Organización es requerida');
         }
         if (strlen($password) < 6) {
             throw new Exception('La contraseña debe tener al menos 6 caracteres');
@@ -116,28 +117,101 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
         if (!$org || (int)$org['estatus'] !== 0) {
             throw new Exception('Organización no encontrada o ya está activa');
         }
-        $stmt = $pdo->prepare("SELECT id FROM usuarios WHERE id = ?");
-        $stmt->execute([$admin_user_id]);
-        if (!$stmt->fetch()) {
-            throw new Exception('Usuario no encontrado');
-        }
-        $password_hash = Security::hashPassword($password);
         $entidad_org = (int)$org['entidad'];
-        $pdo->beginTransaction();
-        try {
-            $pdo->prepare("UPDATE organizaciones SET estatus = 1, admin_user_id = ?, updated_at = NOW() WHERE id = ?")->execute([$admin_user_id, $org_id]);
-            $pdo->prepare("UPDATE usuarios SET role = 'admin_club', password_hash = ?, entidad = ? WHERE id = ?")->execute([$password_hash, $entidad_org, $admin_user_id]);
-            $pdo->commit();
-        } catch (Exception $e) {
-            $pdo->rollBack();
-            throw $e;
+
+        if ($crear_responsable === 1) {
+            // Crear nuevo usuario y asignarlo como responsable
+            $nombre = trim($_POST['nombre_responsable'] ?? '');
+            $cedula = trim($_POST['cedula_responsable'] ?? '');
+            $nacionalidad = strtoupper(trim($_POST['nacionalidad_responsable'] ?? 'V'));
+            if (!in_array($nacionalidad, ['V', 'E', 'J', 'P'], true)) {
+                $nacionalidad = 'V';
+            }
+            $username = trim($_POST['username_responsable'] ?? '');
+            $email = trim($_POST['email_responsable'] ?? '');
+            $celular = trim($_POST['celular_responsable'] ?? '');
+            if (empty($nombre) || empty($cedula) || empty($username)) {
+                throw new Exception('Nombre, cédula y nombre de usuario son requeridos para el nuevo responsable');
+            }
+            $cedula_digitos = preg_replace('/\D/', '', $cedula);
+            if ($cedula_digitos === '') {
+                $cedula_digitos = $cedula;
+            }
+            $stmt = $pdo->prepare("SELECT id FROM usuarios WHERE username = ? LIMIT 1");
+            $stmt->execute([$username]);
+            if ($stmt->fetch()) {
+                throw new Exception('Ya existe un usuario con ese nombre de usuario. Elija otro.');
+            }
+            $stmt = $pdo->prepare("SELECT id FROM usuarios WHERE cedula = ? OR cedula = ? LIMIT 1");
+            $stmt->execute([$cedula_digitos, $nacionalidad . $cedula_digitos]);
+            if ($stmt->fetch()) {
+                throw new Exception('Ya existe un usuario registrado con esa cédula.');
+            }
+            $password_hash = Security::hashPassword($password);
+            $uuid = sprintf('%04x%04x-%04x-%04x-%04x-%04x%04x%04x', mt_rand(0, 0xffff), mt_rand(0, 0xffff), mt_rand(0, 0xffff), mt_rand(0x4000, 0x4fff), mt_rand(0, 0xffff), mt_rand(0, 0xffff), mt_rand(0, 0xffff), mt_rand(0, 0xffff));
+            $pdo->beginTransaction();
+            try {
+                $cols = "cedula, nombre, email, celular, username, password_hash, role, club_id, entidad, status";
+                $placeholders = "?, ?, ?, ?, ?, ?, 'admin_club', NULL, ?, 0";
+                $params = [$cedula_digitos, $nombre, $email ?: null, $celular ?: null, $username, $password_hash, $entidad_org];
+                if (method_exists($pdo, 'query')) {
+                    $chk = $pdo->query("SHOW COLUMNS FROM usuarios LIKE 'nacionalidad'");
+                    if ($chk && $chk->rowCount() > 0) {
+                        $cols .= ", nacionalidad";
+                        $placeholders .= ", ?";
+                        $params[] = $nacionalidad;
+                    }
+                }
+                if (method_exists($pdo, 'query')) {
+                    $chk = $pdo->query("SHOW COLUMNS FROM usuarios LIKE 'uuid'");
+                    if ($chk && $chk->rowCount() > 0) {
+                        $cols .= ", uuid";
+                        $placeholders .= ", ?";
+                        $params[] = $uuid;
+                    }
+                }
+                $stmt = $pdo->prepare("INSERT INTO usuarios ({$cols}) VALUES ({$placeholders})");
+                $stmt->execute($params);
+                $admin_user_id = (int) $pdo->lastInsertId();
+                if ($admin_user_id <= 0) {
+                    throw new Exception('Error al crear el usuario');
+                }
+                $pdo->prepare("UPDATE organizaciones SET estatus = 1, admin_user_id = ?, updated_at = NOW() WHERE id = ?")->execute([$admin_user_id, $org_id]);
+                $pdo->commit();
+            } catch (Exception $e) {
+                $pdo->rollBack();
+                throw $e;
+            }
+            $success_msg = 'Organización activada. Se creó el usuario responsable y se asignó la contraseña.';
+        } else {
+            // Usuario existente: asignar y actualizar contraseña
+            if ($admin_user_id <= 0) {
+                throw new Exception('Debe buscar y seleccionar un responsable por cédula o elegir un usuario de la lista.');
+            }
+            $stmt = $pdo->prepare("SELECT id FROM usuarios WHERE id = ?");
+            $stmt->execute([$admin_user_id]);
+            if (!$stmt->fetch()) {
+                throw new Exception('Usuario no encontrado');
+            }
+            $password_hash = Security::hashPassword($password);
+            $pdo->beginTransaction();
+            try {
+                $pdo->prepare("UPDATE organizaciones SET estatus = 1, admin_user_id = ?, updated_at = NOW() WHERE id = ?")->execute([$admin_user_id, $org_id]);
+                $pdo->prepare("UPDATE usuarios SET role = 'admin_club', password_hash = ?, entidad = ? WHERE id = ?")->execute([$password_hash, $entidad_org, $admin_user_id]);
+                $pdo->commit();
+            } catch (Exception $e) {
+                $pdo->rollBack();
+                throw $e;
+            }
+            $success_msg = 'Organización activada. Usuario asignado y contraseña actualizada.';
         }
+
         $return_extra = '';
         if (($_GET['return_to'] ?? '') === 'organizaciones' && !empty($_GET['entidad_id'])) {
             $return_extra = '&entidad_id=' . (int)$_GET['entidad_id'];
         }
         $base = (defined('URL_BASE') && URL_BASE !== '') ? rtrim(URL_BASE, '/') . '/' : '';
-        header('Location: ' . $base . 'index.php?page=organizaciones' . $return_extra . '&success=' . urlencode('Organización activada. Usuario asignado y contraseña actualizada.'));
+        header('Location: ' . $base . 'index.php?page=organizaciones' . $return_extra . '&success=' . urlencode($success_msg));
         exit;
     } catch (Exception $e) {
         $error = $e->getMessage();
