@@ -2444,7 +2444,8 @@ function obtenerDatosInscribirParejaSitio($torneo_id) {
 
 /**
  * Obtiene datos para inscribir jugador en sitio.
- * Sincroniza numfvd de atletas a usuarios (por cédula). Lista usuarios por código de entidad, ordenados por numfvd y activos.
+ * Usa configuración centralizada (DB::pdo()) y consultas directas por ID para aprovechar índices.
+ * No modifica lógica de negocio ni resultados de torneos.
  */
 function obtenerDatosInscribirSitio($torneo_id, $user_id, $is_admin_general) {
     $pdo = DB::pdo();

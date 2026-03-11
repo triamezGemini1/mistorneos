@@ -1,9 +1,8 @@
-﻿<?php
+<?php
 /**
  * Página independiente del Administrador de Torneos
- * Diseño moderno, práctico y responsive
+ * Patrón en bloque: conexión única → seguridad → validación inmediata → interfaz (layout incluye header).
  */
-
 require_once __DIR__ . '/../config/bootstrap.php';
 require_once __DIR__ . '/../config/csrf.php';
 require_once __DIR__ . '/../config/db_config.php';

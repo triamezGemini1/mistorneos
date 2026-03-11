@@ -1,6 +1,9 @@
 <?php
-
+/**
+ * Acceso denegado. Patrón en bloque: conexión única → seguridad → validación inmediata.
+ */
 require_once __DIR__ . '/../config/bootstrap.php';
+require_once __DIR__ . '/../config/db_config.php';
 require_once __DIR__ . '/../config/auth_service.php';
 require_once __DIR__ . '/../config/auth.php';
 require_once __DIR__ . '/../config/environment.php';

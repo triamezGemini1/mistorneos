@@ -1,18 +1,16 @@
-﻿<?php
+<?php
 /**
  * Layout específico para el Administrador de Torneos
- * Diseño moderno, práctico y responsive
+ * Usa cabecera unificada (includes/header.php) para favicon y meta.
  */
 $current_user = Auth::user();
 $page_title = $page_title ?? 'Administrador de Torneos';
+$header_title = $page_title . ' - La Estación del Dominó';
 ?>
 <!DOCTYPE html>
 <html lang="es">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes">
+<?php include_once __DIR__ . '/../../includes/header.php'; ?>
     <meta name="theme-color" content="#667eea">
-    <title><?php echo htmlspecialchars($page_title); ?> - La Estación del Dominó</title>
     
     <!-- Preconnect: conexiones tempranas a CDNs -->
     <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>

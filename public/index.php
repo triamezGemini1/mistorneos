@@ -14,6 +14,7 @@ if (!is_dir($configDir) || !is_readable($configDir . '/bootstrap.php')) {
     exit;
 }
 
+// Patrón en bloque: carga mínima → conexión única → seguridad → validación inmediata
 try {
     require_once $configDir . '/session_start_early.php';
     require_once $configDir . '/bootstrap.php';
@@ -31,20 +32,6 @@ try {
     exit;
 }
 
-// Verificación de sesión al inicio absoluto: redirect <50ms sin tocar la base de datos
-try {
-    require_once $configDir . '/auth_service.php';
-    AuthService::requireAuth();
-} catch (Throwable $e) {
-    error_log("index.php requireAuth: " . $e->getMessage());
-    if (!headers_sent()) {
-        http_response_code(503);
-        header('Content-Type: text/html; charset=utf-8');
-    }
-    include __DIR__ . '/error_service_unavailable.php';
-    exit;
-}
-
 try {
     require_once $configDir . '/db_config.php';
 } catch (Throwable $e) {
@@ -56,6 +43,19 @@ try {
     $msg = (defined('APP_DEBUG') && APP_DEBUG) ? $e->getMessage() : 'Error al conectar. Revisa el log del servidor.';
     echo '<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Error</title></head><body style="font-family:sans-serif;padding:2rem;max-width:600px;margin:0 auto;">';
     echo '<h1>No se pudo cargar la aplicación</h1><p>' . htmlspecialchars($msg) . '</p></body></html>';
+    exit;
+}
+
+try {
+    require_once $configDir . '/auth_service.php';
+    AuthService::requireAuth();
+} catch (Throwable $e) {
+    error_log("index.php requireAuth: " . $e->getMessage());
+    if (!headers_sent()) {
+        http_response_code(503);
+        header('Content-Type: text/html; charset=utf-8');
+    }
+    include __DIR__ . '/error_service_unavailable.php';
     exit;
 }
 
