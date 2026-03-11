@@ -136,7 +136,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
         if (($_GET['return_to'] ?? '') === 'organizaciones' && !empty($_GET['entidad_id'])) {
             $return_extra = '&entidad_id=' . (int)$_GET['entidad_id'];
         }
-        header('Location: index.php?page=organizaciones' . $return_extra . '&success=' . urlencode('Organización activada. Usuario asignado y contraseña actualizada.'));
+        $base = (defined('URL_BASE') && URL_BASE !== '') ? rtrim(URL_BASE, '/') . '/' : '';
+        header('Location: ' . $base . 'index.php?page=organizaciones' . $return_extra . '&success=' . urlencode('Organización activada. Usuario asignado y contraseña actualizada.'));
         exit;
     } catch (Exception $e) {
         $error = $e->getMessage();
