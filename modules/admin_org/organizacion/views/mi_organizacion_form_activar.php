@@ -11,8 +11,6 @@ if (($_GET['return_to'] ?? '') === 'organizaciones' && $entidad_id > 0) {
 }
 $url_volver = $return_extra !== '' ? 'index.php?page=organizaciones&entidad_id=' . $entidad_id : 'index.php?page=mi_organizacion&id=' . $org_id;
 $form_action = 'index.php?page=mi_organizacion&id=' . $org_id . $return_extra;
-// URL absoluta de la API de búsqueda (mismo criterio que admin_torneo_operadores y users/list)
-$api_search_url = (class_exists('AppHelpers') ? rtrim(AppHelpers::getPublicUrl(), '/') : '') . '/api/search_user_persona.php';
 ?>
 <div class="card shadow-sm">
     <div class="card-header bg-warning text-dark">
@@ -156,10 +154,12 @@ $api_search_url = (class_exists('AppHelpers') ? rtrim(AppHelpers::getPublicUrl()
 
 <script>
 (function() {
-    // URL absoluta de la API inyectada desde PHP (evita error de conexión con subcarpetas / mistorneos_beta/public)
-    var API_SEARCH_URL = '<?= htmlspecialchars($api_search_url ?? '', ENT_QUOTES, 'UTF-8') ?>';
+    // URL de la API: relativa al documento (index.php está en public/, api está en public/api/) → mismo origen, sin depender de PHP
     function getApiSearchUrl() {
-        return API_SEARCH_URL || (window.location.pathname.replace(/\/[^/]*$/, '') + '/api/search_user_persona.php');
+        var path = window.location.pathname || '';
+        var lastSlash = path.lastIndexOf('/');
+        var dir = (lastSlash >= 0) ? path.substring(0, lastSlash + 1) : '/';
+        return window.location.origin + dir + 'api/search_user_persona.php';
     }
 
     var btnBuscar = document.getElementById('btn_buscar_responsable');
@@ -239,8 +239,13 @@ $api_search_url = (class_exists('AppHelpers') ? rtrim(AppHelpers::getPublicUrl()
         }
         resultadoDiv.innerHTML = '<div class="text-center py-2"><i class="fas fa-spinner fa-spin"></i> Buscando...</div>';
         var url = getApiSearchUrl() + '?cedula=' + encodeURIComponent(cedula) + '&nacionalidad=' + encodeURIComponent(nacionalidad);
-        fetch(url)
-            .then(function(r) { return r.json(); })
+        fetch(url, { credentials: 'same-origin', headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+            .then(function(r) {
+                if (!r.ok) throw new Error('HTTP ' + r.status);
+                var ct = (r.headers.get('Content-Type') || '').toLowerCase();
+                if (ct.indexOf('application/json') === -1) throw new Error('Respuesta no JSON (¿sesión expirada?)');
+                return r.json();
+            })
             .then(function(data) {
                 if (!data.success) {
                     resultadoDiv.innerHTML = '<div class="alert alert-danger py-2">' + (data.error || 'Error al buscar') + '</div>';
@@ -275,7 +280,10 @@ $api_search_url = (class_exists('AppHelpers') ? rtrim(AppHelpers::getPublicUrl()
             })
             .catch(function(err) {
                 console.error(err);
-                resultadoDiv.innerHTML = '<div class="alert alert-danger py-2"><i class="fas fa-times-circle me-1"></i>Error de conexión. Intente de nuevo.</div>';
+                var msg = 'Error de conexión. Intente de nuevo.';
+                if (err.message && err.message.indexOf('sesión') !== -1) msg = 'Sesión expirada o no válida. Recargue la página e inicie sesión de nuevo.';
+                else if (err.message && err.message.indexOf('HTTP') === 0) msg = 'Error del servidor (' + err.message + ').';
+                resultadoDiv.innerHTML = '<div class="alert alert-danger py-2"><i class="fas fa-times-circle me-1"></i>' + msg + '</div>';
             });
     }
 
