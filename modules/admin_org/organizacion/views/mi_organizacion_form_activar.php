@@ -154,13 +154,12 @@ $form_action = 'index.php?page=mi_organizacion&id=' . $org_id . $return_extra;
 
 <script>
 (function() {
-    function getApiBase() {
+    // URL de la API relativa al documento actual (index.php) para evitar error de conexión con subcarpetas
+    function getApiSearchUrl() {
         var path = window.location.pathname || '';
-        var i = path.indexOf('index.php');
-        if (i !== -1) path = path.substring(0, i);
-        path = path.replace(/\/$/, '');
-        if (path.indexOf('public') === -1 && path.length > 0) path = path + '/public';
-        return path;
+        var idx = path.lastIndexOf('/');
+        if (idx !== -1) path = path.substring(0, idx + 1);
+        return path + 'api/search_user_persona.php';
     }
 
     var btnBuscar = document.getElementById('btn_buscar_responsable');
@@ -231,61 +230,66 @@ $form_action = 'index.php?page=mi_organizacion&id=' . $org_id . $return_extra;
         resultadoDiv.innerHTML = '<div class="alert alert-info py-2"><i class="fas fa-info-circle me-1"></i>No encontrado en usuarios ni en base externa. Ingrese los datos manualmente abajo y pulse Activar organización.</div>';
     }
 
+    function ejecutarBusqueda() {
+        var nacionalidad = (document.getElementById('nacionalidad_busqueda').value || 'V').trim();
+        var cedula = (document.getElementById('cedula_busqueda').value || '').trim().replace(/\s/g, '');
+        if (!cedula) {
+            resultadoDiv.innerHTML = '<div class="alert alert-warning py-2"><i class="fas fa-exclamation-triangle me-1"></i>Ingrese la cédula para buscar.</div>';
+            return;
+        }
+        resultadoDiv.innerHTML = '<div class="text-center py-2"><i class="fas fa-spinner fa-spin"></i> Buscando...</div>';
+        var url = getApiSearchUrl() + '?cedula=' + encodeURIComponent(cedula) + '&nacionalidad=' + encodeURIComponent(nacionalidad);
+        fetch(url)
+            .then(function(r) { return r.json(); })
+            .then(function(data) {
+                if (!data.success) {
+                    resultadoDiv.innerHTML = '<div class="alert alert-danger py-2">' + (data.error || 'Error al buscar') + '</div>';
+                    return;
+                }
+                var d = data.data;
+                if (d.encontrado && d.existe_usuario && d.usuario_existente) {
+                    var u = d.usuario_existente;
+                    resultadoDiv.innerHTML = '<div class="alert alert-success py-2"><i class="fas fa-check-circle me-1"></i>Usuario encontrado en la plataforma. Puede asignarlo como responsable.</div>';
+                    adminUserId.value = u.id;
+                    mostrarUsuarioExistente(u.nombre, u.username);
+                    return;
+                }
+                if (d.encontrado && (d.en_solicitudes && d.solicitud)) {
+                    var s = d.solicitud;
+                    resultadoDiv.innerHTML = '<div class="alert alert-info py-2"><i class="fas fa-info-circle me-1"></i>Encontrado en solicitudes de afiliación. Complete los datos y registre como responsable.</div>';
+                    mostrarDatosNuevo({
+                        nombre: s.nombre,
+                        cedula: s.cedula,
+                        email: s.email,
+                        celular: s.celular,
+                        username: s.username
+                    });
+                    return;
+                }
+                if (d.encontrado && d.persona) {
+                    resultadoDiv.innerHTML = '<div class="alert alert-success py-2"><i class="fas fa-check-circle me-1"></i>Encontrado en base de datos externa. Revise los datos y pulse Activar organización.</div>';
+                    mostrarDatosNuevo(d.persona);
+                    return;
+                }
+                mensajeNoEncontrado();
+            })
+            .catch(function(err) {
+                console.error(err);
+                resultadoDiv.innerHTML = '<div class="alert alert-danger py-2"><i class="fas fa-times-circle me-1"></i>Error de conexión. Intente de nuevo.</div>';
+            });
+    }
+
     if (btnBuscar) {
-        btnBuscar.addEventListener('click', function() {
-            var nacionalidad = (document.getElementById('nacionalidad_busqueda').value || 'V').trim();
-            var cedula = (document.getElementById('cedula_busqueda').value || '').trim().replace(/\s/g, '');
-            if (!cedula) {
-                resultadoDiv.innerHTML = '<div class="alert alert-warning py-2"><i class="fas fa-exclamation-triangle me-1"></i>Ingrese la cédula para buscar.</div>';
-                return;
-            }
-            resultadoDiv.innerHTML = '<div class="text-center py-2"><i class="fas fa-spinner fa-spin"></i> Buscando...</div>';
-            var base = getApiBase();
-            var url = base + '/api/search_user_persona.php?cedula=' + encodeURIComponent(cedula) + '&nacionalidad=' + encodeURIComponent(nacionalidad);
-            fetch(url)
-                .then(function(r) { return r.json(); })
-                .then(function(data) {
-                    if (!data.success) {
-                        resultadoDiv.innerHTML = '<div class="alert alert-danger py-2">' + (data.error || 'Error al buscar') + '</div>';
-                        return;
-                    }
-                    var d = data.data;
-                    if (d.encontrado && d.existe_usuario && d.usuario_existente) {
-                        var u = d.usuario_existente;
-                        resultadoDiv.innerHTML = '<div class="alert alert-success py-2"><i class="fas fa-check-circle me-1"></i>Usuario encontrado en la plataforma. Puede asignarlo como responsable.</div>';
-                        adminUserId.value = u.id;
-                        mostrarUsuarioExistente(u.nombre, u.username);
-                        return;
-                    }
-                    if (d.encontrado && (d.en_solicitudes && d.solicitud)) {
-                        var s = d.solicitud;
-                        resultadoDiv.innerHTML = '<div class="alert alert-info py-2"><i class="fas fa-info-circle me-1"></i>Encontrado en solicitudes de afiliación. Complete los datos y registre como responsable.</div>';
-                        mostrarDatosNuevo({
-                            nombre: s.nombre,
-                            cedula: s.cedula,
-                            email: s.email,
-                            celular: s.celular,
-                            username: s.username
-                        });
-                        return;
-                    }
-                    if (d.encontrado && d.persona) {
-                        resultadoDiv.innerHTML = '<div class="alert alert-success py-2"><i class="fas fa-check-circle me-1"></i>Encontrado en base de datos externa. Revise los datos y pulse Activar organización.</div>';
-                        mostrarDatosNuevo(d.persona);
-                        return;
-                    }
-                    mensajeNoEncontrado();
-                })
-                .catch(function(err) {
-                    console.error(err);
-                    resultadoDiv.innerHTML = '<div class="alert alert-danger py-2"><i class="fas fa-times-circle me-1"></i>Error de conexión. Intente de nuevo.</div>';
-                });
-        });
+        btnBuscar.addEventListener('click', ejecutarBusqueda);
     }
     var cedulaInput = document.getElementById('cedula_busqueda');
     if (cedulaInput) {
+        cedulaInput.addEventListener('blur', function() {
+            var cedula = (this.value || '').trim().replace(/\s/g, '');
+            if (cedula.length >= 6) ejecutarBusqueda();
+        });
         cedulaInput.addEventListener('keypress', function(e) {
-            if (e.key === 'Enter') { e.preventDefault(); if (btnBuscar) btnBuscar.click(); }
+            if (e.key === 'Enter') { e.preventDefault(); ejecutarBusqueda(); }
         });
     }
 })();
