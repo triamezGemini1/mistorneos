@@ -154,12 +154,9 @@ $form_action = 'index.php?page=mi_organizacion&id=' . $org_id . $return_extra;
 
 <script>
 (function() {
-    // URL de la API: relativa al documento (index.php está en public/, api está en public/api/) → mismo origen, sin depender de PHP
-    function getApiSearchUrl() {
-        var path = window.location.pathname || '';
-        var lastSlash = path.lastIndexOf('/');
-        var dir = (lastSlash >= 0) ? path.substring(0, lastSlash + 1) : '/';
-        return window.location.origin + dir + 'api/search_user_persona.php';
+    // Misma página (index.php) con page=api_search_user_persona → misma sesión, sin "sesión expirada"
+    function getApiSearchQuery(cedula, nacionalidad) {
+        return '?page=api_search_user_persona&cedula=' + encodeURIComponent(cedula) + '&nacionalidad=' + encodeURIComponent(nacionalidad);
     }
 
     var btnBuscar = document.getElementById('btn_buscar_responsable');
@@ -238,7 +235,7 @@ $form_action = 'index.php?page=mi_organizacion&id=' . $org_id . $return_extra;
             return;
         }
         resultadoDiv.innerHTML = '<div class="text-center py-2"><i class="fas fa-spinner fa-spin"></i> Buscando...</div>';
-        var url = getApiSearchUrl() + '?cedula=' + encodeURIComponent(cedula) + '&nacionalidad=' + encodeURIComponent(nacionalidad);
+        var url = getApiSearchQuery(cedula, nacionalidad);
         fetch(url, { credentials: 'same-origin', headers: { 'X-Requested-With': 'XMLHttpRequest' } })
             .then(function(r) {
                 if (!r.ok) throw new Error('HTTP ' + r.status);

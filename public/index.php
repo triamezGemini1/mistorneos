@@ -265,6 +265,12 @@ if ($page === 'mi_organizacion' && isset($_GET['id']) && in_array($action, ['des
     exit;
 }
 
+// API de búsqueda usuario/persona por cédula: misma sesión que index.php (evita "sesión expirada" en fetch)
+if ($page === 'api_search_user_persona') {
+    require_once __DIR__ . '/api/search_user_persona.php';
+    exit;
+}
+
 // Manejar endpoints especiales (sin layout)
 $special_endpoints = [
     'invitations_send_email',
