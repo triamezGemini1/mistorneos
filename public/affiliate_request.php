@@ -546,9 +546,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     </style>
 </head>
 <body>
-    <div class="container">
+    <div class="container" style="max-width: 80%;">
         <div class="row justify-content-center">
-            <div class="col-lg-8 col-md-10">
+            <div class="col-12">
                 <div class="register-card">
                     <div class="register-header">
                         <i class="fas fa-building"></i>
@@ -624,37 +624,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                 <input type="hidden" name="fechnac" id="fechnac" value="<?= htmlspecialchars($preservar ? ($post['fechnac'] ?? '') : '') ?>">
                                 
                                 <?php if ($form_tipo === 'asociacion'): ?>
-                                <!-- Formulario Asociación: selector de organización (solo disponibles) -->
+                                <!-- Formulario Asociación: selector de organización (mismo criterio: estatus=1 y sin admin_user_id) -->
                                 <h6 class="section-title"><i class="fas fa-sitemap me-2"></i>Seleccionar Asociación</h6>
-                                <p class="text-muted small mb-2">Solo se muestran asociaciones disponibles (sin responsable asignado). Use los filtros para localizar la suya.</p>
-                                <div class="row mb-2">
-                                    <div class="col-md-6 mb-2">
-                                        <label class="form-label">Filtrar por entidad</label>
-                                        <select id="filtro_entidad_asoc" class="form-select form-select-sm">
-                                            <option value="">— Todas las entidades —</option>
-                                            <?php if (!empty($entidades_options)): ?>
-                                                <?php foreach ($entidades_options as $ent): ?>
-                                                    <option value="<?= htmlspecialchars($ent['codigo']) ?>"><?= htmlspecialchars($ent['nombre'] ?? $ent['codigo']) ?></option>
-                                                <?php endforeach; ?>
-                                            <?php endif; ?>
-                                        </select>
-                                    </div>
-                                    <div class="col-md-6 mb-2">
-                                        <label class="form-label">Buscar por nombre</label>
-                                        <input type="text" id="filtro_nombre_asoc" class="form-control form-control-sm" placeholder="Escriba para filtrar..." autocomplete="off">
-                                    </div>
-                                </div>
                                 <div class="mb-4">
                                     <label class="form-label">Asociación / Organización *</label>
                                     <select name="organizacion_id" id="organizacion_id" class="form-select" required>
                                         <option value="">-- Seleccione la asociación a la que desea quedar asignado --</option>
                                         <?php foreach ($organizaciones_sin_asignar as $org): ?>
-                                            <option value="<?= (int)$org['id'] ?>" data-entidad="<?= (int)($org['entidad'] ?? 0) ?>" data-nombre="<?= htmlspecialchars($org['nombre']) ?>" <?= ($preservar && isset($post['organizacion_id']) && (string)$post['organizacion_id'] === (string)$org['id']) ? 'selected' : '' ?>>
+                                            <option value="<?= (int)$org['id'] ?>" <?= ($preservar && isset($post['organizacion_id']) && (string)$post['organizacion_id'] === (string)$org['id']) ? 'selected' : '' ?>>
                                                 <?= htmlspecialchars($org['nombre']) ?>
                                             </option>
                                         <?php endforeach; ?>
                                     </select>
-                                    <small class="text-muted" id="contador_asoc_visible"><?= count($organizaciones_sin_asignar) ?> disponible(s)</small>
+                                    <small class="text-muted"><?= count($organizaciones_sin_asignar) ?> disponible(s) — solo asociaciones activas sin responsable asignado.</small>
                                     <?php if (empty($organizaciones_sin_asignar)): ?>
                                         <div class="alert alert-warning mt-2 mb-0">
                                             <i class="fas fa-info-circle me-1"></i>
@@ -663,54 +645,57 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                         </div>
                                     <?php endif; ?>
                                 </div>
-                                <p class="text-muted small">La asociación seleccionada debe estar registrada y sin responsable asignado. Al aprobar la solicitud quedará como administrador de esa asociación.</p>
                                 <?php endif; ?>
                                 
                                 <!-- Datos de la Organización (Particular: editable; Asociación: opcional complemento) -->
                                 <h6 class="section-title mt-4"><i class="fas fa-building me-2"></i>Datos de la Organización</h6>
 
+                                <!-- Fila 1: Nombre (30% menos), RIF (50% del actual), Dirección -->
                                 <div class="row">
-                                    <div class="col-md-6 mb-3">
+                                    <div class="col-md-4 mb-3">
                                         <label class="form-label">Nombre de la Organización <?= $form_tipo === 'particular' ? '*' : '' ?></label>
                                         <input type="text" name="club_nombre" id="club_nombre" class="form-control" 
                                                value="<?= htmlspecialchars($preservar ? ($post['club_nombre'] ?? '') : '') ?>" <?= $form_tipo === 'particular' ? 'required' : 'placeholder="Opcional (se usará el de la asociación)"' ?>>
                                     </div>
-                                    <div class="col-md-6 mb-3">
+                                    <div class="col-md-2 mb-3">
                                         <label class="form-label">RIF</label>
                                         <input type="text" name="rif" id="rif" class="form-control" 
-                                               value="<?= htmlspecialchars($preservar ? ($post['rif'] ?? '') : '') ?>" placeholder="Ej: J-12345678-9">
+                                               value="<?= htmlspecialchars($preservar ? ($post['rif'] ?? '') : '') ?>" placeholder="J-12345678-9">
                                     </div>
-                                </div>
-
-                                <div class="row">
-                                    <div class="col-12 mb-3">
+                                    <div class="col-md-6 mb-3">
                                         <label class="form-label">Dirección</label>
                                         <input type="text" name="org_direccion" id="org_direccion" class="form-control" 
                                                value="<?= htmlspecialchars($preservar ? ($post['org_direccion'] ?? '') : '') ?>" placeholder="Dirección de la organización">
                                     </div>
                                 </div>
 
+                                <!-- Fila 2: Responsable, Teléfono (50%), Email (-30%), Ubicación/Ciudad (-30%) -->
                                 <div class="row">
-                                    <div class="col-md-6 mb-3">
+                                    <div class="col-md-4 mb-3">
                                         <label class="form-label">Responsable / Presidente *</label>
                                         <input type="text" name="org_responsable" id="org_responsable" class="form-control" 
-                                               value="<?= htmlspecialchars($preservar ? ($post['org_responsable'] ?? '') : '') ?>" required placeholder="Nombre del responsable o presidente">
+                                               value="<?= htmlspecialchars($preservar ? ($post['org_responsable'] ?? '') : '') ?>" required placeholder="Nombre del responsable">
                                     </div>
-                                    <div class="col-md-6 mb-3">
-                                        <label class="form-label">Teléfono de la Organización</label>
+                                    <div class="col-md-2 mb-3">
+                                        <label class="form-label">Teléfono</label>
                                         <input type="text" name="org_telefono" id="org_telefono" class="form-control" 
-                                               value="<?= htmlspecialchars($preservar ? ($post['org_telefono'] ?? '') : '') ?>" placeholder="Ej: 0212-1234567">
+                                               value="<?= htmlspecialchars($preservar ? ($post['org_telefono'] ?? '') : '') ?>" placeholder="0212-1234567">
+                                    </div>
+                                    <div class="col-md-3 mb-3">
+                                        <label class="form-label">Email</label>
+                                        <input type="email" name="org_email" id="org_email" class="form-control" 
+                                               value="<?= htmlspecialchars($preservar ? ($post['org_email'] ?? '') : '') ?>" placeholder="contacto@org.com">
+                                    </div>
+                                    <div class="col-md-3 mb-3">
+                                        <label class="form-label">Ubicación / Ciudad</label>
+                                        <input type="text" name="club_ubicacion" id="club_ubicacion" class="form-control" 
+                                               value="<?= htmlspecialchars($preservar ? ($post['club_ubicacion'] ?? '') : '') ?>" placeholder="Caracas, Miranda">
                                     </div>
                                 </div>
 
+                                <?php if ($form_tipo === 'particular'): ?>
                                 <div class="row">
-                                    <div class="col-md-6 mb-3">
-                                        <label class="form-label">Email de la Organización</label>
-                                        <input type="email" name="org_email" id="org_email" class="form-control" 
-                                               value="<?= htmlspecialchars($preservar ? ($post['org_email'] ?? '') : '') ?>" placeholder="contacto@organizacion.com">
-                                    </div>
-                                    <?php if ($form_tipo === 'particular'): ?>
-                                    <div class="col-md-6 mb-3">
+                                    <div class="col-md-4 mb-3">
                                         <label class="form-label">Entidad *</label>
                                         <select name="entidad" id="entidad" class="form-select" required>
                                             <option value="">Seleccionar Entidad</option>
@@ -726,49 +711,38 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                             <?php endif; ?>
                                         </select>
                                     </div>
-                                    <?php else: ?>
-                                    <input type="hidden" name="entidad" id="entidad" value="<?= (int)($preservar ? ($post['entidad'] ?? 0) : 0) ?>">
-                                    <?php endif; ?>
                                 </div>
-
-                                <div class="row">
-                                    <div class="col-12 mb-3">
-                                        <label class="form-label">Ubicación / Ciudad</label>
-                                        <input type="text" name="club_ubicacion" id="club_ubicacion" class="form-control" 
-                                               value="<?= htmlspecialchars($preservar ? ($post['club_ubicacion'] ?? '') : '') ?>" placeholder="Ej: Caracas, Miranda">
-                                    </div>
-                                </div>
+                                <?php else: ?>
+                                <input type="hidden" name="entidad" id="entidad" value="<?= (int)($preservar ? ($post['entidad'] ?? 0) : 0) ?>">
+                                <?php endif; ?>
                                 
-                                <!-- Datos Personales -->
+                                <!-- Datos Personales: cédula, nombre, email, celular en una línea -->
                                 <h6 class="section-title mt-4"><i class="fas fa-user me-2"></i>Datos Personales</h6>
                                 
                                 <input type="hidden" name="nacionalidad" id="nacionalidad" value="<?= htmlspecialchars($preservar ? ($post['nacionalidad'] ?? '') : '') ?>">
                                 <div class="row">
-                                    <div class="col-md-4 mb-3">
+                                    <div class="col-md-3 mb-3">
                                         <label class="form-label">Cédula *</label>
                                         <input type="text" name="cedula" id="cedula" class="form-control" 
                                                value="<?= htmlspecialchars($preservar ? ($post['cedula'] ?? '') : '') ?>" 
                                                onblur="buscarPersona()" required>
                                         <div id="busqueda_resultado" class="search-status"></div>
-                                        <div id="nacionalidad_visible" class="mt-2 p-2 rounded bg-light border">
+                                        <div id="nacionalidad_visible" class="mt-2 p-2 rounded bg-light border small">
                                             <span class="text-muted">Nacionalidad:</span> <strong id="nacionalidad_valor" class="text-primary"><?= $preservar && !empty($post['nacionalidad']) ? htmlspecialchars($post['nacionalidad']) : '—' ?></strong>
-                                            <span id="nacionalidad_hint" class="text-muted small"> (se carga al buscar por cédula)</span>
+                                            <span id="nacionalidad_hint" class="text-muted"> (se carga al buscar por cédula)</span>
                                         </div>
                                     </div>
-                                    <div class="col-md-5 mb-3">
+                                    <div class="col-md-3 mb-3">
                                         <label class="form-label">Nombre Completo *</label>
                                         <input type="text" name="nombre" id="nombre" class="form-control" 
                                                value="<?= htmlspecialchars($preservar ? ($post['nombre'] ?? '') : '') ?>" required>
                                     </div>
-                                </div>
-
-                                <div class="row">
-                                    <div class="col-md-6 mb-3">
+                                    <div class="col-md-3 mb-3">
                                         <label class="form-label">Email</label>
                                         <input type="email" name="email" id="email" class="form-control" 
                                                value="<?= htmlspecialchars($preservar ? ($post['email'] ?? '') : '') ?>">
                                     </div>
-                                    <div class="col-md-6 mb-3">
+                                    <div class="col-md-3 mb-3">
                                         <label class="form-label">Celular</label>
                                         <input type="text" name="celular" id="celular" class="form-control" 
                                                value="<?= htmlspecialchars($preservar ? ($post['celular'] ?? '') : '') ?>">
@@ -915,33 +889,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 });
             }
 
-            // Filtro selector de asociaciones: solo mostrar disponibles que coincidan con entidad y nombre
-            const selAsoc = document.getElementById('organizacion_id');
-            const filtroEntidad = document.getElementById('filtro_entidad_asoc');
-            const filtroNombre = document.getElementById('filtro_nombre_asoc');
-            const contadorAsoc = document.getElementById('contador_asoc_visible');
-            function aplicarFiltroAsociaciones() {
-                if (!selAsoc) return;
-                const entidadVal = (filtroEntidad && filtroEntidad.value) ? String(filtroEntidad.value).trim() : '';
-                const nombreVal = (filtroNombre && filtroNombre.value) ? String(filtroNombre.value).trim().toLowerCase() : '';
-                let visibles = 0;
-                const opts = selAsoc.querySelectorAll('option[value][data-entidad]');
-                opts.forEach(function(opt) {
-                    const entidadOpt = String(opt.getAttribute('data-entidad') || '');
-                    const nombreOpt = (opt.getAttribute('data-nombre') || opt.textContent || '').toLowerCase();
-                    const cumpleEntidad = !entidadVal || entidadOpt === entidadVal;
-                    const cumpleNombre = !nombreVal || nombreOpt.indexOf(nombreVal) !== -1;
-                    const show = cumpleEntidad && cumpleNombre;
-                    opt.style.display = show ? '' : 'none';
-                    opt.disabled = !show;
-                    if (show) visibles++;
-                });
-                if (contadorAsoc) contadorAsoc.textContent = visibles + ' disponible(s)';
-                var selected = selAsoc.querySelector('option:checked');
-                if (selected && selected.disabled) selAsoc.value = '';
-            }
-            if (filtroEntidad) filtroEntidad.addEventListener('change', aplicarFiltroAsociaciones);
-            if (filtroNombre) filtroNombre.addEventListener('input', aplicarFiltroAsociaciones);
         });
         
     function actualizarIndicadorNacionalidad(valor) {
