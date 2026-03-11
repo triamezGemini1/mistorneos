@@ -23,8 +23,7 @@ $header_asset_base = rtrim($header_asset_base, '/');
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes">
   <meta name="theme-color" content="#1a365d">
-  <!-- Favicon: ruta dinámica según subcarpeta (pruebas, mistorneos_beta, etc.) -->
+  <!-- Favicon: solo PNG ≤10KB (evitar favicon.ico 363KB). Ejecutar make_favicon.php para generar public/favicon.png -->
   <link rel="icon" type="image/png" sizes="32x32" href="<?= htmlspecialchars($header_asset_base) ?>/favicon.png">
-  <link rel="icon" type="image/x-icon" href="<?= htmlspecialchars($header_asset_base) ?>/favicon.ico">
   <title><?= htmlspecialchars($header_title) ?></title>
   <meta name="description" content="mistorneos - La Estación del Dominó. Gestión de torneos, inscripciones y resultados.">

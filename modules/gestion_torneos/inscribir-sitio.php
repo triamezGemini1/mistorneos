@@ -21,9 +21,11 @@ if (empty($torneo) || !is_array($torneo) || !isset($torneo['id'])) {
 }
 
 require_once __DIR__ . '/../../lib/InscritosHelper.php';
+// Base absoluta public/ para formularios y APIs (evitar que el navegador se pierda en subcarpetas)
+$base_public_abs = (class_exists('AppHelpers') && method_exists('AppHelpers', 'getPublicUrl')) ? rtrim(AppHelpers::getPublicUrl(), '/') : '';
 ?>
-<link rel="stylesheet" href="assets/css/design-system.css">
-<link rel="stylesheet" href="assets/css/inscripcion.css">
+<link rel="stylesheet" href="<?= htmlspecialchars($base_public_abs ? $base_public_abs . '/assets/css/design-system.css' : 'assets/css/design-system.css') ?>">
+<link rel="stylesheet" href="<?= htmlspecialchars($base_public_abs ? $base_public_abs . '/assets/css/inscripcion.css' : 'assets/css/inscripcion.css') ?>">
 <div class="ds-inscripcion container-fluid px-0 px-md-2" style="max-width: 100%;">
     <div class="row mb-4">
         <div class="col-12">
@@ -204,10 +206,11 @@ require_once __DIR__ . '/../../lib/InscritosHelper.php';
 
 <script>
 (function() {
+    var BASE_PUBLIC = <?= json_encode($base_public_abs ? $base_public_abs . '/' : '') ?>;
     var TORNEOS_ID = <?= (int)$torneo['id'] ?>;
     var CSRF_TOKEN = '<?= htmlspecialchars(CSRF::token(), ENT_QUOTES) ?>';
-    var API_URL = 'tournament_admin_toggle_inscripcion.php';
-    var BUSCAR_API = 'api/search_persona.php';
+    var API_URL = BASE_PUBLIC + 'tournament_admin_toggle_inscripcion.php';
+    var BUSCAR_API = BASE_PUBLIC + 'api/search_persona.php';
     var isSearching = false;
     var usuarioEncontrado = null;
 

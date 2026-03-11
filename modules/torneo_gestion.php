@@ -2471,17 +2471,8 @@ function obtenerDatosInscribirSitio($torneo_id, $user_id, $is_admin_general) {
         // tabla atletas no existe
     }
 
-    if ($tiene_numfvd && $existe_atletas) {
-        $pdo->exec("
-            UPDATE usuarios u
-            INNER JOIN atletas a ON (
-                TRIM(REPLACE(REPLACE(REPLACE(REPLACE(u.cedula,'V',''),'E',''),'J',''),'P','')) = TRIM(REPLACE(REPLACE(REPLACE(REPLACE(COALESCE(a.cedula,''),'V',''),'E',''),'J',''),'P',''))
-                OR u.cedula = a.cedula
-            )
-            SET u.numfvd = NULLIF(TRIM(a.numfvd), '')
-            WHERE a.numfvd IS NOT NULL AND TRIM(a.numfvd) != ''
-        ");
-    }
+    // No ejecutar UPDATE usuarios+atletas aquí: evita full table scan sobre 32M registros.
+    // La sincronización numfvd puede hacerse vía cron/tarea programada si se necesita.
 
     $orderBy = $tiene_numfvd
         ? "ORDER BY COALESCE(u.numfvd, '') ASC, COALESCE(u.nombre, u.username) ASC"

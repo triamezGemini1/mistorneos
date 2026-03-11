@@ -19,7 +19,6 @@ try {
     require_once $configDir . '/bootstrap.php';
     require_once $configDir . '/csrf.php';
     require_once $configDir . '/auth.php';
-    require_once $configDir . '/db_config.php';
 } catch (Throwable $e) {
     error_log("index.php: " . $e->getMessage() . " en " . $e->getFile() . ":" . $e->getLine());
     if (!headers_sent()) {
@@ -27,6 +26,34 @@ try {
         header('Content-Type: text/html; charset=utf-8');
     }
     $msg = (defined('APP_DEBUG') && APP_DEBUG) ? $e->getMessage() : 'Error al cargar la aplicación. Revisa el log del servidor.';
+    echo '<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Error</title></head><body style="font-family:sans-serif;padding:2rem;max-width:600px;margin:0 auto;">';
+    echo '<h1>No se pudo cargar la aplicación</h1><p>' . htmlspecialchars($msg) . '</p></body></html>';
+    exit;
+}
+
+// Verificación de sesión al inicio absoluto: redirect <50ms sin tocar la base de datos
+try {
+    require_once $configDir . '/auth_service.php';
+    AuthService::requireAuth();
+} catch (Throwable $e) {
+    error_log("index.php requireAuth: " . $e->getMessage());
+    if (!headers_sent()) {
+        http_response_code(503);
+        header('Content-Type: text/html; charset=utf-8');
+    }
+    include __DIR__ . '/error_service_unavailable.php';
+    exit;
+}
+
+try {
+    require_once $configDir . '/db_config.php';
+} catch (Throwable $e) {
+    error_log("index.php db_config: " . $e->getMessage() . " en " . $e->getFile() . ":" . $e->getLine());
+    if (!headers_sent()) {
+        http_response_code(500);
+        header('Content-Type: text/html; charset=utf-8');
+    }
+    $msg = (defined('APP_DEBUG') && APP_DEBUG) ? $e->getMessage() : 'Error al conectar. Revisa el log del servidor.';
     echo '<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Error</title></head><body style="font-family:sans-serif;padding:2rem;max-width:600px;margin:0 auto;">';
     echo '<h1>No se pudo cargar la aplicación</h1><p>' . htmlspecialchars($msg) . '</p></body></html>';
     exit;
@@ -137,18 +164,9 @@ if ($useModernRouter) {
 // =================================================================
 // MODO 2: RUTAS LEGACY (?page=xxx) - Compatibilidad
 // =================================================================
-// Verificación de sesión antes de cargar recursos pesados (centralizada en auth_service).
-try {
-    require_once __DIR__ . '/../config/auth_service.php';
-    AuthService::requireAuth();
-    $user = Auth::user();
-    if (getenv('SESSION_DEBUG')) error_log('[SESSION_DEBUG] index.php | usuario OK | id=' . ($user['id'] ?? '') . ' | role=' . ($user['role'] ?? ''));
-} catch (Throwable $e) {
-    error_log("Error en index.php: " . $e->getMessage());
-    http_response_code(503);
-    include __DIR__ . '/error_service_unavailable.php';
-    exit;
-}
+// Sesión ya verificada arriba (requireAuth antes de db_config). Obtener usuario para restricciones.
+$user = Auth::user();
+if (getenv('SESSION_DEBUG')) error_log('[SESSION_DEBUG] index.php | usuario OK | id=' . ($user['id'] ?? '') . ' | role=' . ($user['role'] ?? ''));
 
 // Restringir dashboard a roles válidos del sistema
 $allowed_roles = ['admin_general', 'admin_torneo', 'admin_club', 'usuario', 'operador'];
