@@ -13,16 +13,26 @@ require_once __DIR__ . '/../lib/security.php';
 
 header('Content-Type: application/json; charset=utf-8');
 
-// Comprobar rol sin redirigir (las peticiones fetch deben recibir JSON, no redirect a access_denied)
-$u = Auth::user();
-$roles_permitidos = ['admin_general', 'admin_torneo', 'admin_club'];
-if (!$u || !in_array($u['role'] ?? '', $roles_permitidos, true)) {
-    echo json_encode(['success' => false, 'error' => 'No autorizado para esta sección. Inicie sesión con un perfil de administrador (club, torneo o general).']);
+if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+    echo json_encode(['success' => false, 'error' => 'Método no permitido']);
     exit;
 }
 
-if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-    echo json_encode(['success' => false, 'error' => 'Método no permitido']);
+$u = Auth::user();
+if (!$u) {
+    echo json_encode(['success' => false, 'error' => 'Debe iniciar sesión para realizar esta acción.']);
+    exit;
+}
+
+// Autorización por organización: quien puede inscribir es quien pertenece a la organización que gestiona el torneo (los clubes son solo informativos).
+$torneo_id = (int)($_POST['torneo_id'] ?? 0);
+$permiso = Auth::isAdminGeneral()
+    || ($torneo_id > 0 && (
+        Auth::canAccessTournament($torneo_id)
+        || (($org_torneo = Auth::getTournamentOrganizacionId($torneo_id)) && Auth::userIsInOrganizacion($org_torneo))
+    ));
+if (!$permiso) {
+    echo json_encode(['success' => false, 'error' => 'No autorizado para esta sección. Debe pertenecer a la organización que gestiona el torneo.']);
     exit;
 }
 
@@ -36,7 +46,6 @@ if (!$csrf_token || !$session_token || !hash_equals($session_token, $csrf_token)
 
 try {
     $action = $_POST['action'] ?? ''; // 'inscribir', 'desinscribir', 'registrar_inscribir'
-    $torneo_id = (int)($_POST['torneo_id'] ?? 0);
     $id_usuario = (int)($_POST['id_usuario'] ?? 0);
     $id_club = !empty($_POST['id_club']) ? (int)$_POST['id_club'] : null;
     // REGLA CRÍTICA: estatus forzado a (int) 1 para que "Gestionar Inscripciones" reconozca al jugador como activo de inmediato

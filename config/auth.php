@@ -264,6 +264,63 @@ class Auth {
   }
 
   /**
+   * Obtiene el ID de la organización que gestiona el torneo (todos los procesos son por organización).
+   * club_responsable puede ser ID de organización o ID de club; si es club se resuelve organizacion_id.
+   * @param int $tournament_id
+   * @return int|null
+   */
+  public static function getTournamentOrganizacionId(int $tournament_id): ?int {
+    if ($tournament_id <= 0) return null;
+    try {
+      $stmt = DB::pdo()->prepare("SELECT club_responsable FROM tournaments WHERE id = ? LIMIT 1");
+      $stmt->execute([$tournament_id]);
+      $row = $stmt->fetch(PDO::FETCH_ASSOC);
+      if (!$row || empty($row['club_responsable'])) return null;
+      $resp = (int)$row['club_responsable'];
+      if ($resp <= 0) return null;
+      // ¿Es una organización? (existe en organizaciones)
+      $stmt2 = DB::pdo()->prepare("SELECT id FROM organizaciones WHERE id = ? AND estatus = 1 LIMIT 1");
+      $stmt2->execute([$resp]);
+      if ($stmt2->fetch()) return $resp;
+      // Es un club: obtener organizacion_id del club
+      $stmt3 = DB::pdo()->prepare("SELECT organizacion_id FROM clubes WHERE id = ? LIMIT 1");
+      $stmt3->execute([$resp]);
+      $org = $stmt3->fetchColumn();
+      return $org !== false && $org !== null ? (int)$org : null;
+    } catch (Exception $e) {
+      return null;
+    }
+  }
+
+  /**
+   * Indica si el usuario actual pertenece a la organización (los procesos se administran por organización).
+   * True si: es admin de esa org, o su club pertenece a esa org, o es admin_club de esa org.
+   * @param int $org_id
+   * @return bool
+   */
+  public static function userIsInOrganizacion(int $org_id): bool {
+    $u = self::user();
+    if (!$u || $org_id <= 0) return false;
+    if (self::isAdminGeneral()) return true;
+    if (self::getUserOrganizacionId() === $org_id) return true;
+    // Usuario es responsable de la organización (admin_user_id) aunque no tenga rol admin_club
+    try {
+      $stmt = DB::pdo()->prepare("SELECT 1 FROM organizaciones WHERE id = ? AND admin_user_id = ? AND estatus = 1 LIMIT 1");
+      $stmt->execute([$org_id, self::id()]);
+      if ($stmt->fetch()) return true;
+    } catch (Exception $e) { /* seguir con club */ }
+    $club_id = isset($u['club_id']) ? (int)$u['club_id'] : 0;
+    if ($club_id <= 0) return false;
+    try {
+      $stmt = DB::pdo()->prepare("SELECT 1 FROM clubes WHERE id = ? AND organizacion_id = ? AND estatus = 1 LIMIT 1");
+      $stmt->execute([$club_id, $org_id]);
+      return $stmt->fetch() !== false;
+    } catch (Exception $e) {
+      return false;
+    }
+  }
+
+  /**
    * Verifica si un torneo pertenece al club del admin_torneo o admin_club
    * Para admin_club, verifica por organización (no requiere club_id)
    * @param int $tournament_id
