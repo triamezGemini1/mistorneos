@@ -611,7 +611,9 @@ if ($from_url !== '') {
         <?php endif; ?>
         <?php
         $content = __DIR__ . "/../../modules/$current_page.php";
+        $action_get = $_GET['action'] ?? '';
         try {
+          ob_start();
           if (file_exists($content)) {
             include $content;
           } else {
@@ -620,9 +622,27 @@ if ($from_url !== '') {
             }
             include __DIR__ . "/../../modules/404.php";
           }
+          $main_output = ob_get_clean();
+          // Si el módulo hizo exit() (p. ej. redirect que falló por headers ya enviados), el buffer puede estar vacío
+          if ($main_output === '' || $main_output === false) {
+            if ($current_page === 'torneo_gestion' && $action_get === 'inscribir_sitio') {
+              $torneo_id = (int)($_GET['torneo_id'] ?? 0);
+              $panel_url = (function_exists('dashboard_href') && is_callable($dashboard_href))
+                ? $dashboard_href('torneo_gestion', $torneo_id > 0 ? ['action' => 'panel', 'torneo_id' => $torneo_id] : ['action' => 'index'])
+                : 'index.php?page=torneo_gestion&action=index';
+              echo '<div class="alert alert-warning mx-3"><strong>No se pudo cargar el formulario de Inscripción en sitio.</strong> ';
+              echo 'Compruebe que ha seleccionado un torneo y que tiene permisos. ';
+              echo '<a href="' . htmlspecialchars($panel_url) . '" class="alert-link">Volver al panel de torneos</a>.</div>';
+            } else {
+              echo '<div class="alert alert-info mx-3">Contenido no disponible. <a href="' . htmlspecialchars($dashboard_href('home')) . '">Ir a Inicio</a>.</div>';
+            }
+          } else {
+            echo $main_output;
+          }
         } catch (Throwable $e) {
+          if (ob_get_level()) ob_end_clean();
           error_log("layout: Error en página '{$current_page}': " . $e->getMessage() . " en " . $e->getFile() . ":" . $e->getLine());
-          echo '<div class="alert alert-danger mx-3"><strong>Error al cargar Inicio.</strong> ';
+          echo '<div class="alert alert-danger mx-3"><strong>Error al cargar la página.</strong> ';
           echo (defined('APP_DEBUG') && APP_DEBUG) ? htmlspecialchars($e->getMessage()) : 'Revisa el log del servidor o contacta al administrador.';
           echo '</div>';
         }
