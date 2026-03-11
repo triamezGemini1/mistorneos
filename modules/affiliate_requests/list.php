@@ -174,14 +174,22 @@ try {
         }
     }
     $has_user_id = false;
+    $has_organizacion_id = false;
+    $has_tipo_solicitud = false;
     foreach ($cols as $col) {
-        if (strtolower($col['Field'] ?? $col['field'] ?? '') === 'user_id') {
-            $has_user_id = true;
-            break;
-        }
+        $f = strtolower($col['Field'] ?? $col['field'] ?? '');
+        if ($f === 'user_id') $has_user_id = true;
+        if ($f === 'organizacion_id') $has_organizacion_id = true;
+        if ($f === 'tipo_solicitud') $has_tipo_solicitud = true;
     }
     if (!$has_user_id) {
         $pdo->exec("ALTER TABLE solicitudes_afiliacion ADD COLUMN user_id INT NULL AFTER id");
+    }
+    if (!$has_organizacion_id) {
+        $pdo->exec("ALTER TABLE solicitudes_afiliacion ADD COLUMN organizacion_id INT NULL AFTER user_id");
+    }
+    if (!$has_tipo_solicitud) {
+        $pdo->exec("ALTER TABLE solicitudes_afiliacion ADD COLUMN tipo_solicitud VARCHAR(20) NULL DEFAULT 'particular' AFTER organizacion_id");
     }
 } catch (Exception $e) {
     // Ignorar errores de alteración
@@ -263,27 +271,41 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $admin_user_id = (int) $pdo->lastInsertId();
                 }
 
-                // Crear organización asociada al nuevo admin
-                $org_nombre = trim($solicitud['club_nombre'] ?? '');
-                $org_direccion = trim($solicitud['org_direccion'] ?? $solicitud['club_ubicacion'] ?? '') ?: null;
-                $org_responsable = trim($solicitud['org_responsable'] ?? $solicitud['nombre'] ?? '') ?: null;
-                $org_telefono = trim($solicitud['org_telefono'] ?? $solicitud['celular'] ?? '') ?: null;
-                $org_email = trim($solicitud['org_email'] ?? $solicitud['email'] ?? '') ?: null;
-                $org_entidad = $entidad;
+                $organizacion_id_solicitud = isset($solicitud['organizacion_id']) && (int)$solicitud['organizacion_id'] > 0 ? (int)$solicitud['organizacion_id'] : null;
+                $tipo_solicitud = $solicitud['tipo_solicitud'] ?? 'particular';
 
-                $stmt = $pdo->prepare("
-                    INSERT INTO organizaciones (nombre, direccion, responsable, telefono, email, entidad, admin_user_id, estatus, created_at, updated_at)
-                    VALUES (?, ?, ?, ?, ?, ?, ?, 1, NOW(), NOW())
-                ");
-                $stmt->execute([
-                    $org_nombre,
-                    $org_direccion,
-                    $org_responsable,
-                    $org_telefono,
-                    $org_email,
-                    $org_entidad,
-                    $admin_user_id
-                ]);
+                if ($organizacion_id_solicitud && ($tipo_solicitud === 'asociacion' || $tipo_solicitud === 'asociación')) {
+                    // Solicitud de asociación: asignar usuario a la organización existente (solo si aún no tiene responsable)
+                    $stmt = $pdo->prepare("UPDATE organizaciones SET admin_user_id = ?, updated_at = NOW() WHERE id = ? AND estatus = 1 AND (admin_user_id IS NULL OR admin_user_id = 0)");
+                    $stmt->execute([$admin_user_id, $organizacion_id_solicitud]);
+                    if ($stmt->rowCount() === 0) {
+                        throw new Exception('La asociación seleccionada ya está asignada a otro responsable. No se puede aprobar esta solicitud.');
+                    }
+                    $nota = "Asociación existente asignada (org id {$organizacion_id_solicitud}).";
+                } else {
+                    // Solicitud particular: crear nueva organización
+                    $org_nombre = trim($solicitud['club_nombre'] ?? '');
+                    $org_direccion = trim($solicitud['org_direccion'] ?? $solicitud['club_ubicacion'] ?? '') ?: null;
+                    $org_responsable = trim($solicitud['org_responsable'] ?? $solicitud['nombre'] ?? '') ?: null;
+                    $org_telefono = trim($solicitud['org_telefono'] ?? $solicitud['celular'] ?? '') ?: null;
+                    $org_email = trim($solicitud['org_email'] ?? $solicitud['email'] ?? '') ?: null;
+                    $org_entidad = $entidad;
+
+                    $stmt = $pdo->prepare("
+                        INSERT INTO organizaciones (nombre, direccion, responsable, telefono, email, entidad, admin_user_id, estatus, created_at, updated_at)
+                        VALUES (?, ?, ?, ?, ?, ?, ?, 1, NOW(), NOW())
+                    ");
+                    $stmt->execute([
+                        $org_nombre,
+                        $org_direccion,
+                        $org_responsable,
+                        $org_telefono,
+                        $org_email,
+                        $org_entidad,
+                        $admin_user_id
+                    ]);
+                    $nota = "Organización: " . ($solicitud['club_nombre'] ?? 'N/A');
+                }
 
                 // Actualizar estado de la solicitud
                 $stmt = $pdo->prepare("
@@ -291,7 +313,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     SET estatus = 'aprobada', notas_admin = ?, revisado_at = NOW(), revisado_por = ?
                     WHERE id = ?
                 ");
-                $nota = "Organización: " . ($solicitud['club_nombre'] ?? 'N/A');
                 $stmt->execute([$nota, Auth::user()['id'], $request_id]);
                 
                 $pdo->commit();
@@ -304,9 +325,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     true
                 );
                 
-                $message = !empty($solicitud['user_id'])
-                    ? "Solicitud aprobada. Usuario '{$solicitud['username']}' asignado como administrador de la organización."
-                    : "Solicitud aprobada. Usuario '{$solicitud['username']}' creado como administrador de organización.";
+                if ($organizacion_id_solicitud && ($tipo_solicitud === 'asociacion' || $tipo_solicitud === 'asociación')) {
+                    $message = "Solicitud aprobada. Usuario '{$solicitud['username']}' asignado como responsable de la asociación.";
+                } else {
+                    $message = !empty($solicitud['user_id'])
+                        ? "Solicitud aprobada. Usuario '{$solicitud['username']}' asignado como administrador de la organización."
+                        : "Solicitud aprobada. Usuario '{$solicitud['username']}' creado como administrador de organización.";
+                }
                 if ($email_enviado) {
                     $message .= " Se envió notificación por email.";
                 } elseif (!empty($solicitud['email'])) {
@@ -602,6 +627,13 @@ $status_badges = [
                                         <small class="text-muted"><?= htmlspecialchars($sol['nacionalidad'] . '-' . $sol['cedula']) ?></small>
                                         <?php if (!empty($sol['user_id'])): ?>
                                             <br><span class="badge bg-info mt-1">Usuario existente – registro de organización</span>
+                                        <?php endif; ?>
+                                        <?php
+                                        $tipo_sol = $sol['tipo_solicitud'] ?? 'particular';
+                                        if ($tipo_sol === 'asociacion' || $tipo_sol === 'asociación'): ?>
+                                            <br><span class="badge bg-primary mt-1">Asociación</span>
+                                        <?php else: ?>
+                                            <br><span class="badge bg-secondary mt-1">Particular</span>
                                         <?php endif; ?>
                                     </td>
                                     <td>

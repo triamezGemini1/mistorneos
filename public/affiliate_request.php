@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 require_once __DIR__ . '/../config/bootstrap.php';
 require_once __DIR__ . '/../config/db_config.php';
 require_once __DIR__ . '/../config/csrf.php';
@@ -125,24 +125,43 @@ try {
         }
     }
     $has_user_id = false;
+    $has_organizacion_id = false;
+    $has_tipo_solicitud = false;
     foreach ($cols as $col) {
-        if (strtolower($col['Field'] ?? $col['field'] ?? '') === 'user_id') {
-            $has_user_id = true;
-            break;
-        }
+        $f = strtolower($col['Field'] ?? $col['field'] ?? '');
+        if ($f === 'user_id') $has_user_id = true;
+        if ($f === 'organizacion_id') $has_organizacion_id = true;
+        if ($f === 'tipo_solicitud') $has_tipo_solicitud = true;
     }
     if (!$has_user_id) {
         $pdo->exec("ALTER TABLE solicitudes_afiliacion ADD COLUMN user_id INT NULL AFTER id");
+    }
+    if (!$has_organizacion_id) {
+        $pdo->exec("ALTER TABLE solicitudes_afiliacion ADD COLUMN organizacion_id INT NULL AFTER user_id");
+    }
+    if (!$has_tipo_solicitud) {
+        $pdo->exec("ALTER TABLE solicitudes_afiliacion ADD COLUMN tipo_solicitud VARCHAR(20) NULL DEFAULT 'particular' AFTER organizacion_id");
     }
 } catch (Exception $e) {
     // Ignorar errores de alteración
 }
 
+// Organizaciones sin asignar (para formulario de asociación): estatus=1 y sin admin_user_id
+$organizaciones_sin_asignar = [];
+try {
+    $stmt = $pdo->query("SELECT id, nombre FROM organizaciones WHERE estatus = 1 AND (admin_user_id IS NULL OR admin_user_id = 0) ORDER BY nombre ASC");
+    $organizaciones_sin_asignar = $stmt ? $stmt->fetchAll(PDO::FETCH_ASSOC) : [];
+} catch (Exception $e) {}
+
 $error = '';
 $success = '';
+$tipo_solicitud = isset($_GET['tipo']) && in_array($_GET['tipo'], ['asociacion', 'particular'], true) ? $_GET['tipo'] : null;
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     CSRF::validate();
+    
+    $tipo_post = isset($_POST['tipo_solicitud']) && in_array($_POST['tipo_solicitud'], ['asociacion', 'particular'], true) ? $_POST['tipo_solicitud'] : 'particular';
+    $organizacion_id_post = $tipo_post === 'asociacion' ? (int)($_POST['organizacion_id'] ?? 0) : null;
     
     // Nacionalidad solo puede venir de la consulta por cédula (BD externa); no hay select, es obligatorio que venga cargada
     $nacionalidad = strtoupper(trim((string)($_POST['nacionalidad'] ?? '')));
@@ -183,11 +202,31 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     // Validaciones: nacionalidad debe venir de la consulta por cédula (campo oculto rellenado por la API)
     if ($nacionalidad === '') {
         $error = 'Debe buscar su cédula para cargar sus datos. La nacionalidad se obtiene de la consulta al sistema.';
-    } elseif (empty($cedula) || empty($nombre) || empty($club_nombre)) {
+    } elseif (empty($cedula) || empty($nombre)) {
         $error = 'Todos los campos marcados con * son requeridos';
+    } elseif ($tipo_post === 'asociacion') {
+        $org = null;
+        if ($organizacion_id_post <= 0) {
+            $error = 'Debe seleccionar una asociación';
+        } else {
+            $stmt = $pdo->prepare("SELECT id, nombre, admin_user_id, entidad FROM organizaciones WHERE id = ? AND estatus = 1");
+            $stmt->execute([$organizacion_id_post]);
+            $org = $stmt->fetch(PDO::FETCH_ASSOC);
+            if (!$org) {
+                $error = 'La asociación seleccionada no existe o está inactiva';
+            } elseif (!empty($org['admin_user_id']) && (int)$org['admin_user_id'] !== 0) {
+                $error = 'La asociación seleccionada ya está asignada a otro responsable. Elija otra asociación.';
+            }
+        }
+        if (empty($error) && $org) {
+            if (empty($club_nombre)) $club_nombre = $org['nombre'] ?? '';
+            if ($entidad <= 0) $entidad = (int)($org['entidad'] ?? 0);
+        }
+    } elseif ($tipo_post === 'particular' && empty($club_nombre)) {
+        $error = 'El nombre de la organización es requerido';
     } elseif (!$es_usuario_registrado && (empty($username) || empty($password))) {
         $error = 'Nombre de usuario y contraseña son requeridos para nuevos usuarios';
-    } elseif ($entidad <= 0) {
+    } elseif ($tipo_post === 'particular' && $entidad <= 0) {
         $error = 'Debe seleccionar la entidad';
     } elseif (!empty($rif) && strlen($rif) < 6) {
         $error = 'El RIF no es válido';
@@ -259,16 +298,28 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $user_id_solicitud = (int) $pdo->lastInsertId();
                 }
 
+                // Asociación: verificar de nuevo que la organización siga sin asignar (evitar condición de carrera)
+                if ($tipo_post === 'asociacion' && $organizacion_id_post > 0) {
+                    $stmt = $pdo->prepare("SELECT id FROM organizaciones WHERE id = ? AND estatus = 1 AND (admin_user_id IS NULL OR admin_user_id = 0)");
+                    $stmt->execute([$organizacion_id_post]);
+                    if (!$stmt->fetch()) {
+                        $error = 'La asociación seleccionada ya está asignada a otro responsable. Elija otra asociación.';
+                    }
+                }
+
+                if (empty($error)) {
                 // La columna nacionalidad no acepta NULL ni vacío: asegurar valor siempre
                 $nacionalidad_db = in_array($nacionalidad, ['V', 'E', 'J', 'P'], true) ? $nacionalidad : 'V';
 
                 $stmt = $pdo->prepare("
                     INSERT INTO solicitudes_afiliacion 
-                    (user_id, nacionalidad, cedula, nombre, email, celular, fechnac, username, password_hash, entidad, rif, club_nombre, club_ubicacion, org_direccion, org_responsable, org_telefono, org_email, motivo, estatus, created_at)
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pendiente', NOW())
+                    (user_id, organizacion_id, tipo_solicitud, nacionalidad, cedula, nombre, email, celular, fechnac, username, password_hash, entidad, rif, club_nombre, club_ubicacion, org_direccion, org_responsable, org_telefono, org_email, motivo, estatus, created_at)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pendiente', NOW())
                 ");
                 $stmt->execute([
                     $user_id_solicitud ?: null,
+                    $tipo_post === 'asociacion' && $organizacion_id_post > 0 ? $organizacion_id_post : null,
+                    $tipo_post,
                     $nacionalidad_db,
                     $cedula,
                     $nombre,
@@ -288,9 +339,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $motivo ?: null
                 ]);
 
-                $success = $es_usuario_registrado
-                    ? 'Se creó una solicitud pendiente para registrar tu organización. Debe ser autorizada por el administrador general; al aprobarse se te asignará la nueva organización como administrador.'
-                    : '¡Solicitud enviada! Se ha creado tu usuario en estado pendiente. Debe ser autorizada por el administrador general; al aprobarse podrás acceder y se creará tu organización.';
+                if ($tipo_post === 'asociacion') {
+                    $success = 'Solicitud de afiliación como asociación enviada. Será revisada por el administrador; al aprobarse quedarás asignado como responsable de la asociación seleccionada.';
+                } else {
+                    $success = $es_usuario_registrado
+                        ? 'Se creó una solicitud pendiente para registrar tu organización. Debe ser autorizada por el administrador general; al aprobarse se te asignará la nueva organización como administrador.'
+                        : '¡Solicitud enviada! Se ha creado tu usuario en estado pendiente. Debe ser autorizada por el administrador general; al aprobarse podrás acceder y se creará tu organización.';
+                }
                 
                 // Notificar a admin_general sobre la nueva solicitud (campanita web + email)
                 try {
@@ -354,6 +409,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $org_telefono = '';
                 $org_email = '';
                 $motivo = '';
+                }
             } catch (Exception $e) {
                 $error = 'Error al enviar la solicitud: ' . $e->getMessage();
                 error_log("Affiliate request error: " . $e->getMessage());
@@ -445,9 +501,46 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         <p class="mb-0 opacity-75">Únete como organizador de torneos</p>
                     </div>
                     <div class="register-body">
+                        <?php if ($tipo_solicitud === null && !$success): ?>
+                            <!-- Pantalla de elección: Asociación o Particular -->
+                            <div class="info-box">
+                                <i class="fas fa-info-circle text-warning me-2"></i>
+                                <strong>Elija el tipo de solicitud:</strong> Si su asociación ya está registrada en el sistema, selecciónela para quedar asignado como responsable. Si es un particular, use el formulario estándar para crear una nueva organización.
+                            </div>
+                            <div class="row g-3 mb-4">
+                                <div class="col-md-6">
+                                    <a href="?tipo=asociacion" class="text-decoration-none">
+                                        <div class="card h-100 border-primary shadow-sm hover-shadow">
+                                            <div class="card-body text-center py-4">
+                                                <i class="fas fa-sitemap fa-3x text-primary mb-2"></i>
+                                                <h5 class="card-title">Solicitud para Asociación</h5>
+                                                <p class="card-text text-muted small">Mi asociación ya está registrada. Deseo quedar asignado como responsable.</p>
+                                            </div>
+                                        </div>
+                                    </a>
+                                </div>
+                                <div class="col-md-6">
+                                    <a href="?tipo=particular" class="text-decoration-none">
+                                        <div class="card h-100 border-success shadow-sm hover-shadow">
+                                            <div class="card-body text-center py-4">
+                                                <i class="fas fa-user-plus fa-3x text-success mb-2"></i>
+                                                <h5 class="card-title">Solicitud para Particular</h5>
+                                                <p class="card-text text-muted small">Deseo afiliarme como organizador y crear mi organización/club.</p>
+                                            </div>
+                                        </div>
+                                    </a>
+                                </div>
+                            </div>
+                            <div class="text-center">
+                                <a href="landing.php" class="btn btn-outline-secondary"><i class="fas fa-home me-1"></i>Volver al Inicio</a>
+                            </div>
+                        <?php else: ?>
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <a href="affiliate_request.php" class="btn btn-sm btn-outline-secondary"><i class="fas fa-arrow-left me-1"></i>Cambiar tipo de solicitud</a>
+                        </div>
                         <div class="info-box">
                             <i class="fas fa-info-circle text-warning me-2"></i>
-                            <strong>Información:</strong> Al afiliarte podrás crear tus propios clubes, organizar torneos e invitar jugadores. Tu solicitud será revisada por el administrador del sistema.
+                            <strong>Información:</strong> <?= $tipo_solicitud === 'asociacion' ? 'Seleccione su asociación y complete sus datos. Al aprobarse quedará asignado como responsable de esa asociación.' : 'Al afiliarte podrás crear tus propios clubes, organizar torneos e invitar jugadores. Tu solicitud será revisada por el administrador del sistema.' ?>
                         </div>
                         
                         <?php if ($error): ?>
@@ -461,27 +554,48 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                 <i class="fas fa-check-circle me-2"></i><?= htmlspecialchars($success) ?>
                             </div>
                             <div class="text-center">
-                                <a href="landing.php" class="btn btn-outline-secondary">
-                                    <i class="fas fa-home me-1"></i>Volver al Inicio
-                                </a>
+                                <a href="affiliate_request.php" class="btn btn-outline-secondary me-2"><i class="fas fa-file-alt me-1"></i>Nueva solicitud</a>
+                                <a href="landing.php" class="btn btn-outline-secondary"><i class="fas fa-home me-1"></i>Volver al Inicio</a>
                             </div>
                         <?php else: ?>
                             <?php
                             $post = $_POST;
                             $preservar = !empty($error);
+                            $form_tipo = $tipo_solicitud ?? ($preservar ? ($post['tipo_solicitud'] ?? 'particular') : 'particular');
                             ?>
                             <form method="POST" id="affiliateForm" data-preservar="<?= $preservar ? '1' : '0' ?>">
                                 <input type="hidden" name="csrf_token" value="<?= CSRF::token() ?>">
+                                <input type="hidden" name="tipo_solicitud" value="<?= htmlspecialchars($form_tipo) ?>">
                                 <input type="hidden" name="fechnac" id="fechnac" value="<?= htmlspecialchars($preservar ? ($post['fechnac'] ?? '') : '') ?>">
                                 
-                                <!-- Datos de la Organización -->
-                                <h6 class="section-title"><i class="fas fa-building me-2"></i>Datos de la Organización</h6>
+                                <?php if ($form_tipo === 'asociacion'): ?>
+                                <!-- Formulario Asociación: selector de organización -->
+                                <h6 class="section-title"><i class="fas fa-sitemap me-2"></i>Seleccionar Asociación</h6>
+                                <div class="mb-4">
+                                    <label class="form-label">Asociación / Organización *</label>
+                                    <select name="organizacion_id" id="organizacion_id" class="form-select" required>
+                                        <option value="">-- Seleccione la asociación a la que desea quedar asignado --</option>
+                                        <?php foreach ($organizaciones_sin_asignar as $org): ?>
+                                            <option value="<?= (int)$org['id'] ?>" <?= ($preservar && isset($post['organizacion_id']) && (string)$post['organizacion_id'] === (string)$org['id']) ? 'selected' : '' ?>>
+                                                <?= htmlspecialchars($org['nombre']) ?>
+                                            </option>
+                                        <?php endforeach; ?>
+                                    </select>
+                                    <?php if (empty($organizaciones_sin_asignar)): ?>
+                                        <div class="alert alert-warning mt-2 mb-0">No hay asociaciones disponibles sin asignar. Todas tienen ya un responsable. Contacte al administrador.</div>
+                                    <?php endif; ?>
+                                </div>
+                                <p class="text-muted small">La asociación seleccionada debe estar registrada y sin responsable asignado. Al aprobar la solicitud quedará como administrador de esa asociación.</p>
+                                <?php endif; ?>
+                                
+                                <!-- Datos de la Organización (Particular: editable; Asociación: opcional complemento) -->
+                                <h6 class="section-title mt-4"><i class="fas fa-building me-2"></i>Datos de la Organización</h6>
 
                                 <div class="row">
                                     <div class="col-md-6 mb-3">
-                                        <label class="form-label">Nombre de la Organización *</label>
+                                        <label class="form-label">Nombre de la Organización <?= $form_tipo === 'particular' ? '*' : '' ?></label>
                                         <input type="text" name="club_nombre" id="club_nombre" class="form-control" 
-                                               value="<?= htmlspecialchars($preservar ? ($post['club_nombre'] ?? '') : '') ?>" required>
+                                               value="<?= htmlspecialchars($preservar ? ($post['club_nombre'] ?? '') : '') ?>" <?= $form_tipo === 'particular' ? 'required' : 'placeholder="Opcional (se usará el de la asociación)"' ?>>
                                     </div>
                                     <div class="col-md-6 mb-3">
                                         <label class="form-label">RIF</label>
@@ -517,6 +631,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                         <input type="email" name="org_email" id="org_email" class="form-control" 
                                                value="<?= htmlspecialchars($preservar ? ($post['org_email'] ?? '') : '') ?>" placeholder="contacto@organizacion.com">
                                     </div>
+                                    <?php if ($form_tipo === 'particular'): ?>
                                     <div class="col-md-6 mb-3">
                                         <label class="form-label">Entidad *</label>
                                         <select name="entidad" id="entidad" class="form-select" required>
@@ -533,6 +648,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                             <?php endif; ?>
                                         </select>
                                     </div>
+                                    <?php else: ?>
+                                    <input type="hidden" name="entidad" id="entidad" value="<?= (int)($preservar ? ($post['entidad'] ?? 0) : 0) ?>">
+                                    <?php endif; ?>
                                 </div>
 
                                 <div class="row">
@@ -621,16 +739,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             </form>
                         <?php endif; ?>
                         
-                        <?php if (!$success): ?>
+                        <?php if (!$success && $tipo_solicitud !== null): ?>
                         <div class="text-center mt-4">
                             <p class="text-muted mb-2">¿Solo quieres participar en torneos?</p>
                             <a href="user_register.php" class="btn btn-outline-success btn-sm">
                                 <i class="fas fa-user-plus me-1"></i>Registro de Jugador
                             </a>
+                            <a href="affiliate_request.php" class="btn btn-outline-secondary btn-sm ms-2"><i class="fas fa-file-alt me-1"></i>Cambiar tipo</a>
                             <a href="landing.php" class="btn btn-outline-secondary btn-sm ms-2">
                                 <i class="fas fa-home me-1"></i>Volver al Inicio
                             </a>
                         </div>
+                        <?php endif; ?>
                         <?php endif; ?>
                     </div>
                 </div>
