@@ -384,18 +384,28 @@ if ($organizacion) {
 }
 ?>
 
+<?php
+$url_inicio = class_exists('AppHelpers') ? AppHelpers::dashboard('home') : 'index.php?page=home';
+?>
 <div class="container-fluid py-4">
     <div class="row mb-4">
         <div class="col">
-            <h1 class="h3">
-                <i class="fas fa-building text-primary me-2"></i>
-                <?= $is_admin_general && !$organizacion ? 'Gestión de Organizaciones' : 'Mi Organización' ?>
-            </h1>
+            <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+                <h1 class="h3 mb-0">
+                    <i class="fas fa-building text-primary me-2"></i>
+                    <?= $is_admin_general && !$organizacion ? 'Gestión de Organizaciones' : 'Mi Organización' ?>
+                </h1>
+                <?php if (!$is_admin_general && $organizacion): ?>
+                <a href="<?= htmlspecialchars($url_inicio) ?>" class="btn btn-outline-secondary btn-sm">
+                    <i class="fas fa-arrow-left me-1"></i>Regresar al inicio
+                </a>
+                <?php endif; ?>
+            </div>
             <nav aria-label="breadcrumb">
                 <ol class="breadcrumb">
-                    <li class="breadcrumb-item"><a href="index.php?page=home">Inicio</a></li>
+                    <li class="breadcrumb-item"><a href="<?= htmlspecialchars($url_inicio) ?>">Inicio</a></li>
                     <?php if ($is_admin_general && $organizacion): ?>
-                        <li class="breadcrumb-item"><a href="index.php?page=mi_organizacion">Organizaciones</a></li>
+                        <li class="breadcrumb-item"><a href="<?= htmlspecialchars(class_exists('AppHelpers') ? AppHelpers::dashboard('mi_organizacion') : 'index.php?page=mi_organizacion') ?>">Organizaciones</a></li>
                         <li class="breadcrumb-item active"><?= htmlspecialchars($organizacion['nombre']) ?></li>
                     <?php else: ?>
                         <li class="breadcrumb-item active">Mi Organización</li>
