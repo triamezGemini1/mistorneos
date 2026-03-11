@@ -23,6 +23,10 @@ if (empty($torneo) || !is_array($torneo) || !isset($torneo['id'])) {
 require_once __DIR__ . '/../../lib/InscritosHelper.php';
 // Base absoluta public/ para formularios y APIs (evitar que el navegador se pierda en subcarpetas)
 $base_public_abs = (class_exists('AppHelpers') && method_exists('AppHelpers', 'getPublicUrl')) ? rtrim(AppHelpers::getPublicUrl(), '/') : '';
+if ($base_public_abs === '' && !empty($_SERVER['HTTP_HOST'])) {
+    $scheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
+    $base_public_abs = $scheme . '://' . $_SERVER['HTTP_HOST'] . rtrim(dirname($_SERVER['SCRIPT_NAME'] ?? ''), '/');
+}
 ?>
 <link rel="stylesheet" href="<?= htmlspecialchars($base_public_abs ? $base_public_abs . '/assets/css/design-system.css' : 'assets/css/design-system.css') ?>">
 <link rel="stylesheet" href="<?= htmlspecialchars($base_public_abs ? $base_public_abs . '/assets/css/inscripcion.css' : 'assets/css/inscripcion.css') ?>">
@@ -394,8 +398,13 @@ $base_public_abs = (class_exists('AppHelpers') && method_exists('AppHelpers', 'g
         fd.append('estatus', '1');
         fd.append('csrf_token', CSRF_TOKEN);
         if (rowEl) { rowEl.style.opacity = '0.5'; rowEl.style.pointerEvents = 'none'; }
-        fetch(API_URL, { method: 'POST', body: fd })
-            .then(function(r) { return r.json(); })
+        fetch(API_URL, { method: 'POST', body: fd, credentials: 'same-origin' })
+            .then(function(r) {
+                var ct = r.headers.get('Content-Type') || '';
+                if (!r.ok) { return r.text().then(function(t) { throw new Error(t || 'Error ' + r.status); }); }
+                if (ct.indexOf('application/json') !== -1) return r.json();
+                return r.text().then(function(t) { throw new Error(t || 'Respuesta no JSON'); });
+            })
             .then(function(data) {
                 if (rowEl) { rowEl.style.opacity = '1'; rowEl.style.pointerEvents = 'auto'; }
                 if (data.success) {
@@ -410,9 +419,9 @@ $base_public_abs = (class_exists('AppHelpers') && method_exists('AppHelpers', 'g
                     showMessage(data.error || 'Error al inscribir', 'danger');
                 }
             })
-            .catch(function() {
+            .catch(function(err) {
                 if (rowEl) { rowEl.style.opacity = '1'; rowEl.style.pointerEvents = 'auto'; }
-                showMessage('Error de conexión', 'danger');
+                showMessage(err && err.message ? err.message : 'Error de conexión. Compruebe la red o que la sesión siga activa.', 'danger');
             });
     }
     function desinscribirJugador(idUsuario, nombre, cedula, clubId, rowEl) {
@@ -423,8 +432,13 @@ $base_public_abs = (class_exists('AppHelpers') && method_exists('AppHelpers', 'g
         fd.append('id_usuario', idUsuario);
         fd.append('csrf_token', CSRF_TOKEN);
         if (rowEl) { rowEl.style.opacity = '0.5'; rowEl.style.pointerEvents = 'none'; }
-        fetch(API_URL, { method: 'POST', body: fd })
-            .then(function(r) { return r.json(); })
+        fetch(API_URL, { method: 'POST', body: fd, credentials: 'same-origin' })
+            .then(function(r) {
+                if (!r.ok) return r.text().then(function(t) { throw new Error(t || 'Error ' + r.status); });
+                var ct = r.headers.get('Content-Type') || '';
+                if (ct.indexOf('application/json') !== -1) return r.json();
+                return r.text().then(function(t) { throw new Error(t || 'Respuesta no JSON'); });
+            })
             .then(function(data) {
                 if (rowEl) { rowEl.style.opacity = '1'; rowEl.style.pointerEvents = 'auto'; }
                 if (data.success) {
@@ -439,9 +453,9 @@ $base_public_abs = (class_exists('AppHelpers') && method_exists('AppHelpers', 'g
                     showMessage(data.error || 'Error', 'danger');
                 }
             })
-            .catch(function() {
+            .catch(function(err) {
                 if (rowEl) { rowEl.style.opacity = '1'; rowEl.style.pointerEvents = 'auto'; }
-                showMessage('Error de conexión', 'danger');
+                showMessage(err && err.message ? err.message : 'Error de conexión. Compruebe la sesión.', 'danger');
             });
     }
 
@@ -471,8 +485,13 @@ $base_public_abs = (class_exists('AppHelpers') && method_exists('AppHelpers', 'g
                 fd.append('id_club', clubId);
                 fd.append('estatus', '1');
                 fd.append('csrf_token', CSRF_TOKEN);
-                fetch(API_URL, { method: 'POST', body: fd })
-                    .then(function(r) { return r.json(); })
+                fetch(API_URL, { method: 'POST', body: fd, credentials: 'same-origin' })
+                    .then(function(r) {
+                        if (!r.ok) return r.text().then(function(t) { throw new Error(t || 'Error ' + r.status); });
+                        var ct = r.headers.get('Content-Type') || '';
+                        if (ct.indexOf('application/json') !== -1) return r.json();
+                        return r.text().then(function(t) { throw new Error(t || 'Respuesta no JSON'); });
+                    })
                     .then(function(data) {
                         if (data.success) {
                             agregarFilaInscrito(usuarioEncontrado.id, usuarioEncontrado.nombre || usuarioEncontrado.username || 'Usuario', ($('input_cedula') && $('input_cedula').value) || '', clubId);
@@ -483,7 +502,7 @@ $base_public_abs = (class_exists('AppHelpers') && method_exists('AppHelpers', 'g
                             showMessage(data.error || 'Error', 'danger');
                         }
                     })
-                    .catch(function() { showMessage('Error de conexión', 'danger'); });
+                    .catch(function(err) { showMessage(err && err.message ? err.message : 'Error de conexión. Compruebe la sesión.', 'danger'); });
             });
         }
 
@@ -514,8 +533,13 @@ $base_public_abs = (class_exists('AppHelpers') && method_exists('AppHelpers', 'g
                 fd.append('email', ($('form_email') && $('form_email').value) || '');
                 fd.append('id_club', clubId);
                 fd.append('estatus', 1);
-                fetch(API_URL, { method: 'POST', body: fd })
-                    .then(function(r) { return r.json(); })
+                fetch(API_URL, { method: 'POST', body: fd, credentials: 'same-origin' })
+                    .then(function(r) {
+                        if (!r.ok) return r.text().then(function(t) { throw new Error(t || 'Error ' + r.status); });
+                        var ct = r.headers.get('Content-Type') || '';
+                        if (ct.indexOf('application/json') !== -1) return r.json();
+                        return r.text().then(function(t) { throw new Error(t || 'Respuesta no JSON'); });
+                    })
                     .then(function(data) {
                         if (data.success) {
                             var idUser = data.id_usuario || 0;
@@ -527,7 +551,7 @@ $base_public_abs = (class_exists('AppHelpers') && method_exists('AppHelpers', 'g
                             showMessage(data.error || 'Error', 'danger');
                         }
                     })
-                    .catch(function() { showMessage('Error de conexión', 'danger'); });
+                    .catch(function(err) { showMessage(err && err.message ? err.message : 'Error de conexión. Compruebe la sesión.', 'danger'); });
             });
         }
         if ($('btn_cancelar_form_nuevo')) $('btn_cancelar_form_nuevo').addEventListener('click', function() { showFormNuevo(false); msgHide(); });
