@@ -1374,42 +1374,92 @@ foreach ($eventos_calendario as $ev) {
                 }
 
                 if ($club_photos_exists) {
-                    // Obtener el último torneo con fotos
-                    $stmt = $pdo->query("
-                        SELECT 
-                            t.id as torneo_id,
-                            t.nombre as torneo_nombre,
-                            t.fechator,
-                            o.nombre as organizacion_nombre,
-                            o.id as club_id
-                        FROM tournaments t
-                        LEFT JOIN organizaciones o ON t.club_responsable = o.id
-                        WHERE t.estatus = 1 
-                        AND EXISTS (
-                            SELECT 1 FROM club_photos tp WHERE tp.torneo_id = t.id
-                        )
-                        ORDER BY t.fechator DESC, t.created_at DESC
-                        LIMIT 1
-                    ");
-                    $ultimo_torneo_info = $stmt->fetch(PDO::FETCH_ASSOC);
-                    
-                    if ($ultimo_torneo_info) {
-                        // Obtener 4 fotos del último torneo
-                        $stmt = $pdo->prepare("
+                    // Obtener el último torneo con fotos (subconsultas para evitar "Unknown column 'c.nombre'" si el esquema difiere)
+                    try {
+                        $stmt = $pdo->query("
                             SELECT 
-                                tp.*,
+                                t.id as torneo_id,
                                 t.nombre as torneo_nombre,
                                 t.fechator,
-                                o.nombre as organizacion_nombre
-                            FROM club_photos tp
-                            JOIN tournaments t ON tp.torneo_id = t.id
-                            LEFT JOIN organizaciones o ON t.club_responsable = o.id
-                            WHERE tp.torneo_id = ?
-                            ORDER BY tp.orden ASC, tp.fecha_subida DESC
-                            LIMIT 4
+                                (SELECT nombre FROM organizaciones WHERE id = t.club_responsable LIMIT 1) as organizacion_nombre,
+                                t.club_responsable as club_id
+                            FROM tournaments t
+                            WHERE t.estatus = 1 
+                            AND EXISTS (
+                                SELECT 1 FROM club_photos tp WHERE tp.torneo_id = t.id
+                            )
+                            ORDER BY t.fechator DESC, t.created_at DESC
+                            LIMIT 1
                         ");
-                        $stmt->execute([$ultimo_torneo_info['torneo_id']]);
-                        $fotos_ultimo_torneo = $stmt->fetchAll(PDO::FETCH_ASSOC);
+                        $ultimo_torneo_info = $stmt->fetch(PDO::FETCH_ASSOC);
+                    } catch (Exception $e) {
+                        $ultimo_torneo_info = null;
+                        try {
+                            $stmt = $pdo->query("
+                                SELECT 
+                                    t.id as torneo_id,
+                                    t.nombre as torneo_nombre,
+                                    t.fechator,
+                                    NULL as organizacion_nombre,
+                                    t.club_responsable as club_id
+                                FROM tournaments t
+                                WHERE t.estatus = 1 
+                                AND EXISTS (SELECT 1 FROM club_photos tp WHERE tp.torneo_id = t.id)
+                                ORDER BY t.fechator DESC, t.created_at DESC
+                                LIMIT 1
+                            ");
+                            $ultimo_torneo_info = $stmt->fetch(PDO::FETCH_ASSOC);
+                        } catch (Exception $e2) {}
+                    }
+                    if ($ultimo_torneo_info && $ultimo_torneo_info['organizacion_nombre'] === null) {
+                        $org_id = (int)($ultimo_torneo_info['club_id'] ?? 0);
+                        if ($org_id > 0) {
+                            try {
+                                $stmt_org = $pdo->prepare("SELECT nombre FROM clubes WHERE id = ? LIMIT 1");
+                                $stmt_org->execute([$org_id]);
+                                $row = $stmt_org->fetch(PDO::FETCH_ASSOC);
+                                if ($row && isset($row['nombre'])) {
+                                    $ultimo_torneo_info['organizacion_nombre'] = $row['nombre'];
+                                } else {
+                                    $stmt_org = $pdo->prepare("SELECT name FROM clubes WHERE id = ? LIMIT 1");
+                                    $stmt_org->execute([$org_id]);
+                                    $row = $stmt_org->fetch(PDO::FETCH_ASSOC);
+                                    if ($row && isset($row['name'])) {
+                                        $ultimo_torneo_info['organizacion_nombre'] = $row['name'];
+                                    }
+                                }
+                            } catch (Exception $e) {}
+                        }
+                    }
+
+                    if ($ultimo_torneo_info) {
+                        try {
+                            $stmt = $pdo->prepare("
+                                SELECT 
+                                    tp.*,
+                                    t.nombre as torneo_nombre,
+                                    t.fechator,
+                                    (SELECT nombre FROM organizaciones WHERE id = t.club_responsable LIMIT 1) as organizacion_nombre
+                                FROM club_photos tp
+                                JOIN tournaments t ON tp.torneo_id = t.id
+                                WHERE tp.torneo_id = ?
+                                ORDER BY tp.orden ASC, tp.fecha_subida DESC
+                                LIMIT 4
+                            ");
+                            $stmt->execute([$ultimo_torneo_info['torneo_id']]);
+                            $fotos_ultimo_torneo = $stmt->fetchAll(PDO::FETCH_ASSOC);
+                        } catch (Exception $e) {
+                            $stmt = $pdo->prepare("
+                                SELECT tp.*, t.nombre as torneo_nombre, t.fechator, NULL as organizacion_nombre
+                                FROM club_photos tp
+                                JOIN tournaments t ON tp.torneo_id = t.id
+                                WHERE tp.torneo_id = ?
+                                ORDER BY tp.orden ASC, tp.fecha_subida DESC
+                                LIMIT 4
+                            ");
+                            $stmt->execute([$ultimo_torneo_info['torneo_id']]);
+                            $fotos_ultimo_torneo = $stmt->fetchAll(PDO::FETCH_ASSOC);
+                        }
                     }
                 }
             } catch (Exception $e) {
