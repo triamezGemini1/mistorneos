@@ -10,7 +10,14 @@
 if (!isset($user) || !is_array($user)) {
     return;
 }
-$base = class_exists('AppHelpers') ? rtrim(AppHelpers::getPublicUrl(), '/') : '';
+// Base absoluta para que el menú funcione en cualquier subruta (ej. /mistorneos_beta/public/)
+$base = '';
+if (class_exists('AppHelpers')) {
+    $base = rtrim(AppHelpers::getPublicUrl(), '/');
+    if ($base === '' && method_exists('AppHelpers', 'getRequestEntryUrl')) {
+        $base = rtrim(AppHelpers::getRequestEntryUrl(), '/');
+    }
+}
 $url_profile = $base ? $base . '/profile.php' : 'profile.php';
 $url_change_password = class_exists('AppHelpers') ? AppHelpers::dashboard('users/change_password') : ($base ? $base . '/index.php?page=users/change_password' : 'index.php?page=users/change_password');
 $url_logout = $base ? $base . '/logout.php' : 'logout.php';

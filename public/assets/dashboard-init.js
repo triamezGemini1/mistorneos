@@ -13,12 +13,13 @@
         bootstrap.Dropdown.getOrCreateInstance(userDropdown);
       } catch (e) { /* ignorar */ }
     }
-    // Forzar navegación al hacer clic en "Cerrar sesión" (evita que falle en páginas como Inscripción en sitio)
+    // Forzar navegación en cualquier enlace del menú usuario (evita fallos en subrutas tipo /mistorneos_beta/public/ e Inscripción en sitio)
     if (userDropdown) {
       userDropdown.addEventListener('click', function (e) {
-        var link = e.target && e.target.closest ? e.target.closest('a[href*="logout.php"]') : null;
-        if (link && link.href) {
+        var link = e.target && e.target.closest ? e.target.closest('a[href]') : null;
+        if (link && link.href && link.getAttribute('href') !== '#') {
           e.preventDefault();
+          e.stopPropagation();
           window.location.href = link.href;
         }
       });

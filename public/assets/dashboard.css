@@ -611,6 +611,15 @@ a:hover {
   z-index: 1060;
 }
 
+/* Menú usuario: asegurar que siempre sea clickeable en subrutas y páginas con mucho contenido (ej. inscripción en sitio) */
+#user-menu-dropdown {
+  position: relative;
+  z-index: 1050;
+}
+#user-menu-dropdown .dropdown-menu {
+  z-index: 1100;
+}
+
 .dropdown-item {
   padding: 0.625rem 1rem;
   border-radius: var(--radius-md);
