@@ -845,7 +845,8 @@ document.getElementById('formEquipo').addEventListener('submit', async function(
     try {
         const response = await fetch('<?php echo $api_base_path; ?>guardar_equipo.php', {
             method: 'POST',
-            body: formData
+            body: formData,
+            credentials: 'same-origin'
         });
         
         console.log('Respuesta recibida, status:', response.status);
