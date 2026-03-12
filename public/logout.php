@@ -10,7 +10,8 @@ require_once __DIR__ . '/../config/auth.php';
 
 Auth::logout();
 
-$login_url = rtrim(AppHelpers::getRequestEntryUrl(), '/') . '/login.php';
+// Usar URL absoluta para que la redirección funcione igual desde cualquier página (usuarios, organizaciones, etc.)
+$login_url = rtrim(AppHelpers::getPublicUrl(), '/') . '/login.php';
 if (!headers_sent()) {
     header('Location: ' . $login_url, true, 302);
 }

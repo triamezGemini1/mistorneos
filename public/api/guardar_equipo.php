@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 /**
  * API: Guardar/Crear equipo con sus jugadores
  */
@@ -91,16 +91,20 @@ error_log("REQUEST_METHOD: " . ($_SERVER['REQUEST_METHOD'] ?? 'N/A'));
 error_log("Content-Type recibido: " . ($_SERVER['CONTENT_TYPE'] ?? 'N/A'));
 
 try {
-    // Validar CSRF si está disponible
+    // Validar CSRF sin usar die() para poder responder siempre en JSON
     if (class_exists('CSRF')) {
-        try {
-            CSRF::validate();
-            error_log("CSRF validado correctamente");
-        } catch (Exception $csrfError) {
-            error_log("CSRF falló pero continúa (desarrollo): " . $csrfError->getMessage());
-            // Si falla CSRF, continuar de todas formas (para desarrollo)
-            // En producción deberías validar esto
+        $tokenRecibido = $_POST['csrf_token'] ?? '';
+        $tokenSesion = $_SESSION['csrf_token'] ?? '';
+        if (!$tokenRecibido || !$tokenSesion || !hash_equals($tokenSesion, $tokenRecibido)) {
+            error_log("CSRF inválido o sesión sin token - token_recibido=" . (strlen($tokenRecibido) ? 'presente' : 'vacio') . ", token_sesion=" . (strlen($tokenSesion) ? 'presente' : 'vacio'));
+            echo json_encode([
+                'success' => false,
+                'message' => 'Sesión expirada o token de seguridad inválido. Recarga la página e intenta de nuevo.',
+                'error_type' => 'CSRF_INVALID'
+            ], JSON_UNESCAPED_UNICODE);
+            exit;
         }
+        error_log("CSRF validado correctamente");
     }
     
     $torneo_id = (int)($_POST['torneo_id'] ?? 0);

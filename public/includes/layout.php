@@ -584,7 +584,7 @@ if ($from_url !== '') {
                 <li><a class="dropdown-item" href="<?= htmlspecialchars($menu_url('profile.php')) ?>"><i class="fas fa-id-card me-2"></i>Mi Perfil</a></li>
                 <li><a class="dropdown-item" href="<?= htmlspecialchars($menu_url('modules/users/change_password.php')) ?>"><i class="fas fa-key me-2"></i>Cambiar Contraseña</a></li>
                 <li><hr class="dropdown-divider"></li>
-                <li><a class="dropdown-item text-danger" href="<?= htmlspecialchars($menu_url('logout.php')) ?>"><i class="fas fa-sign-out-alt me-2"></i>Cerrar sesión</a></li>
+                <li><a class="dropdown-item text-danger" href="<?= htmlspecialchars(class_exists('AppHelpers') ? rtrim(AppHelpers::getPublicUrl(), '/') . '/logout.php' : $menu_url('logout.php')) ?>" target="_self"><i class="fas fa-sign-out-alt me-2"></i>Cerrar sesión</a></li>
               </ul>
             </div>
           </div>
