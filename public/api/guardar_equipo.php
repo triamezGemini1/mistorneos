@@ -6,6 +6,9 @@
 // Iniciar output buffering inmediatamente para capturar cualquier output
 ob_start();
 
+// Iniciar sesión igual que index.php para que la cookie se reconozca y $_SESSION tenga el CSRF token
+require_once __DIR__ . '/../../config/session_start_early.php';
+
 // Función helper para enviar respuesta JSON de error
 function sendJsonError($message, $errorType = 'ERROR', $details = []) {
     ob_clean();

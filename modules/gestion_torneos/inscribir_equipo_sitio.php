@@ -256,7 +256,7 @@ $api_base_path = (function_exists('AppHelpers') ? AppHelpers::getPublicPath() : 
                             <div class="d-flex justify-content-between align-items-center mb-3">
                                 <label class="form-label fw-bold mb-0">Jugadores del Equipo (<?php echo $jugadores_por_equipo; ?> requeridos)</label>
                                 <div class="d-flex gap-2">
-                                    <button type="submit" class="btn btn-success" id="btnGuardarEquipo" <?= $torneo_iniciado ? 'disabled' : 'disabled' ?>>
+                                    <button type="submit" class="btn btn-success" id="btnGuardarEquipo" <?= $torneo_iniciado ? 'disabled' : '' ?>>
                                         <i class="fas fa-save me-2"></i>Guardar Equipo
                                     </button>
                                     <button type="button" class="btn btn-secondary" onclick="limpiarFormulario()" <?= $torneo_iniciado ? 'disabled' : '' ?>>
