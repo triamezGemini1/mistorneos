@@ -13,6 +13,16 @@
         bootstrap.Dropdown.getOrCreateInstance(userDropdown);
       } catch (e) { /* ignorar */ }
     }
+    // Forzar navegación al hacer clic en "Cerrar sesión" (evita que falle en páginas como Inscripción en sitio)
+    if (userDropdown) {
+      userDropdown.addEventListener('click', function (e) {
+        var link = e.target && e.target.closest ? e.target.closest('a[href*="logout.php"]') : null;
+        if (link && link.href) {
+          e.preventDefault();
+          window.location.href = link.href;
+        }
+      });
+    }
 
     // Mover alertas del contenido a la zona superpuesta (no desplazan el layout)
     var flashContainer = document.getElementById('app-flash-messages');

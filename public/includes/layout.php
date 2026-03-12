@@ -570,23 +570,7 @@ if ($from_url !== '') {
             </a>
             <?php endif; ?>
             
-            <!-- Usuario: data-bs-boundary="viewport" evita que el menú se recorte por overflow en ancestros -->
-            <div class="dropdown" id="user-menu-dropdown" data-bs-boundary="viewport">
-              <button class="btn btn-outline-primary dropdown-toggle" type="button" id="userMenuButton" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">
-                <i class="fas fa-user me-2"></i>
-                <?= htmlspecialchars($user['username']) ?>
-              </button>
-              <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userMenuButton">
-                <li><span class="dropdown-item-text text-muted">Rol: <?= htmlspecialchars($user['role']) ?></span></li>
-                <?php if ($user['role'] === 'admin_club'): ?>
-                <li><a class="dropdown-item" href="<?= htmlspecialchars($dashboard_href('mi_organizacion')) ?>"><i class="fas fa-building me-2"></i>Perfil de la organización</a></li>
-                <?php endif; ?>
-                <li><a class="dropdown-item" href="<?= htmlspecialchars($menu_url('profile.php')) ?>"><i class="fas fa-id-card me-2"></i>Mi Perfil</a></li>
-                <li><a class="dropdown-item" href="<?= htmlspecialchars($menu_url('modules/users/change_password.php')) ?>"><i class="fas fa-key me-2"></i>Cambiar Contraseña</a></li>
-                <li><hr class="dropdown-divider"></li>
-                <li><a class="dropdown-item text-danger" href="<?= htmlspecialchars(class_exists('AppHelpers') ? rtrim(AppHelpers::getPublicUrl(), '/') . '/logout.php' : $menu_url('logout.php')) ?>" target="_self"><i class="fas fa-sign-out-alt me-2"></i>Cerrar sesión</a></li>
-              </ul>
-            </div>
+            <?php include __DIR__ . '/user_menu_dropdown.php'; ?>
           </div>
         </div>
       </nav>
