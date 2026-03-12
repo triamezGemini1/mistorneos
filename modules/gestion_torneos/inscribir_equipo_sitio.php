@@ -900,11 +900,19 @@ document.getElementById('formEquipo').addEventListener('submit', async function(
         } else {
             console.error('=== ERROR: ' + (data.message || 'Error al guardar el equipo') + ' ===');
             console.error('Detalles del error:', data);
+            var isCsrf = (data.error_type === 'CSRF_INVALID');
             Swal.fire({
                 icon: 'error',
-                title: 'Error al guardar',
+                title: isCsrf ? 'Token de seguridad expirado' : 'Error al guardar',
                 text: data.message || 'Error al guardar el equipo',
-                confirmButtonColor: '#3b82f6'
+                confirmButtonColor: '#3b82f6',
+                showCancelButton: isCsrf,
+                cancelButtonText: 'Cerrar',
+                confirmButtonText: isCsrf ? 'Recargar página' : 'Entendido'
+            }).then(function(result) {
+                if (isCsrf && result.isConfirmed) {
+                    location.reload();
+                }
             });
         }
     } catch (error) {

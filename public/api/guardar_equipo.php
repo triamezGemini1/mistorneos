@@ -86,20 +86,38 @@ if (!headers_sent()) {
 
 // Ahora empezar a registrar logs
 error_log("=== INICIO GUARDAR EQUIPO ===");
-error_log("POST recibido: " . json_encode($_POST, JSON_UNESCAPED_UNICODE));
 error_log("REQUEST_METHOD: " . ($_SERVER['REQUEST_METHOD'] ?? 'N/A'));
-error_log("Content-Type recibido: " . ($_SERVER['CONTENT_TYPE'] ?? 'N/A'));
+$contentType = $_SERVER['CONTENT_TYPE'] ?? '';
+error_log("Content-Type recibido: " . $contentType);
+
+// Normalizar entrada: soportar application/json y multipart/form-data (FormData sigue llenando $_POST)
+$input = $_POST;
+if (strpos($contentType, 'application/json') !== false) {
+    $raw = file_get_contents('php://input');
+    if ($raw !== false && $raw !== '') {
+        $decoded = json_decode($raw, true);
+        if (is_array($decoded)) {
+            $input = $decoded;
+        }
+        // Si el JSON es inválido o no es objeto, se mantiene $_POST
+    }
+}
+error_log("POST/input recibido: " . json_encode($input, JSON_UNESCAPED_UNICODE));
 
 try {
-    // Validar CSRF sin usar die() para poder responder siempre en JSON
+    // Validar CSRF sin usar die(); responder siempre en JSON
     if (class_exists('CSRF')) {
-        $tokenRecibido = $_POST['csrf_token'] ?? '';
+        $tokenRecibido = $input['csrf_token'] ?? '';
         $tokenSesion = $_SESSION['csrf_token'] ?? '';
         if (!$tokenRecibido || !$tokenSesion || !hash_equals($tokenSesion, $tokenRecibido)) {
             error_log("CSRF inválido o sesión sin token - token_recibido=" . (strlen($tokenRecibido) ? 'presente' : 'vacio') . ", token_sesion=" . (strlen($tokenSesion) ? 'presente' : 'vacio'));
+            // Si la sesión no tenía token, generar uno para la próxima carga de la página
+            if (empty($tokenSesion)) {
+                CSRF::token();
+            }
             echo json_encode([
                 'success' => false,
-                'message' => 'Sesión expirada o token de seguridad inválido. Recarga la página e intenta de nuevo.',
+                'message' => 'El token de seguridad ha expirado o no coincide. Recarga la página (F5) y vuelve a intentar guardar el equipo.',
                 'error_type' => 'CSRF_INVALID'
             ], JSON_UNESCAPED_UNICODE);
             exit;
@@ -107,11 +125,18 @@ try {
         error_log("CSRF validado correctamente");
     }
     
-    $torneo_id = (int)($_POST['torneo_id'] ?? 0);
-    $equipo_id = (int)($_POST['equipo_id'] ?? 0);
-    $nombre_equipo = trim($_POST['nombre_equipo'] ?? '');
-    $club_id = (int)($_POST['club_id'] ?? 0);
-    $jugadores = $_POST['jugadores'] ?? [];
+    $torneo_id = (int)($input['torneo_id'] ?? 0);
+    $equipo_id = (int)($input['equipo_id'] ?? 0);  // 0 = inscripción nueva (INSERT)
+    $nombre_equipo = trim($input['nombre_equipo'] ?? '');
+    $club_id = (int)($input['club_id'] ?? 0);
+    $jugadores = $input['jugadores'] ?? [];
+    // Si jugadores viene como JSON string (ej. en algunos entornos con multipart), decodificar
+    if (is_string($jugadores)) {
+        $jugadores = json_decode($jugadores, true);
+        if (!is_array($jugadores)) {
+            $jugadores = [];
+        }
+    }
     
     error_log("PASO 1: Datos extraídos - torneo_id=$torneo_id, equipo_id=$equipo_id, nombre_equipo=$nombre_equipo, club_id=$club_id");
     error_log("PASO 1: Jugadores recibidos: " . count($jugadores) . " jugadores");
