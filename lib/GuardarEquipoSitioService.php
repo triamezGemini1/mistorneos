@@ -52,9 +52,14 @@ final class GuardarEquipoSitioService
                     throw new RuntimeException($result['message'] ?? 'Error al crear equipo');
                 }
                 $equipo_id = (int)$result['id'];
-                $codigo_equipo = $result['codigo'] ?? null;
-                if (empty($codigo_equipo)) {
-                    throw new RuntimeException('No se pudo generar el código del equipo');
+                $codigo_equipo = isset($result['codigo']) ? trim((string)$result['codigo']) : '';
+                if ($equipo_id > 0 && $codigo_equipo === '') {
+                    $stmt = $pdo->prepare('SELECT codigo_equipo FROM equipos WHERE id = ? AND id_torneo = ? LIMIT 1');
+                    $stmt->execute([$equipo_id, $torneo_id]);
+                    $codigo_equipo = trim((string)($stmt->fetchColumn() ?: ''));
+                }
+                if ($codigo_equipo === '') {
+                    throw new RuntimeException('No se pudo generar el código del equipo (codigo_equipo obligatorio en BD)');
                 }
             }
 

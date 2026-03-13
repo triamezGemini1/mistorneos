@@ -89,16 +89,23 @@ class EquiposHelper {
                     return ['success' => false, 'id' => null, 'codigo' => null, 'message' => $result['mensaje']];
                 }
             } catch (PDOException $e) {
-                // Inserción directa si no existe el SP
+                // Inserción directa si no existe el SP (codigo_equipo NOT NULL en BD)
                 error_log("EquiposHelper::crearEquipo - SP no disponible, usando inserción directa: " . $e->getMessage());
                 try {
-                    $stmt = $pdo->prepare("
-                        INSERT INTO equipos (id_torneo, id_club, nombre_equipo, creado_por)
-                        VALUES (?, ?, UPPER(?), ?)
-                    ");
-                    $stmt->execute([$torneoId, $clubId, trim($nombreEquipo), $creadoPor]);
+                    $stmt = $pdo->prepare('SELECT COALESCE(MAX(consecutivo_club), 0) + 1 FROM equipos WHERE id_torneo = ? AND id_club = ?');
+                    $stmt->execute([$torneoId, $clubId]);
+                    $consecutivoIns = (int)$stmt->fetchColumn();
+                    if ($consecutivoIns < 1) {
+                        $consecutivoIns = 1;
+                    }
+                    $codigoIns = str_pad((string)$clubId, 3, '0', STR_PAD_LEFT) . '-' . str_pad((string)$consecutivoIns, 3, '0', STR_PAD_LEFT);
+                    $stmt = $pdo->prepare('
+                        INSERT INTO equipos (id_torneo, id_club, nombre_equipo, creado_por, consecutivo_club, codigo_equipo)
+                        VALUES (?, ?, UPPER(?), ?, ?, ?)
+                    ');
+                    $stmt->execute([$torneoId, $clubId, trim($nombreEquipo), $creadoPor, $consecutivoIns, $codigoIns]);
                     $equipoId = (int)$pdo->lastInsertId();
-                    error_log("EquiposHelper::crearEquipo - Equipo insertado directamente, id=$equipoId");
+                    error_log("EquiposHelper::crearEquipo - Equipo insertado directamente, id=$equipoId codigo=$codigoIns");
                 } catch (PDOException $e2) {
                     error_log("EquiposHelper::crearEquipo - ERROR en inserción directa: " . $e2->getMessage());
                     error_log("EquiposHelper::crearEquipo - SQL Error Info: " . json_encode($stmt->errorInfo()));
