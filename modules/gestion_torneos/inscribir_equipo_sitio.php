@@ -55,18 +55,48 @@ $api_guardar_equipo = $base_url . ($use_standalone ? '?' : '&') . 'action=guarda
     body {
         background-color: #f8f9fa;
     }
-    /* Inscripción en sitio: ocupa como máximo 90% del alto del dispositivo */
+    /* Una sola pantalla: sin scroll en la página (solo columnas internas si hiciera falta) */
     .page-inscripcion-sitio {
-        max-height: 90vh;
-        height: 90vh;
-        overflow-y: auto;
-        overflow-x: hidden;
+        height: 100vh;
+        max-height: 100vh;
+        overflow: hidden;
         box-sizing: border-box;
-        padding-top: 0.5rem !important;
-        padding-bottom: 0.5rem !important;
+        padding: 0.35rem 0.5rem !important;
+        display: flex;
+        flex-direction: column;
     }
-    .page-inscripcion-sitio .breadcrumb { margin-bottom: 0.5rem !important; }
-    .page-inscripcion-sitio .card.mb-4:first-of-type { margin-bottom: 0.5rem !important; }
+    .page-inscripcion-sitio .breadcrumb { margin-bottom: 0.25rem !important; padding: 0.25rem 0; font-size: 0.8rem; }
+    .page-inscripcion-sitio .card.mb-4:first-of-type { margin-bottom: 0.35rem !important; }
+    .page-inscripcion-sitio .card.mb-4:first-of-type .card-body { padding: 0.5rem 0.75rem !important; }
+    .page-inscripcion-sitio .card.mb-4:first-of-type h2 { font-size: 1rem !important; margin-bottom: 0 !important; }
+    .page-inscripcion-sitio .row.g-2.g-lg-3 {
+        flex: 1 1 0;
+        min-height: 0;
+        margin-left: 0;
+        margin-right: 0;
+        align-items: stretch;
+    }
+    .page-inscripcion-sitio .row.g-2.g-lg-3 > [class^="col-"] {
+        display: flex;
+        flex-direction: column;
+        min-height: 0;
+        max-height: 100%;
+    }
+    .page-inscripcion-sitio .col-disponibles > .card,
+    .page-inscripcion-sitio .col-insc-equipos > .card {
+        flex: 1 1 0;
+        min-height: 0;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+    }
+    .page-inscripcion-sitio .col-disponibles .card-body.p-0,
+    .page-inscripcion-sitio .equipo-sidebar-card .card-body {
+        flex: 1 1 0;
+        min-height: 0;
+        overflow-y: auto;
+        max-height: none !important;
+    }
     .jugador-item {
         padding: 8px 12px;
         border-bottom: 1px solid #e9ecef;
@@ -80,18 +110,19 @@ $api_guardar_equipo = $base_url . ($use_standalone ? '?' : '&') . 'action=guarda
         background-color: #cfe2ff;
         border-left: 3px solid #0d6efd;
     }
-    .search-box {
+    .page-inscripcion-sitio .search-box {
         position: sticky;
         top: 0;
         background: white;
-        padding: 15px;
-        border-bottom: 2px solid #e9ecef;
+        padding: 0.35rem 0.5rem;
+        border-bottom: 1px solid #e9ecef;
         z-index: 10;
+        flex-shrink: 0;
     }
-    .separador-jugador {
-        border-top: 2px dashed #0d6efd;
-        margin: 8px 0;
-        opacity: 0.5;
+    .page-inscripcion-sitio .separador-jugador {
+        border-top: 1px dashed #0d6efd;
+        margin: 2px 0 !important;
+        opacity: 0.45;
     }
     .equipo-registrado-item {
         border: 1px solid #dee2e6;
@@ -127,18 +158,50 @@ $api_guardar_equipo = $base_url . ($use_standalone ? '?' : '&') . 'action=guarda
         border-radius: 0.5rem;
         padding: 0.5rem;
     }
-    /* Contenedor del formulario: −15% alto (85% del área útil en viewport) */
+    .page-inscripcion-sitio .col-insc-form {
+        min-height: 0;
+    }
     .page-inscripcion-sitio .col-insc-form > .card {
-        max-height: calc(90vh * 0.85 - 5.5rem);
+        flex: 1 1 0;
+        min-height: 0;
+        max-height: 100%;
         display: flex;
         flex-direction: column;
         overflow: hidden;
     }
     .page-inscripcion-sitio .col-insc-form > .card > .card-header {
         flex-shrink: 0;
+        padding: 0.35rem 0.5rem !important;
     }
+    .page-inscripcion-sitio .col-insc-form > .card > .card-header h6 { font-size: 0.8rem; margin: 0; }
     .page-inscripcion-sitio .col-insc-form > .card > .card-body {
-        flex: 1 1 auto;
+        flex: 1 1 0;
+        min-height: 0;
+        overflow: hidden;
+        padding: 0.4rem 0.5rem !important;
+        display: flex;
+        flex-direction: column;
+    }
+    .page-inscripcion-sitio #formEquipo {
+        display: flex;
+        flex-direction: column;
+        min-height: 0;
+        flex: 1 1 0;
+        overflow: hidden;
+    }
+    .page-inscripcion-sitio .fila-club-nombre-equipo {
+        flex-shrink: 0;
+        margin-bottom: 0.35rem !important;
+    }
+    .page-inscripcion-sitio .col-insc-form #club_id.form-select,
+    .page-inscripcion-sitio .col-insc-form #nombre_equipo.form-control {
+        min-height: 1.65rem !important;
+        height: 1.65rem !important;
+        padding: 0.15rem 0.35rem !important;
+        font-size: 0.72rem !important;
+    }
+    .page-inscripcion-sitio #jugadores-container {
+        flex: 1 1 0;
         min-height: 0;
         overflow-y: auto;
         overflow-x: hidden;
@@ -203,14 +266,17 @@ $api_guardar_equipo = $base_url . ($use_standalone ? '?' : '&') . 'action=guarda
         line-height: 1.05 !important;
         min-height: calc(0.72em + 0.16rem) !important;
     }
-    /* ID / cédula / nombre: alto +70% (×1.7) y fuente +80% (×1.8) respecto a 0.7rem / min-height previo */
-    .fila-jugador-compacta .jugador-id-usuario,
-    .fila-jugador-compacta .jugador-cedula,
-    .fila-jugador-compacta .jugador-nombre {
-        padding: 0.35rem 0.4rem !important;
-        font-size: 1.26rem !important;
-        line-height: 1.25 !important;
-        min-height: calc(2.74em + 0.62rem) !important;
+    /* Filas jugador compactas para caber en viewport sin scroll global */
+    .page-inscripcion-sitio .fila-jugador-compacta {
+        margin-bottom: 0.15rem !important;
+    }
+    .page-inscripcion-sitio .fila-jugador-compacta .jugador-id-usuario,
+    .page-inscripcion-sitio .fila-jugador-compacta .jugador-cedula,
+    .page-inscripcion-sitio .fila-jugador-compacta .jugador-nombre {
+        padding: 0.1rem 0.25rem !important;
+        font-size: 0.72rem !important;
+        line-height: 1.15 !important;
+        min-height: 1.5rem !important;
         box-sizing: border-box !important;
     }
     .fila-jugador-compacta .wrap-inputs-jugador {
@@ -248,8 +314,6 @@ $api_guardar_equipo = $base_url . ($use_standalone ? '?' : '&') . 'action=guarda
         min-width: 0;
         max-width: none;
     }
-    .page-inscripcion-sitio .equipo-sidebar-card .card-body { max-height: calc(90vh - 220px); overflow-y: auto; }
-    .page-inscripcion-sitio .col-disponibles .card-body { max-height: calc(90vh - 260px) !important; }
     .equipo-sidebar-item {
         border: 1px solid #dee2e6;
         border-radius: 6px;
@@ -312,7 +376,7 @@ $api_guardar_equipo = $base_url . ($use_standalone ? '?' : '&') . 'action=guarda
     <div class="row g-2 g-lg-3">
         <!-- COLUMNA 1: Disponibles (ancho reducido) -->
         <div class="col-12 col-disponibles">
-            <div class="card border-0 shadow-sm h-100">
+            <div class="card border-0 shadow-sm h-100 d-flex flex-column overflow-hidden">
                 <div class="card-header bg-primary text-white py-2">
                     <h6 class="mb-0 small">
                         <i class="fas fa-user-friends me-1"></i>Disponibles
@@ -330,7 +394,7 @@ $api_guardar_equipo = $base_url . ($use_standalone ? '?' : '&') . 'action=guarda
                 </div>
                 
                 <!-- Lista de Jugadores -->
-                <div class="card-body p-0" style="max-height: calc(90vh - 240px); overflow-y: auto;">
+                <div class="card-body p-0" style="flex:1;min-height:0;overflow-y:auto;">
                     <?php if (empty($jugadores_disponibles)): ?>
                         <div class="text-center py-3 text-muted small">
                             <i class="fas fa-user-slash fa-2x mb-2 opacity-50"></i>
@@ -420,11 +484,11 @@ $api_guardar_equipo = $base_url . ($use_standalone ? '?' : '&') . 'action=guarda
                             </small>
                         <?php endif; ?>
                         
-                        <hr>
+                        <hr class="my-1">
                         
                         <!-- Jugadores + barra: código (solo edición) | guardar -->
-                        <div class="mb-3">
-                            <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-2">
+                        <div class="mb-1 flex-shrink-0">
+                            <div class="d-flex justify-content-between align-items-center flex-wrap gap-1 mb-1">
                                 <div id="wrap_codigo_equipo_barra" class="d-flex align-items-center gap-2" style="visibility:hidden;" aria-hidden="true">
                                     <span class="small text-muted fw-bold mb-0">Código</span>
                                     <span id="codigo_equipo_visible" class="badge bg-secondary fs-6 px-2 py-1"></span>
@@ -1005,16 +1069,18 @@ function actualizarBloqueoSeleccionJugadores() {
         }
     });
     
+    const editandoEquipo = parseInt(document.getElementById('equipo_id').value || '0', 10) > 0;
     for (let i = 1; i <= JUGADORES_POR_EQUIPO; i++) {
         const cedulaEl = document.getElementById(`jugador_cedula_${i}`);
         const limpiarBtn = document.getElementById(`btn_limpiar_${i}`);
-        
+        const filaTieneJugador = cedulaEl && cedulaEl.value.trim() !== '';
+        const puedeFila = ready || editandoEquipo;
         if (cedulaEl) {
-            cedulaEl.readOnly = !ready;
-            cedulaEl.style.backgroundColor = ready ? '' : '#f1f1f1';
+            cedulaEl.readOnly = !puedeFila;
+            cedulaEl.style.backgroundColor = puedeFila ? '' : '#f1f1f1';
         }
         if (limpiarBtn) {
-            limpiarBtn.disabled = !ready;
+            limpiarBtn.disabled = !filaTieneJugador;
         }
     }
 }
