@@ -175,23 +175,35 @@ $api_guardar_equipo = $base_url . ($use_standalone ? '?' : '&') . 'action=guarda
         line-height: 1.05 !important;
         min-height: calc(0.72em + 0.16rem) !important;
     }
-    /* Jugador: altura +60% vs base compacta (0.72em+0.16rem) ×1.6 */
+    /* Tres textbox: 80% ancho columna formulario; alto +40% sobre bloque anterior (×1.4) */
     .fila-jugador-compacta .jugador-id-usuario,
     .fila-jugador-compacta .jugador-cedula,
     .fila-jugador-compacta .jugador-nombre {
-        padding: 0.18rem 0.28rem !important;
+        padding: 0.22rem 0.3rem !important;
         font-size: 0.7rem !important;
-        line-height: 1.12 !important;
-        min-height: calc(1.152em + 0.26rem) !important;
+        line-height: 1.15 !important;
+        min-height: calc(1.613em + 0.36rem) !important;
         box-sizing: border-box !important;
     }
-    /* ID : cédula : nombre −20% ancho otra vez (×0.8 sobre 5.76:8.32:19.52) */
     .fila-jugador-compacta .wrap-inputs-jugador {
-        display: flex;
-        flex: 1 1 auto;
+        display: flex !important;
+        flex: 0 0 80% !important;
+        width: 80% !important;
+        max-width: 80% !important;
         min-width: 0;
         align-items: center;
         gap: 0.12rem;
+    }
+    .fila-jugador-compacta.row {
+        flex-wrap: nowrap;
+    }
+    @media (max-width: 576px) {
+        .fila-jugador-compacta.row { flex-wrap: wrap; }
+        .fila-jugador-compacta .wrap-inputs-jugador {
+            flex: 0 0 100% !important;
+            width: 100% !important;
+            max-width: 100% !important;
+        }
     }
     .fila-jugador-compacta .input-id-usuario {
         flex: 4.608 1 0;
@@ -411,7 +423,7 @@ $api_guardar_equipo = $base_url . ($use_standalone ? '?' : '&') . 'action=guarda
                                                    name="jugadores[<?php echo $i; ?>][es_capitan]" 
                                                    value="<?php echo $i == 1 ? '1' : '0'; ?>">
                                         </div>
-                                        <div class="col px-1 min-w-0 wrap-inputs-jugador">
+                                        <div class="col px-1 min-w-0 wrap-inputs-jugador flex-shrink-0">
                                             <input type="text" 
                                                    class="form-control form-control-sm jugador-id-usuario input-id-usuario" 
                                                    id="jugador_id_usuario_<?php echo $i; ?>" 
