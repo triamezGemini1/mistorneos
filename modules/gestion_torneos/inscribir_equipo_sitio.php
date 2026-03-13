@@ -100,24 +100,24 @@ $api_guardar_equipo = $base_url . ($use_standalone ? '?' : '&') . 'action=guarda
     .equipo-registrado-item > div:first-child:hover {
         color: #0d6efd;
     }
-    /* Layout: disponibles +15% sobre 25.3% → ~29.1% | equipos −20% sobre 41.37% → ~33.1% | resto formulario */
+    /* Layout: un poco más ancho formulario para fila ID|cédula|nombre en una línea */
     .col-disponibles {
-        flex: 0 0 29.1%;
-        max-width: 29.1%;
+        flex: 0 0 28%;
+        max-width: 28%;
         background: linear-gradient(180deg, #e8f4fc 0%, #f0f7ff 100%);
         border-radius: 0.5rem;
         padding: 0.5rem;
     }
     .col-insc-form {
-        flex: 0 0 37.8%;
-        max-width: 37.8%;
+        flex: 0 0 41%;
+        max-width: 41%;
         background: linear-gradient(180deg, #fff9e6 0%, #fffdf5 100%);
         border-radius: 0.5rem;
         padding: 0.5rem;
     }
     .col-insc-equipos {
-        flex: 0 0 33.1%;
-        max-width: 33.1%;
+        flex: 0 0 31%;
+        max-width: 31%;
         background: linear-gradient(180deg, #e8f5e9 0%, #f1faf1 100%);
         border-radius: 0.5rem;
         padding: 0.5rem;
@@ -132,10 +132,19 @@ $api_guardar_equipo = $base_url . ($use_standalone ? '?' : '&') . 'action=guarda
             max-width: 100%;
         }
     }
-    /* Club y nombre equipo: 40% más estrechos → 60% del ancho de fila, apilados */
+    /* Club y nombre: ancho útil en columna ampliada */
     .wrap-select-club-equipo {
-        max-width: 60%;
+        max-width: 100%;
         width: 100%;
+    }
+    /* Selector club: altura +100% respecto al resto de controles compactos */
+    .col-insc-form #club_id.form-select,
+    .col-insc-form #club_id.form-select-sm {
+        min-height: calc(1.5em + 0.9rem) !important;
+        padding-top: 0.5rem !important;
+        padding-bottom: 0.5rem !important;
+        font-size: 0.8rem !important;
+        line-height: 1.35 !important;
     }
     .jugador-item { padding: 4px 8px !important; font-size: 0.8rem; line-height: 1.25; }
     .fila-jugador-compacta {
@@ -159,26 +168,26 @@ $api_guardar_equipo = $base_url . ($use_standalone ? '?' : '&') . 'action=guarda
         line-height: 1.05;
         min-height: calc(0.72em + 0.16rem);
     }
-    /* ID : Cédula : Nombre proporción ~4.5 : 6.5 : resto (~10) → 9 : 13 : 20 */
+    /* ID y cédula −20% ancho relativo (7.2 : 10.4) → más espacio para nombre en una línea */
     .fila-jugador-compacta .wrap-inputs-jugador {
         display: flex;
         flex: 1 1 auto;
         min-width: 0;
         align-items: center;
-        gap: 0.25rem;
+        gap: 0.2rem;
     }
     .fila-jugador-compacta .input-id-usuario {
-        flex: 9 1 0;
+        flex: 7.2 1 0;
         min-width: 0;
         max-width: none;
     }
     .fila-jugador-compacta .input-cedula {
-        flex: 13 1 0;
+        flex: 10.4 1 0;
         min-width: 0;
         max-width: none;
     }
     .fila-jugador-compacta .input-nombre-jug {
-        flex: 20 1 0;
+        flex: 24.4 1 0;
         min-width: 0;
         max-width: none;
     }
