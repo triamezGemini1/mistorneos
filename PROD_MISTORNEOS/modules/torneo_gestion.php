@@ -2087,7 +2087,7 @@ function obtenerDatosPanelEquipos($torneo_id) {
             LEFT JOIN inscritos ins ON ins.id_usuario = u.id AND ins.torneo_id = ? AND " . InscritosHelper::sqlWhereSoloConfirmadoConAlias('ins') . "
             WHERE u.role = 'usuario' 
               AND u.status = 0
-              AND (ins.id IS NULL OR ins.codigo_equipo IS NULL)
+              AND (ins.id IS NULL OR ins.codigo_equipo IS NULL OR ins.codigo_equipo = '')
         ");
         $stmt->execute([$torneo_id]);
         $total_jugadores_disponibles = (int)$stmt->fetchColumn();
@@ -2110,7 +2110,7 @@ function obtenerDatosPanelEquipos($torneo_id) {
                 WHERE u.role = 'usuario' 
                   AND u.status = 0
                   AND u.club_id IN ({$placeholders})
-                  AND (ins.id IS NULL OR ins.codigo_equipo IS NULL)
+                  AND (ins.id IS NULL OR ins.codigo_equipo IS NULL OR ins.codigo_equipo = '')
             ");
             $stmt->execute(array_merge([$torneo_id], $clubes_ids));
             $total_jugadores_disponibles = (int)$stmt->fetchColumn();
@@ -2310,7 +2310,7 @@ function obtenerDatosInscribirEquipoSitio($torneo_id) {
             LEFT JOIN inscritos ins ON ins.id_usuario = u.id AND ins.torneo_id = ? AND " . InscritosHelper::sqlWhereSoloConfirmadoConAlias('ins') . "
             WHERE u.role = 'usuario' 
               AND u.status = 0
-              AND (ins.id IS NULL OR ins.codigo_equipo IS NULL)
+              AND (ins.id IS NULL OR ins.codigo_equipo IS NULL OR ins.codigo_equipo = '')
             ORDER BY COALESCE(u.nombre, u.username) ASC
         ");
         $stmt->execute([$torneo_id]);
@@ -2336,7 +2336,7 @@ function obtenerDatosInscribirEquipoSitio($torneo_id) {
                 WHERE u.role = 'usuario' 
                   AND u.status = 0
                   AND u.club_id IN ({$placeholders})
-                  AND (ins.id IS NULL OR ins.codigo_equipo IS NULL)
+                  AND (ins.id IS NULL OR ins.codigo_equipo IS NULL OR ins.codigo_equipo = '')
                 ORDER BY COALESCE(u.nombre, u.username) ASC
             ");
             $stmt->execute(array_merge([$torneo_id], $clubes_ids));

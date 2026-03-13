@@ -161,7 +161,7 @@ try {
                 throw new Exception("No se encontró el código del equipo existente");
             }
 
-            $stmt = $pdo->prepare("UPDATE inscritos SET codigo_equipo = NULL WHERE torneo_id = ? AND codigo_equipo = ?");
+            $stmt = $pdo->prepare("UPDATE inscritos SET codigo_equipo = '' WHERE torneo_id = ? AND codigo_equipo = ?");
             $stmt->execute([$torneo_id, $codigo_equipo]);
             error_log("PASO 4A: Jugadores anteriores limpiados, filas afectadas: " . $stmt->rowCount());
         } else {

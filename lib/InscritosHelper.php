@@ -252,7 +252,7 @@ class InscritosHelper {
         $numero = isset($datos['numero']) && $datos['numero'] !== null ? (int)$datos['numero'] : 0;
         // clasiequi: Clasificación de equipo (INT), valor por defecto 0
         $clasiequi = isset($datos['clasiequi']) && $datos['clasiequi'] !== null ? (int)$datos['clasiequi'] : 0;
-        $codigo_equipo = !empty($datos['codigo_equipo']) ? trim($datos['codigo_equipo']) : null;
+        $codigo_equipo = isset($datos['codigo_equipo']) ? trim((string)$datos['codigo_equipo']) : '';
         // nacionalidad y cedula en inscritos (obligatorios para búsqueda NIVEL 1)
         $nacionalidad_inscrito = isset($datos['nacionalidad']) ? strtoupper(trim((string)$datos['nacionalidad'])) : 'V';
         if (!in_array($nacionalidad_inscrito, ['V', 'E', 'J', 'P'], true)) {
@@ -278,16 +278,10 @@ class InscritosHelper {
                 id_usuario, torneo_id, id_club, estatus, inscrito_por, fecha_inscripcion,
                 nacionalidad, cedula,
                 posicion, ganados, perdidos, efectividad, puntos, ptosrnk, 
-                sancion, chancletas, zapatos, tarjeta, numero, clasiequi" . 
-                ($codigo_equipo !== null ? ", codigo_equipo" : "") . "
-            ) VALUES (?, ?, ?, ?, ?, NOW(), ?, ?, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, ?, ?" .
-                ($codigo_equipo !== null ? ", ?" : "") . "
-            )
+                sancion, chancletas, zapatos, tarjeta, numero, clasiequi, codigo_equipo
+            ) VALUES (?, ?, ?, ?, ?, NOW(), ?, ?, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, ?, ?, ?)
         ");
-        $params = [$id_usuario, $torneo_id, $id_club, $estatus_for_db, $inscrito_por, $nacionalidad_inscrito, $cedula_inscrito, $numero, $clasiequi];
-        if ($codigo_equipo !== null) {
-            $params[] = $codigo_equipo;
-        }
+        $params = [$id_usuario, $torneo_id, $id_club, $estatus_for_db, $inscrito_por, $nacionalidad_inscrito, $cedula_inscrito, $numero, $clasiequi, $codigo_equipo];
         
         $resultado = $stmt->execute($params);
         

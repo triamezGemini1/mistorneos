@@ -44,8 +44,9 @@ final class GuardarEquipoSitioService
                 if (empty($codigo_equipo)) {
                     throw new RuntimeException('No se encontró el código del equipo existente');
                 }
-                $stmt = $pdo->prepare('UPDATE inscritos SET codigo_equipo = NULL WHERE torneo_id = ? AND codigo_equipo = ?');
-                $stmt->execute([$torneo_id, $codigo_equipo]);
+                /* inscritos.codigo_equipo es NOT NULL: no usar NULL al liberar jugadores del equipo */
+                $stmt = $pdo->prepare('UPDATE inscritos SET codigo_equipo = ? WHERE torneo_id = ? AND codigo_equipo = ?');
+                $stmt->execute(['', $torneo_id, $codigo_equipo]);
             } else {
                 $result = EquiposHelper::crearEquipo($torneo_id, $club_id, $nombre_equipo, $creado_por);
                 if (empty($result['success'])) {

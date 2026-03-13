@@ -249,7 +249,7 @@ class InscritosHelper {
         $numero = isset($datos['numero']) && $datos['numero'] !== null ? (int)$datos['numero'] : 0;
         // clasiequi: Clasificación de equipo (INT), valor por defecto 0
         $clasiequi = isset($datos['clasiequi']) && $datos['clasiequi'] !== null ? (int)$datos['clasiequi'] : 0;
-        $codigo_equipo = !empty($datos['codigo_equipo']) ? trim($datos['codigo_equipo']) : null;
+        $codigo_equipo = isset($datos['codigo_equipo']) ? trim((string)$datos['codigo_equipo']) : '';
         
         // Verificar que no esté ya inscrito (excluir retirados)
         $stmt = $pdo->prepare("SELECT id FROM inscritos WHERE id_usuario = ? AND torneo_id = ? AND " . self::SQL_WHERE_NO_RETIRADO);
@@ -264,17 +264,11 @@ class InscritosHelper {
             INSERT INTO inscritos (
                 id_usuario, torneo_id, id_club, estatus, inscrito_por, fecha_inscripcion,
                 posicion, ganados, perdidos, efectividad, puntos, ptosrnk, 
-                sancion, chancletas, zapatos, tarjeta, numero, clasiequi" . 
-                ($codigo_equipo !== null ? ", codigo_equipo" : "") . "
-            ) VALUES (?, ?, ?, ?, ?, NOW(), 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, ?, ?" .
-                ($codigo_equipo !== null ? ", ?" : "") . "
-            )
+                sancion, chancletas, zapatos, tarjeta, numero, clasiequi, codigo_equipo
+            ) VALUES (?, ?, ?, ?, ?, NOW(), 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, ?, ?, ?)
         ");
         
-        $params = [$id_usuario, $torneo_id, $id_club, (string)$estatus, $inscrito_por, $numero, $clasiequi];
-        if ($codigo_equipo !== null) {
-            $params[] = $codigo_equipo;
-        }
+        $params = [$id_usuario, $torneo_id, $id_club, (string)$estatus, $inscrito_por, $numero, $clasiequi, $codigo_equipo];
         
         $resultado = $stmt->execute($params);
         
