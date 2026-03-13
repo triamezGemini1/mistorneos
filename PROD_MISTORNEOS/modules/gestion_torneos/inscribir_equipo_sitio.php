@@ -8,6 +8,7 @@ $jugadores_disponibles = $view_data['jugadores_disponibles'] ?? [];
 $clubes_disponibles = $view_data['clubes_disponibles'] ?? [];
 $equipos_registrados = $view_data['equipos_registrados'] ?? [];
 $jugadores_por_equipo = $view_data['jugadores_por_equipo'] ?? 4;
+$api_base_path = (function_exists('AppHelpers') ? AppHelpers::getPublicPath() : '/mistorneos/public/') . 'api/';
 
 // Determinar si el torneo ya inició (tiene rondas)
 $torneo_iniciado = false;
