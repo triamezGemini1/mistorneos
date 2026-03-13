@@ -180,11 +180,39 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
     
     switch ($post_action) {
+        case 'guardar_equipo_sitio':
+            $tid = (int)($_GET['torneo_id'] ?? $_POST['torneo_id'] ?? 0);
+            if ($tid <= 0) {
+                header('Content-Type: application/json; charset=utf-8');
+                echo json_encode(['success' => false, 'message' => 'Torneo no especificado'], JSON_UNESCAPED_UNICODE);
+                exit;
+            }
+            verificarPermisosTorneo($tid, $user_id, $is_admin_general);
+            require_once __DIR__ . '/../lib/GuardarEquipoSitioService.php';
+            $input = $_POST;
+            if ((int)($input['torneo_id'] ?? 0) !== $tid) {
+                header('Content-Type: application/json; charset=utf-8');
+                echo json_encode(['success' => false, 'message' => 'torneo_id no coincide'], JSON_UNESCAPED_UNICODE);
+                exit;
+            }
+            error_log('=== guardar_equipo_sitio POST torneo_gestion (index/admin, sesión OK) ===');
+            header('Content-Type: application/json; charset=utf-8');
+            try {
+                $pdo = DB::pdo();
+                $out = GuardarEquipoSitioService::ejecutar($pdo, $input, Auth::id() ?: null);
+                echo json_encode($out, JSON_UNESCAPED_UNICODE);
+            } catch (Throwable $e) {
+                http_response_code(500);
+                error_log('guardar_equipo_sitio: ' . $e->getMessage());
+                echo json_encode(['success' => false, 'message' => 'Error al guardar: ' . $e->getMessage()], JSON_UNESCAPED_UNICODE);
+            }
+            exit;
+
         case 'generar_ronda':
             $torneo_id = (int)($_POST['torneo_id'] ?? 0);
             generarRonda($torneo_id, $user_id, $is_admin_general);
             break;
-            
+
         case 'eliminar_ultima_ronda':
             $torneo_id = (int)($_POST['torneo_id'] ?? 0);
             eliminarUltimaRonda($torneo_id, $user_id, $is_admin_general);

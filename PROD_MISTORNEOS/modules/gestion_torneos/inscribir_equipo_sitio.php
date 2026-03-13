@@ -44,9 +44,9 @@ $base_url = $use_standalone ? $script_actual : 'index.php?page=torneo_gestion';
 
 // Ruta base para API (dinámica según entorno)
 $api_base_path = (function_exists('AppHelpers') ? AppHelpers::getPublicPath() : '/mistorneos/public/') . 'api/';
-$api_guardar_equipo = $api_base_path . 'save_equipo_sitio.php';
+$api_guardar_equipo = $base_url . ($use_standalone ? '?' : '&') . 'action=guardar_equipo_sitio&torneo_id=' . (int)($torneo['id'] ?? 0);
 ?>
-<!-- inscribir_equipo_sitio: API = save_equipo_sitio.php -->
+<!-- inscribir_equipo_sitio: POST interno guardar_equipo_sitio -->
 <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
 <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
 <style>

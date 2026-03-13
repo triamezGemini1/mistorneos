@@ -1,0 +1,122 @@
+<?php
+/**
+ * Lógica de guardado equipo inscripción en sitio (una sola fuente de verdad).
+ * Invocable desde index.php (torneo_gestion) o desde API — evita sesión/OPcache rotos en public/api.
+ */
+declare(strict_types=1);
+
+final class GuardarEquipoSitioService
+{
+    /**
+     * @param array $input Mismo shape que $_POST del formulario (csrf_token, torneo_id, club_id, nombre_equipo, jugadores)
+     * @return array{success:bool, message:string, equipo_id?:int}
+     */
+    public static function ejecutar(PDO $pdo, array $input, ?int $creado_por): array
+    {
+        $torneo_id = (int)($input['torneo_id'] ?? 0);
+        $equipo_id = (int)($input['equipo_id'] ?? 0);
+        $nombre_equipo = trim((string)($input['nombre_equipo'] ?? ''));
+        $club_id = (int)($input['club_id'] ?? 0);
+        $jugadores = $input['jugadores'] ?? [];
+        if (is_string($jugadores)) {
+            $jugadores = json_decode($jugadores, true) ?: [];
+        }
+        if (!is_array($jugadores)) {
+            $jugadores = [];
+        }
+
+        if ($torneo_id <= 0 || $nombre_equipo === '' || $club_id <= 0) {
+            return ['success' => false, 'message' => 'Datos incompletos'];
+        }
+
+        require_once __DIR__ . '/EquiposHelper.php';
+        require_once __DIR__ . '/InscritosHelper.php';
+        require_once __DIR__ . '/UserActivationHelper.php';
+
+        $pdo->beginTransaction();
+        try {
+            if ($equipo_id > 0) {
+                $stmt = $pdo->prepare('UPDATE equipos SET nombre_equipo = UPPER(?), id_club = ? WHERE id = ? AND id_torneo = ?');
+                $stmt->execute([$nombre_equipo, $club_id, $equipo_id, $torneo_id]);
+                $stmt = $pdo->prepare('SELECT codigo_equipo FROM equipos WHERE id = ?');
+                $stmt->execute([$equipo_id]);
+                $codigo_equipo = $stmt->fetchColumn() ?: null;
+                if (empty($codigo_equipo)) {
+                    throw new RuntimeException('No se encontró el código del equipo existente');
+                }
+                $stmt = $pdo->prepare('UPDATE inscritos SET codigo_equipo = NULL WHERE torneo_id = ? AND codigo_equipo = ?');
+                $stmt->execute([$torneo_id, $codigo_equipo]);
+            } else {
+                $result = EquiposHelper::crearEquipo($torneo_id, $club_id, $nombre_equipo, $creado_por);
+                if (empty($result['success'])) {
+                    throw new RuntimeException($result['message'] ?? 'Error al crear equipo');
+                }
+                $equipo_id = (int)$result['id'];
+                $codigo_equipo = $result['codigo'] ?? null;
+                if (empty($codigo_equipo)) {
+                    throw new RuntimeException('No se pudo generar el código del equipo');
+                }
+            }
+
+            foreach ($jugadores as $jugador_data) {
+                if (empty($jugador_data['cedula']) || empty($jugador_data['nombre'])) {
+                    continue;
+                }
+                $cedula = trim((string)$jugador_data['cedula']);
+                $id_usuario = (int)($jugador_data['id_usuario'] ?? 0);
+                $id_inscrito = (int)($jugador_data['id_inscrito'] ?? 0);
+
+                if ($id_usuario <= 0) {
+                    $stmt = $pdo->prepare('SELECT id FROM usuarios WHERE cedula = ? LIMIT 1');
+                    $stmt->execute([$cedula]);
+                    $row = $stmt->fetch(PDO::FETCH_ASSOC);
+                    $id_usuario = $row ? (int)$row['id'] : 0;
+                }
+                if ($id_usuario <= 0) {
+                    throw new RuntimeException("No se pudo determinar el ID de usuario para la cédula $cedula");
+                }
+
+                if ($id_inscrito > 0) {
+                    $stmt = $pdo->prepare('SELECT id FROM inscritos WHERE id = ? AND id_usuario = ? AND torneo_id = ? LIMIT 1');
+                    $stmt->execute([$id_inscrito, $id_usuario, $torneo_id]);
+                    if (!$stmt->fetch()) {
+                        $id_inscrito = 0;
+                    }
+                }
+                if ($id_inscrito <= 0) {
+                    $stmt = $pdo->prepare('SELECT id FROM inscritos WHERE id_usuario = ? AND torneo_id = ? LIMIT 1');
+                    $stmt->execute([$id_usuario, $torneo_id]);
+                    $row = $stmt->fetch(PDO::FETCH_ASSOC);
+                    if ($row) {
+                        $id_inscrito = (int)$row['id'];
+                    } else {
+                        $id_inscrito = InscritosHelper::insertarInscrito($pdo, [
+                            'id_usuario' => $id_usuario,
+                            'torneo_id' => $torneo_id,
+                            'id_club' => $club_id,
+                            'codigo_equipo' => $codigo_equipo,
+                            'estatus' => 1,
+                            'inscrito_por' => $creado_por,
+                            'numero' => 0,
+                        ]);
+                        UserActivationHelper::activateUser($pdo, $id_usuario);
+                    }
+                }
+                $stmt = $pdo->prepare('UPDATE inscritos SET id_club = ?, codigo_equipo = ?, estatus = 1 WHERE id = ?');
+                $stmt->execute([$club_id, $codigo_equipo, $id_inscrito]);
+            }
+
+            $pdo->commit();
+            return [
+                'success' => true,
+                'message' => 'Equipo guardado exitosamente',
+                'equipo_id' => $equipo_id,
+            ];
+        } catch (Throwable $e) {
+            if ($pdo->inTransaction()) {
+                $pdo->rollBack();
+            }
+            throw $e;
+        }
+    }
+}
