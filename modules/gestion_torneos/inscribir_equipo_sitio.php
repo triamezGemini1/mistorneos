@@ -132,19 +132,34 @@ $api_guardar_equipo = $base_url . ($use_standalone ? '?' : '&') . 'action=guarda
             max-width: 100%;
         }
     }
-    /* Club y nombre: ancho útil en columna ampliada */
-    .wrap-select-club-equipo {
-        max-width: 100%;
+    /* Club + nombre equipo: misma línea, mismo alto */
+    .fila-club-nombre-equipo {
+        display: flex;
+        flex-wrap: nowrap;
+        align-items: flex-end;
+        gap: 0.5rem;
         width: 100%;
+        margin-bottom: 0.75rem;
     }
-    /* Selector club: altura +100% respecto al resto de controles compactos */
+    .fila-club-nombre-equipo .campo-club,
+    .fila-club-nombre-equipo .campo-nombre-equipo {
+        flex: 1 1 50%;
+        min-width: 0;
+    }
+    .fila-club-nombre-equipo .form-label { margin-bottom: 0.15rem; }
+    @media (max-width: 576px) {
+        .fila-club-nombre-equipo { flex-wrap: wrap; }
+        .fila-club-nombre-equipo .campo-club,
+        .fila-club-nombre-equipo .campo-nombre-equipo { flex: 1 1 100%; }
+    }
     .col-insc-form #club_id.form-select,
-    .col-insc-form #club_id.form-select-sm {
-        min-height: calc(1.5em + 0.9rem) !important;
-        padding-top: 0.5rem !important;
-        padding-bottom: 0.5rem !important;
+    .col-insc-form #nombre_equipo.form-control {
+        min-height: 2.35rem !important;
+        height: 2.35rem !important;
+        padding: 0.4rem 0.5rem !important;
         font-size: 0.8rem !important;
-        line-height: 1.35 !important;
+        line-height: 1.3 !important;
+        box-sizing: border-box !important;
     }
     .jugador-item { padding: 4px 8px !important; font-size: 0.8rem; line-height: 1.25; }
     .fila-jugador-compacta {
@@ -152,42 +167,44 @@ $api_guardar_equipo = $base_url . ($use_standalone ? '?' : '&') . 'action=guarda
         align-items: center !important;
         min-height: 0;
     }
-    /* Altura textos ~40% menor */
-    .col-insc-form .form-control-sm,
-    .col-insc-form .form-control,
-    .col-insc-form .form-select-sm {
+    /* Controles compactos (no club/nombre ni filas jugador: tienen reglas propias) */
+    .col-insc-form .form-control-sm:not(.jugador-id-usuario):not(.jugador-cedula):not(.jugador-nombre),
+    .col-insc-form .form-select-sm:not(#club_id) {
         padding: 0.08rem 0.28rem !important;
         font-size: 0.7rem !important;
         line-height: 1.05 !important;
         min-height: calc(0.72em + 0.16rem) !important;
     }
-    .fila-jugador-compacta .form-control-sm,
-    .fila-jugador-compacta .form-control {
-        padding: 0.08rem 0.28rem;
-        font-size: 0.7rem;
-        line-height: 1.05;
-        min-height: calc(0.72em + 0.16rem);
+    /* Jugador: −20% ancho (flex) y altura +30% vs base 0.72em+0.16rem */
+    .fila-jugador-compacta .jugador-id-usuario,
+    .fila-jugador-compacta .jugador-cedula,
+    .fila-jugador-compacta .jugador-nombre {
+        padding: 0.12rem 0.25rem !important;
+        font-size: 0.7rem !important;
+        line-height: 1.08 !important;
+        min-height: calc(0.936em + 0.21rem) !important;
+        box-sizing: border-box !important;
     }
-    /* ID y cédula −20% ancho relativo (7.2 : 10.4) → más espacio para nombre en una línea */
+    /* ID : cédula : nombre −20% ancho cada uno (×0.8 sobre 7.2:10.4:24.4) */
     .fila-jugador-compacta .wrap-inputs-jugador {
         display: flex;
         flex: 1 1 auto;
         min-width: 0;
         align-items: center;
-        gap: 0.2rem;
+        gap: 0.15rem;
     }
     .fila-jugador-compacta .input-id-usuario {
-        flex: 7.2 1 0;
+        flex: 5.76 1 0;
         min-width: 0;
         max-width: none;
     }
     .fila-jugador-compacta .input-cedula {
-        flex: 10.4 1 0;
+        flex: 8.32 1 0;
         min-width: 0;
         max-width: none;
     }
     .fila-jugador-compacta .input-nombre-jug {
-        flex: 24.4 1 0;
+        flex: 19.52 1 0;
         min-width: 0;
         max-width: none;
     }
@@ -331,34 +348,36 @@ $api_guardar_equipo = $base_url . ($use_standalone ? '?' : '&') . 'action=guarda
                         <input type="hidden" id="torneo_id" name="torneo_id" value="<?php echo $torneo['id']; ?>">
                         <input type="hidden" id="codigo_equipo" name="codigo_equipo" value="">
                         
-                        <!-- Club y Nombre (código solo en barra al editar) -->
-                        <div class="mb-2 wrap-select-club-equipo">
-                            <label class="form-label small mb-0">Club *</label>
-                            <select id="club_id" name="club_id" class="form-select form-select-sm" required>
-                                <option value="">Club *</option>
-                                <?php if (!empty($clubes_disponibles)): ?>
-                                    <?php foreach ($clubes_disponibles as $club): ?>
-                                        <option value="<?php echo $club['id']; ?>"><?php echo htmlspecialchars($club['nombre']); ?></option>
-                                    <?php endforeach; ?>
-                                <?php else: ?>
-                                    <option value="" disabled>No hay clubes disponibles</option>
-                                <?php endif; ?>
-                            </select>
-                            <?php if (empty($clubes_disponibles) && !empty($is_admin_club ?? false)): ?>
-                                <small class="text-muted d-block mt-1">
-                                    <a href="<?php echo (function_exists('AppHelpers') ? AppHelpers::dashboard('clubes_asociados') : 'index.php?page=clubes_asociados'); ?>">Crear club</a> en Clubes de la organización
-                                </small>
-                            <?php endif; ?>
+                        <!-- Club y nombre equipo: misma línea, mismo alto -->
+                        <div class="fila-club-nombre-equipo">
+                            <div class="campo-club">
+                                <label class="form-label small mb-0" for="club_id">Club *</label>
+                                <select id="club_id" name="club_id" class="form-select form-select-sm w-100" required>
+                                    <option value="">Club *</option>
+                                    <?php if (!empty($clubes_disponibles)): ?>
+                                        <?php foreach ($clubes_disponibles as $club): ?>
+                                            <option value="<?php echo $club['id']; ?>"><?php echo htmlspecialchars($club['nombre']); ?></option>
+                                        <?php endforeach; ?>
+                                    <?php else: ?>
+                                        <option value="" disabled>No hay clubes disponibles</option>
+                                    <?php endif; ?>
+                                </select>
+                            </div>
+                            <div class="campo-nombre-equipo">
+                                <label class="form-label small mb-0" for="nombre_equipo">Nombre del equipo *</label>
+                                <input type="text"
+                                       id="nombre_equipo"
+                                       name="nombre_equipo"
+                                       class="form-control form-control-sm w-100"
+                                       required
+                                       placeholder="Nombre del equipo *">
+                            </div>
                         </div>
-                        <div class="mb-3 wrap-select-club-equipo">
-                            <label class="form-label small mb-0">Nombre del equipo *</label>
-                            <input type="text" 
-                                   id="nombre_equipo" 
-                                   name="nombre_equipo" 
-                                   class="form-control form-control-sm" 
-                                   required
-                                   placeholder="Nombre del Equipo *">
-                        </div>
+                        <?php if (empty($clubes_disponibles) && !empty($is_admin_club ?? false)): ?>
+                            <small class="text-muted d-block mb-2">
+                                <a href="<?php echo (function_exists('AppHelpers') ? AppHelpers::dashboard('clubes_asociados') : 'index.php?page=clubes_asociados'); ?>">Crear club</a> en Clubes de la organización
+                            </small>
+                        <?php endif; ?>
                         
                         <hr>
                         
