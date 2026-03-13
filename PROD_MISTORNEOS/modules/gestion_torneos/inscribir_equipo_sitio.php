@@ -383,6 +383,31 @@ $api_guardar_equipo = $base_url . ($use_standalone ? '?' : '&') . 'action=guarda
 <script>
 const JUGADORES_POR_EQUIPO = <?php echo $jugadores_por_equipo; ?>;
 const TORNEO_ID = <?php echo $torneo['id']; ?>;
+const EQUIPOS_EDITAR = <?php
+$map = [];
+foreach ($equipos_registrados as $eq) {
+    $id = (int)($eq['id'] ?? 0);
+    if ($id <= 0) {
+        continue;
+    }
+    $map[(string)$id] = [
+        'id' => $id,
+        'codigo_equipo' => $eq['codigo_equipo'] ?? '',
+        'nombre_equipo' => $eq['nombre_equipo'] ?? '',
+        'id_club' => (int)($eq['id_club'] ?? 0),
+        'club_nombre' => $eq['nombre_club'] ?? 'Sin Club',
+        'jugadores' => array_values(array_map(static function ($j) {
+            return [
+                'id_inscrito' => (int)($j['id_inscrito'] ?? 0),
+                'id_usuario' => (int)($j['id_usuario'] ?? 0),
+                'cedula' => (string)($j['cedula'] ?? ''),
+                'nombre' => (string)($j['nombre'] ?? ''),
+            ];
+        }, $eq['jugadores'] ?? [])),
+    ];
+}
+echo json_encode($map, JSON_UNESCAPED_UNICODE);
+?>;
 
 // Validar formulario al cargar
 document.addEventListener('DOMContentLoaded', function() {
@@ -918,94 +943,53 @@ document.getElementById('formEquipo').addEventListener('submit', async function(
     }
 });
 
-// Cargar equipo en el formulario al seleccionarlo de la lista
-async function cargarEquipo(equipoId) {
-    try {
-        const response = await fetch(`<?php echo $api_base_path; ?>obtener_equipo.php?id=${equipoId}`);
-        const data = await response.json();
-        
-        if (data.success && data.equipo) {
-            const equipo = data.equipo;
-            
-            // Marcar equipo seleccionado visualmente
-            document.querySelectorAll('.equipo-registrado-item').forEach(item => {
-                item.classList.remove('selected');
-            });
-            const equipoElement = document.querySelector(`[data-equipo-id="${equipoId}"]`);
-            if (equipoElement) {
-                equipoElement.classList.add('selected');
-            }
-            
-            // Cargar datos del equipo en el formulario
-            document.getElementById('equipo_id').value = equipo.id || '';
-            document.getElementById('codigo_equipo').value = equipo.codigo_equipo || '';
-            document.getElementById('nombre_equipo').value = equipo.nombre_equipo || '';
-            document.getElementById('club_id').value = equipo.id_club || '';
-            
-            // Limpiar jugadores actuales y devolverlos a la lista si están asignados
-            for (let i = 1; i <= JUGADORES_POR_EQUIPO; i++) {
-                const fila = document.querySelector(`[data-posicion="${i}"]`);
-                const jugadorDataStr = fila ? fila.getAttribute('data-jugador-asignado') : null;
-                if (jugadorDataStr) {
-                    try {
-                        const jugador = JSON.parse(jugadorDataStr);
-                        devolverJugadorAListado(jugador);
-                    } catch (e) {}
-                }
-                limpiarJugador(i);
-            }
-            
-            // Cargar jugadores del equipo en el formulario
-            if (equipo.jugadores && equipo.jugadores.length > 0) {
-                equipo.jugadores.forEach((jugador, index) => {
-                    const posicion = index + 1;
-                    if (posicion <= JUGADORES_POR_EQUIPO) {
-                        const jugadorData = {
-                            id: jugador.id_inscrito || jugador.id || '',
-                            id_inscrito: jugador.id_inscrito || '',
-                            id_usuario: jugador.id_usuario || jugador.usuario_id || '',
-                            cedula: jugador.cedula || '',
-                            nombre: jugador.nombre || '',
-                            club_nombre: equipo.club_nombre || 'Sin Club'
-                        };
-                        asignarJugadorAPosicion(posicion, jugadorData);
-                        
-                        // Quitar jugador de la lista de disponibles si está (por id_usuario)
-                        const items = document.querySelectorAll('.jugador-item');
-                        items.forEach(item => {
-                            const itemIdUsuario = item.getAttribute('data-id-usuario');
-                            if (itemIdUsuario && itemIdUsuario == jugadorData.id_usuario) {
-                                item.remove();
-                            }
-                        });
-                    }
-                });
-            }
-            
-            // Habilitar formulario y actualizar bloqueo (el club y nombre ya están llenos)
-            actualizarBloqueoSeleccionJugadores();
-            
-            // Scroll al formulario
-            document.getElementById('formEquipo').scrollIntoView({ behavior: 'smooth', block: 'start' });
-            
-            validarFormulario();
-        } else {
-            Swal.fire({
-                icon: 'error',
-                title: 'Error',
-                text: 'Error al cargar los datos del equipo',
-                confirmButtonColor: '#3b82f6'
-            });
-        }
-    } catch (error) {
-        console.error('Error:', error);
-        Swal.fire({
-            icon: 'error',
-            title: 'Error',
-            text: 'Error al cargar el equipo',
-            confirmButtonColor: '#3b82f6'
-        });
+function cargarEquipo(equipoId) {
+    var equipo = EQUIPOS_EDITAR[String(equipoId)] || EQUIPOS_EDITAR[equipoId];
+    if (!equipo) {
+        Swal.fire({ icon: 'info', title: 'Recargar', text: 'Recarga la página (F5) para ver equipos actualizados.', confirmButtonColor: '#3b82f6' });
+        return;
     }
+    document.querySelectorAll('.equipo-registrado-item').forEach(function (item) { item.classList.remove('selected'); });
+    var el = document.querySelector('[data-equipo-id="' + equipoId + '"]');
+    if (el) {
+        el.classList.add('selected');
+    }
+    document.getElementById('equipo_id').value = equipo.id;
+    document.getElementById('codigo_equipo').value = equipo.codigo_equipo || '';
+    document.getElementById('nombre_equipo').value = equipo.nombre_equipo || '';
+    document.getElementById('club_id').value = equipo.id_club || '';
+    for (var i = 1; i <= JUGADORES_POR_EQUIPO; i++) {
+        var fila = document.querySelector('[data-posicion="' + i + '"]');
+        var s = fila ? fila.getAttribute('data-jugador-asignado') : null;
+        if (s) {
+            try {
+                devolverJugadorAListado(JSON.parse(s));
+            } catch (e) {}
+        }
+        limpiarJugador(i);
+    }
+    (equipo.jugadores || []).forEach(function (jugador, index) {
+        var posicion = index + 1;
+        if (posicion > JUGADORES_POR_EQUIPO) {
+            return;
+        }
+        asignarJugadorAPosicion(posicion, {
+            id: jugador.id_inscrito,
+            id_inscrito: jugador.id_inscrito,
+            id_usuario: jugador.id_usuario,
+            cedula: jugador.cedula || '',
+            nombre: jugador.nombre || '',
+            club_nombre: equipo.club_nombre || 'Sin Club'
+        });
+        document.querySelectorAll('.jugador-item').forEach(function (item) {
+            if (item.getAttribute('data-id-usuario') == jugador.id_usuario) {
+                item.remove();
+            }
+        });
+    });
+    actualizarBloqueoSeleccionJugadores();
+    document.getElementById('formEquipo').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    validarFormulario();
 }
 
 // Eliminar equipo

@@ -2322,7 +2322,25 @@ function obtenerDatosInscribirEquipoSitio($torneo_id) {
     ");
     $stmt->execute([$torneo_id]);
     $equipos_registrados = $stmt->fetchAll(PDO::FETCH_ASSOC);
-    
+    // Jugadores por equipo en el mismo request (editar sin API)
+    foreach ($equipos_registrados as &$eq) {
+        $eq['jugadores'] = [];
+        $codigo = trim((string)($eq['codigo_equipo'] ?? ''));
+        if ($codigo !== '') {
+            $stj = $pdo->prepare("
+                SELECT i.id AS id_inscrito, i.id_usuario, u.cedula, COALESCE(NULLIF(TRIM(u.nombre), ''), u.username) AS nombre
+                FROM inscritos i
+                INNER JOIN usuarios u ON u.id = i.id_usuario
+                WHERE i.torneo_id = ? AND i.codigo_equipo = ?
+                  AND (i.estatus IS NULL OR i.estatus = '' OR i.estatus NOT IN ('retirado', 4))
+                ORDER BY nombre ASC
+            ");
+            $stj->execute([$torneo_id, $codigo]);
+            $eq['jugadores'] = $stj->fetchAll(PDO::FETCH_ASSOC);
+        }
+    }
+    unset($eq);
+
     return [
         'torneo' => $torneo,
         'jugadores_disponibles' => $jugadores_disponibles,
