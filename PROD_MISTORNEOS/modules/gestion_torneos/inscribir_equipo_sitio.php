@@ -957,7 +957,20 @@ function cargarEquipo(equipoId) {
     document.getElementById('equipo_id').value = equipo.id;
     document.getElementById('codigo_equipo').value = equipo.codigo_equipo || '';
     document.getElementById('nombre_equipo').value = equipo.nombre_equipo || '';
-    document.getElementById('club_id').value = equipo.id_club || '';
+    var selClub = document.getElementById('club_id');
+    var idClub = (equipo.id_club !== undefined && equipo.id_club !== null) ? String(equipo.id_club) : '';
+    if (idClub && selClub) {
+        var opt = selClub.querySelector('option[value="' + idClub.replace(/"/g, '\\"') + '"]');
+        if (!opt) {
+            opt = document.createElement('option');
+            opt.value = idClub;
+            opt.textContent = equipo.club_nombre || ('Club #' + idClub);
+            selClub.appendChild(opt);
+        }
+        selClub.value = idClub;
+    } else if (selClub) {
+        selClub.value = '';
+    }
     for (var i = 1; i <= JUGADORES_POR_EQUIPO; i++) {
         var fila = document.querySelector('[data-posicion="' + i + '"]');
         var s = fila ? fila.getAttribute('data-jugador-asignado') : null;

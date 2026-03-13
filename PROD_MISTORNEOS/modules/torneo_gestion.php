@@ -2351,24 +2351,32 @@ function obtenerDatosInscribirEquipoSitio($torneo_id) {
     }
     unset($jugador);
     
-    // Obtener clubes disponibles para el formulario
+    $org_torneo_id = Auth::getTournamentOrganizacionId($torneo_id);
     $clubes_disponibles = [];
-    if ($is_admin_general) {
+    $where_club_activo = "(c.estatus = 1 OR c.estatus = '1' OR c.estatus = 'activo')";
+    if ($org_torneo_id) {
+        $stmt = $pdo->prepare("SELECT c.id, c.nombre FROM clubes c WHERE c.organizacion_id = ? AND {$where_club_activo} ORDER BY c.nombre ASC");
+        $stmt->execute([$org_torneo_id]);
+        $clubes_disponibles = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    } elseif ($is_admin_general) {
         $stmt = $pdo->query("SELECT id, nombre FROM clubes WHERE (estatus = 1 OR estatus = '1' OR estatus = 'activo') ORDER BY nombre ASC");
         $clubes_disponibles = $stmt->fetchAll(PDO::FETCH_ASSOC);
-    } else if ($user_club_id) {
-        if ($is_admin_club) {
+    } elseif ($user_club_id) {
+        $stmt = $pdo->prepare('SELECT organizacion_id FROM clubes WHERE id = ? LIMIT 1');
+        $stmt->execute([$user_club_id]);
+        $org_usuario = $stmt->fetchColumn();
+        if ($org_usuario) {
+            $stmt = $pdo->prepare("SELECT c.id, c.nombre FROM clubes c WHERE c.organizacion_id = ? AND {$where_club_activo} ORDER BY c.nombre ASC");
+            $stmt->execute([(int)$org_usuario]);
+            $clubes_disponibles = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        }
+        if (empty($clubes_disponibles) && $is_admin_club) {
             $clubes_disponibles = ClubHelper::getClubesSupervisedWithData($user_club_id);
-            $club_ids = array_column($clubes_disponibles, 'id');
-            if (!in_array($user_club_id, $club_ids)) {
-                $stmt = $pdo->prepare("SELECT id, nombre FROM clubes WHERE id = ? AND (estatus = 1 OR estatus = '1' OR estatus = 'activo')");
-                $stmt->execute([$user_club_id]);
-                $club = $stmt->fetch(PDO::FETCH_ASSOC);
-                if ($club) {
-                    array_unshift($clubes_disponibles, $club);
-                }
-            }
-        } else {
+            $clubes_disponibles = array_map(static function ($r) {
+                return ['id' => (int)($r['id'] ?? 0), 'nombre' => (string)($r['nombre'] ?? '')];
+            }, $clubes_disponibles);
+        }
+        if (empty($clubes_disponibles) && $user_club_id) {
             $stmt = $pdo->prepare("SELECT id, nombre FROM clubes WHERE id = ? AND (estatus = 1 OR estatus = '1' OR estatus = 'activo')");
             $stmt->execute([$user_club_id]);
             $club = $stmt->fetch(PDO::FETCH_ASSOC);
@@ -2377,17 +2385,37 @@ function obtenerDatosInscribirEquipoSitio($torneo_id) {
             }
         }
     }
-    
-    // Obtener equipos registrados del torneo (solo código, club y nombre)
     $stmt = $pdo->prepare("
-        SELECT e.id, e.codigo_equipo, e.nombre_equipo, e.id_club, c.nombre as nombre_club
+        SELECT e.id, e.codigo_equipo, e.nombre_equipo, e.id_club AS id_club,
+               COALESCE(NULLIF(TRIM(c.nombre), ''), CONCAT('Club #', e.id_club)) AS nombre_club
         FROM equipos e
-        LEFT JOIN clubes c ON e.id_club = c.id
+        LEFT JOIN clubes c ON c.id = e.id_club
         WHERE e.id_torneo = ?
         ORDER BY e.codigo_equipo ASC, e.nombre_equipo ASC
     ");
     $stmt->execute([$torneo_id]);
     $equipos_registrados = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    foreach ($equipos_registrados as &$eq0) {
+        $eq0['id_club'] = (int)($eq0['id_club'] ?? 0);
+    }
+    unset($eq0);
+    $ids_select = array_map('intval', array_column($clubes_disponibles, 'id'));
+    foreach ($equipos_registrados as $eqm) {
+        $cid = (int)($eqm['id_club'] ?? 0);
+        if ($cid <= 0 || in_array($cid, $ids_select, true)) {
+            continue;
+        }
+        $stmt = $pdo->prepare('SELECT id, nombre FROM clubes WHERE id = ? LIMIT 1');
+        $stmt->execute([$cid]);
+        $fila = $stmt->fetch(PDO::FETCH_ASSOC);
+        if ($fila) {
+            $clubes_disponibles[] = ['id' => (int)$fila['id'], 'nombre' => $fila['nombre'] . ' (equipo)'];
+            $ids_select[] = $cid;
+        }
+    }
+    usort($clubes_disponibles, static function ($a, $b) {
+        return strcasecmp((string)($a['nombre'] ?? ''), (string)($b['nombre'] ?? ''));
+    });
     foreach ($equipos_registrados as &$eq) {
         $eq['jugadores'] = [];
         $codigo = trim((string)($eq['codigo_equipo'] ?? ''));
