@@ -44,10 +44,10 @@ $base_url = $use_standalone ? $script_actual : 'index.php?page=torneo_gestion';
 
 // Ruta base para API (dinámica según entorno)
 $api_base_path = (function_exists('AppHelpers') ? AppHelpers::getPublicPath() : '/mistorneos/public/') . 'api/';
-/** Obligatorio v2: evita OPcache obsoleto de guardar_equipo.php en el servidor */
-$api_guardar_equipo = $api_base_path . 'guardar_equipo_v2.php';
+/** Endpoint único save_equipo_sitio.php (evita OPcache/rutas viejas de guardar_equipo.php) */
+$api_guardar_equipo = $api_base_path . 'save_equipo_sitio.php';
 ?>
-<!-- inscribir_equipo_sitio: API guardado = guardar_equipo_v2.php (si ves guardar_equipo.php en el HTML, el servidor no tiene esta vista actualizada) -->
+<!-- inscribir_equipo_sitio: API = save_equipo_sitio.php -->
 <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
 <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
 <style>
@@ -845,8 +845,8 @@ document.getElementById('formEquipo').addEventListener('submit', async function(
     console.log('Total de jugadores a enviar:', jugadoresEnviados.length);
     var _urlGuardar = <?php echo json_encode($api_guardar_equipo); ?>;
     console.log('[Inscribir equipo] POST a:', _urlGuardar);
-    if (_urlGuardar.indexOf('guardar_equipo_v2') === -1) {
-        console.error('ERROR: Esta página no usa guardar_equipo_v2.php. Sube modules/gestion_torneos/inscribir_equipo_sitio.php al servidor.');
+    if (_urlGuardar.indexOf('save_equipo_sitio') === -1) {
+        console.error('ERROR: Esta página no usa save_equipo_sitio.php. Sube modules/gestion_torneos/inscribir_equipo_sitio.php al servidor.');
     }
     try {
         const response = await fetch(_urlGuardar, {
