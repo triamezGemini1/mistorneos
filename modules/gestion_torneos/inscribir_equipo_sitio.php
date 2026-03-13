@@ -127,6 +127,22 @@ $api_guardar_equipo = $base_url . ($use_standalone ? '?' : '&') . 'action=guarda
         border-radius: 0.5rem;
         padding: 0.5rem;
     }
+    /* Contenedor del formulario: −15% alto (85% del área útil en viewport) */
+    .page-inscripcion-sitio .col-insc-form > .card {
+        max-height: calc(90vh * 0.85 - 5.5rem);
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+    }
+    .page-inscripcion-sitio .col-insc-form > .card > .card-header {
+        flex-shrink: 0;
+    }
+    .page-inscripcion-sitio .col-insc-form > .card > .card-body {
+        flex: 1 1 auto;
+        min-height: 0;
+        overflow-y: auto;
+        overflow-x: hidden;
+    }
     .col-insc-equipos {
         flex: 0 0 31%;
         max-width: 31%;
