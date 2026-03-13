@@ -42,7 +42,10 @@ $script_actual = basename($_SERVER['PHP_SELF'] ?? '');
 $use_standalone = in_array($script_actual, ['admin_torneo.php', 'panel_torneo.php']);
 $base_url = $use_standalone ? $script_actual : 'index.php?page=torneo_gestion';
 
-// Guardado vía index.php / admin_torneo (misma sesión que la página — corrige de base OPcache/API)
+// APIs públicas (obtener/eliminar/buscar jugador) — deben seguir en public/api/
+$api_base_path = (function_exists('AppHelpers') ? AppHelpers::getPublicPath() : '/mistorneos/public/') . 'api/';
+
+// Guardado vía index.php / admin_torneo (misma sesión; no depender de guardar_equipo.php en /api/)
 $api_guardar_equipo = $base_url . ($use_standalone ? '?' : '&') . 'action=guardar_equipo_sitio&torneo_id=' . (int)($torneo['id'] ?? 0);
 ?>
 <!-- inscribir_equipo_sitio: POST interno action=guardar_equipo_sitio (no public/api) -->
@@ -935,8 +938,16 @@ document.getElementById('formEquipo').addEventListener('submit', async function(
 // Cargar equipo en el formulario al seleccionarlo de la lista
 async function cargarEquipo(equipoId) {
     try {
-        const response = await fetch(`<?php echo $api_base_path; ?>obtener_equipo.php?id=${equipoId}`);
-        const data = await response.json();
+        const response = await fetch(`<?php echo $api_base_path; ?>obtener_equipo.php?id=${equipoId}`, { credentials: 'same-origin' });
+        const text = await response.text();
+        let data;
+        try {
+            data = JSON.parse(text);
+        } catch (e) {
+            console.error('obtener_equipo no devolvió JSON:', text.substring(0, 300));
+            Swal.fire({ icon: 'error', title: 'Error', text: 'No se pudo leer el equipo (respuesta no JSON). ¿Sesión caducada?', confirmButtonColor: '#3b82f6' });
+            return;
+        }
         
         if (data.success && data.equipo) {
             const equipo = data.equipo;
@@ -1007,7 +1018,7 @@ async function cargarEquipo(equipoId) {
             Swal.fire({
                 icon: 'error',
                 title: 'Error',
-                text: 'Error al cargar los datos del equipo',
+                text: data.message || 'Error al cargar los datos del equipo',
                 confirmButtonColor: '#3b82f6'
             });
         }
