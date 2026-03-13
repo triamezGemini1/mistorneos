@@ -843,7 +843,7 @@ document.getElementById('formEquipo').addEventListener('submit', async function(
     console.log('Enviando datos al servidor...');
     
     try {
-        const response = await fetch('<?php echo $api_base_path; ?>guardar_equipo.php', {
+        const response = await fetch('<?php echo $api_base_path; ?>guardar_equipo_v2.php', {
             method: 'POST',
             body: formData,
             credentials: 'same-origin'

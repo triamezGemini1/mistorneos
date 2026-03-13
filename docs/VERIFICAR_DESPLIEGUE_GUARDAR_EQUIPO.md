@@ -3,11 +3,13 @@
 ## Problema
 El log muestra **"POST recibido"** y se corta después de **"Content-Type recibido"**. Eso indica que en el servidor está la **versión antigua** del archivo.
 
-## Qué desplegar
-Subir/copiar al servidor el archivo actual:
+## Qué desplegar (importante: v2 evita OPcache obsoleto)
 
-- **Origen (repo):** `public/api/guardar_equipo.php`
-- **Destino (servidor):** la ruta equivalente a `public/api/guardar_equipo.php` dentro de tu instalación (ej. `mistorneos_beta/public/api/guardar_equipo.php`).
+1. **`public/api/guardar_equipo_v2.php`** — implementación real (nombre nuevo = PHP no tiene bytecode antiguo).
+2. **`public/api/guardar_equipo.php`** — solo hace `require` de `guardar_equipo_v2.php` (compatibilidad).
+3. **`modules/gestion_torneos/inscribir_equipo_sitio.php`** — el formulario hace `fetch` a **`guardar_equipo_v2.php`** (obligatorio para que el navegador no siga pegando al script cacheado).
+
+Sin subir **v2** y sin actualizar la vista, seguirás viendo en el log "POST recibido" aunque el disco tenga el PHP nuevo.
 
 ## Comprobar que el archivo desplegado es el correcto
 
