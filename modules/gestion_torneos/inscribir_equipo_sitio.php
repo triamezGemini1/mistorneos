@@ -175,36 +175,36 @@ $api_guardar_equipo = $base_url . ($use_standalone ? '?' : '&') . 'action=guarda
         line-height: 1.05 !important;
         min-height: calc(0.72em + 0.16rem) !important;
     }
-    /* Jugador: −20% ancho (flex) y altura +30% vs base 0.72em+0.16rem */
+    /* Jugador: altura +60% vs base compacta (0.72em+0.16rem) ×1.6 */
     .fila-jugador-compacta .jugador-id-usuario,
     .fila-jugador-compacta .jugador-cedula,
     .fila-jugador-compacta .jugador-nombre {
-        padding: 0.12rem 0.25rem !important;
+        padding: 0.18rem 0.28rem !important;
         font-size: 0.7rem !important;
-        line-height: 1.08 !important;
-        min-height: calc(0.936em + 0.21rem) !important;
+        line-height: 1.12 !important;
+        min-height: calc(1.152em + 0.26rem) !important;
         box-sizing: border-box !important;
     }
-    /* ID : cédula : nombre −20% ancho cada uno (×0.8 sobre 7.2:10.4:24.4) */
+    /* ID : cédula : nombre −20% ancho otra vez (×0.8 sobre 5.76:8.32:19.52) */
     .fila-jugador-compacta .wrap-inputs-jugador {
         display: flex;
         flex: 1 1 auto;
         min-width: 0;
         align-items: center;
-        gap: 0.15rem;
+        gap: 0.12rem;
     }
     .fila-jugador-compacta .input-id-usuario {
-        flex: 5.76 1 0;
+        flex: 4.608 1 0;
         min-width: 0;
         max-width: none;
     }
     .fila-jugador-compacta .input-cedula {
-        flex: 8.32 1 0;
+        flex: 6.656 1 0;
         min-width: 0;
         max-width: none;
     }
     .fila-jugador-compacta .input-nombre-jug {
-        flex: 19.52 1 0;
+        flex: 15.616 1 0;
         min-width: 0;
         max-width: none;
     }
@@ -491,9 +491,9 @@ $api_guardar_equipo = $base_url . ($use_standalone ? '?' : '&') . 'action=guarda
                             ?>
                             <div class="equipo-sidebar-item equipo-registrado-item" data-equipo-id="<?php echo $eid; ?>">
                                 <div class="equipo-sidebar-header d-flex align-items-center justify-content-between gap-1 flex-wrap"
-                                     data-bs-toggle="collapse" data-bs-target="#<?php echo $collapseId; ?>"
-                                     aria-expanded="false" aria-controls="<?php echo $collapseId; ?>"
-                                     role="button">
+                                     role="button" tabindex="0"
+                                     data-collapse-target="<?php echo htmlspecialchars($collapseId, ENT_QUOTES, 'UTF-8'); ?>"
+                                     aria-expanded="false" aria-controls="<?php echo $collapseId; ?>">
                                     <div class="flex-grow-1 min-w-0">
                                         <span class="badge bg-secondary"><?php echo htmlspecialchars($equipo['codigo_equipo']); ?></span>
                                         <span class="fw-semibold text-primary"><?php echo htmlspecialchars($equipo['nombre_equipo']); ?></span>
@@ -512,7 +512,7 @@ $api_guardar_equipo = $base_url . ($use_standalone ? '?' : '&') . 'action=guarda
                                         </button>
                                     </div>
                                 </div>
-                                <div class="collapse" id="<?php echo $collapseId; ?>">
+                                <div class="collapse integrantes-collapse" id="<?php echo $collapseId; ?>">
                                     <ul class="list-unstyled mb-0 equipo-sidebar-integrantes">
                                         <?php if (empty($jugEq)): ?>
                                             <li class="text-muted">Sin jugadores en lista</li>
@@ -574,18 +574,49 @@ echo json_encode($map, JSON_UNESCAPED_UNICODE);
 document.addEventListener('DOMContentLoaded', function() {
     validarFormulario();
     actualizarBloqueoSeleccionJugadores();
-    document.querySelectorAll('#listaEquiposRegistrados .collapse').forEach(function (el) {
-        el.addEventListener('shown.bs.collapse', function () {
-            var h = el.previousElementSibling;
-            var i = h && h.querySelector('.integrantes-chevron i');
-            if (i) { i.classList.remove('fa-chevron-down'); i.classList.add('fa-chevron-up'); }
+    /* Integrantes: despliegue/repliegue manual (evita fallos del toggle en cabecera con botones) */
+    (function initToggleIntegrantes() {
+        var lista = document.getElementById('listaEquiposRegistrados');
+        if (!lista || typeof bootstrap === 'undefined') return;
+        function chevron(header, abajo) {
+            var i = header && header.querySelector('.integrantes-chevron i');
+            if (!i) return;
+            i.classList.remove('fa-chevron-down', 'fa-chevron-up');
+            i.classList.add(abajo ? 'fa-chevron-down' : 'fa-chevron-up');
+        }
+        function syncAria(header, collapseEl) {
+            var open = collapseEl.classList.contains('show');
+            header.setAttribute('aria-expanded', open ? 'true' : 'false');
+            chevron(header, !open);
+        }
+        lista.querySelectorAll('.integrantes-collapse').forEach(function (collapseEl) {
+            var header = collapseEl.previousElementSibling;
+            if (!header || !header.classList.contains('equipo-sidebar-header')) return;
+            collapseEl.addEventListener('shown.bs.collapse', function () { syncAria(header, collapseEl); });
+            collapseEl.addEventListener('hidden.bs.collapse', function () { syncAria(header, collapseEl); });
         });
-        el.addEventListener('hidden.bs.collapse', function () {
-            var h = el.previousElementSibling;
-            var i = h && h.querySelector('.integrantes-chevron i');
-            if (i) { i.classList.remove('fa-chevron-up'); i.classList.add('fa-chevron-down'); }
+        lista.addEventListener('click', function (e) {
+            if (e.target.closest('.btn-editar-equipo-form')) return;
+            if (e.target.closest('button.btn-outline-danger')) return;
+            var header = e.target.closest('.equipo-sidebar-header');
+            if (!header || !lista.contains(header)) return;
+            var id = header.getAttribute('data-collapse-target');
+            if (!id) return;
+            var collapseEl = document.getElementById(id);
+            if (!collapseEl) return;
+            var inst = bootstrap.Collapse.getOrCreateInstance(collapseEl, { toggle: false });
+            inst.toggle();
         });
-    });
+        lista.addEventListener('keydown', function (e) {
+            if (e.key !== 'Enter' && e.key !== ' ') return;
+            var header = e.target.closest('.equipo-sidebar-header');
+            if (!header || e.target.closest('button')) return;
+            e.preventDefault();
+            var id = header.getAttribute('data-collapse-target');
+            var collapseEl = id && document.getElementById(id);
+            if (collapseEl) bootstrap.Collapse.getOrCreateInstance(collapseEl, { toggle: false }).toggle();
+        });
+    })();
     document.getElementById('nombre_equipo').addEventListener('input', () => {
         validarFormulario();
         actualizarBloqueoSeleccionJugadores();
