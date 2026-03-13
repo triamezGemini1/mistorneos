@@ -2416,20 +2416,38 @@ function obtenerDatosInscribirEquipoSitio($torneo_id) {
     usort($clubes_disponibles, static function ($a, $b) {
         return strcasecmp((string)($a['nombre'] ?? ''), (string)($b['nombre'] ?? ''));
     });
-    foreach ($equipos_registrados as &$eq) {
-        $eq['jugadores'] = [];
-        $codigo = trim((string)($eq['codigo_equipo'] ?? ''));
-        if ($codigo !== '') {
-            $stj = $pdo->prepare("
-                SELECT i.id AS id_inscrito, i.id_usuario, u.cedula, COALESCE(NULLIF(TRIM(u.nombre), ''), u.username) AS nombre
-                FROM inscritos i INNER JOIN usuarios u ON u.id = i.id_usuario
-                WHERE i.torneo_id = ? AND i.codigo_equipo = ?
-                  AND (i.estatus IS NULL OR i.estatus = '' OR i.estatus NOT IN ('retirado', 4))
-                ORDER BY nombre ASC
-            ");
-            $stj->execute([$torneo_id, $codigo]);
-            $eq['jugadores'] = $stj->fetchAll(PDO::FETCH_ASSOC);
+    $por_codigo = [];
+    $codigos_eq = [];
+    foreach ($equipos_registrados as $eq) {
+        $c = trim((string)($eq['codigo_equipo'] ?? ''));
+        if ($c !== '') {
+            $codigos_eq[$c] = true;
         }
+    }
+    $codigos_list = array_keys($codigos_eq);
+    if ($codigos_list !== []) {
+        $ph = implode(',', array_fill(0, count($codigos_list), '?'));
+        $stj = $pdo->prepare("
+            SELECT i.codigo_equipo, i.id AS id_inscrito, i.id_usuario, u.cedula,
+                   COALESCE(NULLIF(TRIM(u.nombre), ''), u.username) AS nombre
+            FROM inscritos i INNER JOIN usuarios u ON u.id = i.id_usuario
+            WHERE i.torneo_id = ? AND i.codigo_equipo IN ($ph)
+              AND (i.estatus IS NULL OR i.estatus = '' OR i.estatus NOT IN ('retirado', 4))
+            ORDER BY i.codigo_equipo ASC, nombre ASC
+        ");
+        $stj->execute(array_merge([$torneo_id], $codigos_list));
+        foreach ($stj->fetchAll(PDO::FETCH_ASSOC) as $row) {
+            $ck = (string)($row['codigo_equipo'] ?? '');
+            if ($ck === '') {
+                continue;
+            }
+            unset($row['codigo_equipo']);
+            $por_codigo[$ck][] = $row;
+        }
+    }
+    foreach ($equipos_registrados as &$eq) {
+        $c = trim((string)($eq['codigo_equipo'] ?? ''));
+        $eq['jugadores'] = ($c !== '' && isset($por_codigo[$c])) ? $por_codigo[$c] : [];
     }
     unset($eq);
 

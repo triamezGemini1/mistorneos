@@ -3,6 +3,9 @@
  * Vista: Inscribir Equipos en Sitio
  * Formulario simplificado que muestra solo jugadores NO inscritos
  */
+if (ob_get_level() < 5) {
+    ob_start(null, 2 * 1024 * 1024);
+}
 $torneo = $view_data['torneo'] ?? [];
 $jugadores_disponibles = $view_data['jugadores_disponibles'] ?? [];
 $clubes_disponibles = $view_data['clubes_disponibles'] ?? [];
@@ -20,20 +23,6 @@ if (!empty($torneo['id'])) {
         $ultima_ronda = (int)($stmt->fetchColumn() ?? 0);
         // Equipos: bloquear desde la primera ronda
         $torneo_iniciado = $ultima_ronda >= 1;
-    } catch (Exception $e) {
-        $torneo_iniciado = false;
-    }
-}
-
-// Determinar si el torneo ya inició (tiene rondas)
-$torneo_iniciado = false;
-if (!empty($torneo['id'])) {
-    try {
-        $pdo = DB::pdo();
-        $stmt = $pdo->prepare("SELECT MAX(CAST(partida AS UNSIGNED)) AS ultima_ronda FROM partiresul WHERE id_torneo = ? AND mesa > 0");
-        $stmt->execute([(int)$torneo['id']]);
-        $ultima_ronda = (int)($stmt->fetchColumn() ?? 0);
-        $torneo_iniciado = $ultima_ronda > 0;
     } catch (Exception $e) {
         $torneo_iniciado = false;
     }
