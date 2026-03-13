@@ -44,7 +44,9 @@ $base_url = $use_standalone ? $script_actual : 'index.php?page=torneo_gestion';
 
 // Ruta base para API (dinámica según entorno)
 $api_base_path = (function_exists('AppHelpers') ? AppHelpers::getPublicPath() : '/mistorneos/public/') . 'api/';
+$api_guardar_equipo = $api_base_path . 'guardar_equipo_v2.php';
 ?>
+<!-- inscribir_equipo_sitio: API = guardar_equipo_v2.php -->
 <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
 <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
 <style>
@@ -835,12 +837,13 @@ document.getElementById('formEquipo').addEventListener('submit', async function(
     }
     
     console.log('Total de jugadores a enviar:', jugadoresEnviados.length);
-    console.log('Enviando datos al servidor...');
-    
+    var _urlGuardar = <?php echo json_encode($api_guardar_equipo); ?>;
+    console.log('[Inscribir equipo] POST a:', _urlGuardar);
     try {
-        const response = await fetch('<?php echo $api_base_path; ?>guardar_equipo_v2.php', {
+        const response = await fetch(_urlGuardar, {
             method: 'POST',
-            body: formData
+            body: formData,
+            credentials: 'same-origin'
         });
         
         console.log('Respuesta recibida, status:', response.status);
