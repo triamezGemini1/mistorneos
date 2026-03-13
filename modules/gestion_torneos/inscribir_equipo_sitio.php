@@ -55,6 +55,18 @@ $api_guardar_equipo = $base_url . ($use_standalone ? '?' : '&') . 'action=guarda
     body {
         background-color: #f8f9fa;
     }
+    /* Inscripción en sitio: ocupa como máximo 90% del alto del dispositivo */
+    .page-inscripcion-sitio {
+        max-height: 90vh;
+        height: 90vh;
+        overflow-y: auto;
+        overflow-x: hidden;
+        box-sizing: border-box;
+        padding-top: 0.5rem !important;
+        padding-bottom: 0.5rem !important;
+    }
+    .page-inscripcion-sitio .breadcrumb { margin-bottom: 0.5rem !important; }
+    .page-inscripcion-sitio .card.mb-4:first-of-type { margin-bottom: 0.5rem !important; }
     .jugador-item {
         padding: 8px 12px;
         border-bottom: 1px solid #e9ecef;
@@ -175,14 +187,14 @@ $api_guardar_equipo = $base_url . ($use_standalone ? '?' : '&') . 'action=guarda
         line-height: 1.05 !important;
         min-height: calc(0.72em + 0.16rem) !important;
     }
-    /* Tres textbox: 80% ancho columna formulario; alto +40% sobre bloque anterior (×1.4) */
+    /* ID / cédula / nombre: alto +70% (×1.7) y fuente +80% (×1.8) respecto a 0.7rem / min-height previo */
     .fila-jugador-compacta .jugador-id-usuario,
     .fila-jugador-compacta .jugador-cedula,
     .fila-jugador-compacta .jugador-nombre {
-        padding: 0.22rem 0.3rem !important;
-        font-size: 0.7rem !important;
-        line-height: 1.15 !important;
-        min-height: calc(1.613em + 0.36rem) !important;
+        padding: 0.35rem 0.4rem !important;
+        font-size: 1.26rem !important;
+        line-height: 1.25 !important;
+        min-height: calc(2.74em + 0.62rem) !important;
         box-sizing: border-box !important;
     }
     .fila-jugador-compacta .wrap-inputs-jugador {
@@ -220,7 +232,8 @@ $api_guardar_equipo = $base_url . ($use_standalone ? '?' : '&') . 'action=guarda
         min-width: 0;
         max-width: none;
     }
-    .equipo-sidebar-card .card-body { max-height: calc(100vh - 280px); overflow-y: auto; }
+    .page-inscripcion-sitio .equipo-sidebar-card .card-body { max-height: calc(90vh - 220px); overflow-y: auto; }
+    .page-inscripcion-sitio .col-disponibles .card-body { max-height: calc(90vh - 260px) !important; }
     .equipo-sidebar-item {
         border: 1px solid #dee2e6;
         border-radius: 6px;
@@ -246,7 +259,7 @@ $api_guardar_equipo = $base_url . ($use_standalone ? '?' : '&') . 'action=guarda
     .btn-editar-equipo-form { font-size: 0.7rem; padding: 0.1rem 0.35rem; }
 </style>
 
-<div class="container-fluid py-4">
+<div class="container-fluid py-4 page-inscripcion-sitio">
     <!-- Breadcrumb -->
     <nav aria-label="breadcrumb" class="mb-4">
         <ol class="breadcrumb">
@@ -301,7 +314,7 @@ $api_guardar_equipo = $base_url . ($use_standalone ? '?' : '&') . 'action=guarda
                 </div>
                 
                 <!-- Lista de Jugadores -->
-                <div class="card-body p-0" style="max-height: calc(100vh - 320px); overflow-y: auto;">
+                <div class="card-body p-0" style="max-height: calc(90vh - 240px); overflow-y: auto;">
                     <?php if (empty($jugadores_disponibles)): ?>
                         <div class="text-center py-3 text-muted small">
                             <i class="fas fa-user-slash fa-2x mb-2 opacity-50"></i>
