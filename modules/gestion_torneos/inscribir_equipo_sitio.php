@@ -374,23 +374,38 @@ $api_guardar_equipo = $base_url . ($use_standalone ? '?' : '&') . 'action=guarda
                     </h6>
                 </div>
                 
-                <!-- Buscador -->
+                <!-- Buscador lista (admin club) | cédula AJAX (admin general, lista lazy) -->
                 <div class="search-box">
-                    <input type="text" 
-                           id="searchJugadores" 
-                           class="form-control" 
+                    <?php if ($jugadores_lista_lazy): ?>
+                        <label class="form-label small mb-1 fw-semibold" for="buscarCedulaLazy">Buscar por cédula (añadir a disponibles)</label>
+                        <div class="input-group input-group-sm mb-1">
+                            <input type="text"
+                                   id="buscarCedulaLazy"
+                                   class="form-control"
+                                   placeholder="Cédula del jugador"
+                                   inputmode="numeric"
+                                   autocomplete="off"
+                                   aria-describedby="hintLazyCedula">
+                            <button type="button" class="btn btn-primary" id="btnBuscarCedulaLazy" title="Consultar y añadir a la lista">
+                                <i class="fas fa-plus"></i> Añadir
+                            </button>
+                        </div>
+                        <small id="hintLazyCedula" class="text-muted d-block">1) Club y nombre de equipo. 2) Busque por cédula; el jugador aparece abajo para asignar a una posición.</small>
+                        <input type="text" id="searchJugadores" class="form-control form-control-sm mt-1 d-none" disabled aria-hidden="true">
+                    <?php else: ?>
+                    <input type="text"
+                           id="searchJugadores"
+                           class="form-control"
                            placeholder="Buscar por ID, cédula o nombre..."
                            disabled>
                     <small class="text-muted">Seleccione el Club y Nombre del Equipo para habilitar</small>
+                    <?php endif; ?>
                 </div>
-                
-                <!-- Lista de Jugadores -->
+
+                <!-- Lista de Jugadores (#listaJugadores siempre en DOM si lazy) -->
                 <div class="card-body p-0" style="flex:1;min-height:0;overflow-y:auto;">
                     <?php if ($jugadores_lista_lazy): ?>
-                        <div class="text-center py-2 px-2 text-muted small border-bottom bg-light">
-                            <i class="fas fa-search me-1 text-primary"></i>
-                            <strong>Admin general:</strong> sin listado precargado. Club + nombre de equipo → cédula por jugador.
-                        </div>
+                        <div class="small text-muted px-2 py-1 border-bottom bg-white fw-bold" style="font-size:0.7rem;">Disponibles (búsqueda por cédula)</div>
                         <div id="listaJugadores"></div>
                     <?php elseif (empty($jugadores_disponibles)): ?>
                         <div class="text-center py-3 text-muted small">
@@ -645,6 +660,7 @@ $api_guardar_equipo = $base_url . ($use_standalone ? '?' : '&') . 'action=guarda
 <script>
 const JUGADORES_POR_EQUIPO = <?php echo $jugadores_por_equipo; ?>;
 const TORNEO_ID = <?php echo $torneo['id']; ?>;
+const JUGADORES_LISTA_LAZY = <?php echo $jugadores_lista_lazy ? 'true' : 'false'; ?>;
 /** Datos para editar: todo viene del servidor al cargar la página — sin fetch a obtener_equipo */
 const EQUIPOS_EDITAR = <?php
 $map = [];
@@ -910,6 +926,59 @@ function actualizarContadorDisponibles() {
     const numItems = document.querySelectorAll('#listaJugadores .jugador-item').length;
 }
 
+/** Admin general (lista lazy): API + añade fila en #listaJugadores (mismo flujo que admin club). */
+async function buscarCedulaLazyAnadir() {
+    if (!JUGADORES_LISTA_LAZY) return;
+    if (!puedeSeleccionarJugadores()) {
+        Swal.fire({ icon: 'warning', title: 'Atención', text: 'Indique Club y nombre del equipo primero.', confirmButtonColor: '#3b82f6' });
+        return;
+    }
+    const input = document.getElementById('buscarCedulaLazy');
+    if (!input) return;
+    const cedula = (input.value || '').trim();
+    if (!cedula) {
+        Swal.fire({ icon: 'info', title: 'Cédula', text: 'Escriba la cédula del jugador.', confirmButtonColor: '#3b82f6' });
+        return;
+    }
+    try {
+        const response = await fetch(`<?php echo $api_base_path; ?>buscar_jugador_inscripcion.php?cedula=${encodeURIComponent(cedula)}&torneo_id=${TORNEO_ID}`);
+        const data = await response.json();
+        if (!data.success || !data.jugador) {
+            Swal.fire({ icon: 'error', title: 'No encontrado', text: data.message || 'Jugador no disponible', confirmButtonColor: '#3b82f6' });
+            return;
+        }
+        if (data.jugador.codigo_equipo) {
+            Swal.fire({ icon: 'warning', title: 'No disponible', text: 'Ya está en un equipo: ' + data.jugador.codigo_equipo, confirmButtonColor: '#3b82f6' });
+            return;
+        }
+        let dup = false;
+        document.querySelectorAll('#listaJugadores .jugador-item').forEach(function (el) {
+            if (el.getAttribute('data-cedula') === cedula) dup = true;
+        });
+        if (dup) {
+            Swal.fire({ icon: 'info', title: 'Ya en lista', text: 'Ese jugador ya está en disponibles.', confirmButtonColor: '#3b82f6' });
+            return;
+        }
+        data.jugador.id = data.jugador.id_inscrito ?? data.jugador.id ?? null;
+        devolverJugadorAListado(data.jugador);
+        input.value = '';
+        actualizarContadorDisponibles();
+    } catch (e) {
+        console.error(e);
+        Swal.fire({ icon: 'error', title: 'Error', text: 'No se pudo consultar la cédula.', confirmButtonColor: '#3b82f6' });
+    }
+}
+
+document.addEventListener('DOMContentLoaded', function () {
+    if (!JUGADORES_LISTA_LAZY) return;
+    const btn = document.getElementById('btnBuscarCedulaLazy');
+    const inp = document.getElementById('buscarCedulaLazy');
+    if (btn) btn.addEventListener('click', function () { buscarCedulaLazyAnadir(); });
+    if (inp) inp.addEventListener('keydown', function (ev) {
+        if (ev.key === 'Enter') { ev.preventDefault(); buscarCedulaLazyAnadir(); }
+    });
+});
+
 // Buscar jugador por cédula
 async function buscarJugadorPorCedula(input) {
     const cedula = input.value.trim();
@@ -1038,12 +1107,19 @@ function puedeSeleccionarJugadores() {
 
 function actualizarBloqueoSeleccionJugadores() {
     const ready = puedeSeleccionarJugadores();
-    
+
     const searchInput = document.getElementById('searchJugadores');
-    if (searchInput) {
+    if (searchInput && !searchInput.classList.contains('d-none')) {
         searchInput.disabled = !ready;
         if (!ready) searchInput.value = '';
     }
+    const lazyCed = document.getElementById('buscarCedulaLazy');
+    const lazyBtn = document.getElementById('btnBuscarCedulaLazy');
+    if (lazyCed) {
+        lazyCed.disabled = !ready;
+        if (!ready) lazyCed.value = '';
+    }
+    if (lazyBtn) lazyBtn.disabled = !ready;
     
     // Actualizar contenedor y cada item individual
     const lista = document.getElementById('listaJugadores');

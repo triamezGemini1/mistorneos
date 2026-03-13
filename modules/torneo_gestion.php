@@ -2207,58 +2207,76 @@ function obtenerDatosGestionarInscripcionesParejasFijas($torneo_id) {
 }
 
 /**
- * Obtiene datos para inscribir equipos en sitio (solo jugadores NO inscritos + equipos registrados)
+ * Datos para la vista inscribir_equipo_sitio (equipos en sitio).
+ *
+ * Rendimiento:
+ * - Admin general: no carga listado masivo de usuarios; jugadores_disponibles = [] y jugadores_lista_lazy = true.
+ * - Admin club: una query con club_id IN (…) para jugadores del territorio no asignados a equipo.
+ * - Torneo: caché APCu 120 s si está disponible; sin APCu, SELECT directo (sin error).
+ * - Clubes extra por equipos ya inscritos: un solo SELECT … id IN (…) (evita N+1).
+ *
+ * @param int $torneo_id ID del torneo
+ *
+ * @return array{
+ *     torneo: array,
+ *     jugadores_disponibles: array<int, array>,
+ *     clubes_disponibles: array<int, array>,
+ *     equipos_registrados: array<int, array>,
+ *     total_jugadores_disponibles: int,
+ *     total_equipos: int,
+ *     jugadores_por_equipo: int,
+ *     is_admin_club: bool,
+ *     jugadores_lista_lazy: bool
+ * }
  */
-function obtenerDatosInscribirEquipoSitio($torneo_id) {
+function obtenerDatosInscribirEquipoSitio(int $torneo_id): array
+{
     require_once __DIR__ . '/../lib/ClubHelper.php';
     require_once __DIR__ . '/../lib/EquiposHelper.php';
     require_once __DIR__ . '/../config/auth.php';
 
     $pdo = DB::pdo();
 
-    $current_user = Auth::user();
     $user_club_id_raw = Auth::getUserClubId();
-    $user_club_id = ($user_club_id_raw !== null && (int)$user_club_id_raw > 0) ? (int)$user_club_id_raw : null;
+    $user_club_id = ($user_club_id_raw !== null && (int) $user_club_id_raw > 0)
+        ? (int) $user_club_id_raw
+        : null;
     $is_admin_general = Auth::isAdminGeneral();
     $is_admin_club = Auth::isAdminClub();
 
-    // Caché corta del torneo (nombre, pareclub, etc.): evita lectura repetida en misma petición / APCu
-    static $torneoCache = [];
-    $cacheKey = 't_' . (int)$torneo_id;
-    if (isset($torneoCache[$cacheKey])) {
-        $torneo = $torneoCache[$cacheKey];
-    } elseif (function_exists('apcu_fetch')) {
-        $apcuKey = 'inscribir_eq_sitio_torneo_' . (int)$torneo_id;
-        $torneo = apcu_fetch($apcuKey);
-        if (!is_array($torneo)) {
+    static $torneoRequestCache = [];
+    $memKey = 't_' . $torneo_id;
+    if (isset($torneoRequestCache[$memKey])) {
+        $torneo = $torneoRequestCache[$memKey];
+    } elseif (function_exists('apcu_fetch') && function_exists('apcu_store')) {
+        $apcuKey = 'inscribir_eq_sitio_torneo_' . $torneo_id;
+        $torneo = @apcu_fetch($apcuKey);
+        if (! is_array($torneo)) {
             $stmt = $pdo->prepare('SELECT * FROM tournaments WHERE id = ?');
             $stmt->execute([$torneo_id]);
-            $torneo = $stmt->fetch(PDO::FETCH_ASSOC);
-            if ($torneo) {
-                apcu_store($apcuKey, $torneo, 120);
+            $torneo = $stmt->fetch(PDO::FETCH_ASSOC) ?: null;
+            if (is_array($torneo)) {
+                @apcu_store($apcuKey, $torneo, 120);
             }
         }
         if (is_array($torneo)) {
-            $torneoCache[$cacheKey] = $torneo;
+            $torneoRequestCache[$memKey] = $torneo;
+        } else {
+            $torneo = null;
         }
     } else {
         $stmt = $pdo->prepare('SELECT * FROM tournaments WHERE id = ?');
         $stmt->execute([$torneo_id]);
         $torneo = $stmt->fetch(PDO::FETCH_ASSOC);
-        if ($torneo) {
-            $torneoCache[$cacheKey] = $torneo;
+        if (is_array($torneo)) {
+            $torneoRequestCache[$memKey] = $torneo;
         }
     }
 
-    if (!$torneo) {
+    if (! is_array($torneo)) {
         throw new Exception('Torneo no encontrado');
     }
 
-    /*
-     * Jugadores disponibles: solo admin club / territorio limitado por club_id IN (...).
-     * Admin general: NO listar miles/millones de filas en el HTML (TTFB + DOM).
-     * Inscripción por cédula vía buscar_jugador_inscripcion.php + campos del formulario.
-     */
     $jugadores_disponibles = [];
     $jugadores_lista_lazy = false;
 
