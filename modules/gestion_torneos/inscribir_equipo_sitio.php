@@ -12,6 +12,7 @@ $jugadores_disponibles = $view_data['jugadores_disponibles'] ?? [];
 $clubes_disponibles = $view_data['clubes_disponibles'] ?? [];
 $equipos_registrados = $view_data['equipos_registrados'] ?? [];
 $jugadores_por_equipo = $view_data['jugadores_por_equipo'] ?? 4;
+$jugadores_lista_lazy = !empty($view_data['jugadores_lista_lazy']);
 
 /** Base URL hacia public/api/ — obligatoria para buscar_jugador, obtener_equipo, eliminar_equipo */
 $api_base_path = (function_exists('AppHelpers') ? AppHelpers::getPublicPath() : '/mistorneos/public/') . 'api/';
@@ -385,7 +386,13 @@ $api_guardar_equipo = $base_url . ($use_standalone ? '?' : '&') . 'action=guarda
                 
                 <!-- Lista de Jugadores -->
                 <div class="card-body p-0" style="flex:1;min-height:0;overflow-y:auto;">
-                    <?php if (empty($jugadores_disponibles)): ?>
+                    <?php if ($jugadores_lista_lazy): ?>
+                        <div class="text-center py-2 px-2 text-muted small border-bottom bg-light">
+                            <i class="fas fa-search me-1 text-primary"></i>
+                            <strong>Admin general:</strong> sin listado precargado. Club + nombre de equipo → cédula por jugador.
+                        </div>
+                        <div id="listaJugadores"></div>
+                    <?php elseif (empty($jugadores_disponibles)): ?>
                         <div class="text-center py-3 text-muted small">
                             <i class="fas fa-user-slash fa-2x mb-2 opacity-50"></i>
                             <p class="mb-0 small">Sin disponibles</p>

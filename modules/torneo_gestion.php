@@ -2213,43 +2213,59 @@ function obtenerDatosInscribirEquipoSitio($torneo_id) {
     require_once __DIR__ . '/../lib/ClubHelper.php';
     require_once __DIR__ . '/../lib/EquiposHelper.php';
     require_once __DIR__ . '/../config/auth.php';
-    
+
     $pdo = DB::pdo();
-    
+
     $current_user = Auth::user();
     $user_club_id_raw = Auth::getUserClubId();
     $user_club_id = ($user_club_id_raw !== null && (int)$user_club_id_raw > 0) ? (int)$user_club_id_raw : null;
     $is_admin_general = Auth::isAdminGeneral();
     $is_admin_club = Auth::isAdminClub();
-    
-    $stmt = $pdo->prepare("SELECT * FROM tournaments WHERE id = ?");
-    $stmt->execute([$torneo_id]);
-    $torneo = $stmt->fetch(PDO::FETCH_ASSOC);
-    
+
+    // Caché corta del torneo (nombre, pareclub, etc.): evita lectura repetida en misma petición / APCu
+    static $torneoCache = [];
+    $cacheKey = 't_' . (int)$torneo_id;
+    if (isset($torneoCache[$cacheKey])) {
+        $torneo = $torneoCache[$cacheKey];
+    } elseif (function_exists('apcu_fetch')) {
+        $apcuKey = 'inscribir_eq_sitio_torneo_' . (int)$torneo_id;
+        $torneo = apcu_fetch($apcuKey);
+        if (!is_array($torneo)) {
+            $stmt = $pdo->prepare('SELECT * FROM tournaments WHERE id = ?');
+            $stmt->execute([$torneo_id]);
+            $torneo = $stmt->fetch(PDO::FETCH_ASSOC);
+            if ($torneo) {
+                apcu_store($apcuKey, $torneo, 120);
+            }
+        }
+        if (is_array($torneo)) {
+            $torneoCache[$cacheKey] = $torneo;
+        }
+    } else {
+        $stmt = $pdo->prepare('SELECT * FROM tournaments WHERE id = ?');
+        $stmt->execute([$torneo_id]);
+        $torneo = $stmt->fetch(PDO::FETCH_ASSOC);
+        if ($torneo) {
+            $torneoCache[$cacheKey] = $torneo;
+        }
+    }
+
     if (!$torneo) {
         throw new Exception('Torneo no encontrado');
     }
-    
-    // Obtener jugadores NO inscritos (sin codigo_equipo) del territorio del administrador
+
+    /*
+     * Jugadores disponibles: solo admin club / territorio limitado por club_id IN (...).
+     * Admin general: NO listar miles/millones de filas en el HTML (TTFB + DOM).
+     * Inscripción por cédula vía buscar_jugador_inscripcion.php + campos del formulario.
+     */
     $jugadores_disponibles = [];
-    
+    $jugadores_lista_lazy = false;
+
     if ($is_admin_general) {
-        // Admin general: todos los usuarios que no están inscritos o no tienen codigo_equipo
-        $stmt = $pdo->prepare("
-            SELECT u.id as id_usuario, u.nombre, u.cedula, u.sexo,
-                   u.club_id as club_id, c.nombre as club_nombre,
-                   ins.id as id_inscrito
-            FROM usuarios u
-            LEFT JOIN clubes c ON u.club_id = c.id
-            LEFT JOIN inscritos ins ON ins.id_usuario = u.id AND ins.torneo_id = ? AND ins.estatus != 4
-            WHERE u.role = 'usuario' 
-              AND (u.status IN ('approved', 'active', 'activo') OR u.status = 1)
-              AND (ins.id IS NULL OR ins.codigo_equipo IS NULL OR ins.codigo_equipo = '')
-            ORDER BY COALESCE(u.nombre, u.username) ASC
-        ");
-        $stmt->execute([$torneo_id]);
-        $jugadores_disponibles = $stmt->fetchAll(PDO::FETCH_ASSOC);
-    } else if ($user_club_id) {
+        $jugadores_disponibles = [];
+        $jugadores_lista_lazy = true;
+    } elseif ($user_club_id) {
         // Admin club o usuario: jugadores del territorio que no están inscritos
         if ($is_admin_club) {
             $clubes_supervisados = ClubHelper::getClubesSupervised($user_club_id);
@@ -2338,19 +2354,26 @@ function obtenerDatosInscribirEquipoSitio($torneo_id) {
     }
     unset($eq);
 
-    // Incluir en el selector todo club ya usado por un equipo inscrito (edición: debe aparecer el club actual)
+    // Clubes usados por equipos ya inscritos y aún no en el selector (una sola consulta, sin N+1)
     $ids_select = array_map('intval', array_column($clubes_disponibles, 'id'));
+    $faltan_club = [];
     foreach ($equipos_registrados as $eq) {
         $cid = (int)($eq['id_club'] ?? 0);
-        if ($cid <= 0 || in_array($cid, $ids_select, true)) {
-            continue;
+        if ($cid > 0 && !in_array($cid, $ids_select, true)) {
+            $faltan_club[$cid] = true;
         }
-        $stmt = $pdo->prepare('SELECT id, nombre FROM clubes WHERE id = ? LIMIT 1');
-        $stmt->execute([$cid]);
-        $fila = $stmt->fetch(PDO::FETCH_ASSOC);
-        if ($fila) {
-            $clubes_disponibles[] = ['id' => (int)$fila['id'], 'nombre' => $fila['nombre'] . ' (equipo)'];
-            $ids_select[] = $cid;
+    }
+    if ($faltan_club !== []) {
+        $ids_faltan = array_keys($faltan_club);
+        $phc = implode(',', array_fill(0, count($ids_faltan), '?'));
+        $stc = $pdo->prepare("SELECT id, nombre FROM clubes WHERE id IN ($phc)");
+        $stc->execute($ids_faltan);
+        foreach ($stc->fetchAll(PDO::FETCH_ASSOC) as $fila) {
+            $clubes_disponibles[] = [
+                'id' => (int)$fila['id'],
+                'nombre' => ($fila['nombre'] ?? '') . ' (equipo)',
+            ];
+            $ids_select[] = (int)$fila['id'];
         }
     }
     usort($clubes_disponibles, static function ($a, $b) {
@@ -2402,6 +2425,7 @@ function obtenerDatosInscribirEquipoSitio($torneo_id) {
         'total_equipos' => count($equipos_registrados),
         'jugadores_por_equipo' => max(2, (int)($torneo['pareclub'] ?? 4)),
         'is_admin_club' => $is_admin_club,
+        'jugadores_lista_lazy' => $jugadores_lista_lazy,
     ];
 }
 
