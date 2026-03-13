@@ -26,6 +26,72 @@ if ($_SERVER['REQUEST_METHOD'] !== 'GET') {
 $baseUrl = rtrim(class_exists('AppHelpers') ? AppHelpers::getPublicUrl() : (rtrim(app_base_url(), '/') . '/public'), '/') . '/';
 $entidadParam = isset($_GET['entidad']) ? (int)$_GET['entidad'] : 0;
 
+/** TTL caché landing (segundos): TTFB bajo en calientes */
+const LANDING_DATA_CACHE_TTL = 90;
+
+/**
+ * Clave de caché estable por entidad + usuario (la respuesta depende de ambos).
+ */
+function landingDataCacheKey(int $entidadParam): string
+{
+    $uid = 0;
+    try {
+        $uid = (int)(Auth::id() ?: 0);
+    } catch (Throwable $e) {
+        $uid = 0;
+    }
+    $role = '';
+    try {
+        $u = Auth::user();
+        $role = (string)($u['role'] ?? '');
+    } catch (Throwable $e) {
+    }
+
+    return 'landing_data_v1_' . hash('sha256', json_encode([$entidadParam, $uid, $role]));
+}
+
+function landingDataCacheGet(string $key): ?array
+{
+    if (function_exists('apcu_fetch')) {
+        $v = apcu_fetch($key);
+        if (is_array($v) && isset($v['exp'], $v['payload']) && $v['exp'] >= time()) {
+            return $v['payload'];
+        }
+    }
+    $dir = dirname(__DIR__, 2) . DIRECTORY_SEPARATOR . 'storage' . DIRECTORY_SEPARATOR . 'cache';
+    if (!is_dir($dir)) {
+        @mkdir($dir, 0755, true);
+    }
+    $file = $dir . DIRECTORY_SEPARATOR . $key . '.json';
+    if (!is_readable($file)) {
+        return null;
+    }
+    $raw = @file_get_contents($file);
+    if ($raw === false || $raw === '') {
+        return null;
+    }
+    $meta = json_decode($raw, true);
+    if (!is_array($meta) || !isset($meta['exp'], $meta['payload']) || $meta['exp'] < time()) {
+        return null;
+    }
+
+    return $meta['payload'];
+}
+
+function landingDataCacheSet(string $key, array $payload): void
+{
+    $wrapped = ['exp' => time() + LANDING_DATA_CACHE_TTL, 'payload' => $payload];
+    if (function_exists('apcu_store')) {
+        @apcu_store($key, $wrapped, LANDING_DATA_CACHE_TTL + 5);
+    }
+    $dir = dirname(__DIR__, 2) . DIRECTORY_SEPARATOR . 'storage' . DIRECTORY_SEPARATOR . 'cache';
+    if (!is_dir($dir)) {
+        @mkdir($dir, 0755, true);
+    }
+    $file = $dir . DIRECTORY_SEPARATOR . $key . '.json';
+    @file_put_contents($file, json_encode($wrapped), LOCK_EX);
+}
+
 function getAficheUrlApi($torneo, $baseUrl) {
     if (!empty($torneo['afiche'])) {
         $file = basename($torneo['afiche']);
@@ -63,6 +129,24 @@ function enriquecerEvento(&$ev, $baseUrl) {
 try {
     $pdo = DB::pdo();
     $user = Auth::user();
+    $skipCache = isset($_GET['nocache']) && $_GET['nocache'] === '1';
+
+    if (!$skipCache) {
+        $cacheKey = landingDataCacheKey($entidadParam);
+        $cachedPayload = landingDataCacheGet($cacheKey);
+        if (is_array($cachedPayload)) {
+            $cachedPayload['csrf_token'] = CSRF::token();
+            $cachedPayload['user'] = $user ? [
+                'id' => Auth::id() ?: null,
+                'nombre' => $user['nombre'] ?? $user['username'] ?? '',
+                'username' => $user['username'] ?? '',
+            ] : null;
+            header('X-Landing-Cache: HIT');
+            echo json_encode($cachedPayload, JSON_UNESCAPED_UNICODE);
+            exit;
+        }
+    }
+
     $service = new LandingDataService($pdo);
 
     // Eventos realizados (LandingDataService)
@@ -237,7 +321,7 @@ try {
 
     $csrf_token = CSRF::token();
 
-    echo json_encode([
+    $response = [
         'success' => true,
         'base_url' => $baseUrl,
         'user' => $user ? [
@@ -261,7 +345,17 @@ try {
         'logos_clientes' => $logos_clientes,
         'documentos_oficiales' => $documentos_oficiales,
         'invitaciones_fvd' => $invitaciones_fvd,
-    ], JSON_UNESCAPED_UNICODE);
+    ];
+
+    if (!$skipCache) {
+        $toStore = $response;
+        $toStore['csrf_token'] = '';
+        $toStore['user'] = null;
+        landingDataCacheSet(landingDataCacheKey($entidadParam), $toStore);
+    }
+
+    header('X-Landing-Cache: MISS');
+    echo json_encode($response, JSON_UNESCAPED_UNICODE);
 
 } catch (Exception $e) {
     error_log("API landing_data: " . $e->getMessage());

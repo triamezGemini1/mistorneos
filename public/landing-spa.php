@@ -41,9 +41,12 @@ try {
     <meta property="og:description" content="Plataforma integral para la gestión de torneos de dominó en Venezuela.">
     <link rel="canonical" href="<?= htmlspecialchars($base_url . 'landing-spa.php') ?>">
     
-    <link rel="stylesheet" href="<?= htmlspecialchars($base_url . 'assets/dist/output.css') ?>">
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Montserrat:wght@600;700;800;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="<?= htmlspecialchars($base_url . 'assets/dist/output.css') ?>" media="print" onload="this.media='all'">
+    <noscript><link rel="stylesheet" href="<?= htmlspecialchars($base_url . 'assets/dist/output.css') ?>"></noscript>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet" media="print" onload="this.media='all'">
+    <noscript><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet"></noscript>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Montserrat:wght@600;700;800;900&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
+    <noscript><link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Montserrat:wght@600;700;800;900&display=swap" rel="stylesheet"></noscript>
     
     <style>
         /* ========== Tema E-sports: variables y base ========== */
@@ -70,6 +73,9 @@ try {
         .esports-theme section:not(#hero):first-of-type { margin-top: 2rem; }
         .esports-theme section:not(#hero) .container { padding-top: 2rem; padding-bottom: 2rem; }
         .esports-theme #app > div.min-h-screen > p { color: var(--esports-text-muted); }
+        /* Shell estático: sin parpadeo antes de Vue (misma jerarquía que nav+hero) */
+        #static-landing-shell { flex-shrink: 0; }
+        .landing-loading-below-fold { min-height: min(50vh, 28rem); flex: 1 1 auto; }
         .esports-theme section:not(#hero) .container .text-center h2,
         .esports-theme section:not(#hero) .container h2 { color: #f1f5f9 !important; font-family: 'Montserrat', sans-serif; font-weight: 800; text-transform: uppercase; letter-spacing: 0.02em; }
         .esports-theme section:not(#hero) .container h3,
@@ -251,14 +257,58 @@ try {
     </style>
 </head>
 <body class="esports-theme antialiased">
-    <div id="app">
-        <div class="min-h-screen flex flex-col items-center justify-center py-20" v-if="loading">
-            <div class="flex flex-col items-center gap-4">
-                <i class="fas fa-spinner fa-spin text-5xl text-primary-500"></i>
-                <p class="text-gray-600 font-medium">Cargando...</p>
+    <div id="app" class="min-h-screen flex flex-col">
+        <div v-if="loading" class="min-h-screen flex flex-col bg-[#0f172a]">
+            <div id="static-landing-shell" class="static-landing-shell">
+                <nav class="esports-nav bg-[#0f172a]/95 border-b border-white/10 shadow-lg sticky top-0 z-50 backdrop-blur-md" aria-label="Principal">
+                    <div class="container mx-auto px-4 sm:px-6 lg:px-8">
+                        <div class="flex items-center justify-between h-16 md:h-20">
+                            <a href="<?= htmlspecialchars($base_url . 'landing-spa.php') ?>" class="flex items-center text-white font-bold hover:opacity-90 transition-opacity" title="La Estación del Dominó">
+                                <img src="<?= htmlspecialchars($logo_url) ?>" alt="La Estación del Dominó" width="200" height="50" fetchpriority="high" loading="eager" decoding="async" class="h-8 md:h-10 w-auto max-h-10 object-contain object-left">
+                            </a>
+                            <div class="hidden md:flex items-center space-x-1">
+                                <a href="#documentos" class="px-4 py-2 text-slate-300 hover:text-[#00f2ff] hover:bg-white/5 rounded-lg transition-all font-medium">Documentos</a>
+                                <a href="#eventos-masivos" class="px-4 py-2 text-slate-300 hover:text-[#00f2ff] hover:bg-white/5 rounded-lg transition-all font-medium">Eventos Nacionales</a>
+                                <a href="#logos-clientes" class="px-4 py-2 text-slate-300 hover:text-[#00f2ff] hover:bg-white/5 rounded-lg transition-all font-medium">Clientes</a>
+                                <a href="#eventos" class="px-4 py-2 text-slate-300 hover:text-[#00f2ff] hover:bg-white/5 rounded-lg transition-all font-medium">Eventos</a>
+                                <a href="#calendario" class="px-4 py-2 text-slate-300 hover:text-[#00f2ff] hover:bg-white/5 rounded-lg transition-all font-medium">Calendario</a>
+                                <a href="#registro" class="px-4 py-2 text-slate-300 hover:text-[#00f2ff] hover:bg-white/5 rounded-lg transition-all font-medium">Registro</a>
+                                <a href="#servicios" class="px-4 py-2 text-slate-300 hover:text-[#00f2ff] hover:bg-white/5 rounded-lg transition-all font-medium">Servicios</a>
+                                <a href="#galeria" class="px-4 py-2 text-slate-300 hover:text-[#00f2ff] hover:bg-white/5 rounded-lg transition-all font-medium">Galería</a>
+                                <a href="#faq" class="px-4 py-2 text-slate-300 hover:text-[#00f2ff] hover:bg-white/5 rounded-lg transition-all font-medium">FAQ</a>
+                                <a href="#comentarios" class="px-4 py-2 text-slate-300 hover:text-[#00f2ff] hover:bg-white/5 rounded-lg transition-all font-medium">Comentarios</a>
+                                <a href="<?= htmlspecialchars($base_url . 'login.php') ?>" class="ml-4 px-6 py-2.5 btn-accent rounded-lg font-semibold transition-all shadow-lg"><i class="fas fa-sign-in-alt mr-2"></i>Iniciar Sesión</a>
+                            </div>
+                            <span class="md:hidden text-white p-2 rounded-lg opacity-90" aria-hidden="true"><i class="fas fa-bars text-xl"></i></span>
+                        </div>
+                    </div>
+                </nav>
+                <section id="hero" class="relative overflow-hidden" style="background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #0f172a 100%);">
+                    <div class="absolute inset-0 opacity-30" style="background-image: radial-gradient(circle at 2px 2px, rgba(0,242,255,0.15) 1px, transparent 0); background-size: 32px 32px;"></div>
+                    <div class="absolute inset-0 bg-gradient-to-r from-[#00f2ff]/10 via-transparent to-[#00f2ff]/10"></div>
+                    <div class="container mx-auto px-4 sm:px-6 lg:px-8 py-24 md:py-32 lg:py-40 relative z-10">
+                        <div class="max-w-4xl mx-auto text-center">
+                            <h1 class="esports-font-title text-4xl md:text-5xl lg:text-7xl mb-6 leading-tight text-white tracking-tight">
+                                Domina la Mesa,<br><span class="text-[#00f2ff]">Conviértete en Leyenda</span>
+                            </h1>
+                            <p class="text-lg md:text-xl text-slate-400 mb-10 max-w-2xl mx-auto leading-relaxed">La plataforma de torneos de dominó. Inscríbete en eventos, sigue resultados en vivo y únete a la comunidad.</p>
+                            <div class="flex flex-col sm:flex-row gap-4 justify-center items-center">
+                                <a href="#registro" class="hero-cta-primary btn-accent inline-flex items-center justify-center w-full sm:w-auto px-10 py-5 text-lg"><i class="fas fa-building mr-3"></i>Solicitar Afiliación</a>
+                                <a href="<?= htmlspecialchars($base_url . 'login.php') ?>" class="w-full sm:w-auto px-8 py-4 text-slate-300 font-semibold rounded-xl border border-slate-500 hover:bg-white/5 hover:text-white transition-all text-center"><i class="fas fa-sign-in-alt mr-2"></i>Ya tengo cuenta</a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="absolute bottom-0 left-0 right-0"><svg class="w-full h-12 md:h-20 block" viewBox="0 0 1200 120" preserveAspectRatio="none" aria-hidden="true"><path d="M0,0 C150,80 350,80 600,40 C850,0 1050,0 1200,40 L1200,120 L0,120 Z" fill="#0f172a"></path></svg></div>
+                </section>
+            </div>
+            <div class="landing-loading-below-fold flex flex-col items-center justify-center py-12 px-4 border-t border-white/5">
+                <div class="flex flex-col items-center gap-4">
+                    <i class="fas fa-spinner fa-spin text-5xl text-[#00f2ff]" aria-hidden="true"></i>
+                    <p class="text-slate-400 font-medium">Cargando contenido…</p>
+                </div>
             </div>
         </div>
-        <div v-else-if="error" class="min-h-screen flex flex-col items-center justify-center py-20 px-4">
+        <div v-else-if="error" class="min-h-screen flex flex-col items-center justify-center py-20 px-4 flex-1">
             <div class="bg-red-50 border border-red-200 rounded-xl p-8 max-w-md text-center">
                 <i class="fas fa-exclamation-triangle text-4xl text-red-500 mb-4"></i>
                 <p class="text-red-700 font-medium mb-4">{{ error }}</p>
@@ -276,13 +326,13 @@ try {
     </div>
 
     <script type="text/x-template" id="landing-template">
-        <div>
+        <div class="min-h-screen flex flex-col">
             <!-- Navbar -->
             <nav class="esports-nav bg-[#0f172a]/95 border-b border-white/10 shadow-lg sticky top-0 z-50 backdrop-blur-md">
                 <div class="container mx-auto px-4 sm:px-6 lg:px-8">
                     <div class="flex items-center justify-between h-16 md:h-20">
                         <a :href="baseUrl + 'landing-spa.php'" @click.prevent="scrollToSection('hero')" class="flex items-center text-white font-bold hover:opacity-90 transition-opacity" title="La Estación del Dominó">
-                            <img :src="logoUrl" alt="La Estación del Dominó" class="h-8 md:h-10 w-auto">
+                            <img :src="logoUrl" alt="La Estación del Dominó" width="200" height="50" fetchpriority="high" loading="eager" decoding="async" class="h-8 md:h-10 w-auto max-h-10 object-contain object-left">
                         </a>
                         <div class="hidden md:flex items-center space-x-1">
                             <a href="#documentos" @click.prevent="scrollToSection('documentos')" class="px-4 py-2 text-slate-300 hover:text-[#00f2ff] hover:bg-white/5 rounded-lg transition-all font-medium">Documentos</a>
