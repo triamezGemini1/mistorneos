@@ -238,7 +238,8 @@ final class ImportacionTorneoExternoService
                             $params[] = 'admin';
                             break;
                         case 'estatus':
-                            $params[] = $nullable ? null : '';
+                            /* INT en muchas instalaciones; VARCHAR en otras — nunca cadena vacía */
+                            $params[] = $nullable ? null : 1;
                             break;
                         default:
                             if ($nullable) {
