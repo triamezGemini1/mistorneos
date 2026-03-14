@@ -136,8 +136,9 @@ final class ImportacionTorneoExternoService
         $cols = $pdo->query("SHOW COLUMNS FROM partiresul")->fetchAll(PDO::FETCH_COLUMN);
         $tieneObs = in_array('observaciones', $cols, true);
 
+        /* tarjeta/sancion=0; chancleta,zapato,fecha,registrado_por = 4 ?; registrado=1 (13 ? + opc. observaciones) */
         $sql = "INSERT INTO partiresul (id_torneo, partida, mesa, secuencia, id_usuario, resultado1, resultado2, efectividad, ff, tarjeta, sancion, chancleta, zapato, fecha_partida, registrado_por, registrado"
-            . ($tieneObs ? ", observaciones" : '') . ") VALUES (?,?,?,?,?,?,?,?,0,0,0,?,?,?,?,1"
+            . ($tieneObs ? ", observaciones" : '') . ") VALUES (?,?,?,?,?,?,?,?,0,0,?,?,?,?,1"
             . ($tieneObs ? ",?" : '') . ")";
 
         $insertados = 0;
