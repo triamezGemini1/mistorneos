@@ -262,7 +262,11 @@ $base_url_return = $use_standalone ? $script_actual : 'index.php?page=torneo_ges
                     </div>
                 </div>
             </div>
-            <div class="text-right">
+            <div class="text-right flex flex-wrap gap-2 justify-end">
+                <a href="<?php echo $base_url_return . ($use_standalone ? '?' : '&'); ?>action=resultados_reportes&torneo_id=<?php echo $torneo_id; ?>"
+                   class="px-6 py-3 bg-amber-600 hover:bg-amber-700 text-white rounded-lg shadow-lg font-bold inline-flex items-center">
+                    <i class="fas fa-file-alt mr-2"></i> Reportes PDF/Excel
+                </a>
                 <button onclick="window.print()" 
                         class="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg shadow-lg transition-all transform hover:scale-105 font-bold">
                     <i class="fas fa-print mr-2"></i> Imprimir

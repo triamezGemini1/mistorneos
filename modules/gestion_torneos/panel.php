@@ -314,6 +314,10 @@
                                class="btn btn-sm btn-info" style="font-size: 0.75rem;">
                                 <i class="fas fa-building mr-1"></i> Resultados Clubes
                             </a>
+                            <a href="index.php?page=torneo_gestion&action=resultados_reportes&torneo_id=<?php echo $torneo['id']; ?>" 
+                               class="btn btn-sm btn-secondary" style="font-size: 0.75rem;">
+                                <i class="fas fa-file-pdf mr-1"></i> Reportes PDF/Excel
+                            </a>
                             <?php 
                             $isLocked = (int)($torneo['locked'] ?? 0) === 1;
                             $puedeCerrar = !$isLocked && ($ultima_ronda ?? 0) > 0 && ($mesas_incompletas ?? 1) == 0;

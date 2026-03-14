@@ -606,11 +606,15 @@ $base_url_return = $use_standalone ? $script_actual : 'index.php?page=torneo_ges
 
 <div class="min-h-screen bg-gradient-to-br from-purple-600 via-purple-700 to-indigo-800 p-6">
     <!-- Botón de retorno al panel -->
-    <div class="mb-4">
+    <div class="mb-4 flex flex-wrap gap-2">
         <a href="<?php echo $base_url_return . ($use_standalone ? '?' : '&'); ?>action=panel&torneo_id=<?php echo $torneo_id; ?>" 
            class="inline-flex items-center px-6 py-3 bg-gray-800 hover:bg-gray-900 text-white rounded-lg shadow-lg transition-all transform hover:scale-105 font-bold">
             <i class="fas fa-arrow-left mr-2"></i>
             Volver al Panel de Control
+        </a>
+        <a href="<?php echo $base_url_return . ($use_standalone ? '?' : '&'); ?>action=resultados_reportes&torneo_id=<?php echo $torneo_id; ?>"
+           class="inline-flex items-center px-6 py-3 bg-amber-600 hover:bg-amber-700 text-white rounded-lg shadow-lg font-bold">
+            <i class="fas fa-file-alt mr-2"></i> Reportes PDF/Excel
         </a>
     </div>
     

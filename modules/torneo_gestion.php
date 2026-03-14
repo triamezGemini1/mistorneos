@@ -776,6 +776,33 @@ try {
             $view_data = ['torneo' => $torneo, 'torneo_id' => $torneo_id, 'pdo' => DB::pdo()];
             break;
 
+        case 'resultados_reportes':
+            if (!$torneo_id) {
+                throw new Exception('Debe especificar un torneo');
+            }
+            verificarPermisosTorneo($torneo_id, $user_id, $is_admin_general);
+            $torneo = obtenerTorneo($torneo_id, $user_id, $is_admin_general);
+            if (!$torneo) {
+                throw new Exception('Torneo no encontrado o sin permisos');
+            }
+            $view_file = __DIR__ . '/tournament_admin/resultados_reportes.php';
+            $view_data = ['torneo' => $torneo, 'torneo_id' => $torneo_id];
+            break;
+
+        case 'resultados_reportes_print':
+            if (!$torneo_id) {
+                throw new Exception('Debe especificar un torneo');
+            }
+            verificarPermisosTorneo($torneo_id, $user_id, $is_admin_general);
+            $torneo = obtenerTorneo($torneo_id, $user_id, $is_admin_general);
+            if (!$torneo) {
+                throw new Exception('Torneo no encontrado o sin permisos');
+            }
+            $view_file = __DIR__ . '/tournament_admin/resultados_reportes_print.php';
+            $view_data = ['torneo' => $torneo, 'torneo_id' => $torneo_id];
+            $use_reportes_print_standalone = true;
+            break;
+
         case 'verificar_actas_index':
             $view_file = __DIR__ . '/tournament_admin/verificar_actas_index.php';
             $view_data = obtenerTorneosConActasPendientes($user_id, $is_admin_general);
@@ -853,6 +880,13 @@ try {
     
     // Cronómetro: página aparte sin layout (pantalla dedicada)
     if (!empty($use_cronometro_standalone) && $view_file && file_exists($view_file)) {
+        extract($view_data);
+        include $view_file;
+        exit;
+    }
+
+    // Reportes resultados: vista imprimible sin layout
+    if (!empty($use_reportes_print_standalone) && $view_file && file_exists($view_file)) {
         extract($view_data);
         include $view_file;
         exit;

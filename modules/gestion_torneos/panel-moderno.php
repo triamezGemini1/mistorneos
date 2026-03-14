@@ -685,6 +685,10 @@ tailwind.config = {
                                class="tw-btn bg-emerald-500 hover:bg-emerald-600 text-white">
                                 <i class="fas fa-building"></i> Resultados Clubes
                             </a>
+                            <a href="<?php echo $base_url . ($use_standalone ? '?' : '&'); ?>action=resultados_reportes&torneo_id=<?php echo $torneo['id']; ?>" 
+                               class="tw-btn bg-slate-600 hover:bg-slate-700 text-white">
+                                <i class="fas fa-file-alt"></i> Reportes PDF/Excel
+                            </a>
                         <?php endif; ?>
                         
                         <!-- Podios (Común para ambos tipos - detecta modalidad automáticamente) -->

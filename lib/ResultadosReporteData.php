@@ -1,0 +1,140 @@
+<?php
+/**
+ * Datos agregados para reportes PDF/Excel del módulo de resultados.
+ */
+declare(strict_types=1);
+
+final class ResultadosReporteData
+{
+    /**
+     * @return array{torneo: array, participantes: array, resumen_clubes: array, equipos: array, rondas: array}
+     */
+    public static function cargar(PDO $pdo, int $torneoId, array $torneo): array
+    {
+        if (function_exists('recalcularPosiciones')) {
+            recalcularPosiciones($torneoId);
+        }
+
+        $sqlParticipantes = "
+            SELECT
+                i.id,
+                i.id_usuario,
+                i.torneo_id,
+                i.codigo_equipo,
+                i.posicion,
+                i.ganados,
+                i.perdidos,
+                i.efectividad,
+                i.puntos,
+                i.ptosrnk,
+                i.gff,
+                i.sancion,
+                i.tarjeta,
+                (SELECT COUNT(*) FROM partiresul pr WHERE pr.id_usuario = i.id_usuario AND pr.id_torneo = i.torneo_id
+                    AND pr.registrado = 1 AND pr.mesa = 0 AND pr.resultado1 > pr.resultado2) AS partidas_bye,
+                u.nombre AS nombre_completo,
+                u.username,
+                u.cedula,
+                c.nombre AS club_nombre,
+                c.id AS club_id,
+                e.nombre_equipo
+            FROM inscritos i
+            INNER JOIN usuarios u ON i.id_usuario = u.id
+            LEFT JOIN clubes c ON i.id_club = c.id
+            LEFT JOIN equipos e ON i.torneo_id = e.id_torneo AND i.codigo_equipo = e.codigo_equipo AND e.estatus = 0
+            WHERE i.torneo_id = ?
+              AND i.estatus != 'retirado'
+            ORDER BY
+                CASE WHEN i.posicion = 0 OR i.posicion IS NULL THEN 9999 ELSE i.posicion END ASC,
+                i.ganados DESC,
+                i.efectividad DESC,
+                i.puntos DESC
+        ";
+        $stmt = $pdo->prepare($sqlParticipantes);
+        $stmt->execute([$torneoId]);
+        $participantes = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        foreach ($participantes as &$p) {
+            if (empty($p['nombre_equipo']) && !empty($p['codigo_equipo'])) {
+                $p['nombre_equipo'] = 'Equipo ' . $p['codigo_equipo'];
+            }
+        }
+        unset($p);
+
+        $sqlClubes = "
+            SELECT
+                COALESCE(c.id, 0) AS club_id,
+                COALESCE(c.nombre, 'Sin club') AS club_nombre,
+                COUNT(*) AS jugadores,
+                SUM(i.ganados) AS sum_ganados,
+                SUM(i.perdidos) AS sum_perdidos,
+                AVG(i.efectividad) AS avg_efectividad,
+                SUM(i.puntos) AS sum_puntos
+            FROM inscritos i
+            LEFT JOIN clubes c ON i.id_club = c.id
+            WHERE i.torneo_id = ? AND i.estatus != 'retirado'
+            GROUP BY COALESCE(c.id, 0), COALESCE(c.nombre, 'Sin club')
+            ORDER BY club_nombre
+        ";
+        $stmtClub = $pdo->prepare($sqlClubes);
+        $stmtClub->execute([$torneoId]);
+        $resumenClubes = $stmtClub->fetchAll(PDO::FETCH_ASSOC);
+
+        $equipos = [];
+        if ((int)($torneo['modalidad'] ?? 0) === 3) {
+            $sqlEq = "
+                SELECT
+                    e.codigo_equipo,
+                    e.nombre_equipo,
+                    e.posicion AS pos_equipo,
+                    e.ganados AS g_eq,
+                    e.perdidos AS p_eq,
+                    e.efectividad AS ef_eq,
+                    e.puntos AS pts_eq
+                FROM equipos e
+                WHERE e.id_torneo = ? AND e.estatus = 0
+                  AND e.codigo_equipo IS NOT NULL AND e.codigo_equipo != ''
+                ORDER BY
+                    CASE WHEN e.posicion IS NULL OR e.posicion = 0 THEN 9999 ELSE e.posicion END,
+                    e.ganados DESC
+            ";
+            $stmtEq = $pdo->prepare($sqlEq);
+            $stmtEq->execute([$torneoId]);
+            $equipos = $stmtEq->fetchAll(PDO::FETCH_ASSOC);
+        }
+
+        $sqlRondas = "
+            SELECT partida AS num_ronda,
+                   COUNT(DISTINCT mesa) AS mesas,
+                   SUM(registrado) AS registros
+            FROM partiresul
+            WHERE id_torneo = ?
+            GROUP BY partida
+            ORDER BY partida
+        ";
+        $stmtR = $pdo->prepare($sqlRondas);
+        $stmtR->execute([$torneoId]);
+        $rondas = $stmtR->fetchAll(PDO::FETCH_ASSOC);
+
+        return [
+            'torneo' => $torneo,
+            'participantes' => $participantes,
+            'resumen_clubes' => $resumenClubes,
+            'equipos' => $equipos,
+            'rondas' => $rondas,
+        ];
+    }
+
+    public static function tarjetaTexto($tarjeta): string
+    {
+        switch ((int)$tarjeta) {
+            case 1:
+                return 'Amarilla';
+            case 3:
+                return 'Roja';
+            case 4:
+                return 'Negra';
+            default:
+                return '—';
+        }
+    }
+}
