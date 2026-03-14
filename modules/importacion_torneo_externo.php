@@ -276,7 +276,7 @@ $url_import_individual = $url_panel . '#importacion-masiva';
                 </div>
             </div>
             <div class="alert alert-info small mb-0 mt-3">
-                El número en columna <code>usuario</code> del otro sistema se traduce con el <strong>primer bloque</strong> del Excel (misma columna <code>usuario</code> + <code>cédula</code> → consulta <code>usuarios</code>).
+                <strong>Sustitución:</strong> en homologación cada fila = <em>id del otro sistema</em> (37, 81…) + <em>cédula</em> → se busca en <code>usuarios</code> (ej. 4906763 → 7009). En resultados la columna <code>usuario</code> trae 37; al guardar se reemplaza por <strong>7009</strong> (match por id externo).
             </div>
         </div>
     </div>

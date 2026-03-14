@@ -55,7 +55,7 @@ final class ImportacionTorneoExternoService
             return ['filas' => [], 'no_encontradas' => []];
         }
         $header = $rows[0];
-        $map = self::mapearIndices($header, ['pareja' => ['pareja', 'id_pareja', 'parejas'], 'cedula' => ['cedula', 'cedula1', 'ci', 'documento']]);
+        $map = self::mapearIndices($header, ['pareja' => ['pareja', 'id_pareja', 'parejas'], 'cedula' => ['cedula', 'cedula1', 'ci', 'documento', 'c_dula']]);
         if ($map['cedula'] < 0) {
             return ['filas' => $rows, 'no_encontradas' => ['No se encontró columna de cédula en la primera fila.']];
         }
@@ -225,12 +225,40 @@ final class ImportacionTorneoExternoService
             return $stats;
         }
         $hHom = $filasHom[0];
-        $mapHom = self::mapearIndices($hHom, ['pareja' => ['pareja', 'id_pareja', 'parejas'], 'cedula' => ['cedula', 'cedula1', 'ci', 'documento']]);
+        $mapHom = self::mapearIndices($hHom, ['pareja' => ['pareja', 'id_pareja', 'parejas'], 'cedula' => ['cedula', 'cedula1', 'ci', 'documento', 'c_dula']]);
         $idxIdUsuarioHom = count($hHom) - 1;
-        $hNormHom = array_map(static fn ($x) => strtolower(preg_replace('/[^a-z0-9]+/i', '_', trim((string)$x))), $hHom);
+        $hNormHom = array_map(static function ($x) {
+            $s = strtolower(trim((string)$x));
+            $s = str_replace(['á', 'é', 'í', 'ó', 'ú', 'ñ', 'ü'], ['a', 'e', 'i', 'o', 'u', 'n', 'u'], $s);
+            return strtolower(preg_replace('/[^a-z0-9]+/i', '_', $s));
+        }, $hHom);
+        if ($mapHom['cedula'] < 0) {
+            foreach ($hNormHom as $hi => $col) {
+                if ($col === 'cedula' || strpos($col, 'cedul') !== false || $col === 'ci' || strpos($col, 'documento') !== false) {
+                    $mapHom['cedula'] = $hi;
+                    break;
+                }
+            }
+        }
         $iExtHom = -1;
+        $candidatosExt = ['usuario', 'id_externo', 'cod_jugador', 'id_jugador', 'id', 'codigo', 'cod', 'externo', 'jugador_id', 'idjugador', 'nro', 'numero'];
         foreach ($hNormHom as $hi => $col) {
-            if ($col === 'usuario' || $col === 'id_externo' || $col === 'cod_jugador' || $col === 'id_jugador') {
+            if ($hi === $mapHom['cedula'] || $hi === $mapHom['pareja']) {
+                continue;
+            }
+            if ($col === 'id_usuario') {
+                continue;
+            }
+            if (in_array($col, $candidatosExt, true) || ($col !== '' && strpos($col, 'id_') === 0)) {
+                $iExtHom = $hi;
+                break;
+            }
+        }
+        if ($iExtHom < 0 && $mapHom['cedula'] >= 0) {
+            foreach ($hNormHom as $hi => $col) {
+                if ($hi === $mapHom['cedula'] || $hi === $mapHom['pareja'] || $col === 'id_usuario') {
+                    continue;
+                }
                 $iExtHom = $hi;
                 break;
             }
@@ -319,8 +347,8 @@ final class ImportacionTorneoExternoService
         }
         $stats['columna_usuario_resultados'] = $iExtRes >= 0;
         $puedePorExt = $iExtRes >= 0 && $extUsuarioToId !== [];
-        if ($iExtRes >= 0 && $extUsuarioToId === [] && $iExtHom < 0) {
-            $stats['errores'][] = 'El archivo de resultados usa columna usuario (id del otro sistema). En el archivo de homologación debe haber las mismas columnas usuario + cédula por fila, para traducir a id_usuario de Mistorneos.';
+        if ($iExtRes >= 0 && $extUsuarioToId === []) {
+            $stats['errores'][] = 'No hay mapa id externo → Mistorneos: en homologación cada fila necesita cédula (en BD) + una columna con el id del otro sistema (37, 81…). Ese id se sustituye por el id_usuario de la cédula. Revise cédulas y que exista columna de id externo (usuario, id, codigo…).';
             return $stats;
         }
         if ($iCed < 0 && ($iPareja < 0 || $iJug < 0) && !$puedePorExt) {
