@@ -352,7 +352,7 @@ final class ImportacionTorneoExternoService
             return $stats;
         }
         if ($iCed < 0 && ($iPareja < 0 || $iJug < 0) && !$puedePorExt) {
-            $stats['errores'][] = 'En resultados: columna usuario (con homologación usuario+cédula), o cédula, o pareja+jugador.';
+            $stats['errores'][] = 'En resultados hace falta la columna usuario (mismo id externo que en homologación). No hace falta cédula ahí: partida, mesa, secuencia, usuario, r1, r2…';
             return $stats;
         }
 

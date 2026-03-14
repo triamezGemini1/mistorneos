@@ -1,8 +1,8 @@
 <?php
 /**
- * Admin general — Flujo acordado:
- * Paso 1: torneo. Paso 2: tabla parejas+cédula → id_usuario (usuarios).
- * Paso 3: tabla resultados → reemplazar por id_usuario → INSERT partiresul (mismo criterio que registrar resultados en panel).
+ * Admin general —
+ * Homologación: por fila → id_externo (37) + cédula → consulta usuarios → id_usuario (7009). Mapa 37→7009.
+ * Resultados: columna usuario = id_externo (37). NO lleva cédula. Al guardar: 37 se sustituye por 7009.
  */
 declare(strict_types=1);
 
@@ -276,7 +276,12 @@ $url_import_individual = $url_panel . '#importacion-masiva';
                 </div>
             </div>
             <div class="alert alert-info small mb-0 mt-3">
-                <strong>Sustitución:</strong> en homologación cada fila = <em>id del otro sistema</em> (37, 81…) + <em>cédula</em> → se busca en <code>usuarios</code> (ej. 4906763 → 7009). En resultados la columna <code>usuario</code> trae 37; al guardar se reemplaza por <strong>7009</strong> (match por id externo).
+                <strong>Cómo funciona (sin cédula en resultados)</strong>
+                <ol class="mb-0 ps-3 mt-2">
+                    <li><strong>Tabla homologación</strong> (solo ahí va la cédula): una columna = <em>id externo</em> (37 — el mismo que en resultados), otra = <em>cédula</em> (4906763). Con la cédula se busca en <code>usuarios</code> → <code>id_usuario</code> 7009.</li>
+                    <li>Queda el mapa: <strong>id externo 37 = id Mistorneos 7009</strong>.</li>
+                    <li><strong>Tabla resultados</strong>: columna <code>usuario</code> trae <strong>37</strong> (no hace falta cédula). El sistema hace: 37 → 7009 y guarda en <code>partiresul</code> con 7009.</li>
+                </ol>
             </div>
         </div>
     </div>
@@ -345,14 +350,15 @@ $url_import_individual = $url_panel . '#importacion-masiva';
         <div class="card-body">
             <div class="imp-seccion">
                 <h6>Formato del archivo</h6>
-                <p class="small mb-2"><strong>Opción A — Dos hojas:</strong> <em>Hoja1</em> encabezados <code>cédula</code> (o cedula) y <code>usuario</code> (id del jugador en el torneo externo). Una fila por jugador. <em>Hoja2</em> = tabla de resultados (torneo, partida, mesa, secuencia, usuario, r1, r2, ff…).</p>
-                <p class="small mb-0"><strong>Opción B — Una hoja:</strong> arriba el mismo bloque cédula + usuario (todas las filas). En cuanto aparezca una <strong>fila de encabezados</strong> que tenga <code>partida</code>, <code>mesa</code> y <code>secuencia</code>, empieza el bloque de resultados (como en el otro sistema). Todo lo de arriba es homologación.</p>
+                <p class="small mb-2"><strong>Hoja 1 — Homologación:</strong> dos columnas: <code>usuario</code> (o id externo: 37, 81…) y <code>cédula</code>. La cédula solo sirve para buscar en Mistorneos. Mismo <strong>37</strong> debe aparecer en resultados.</p>
+                <p class="small mb-2"><strong>Hoja 2 — Resultados:</strong> <strong>sin cédula</strong>. Columnas partida, mesa, secuencia, <code>usuario</code> (= 37, igual que hoja 1), r1, r2…</p>
+                <p class="small mb-0"><strong>Una sola hoja:</strong> arriba bloque homologación (usuario + cédula por fila); debajo fila con partida/mesa/secuencia y resto de resultados.</p>
             </div>
             <div class="imp-seccion">
                 <h6>Qué hace el sistema</h6>
                 <ol class="small mb-0 ps-3">
-                    <li>Lee el primer bloque: por cada cédula consulta <code>usuarios</code> y arma mapa <code>usuario externo → id_usuario</code> Mistorneos.</li>
-                    <li>Lee cada fila de resultados; sustituye <code>usuario</code> por ese <code>id_usuario</code>.</li>
+                    <li>Homologación: id externo + cédula → mapa <strong>id_externo → id_usuario</strong> (la cédula no se usa en resultados).</li>
+                    <li>Resultados: solo el id externo en <code>usuario</code>; se reemplaza por <code>id_usuario</code> del mapa.</li>
                     <li>Inserta en <code>partiresul</code> con los mismos parámetros que el panel (mesa, secuencia, r1/r2, ff, efectividad, zapato/chancleta, fecha torneo, registrado_por).</li>
                 </ol>
             </div>
@@ -412,21 +418,19 @@ $url_import_individual = $url_panel . '#importacion-masiva';
         </div>
         <div class="card-body">
             <div class="imp-seccion">
-                <h6>Qué hace el sistema con este archivo</h6>
-                <p class="small mb-0">Por cada fila lee la <strong>cédula</strong>, busca al usuario en Mistorneos (<code>usuarios</code>) y obtiene <code>id_usuario</code>. Agrupa por <strong>pareja</strong> para saber quién es el jugador 1, 2, … de cada pareja (orden de las filas en este archivo).</p>
+                <h6>Solo en homologación va la cédula</h6>
+                <p class="small mb-0">Cada fila: <strong>id externo</strong> (37 — el mismo que en resultados) + <strong>cédula</strong> (4906763). Con la cédula se consulta <code>usuarios</code> → <code>id_usuario</code> (7009). Así el sistema sabe: <strong>37 → 7009</strong>.</p>
             </div>
             <div class="imp-seccion">
-                <h6>Qué debe traer el archivo (primera fila = encabezados)</h6>
+                <h6>Columnas (fila 1 = títulos)</h6>
                 <ul class="small mb-0 ps-3">
-                    <li><strong>Cédula</strong> (cédula, cedula1, ci, documento…) — obligatoria para resolver <code>id_usuario</code> en Mistorneos.</li>
-                    <li>Si el Excel de <strong>resultados</strong> trae columna <code>usuario</code> (77, 81… = id del otro sistema), en homologación una fila por jugador con las columnas <strong>usuario</strong> (mismo número) y <strong>cédula</strong>.</li>
-                    <li>Opcional: <strong>pareja</strong> si en resultados usa pareja+jugador en vez de usuario/cédula.</li>
-                    <li>Formato: Excel <code>.xlsx</code> o CSV.</li>
+                    <li>Una columna: id del otro sistema (<code>usuario</code>, <code>id</code>…): 37, 81…</li>
+                    <li>Otra: <strong>cédula</strong> (solo aquí; en resultados no hace falta).</li>
                 </ul>
             </div>
             <div class="imp-seccion border border-warning">
                 <h6 class="text-warning">Atención</h6>
-                <p class="small mb-0">Toda cédula debe existir en Mistorneos; si no, esa fila no tendrá <code>id_usuario</code> y fallará el enlace en el paso 3 para ese jugador.</p>
+                <p class="small mb-0">Cada cédula debe existir en Mistorneos; si no, ese id externo no entrará al mapa y en resultados las filas con ese <code>usuario</code> no se podrán guardar.</p>
             </div>
         </div>
     </div>
@@ -436,28 +440,25 @@ $url_import_individual = $url_panel . '#importacion-masiva';
         <div class="card-header bg-info bg-opacity-10 text-info border-info d-flex align-items-center gap-2 py-3">
             <span class="imp-paso-num bg-info text-dark">3</span>
             <div>
-                <span class="fw-bold text-dark">Paso 3 — Archivo de resultados (por mesa, como el panel)</span>
-                <div class="small text-muted">Export de la otra plataforma — se sube junto al paso 2</div>
+                <span class="fw-bold text-dark">Paso 3 — Resultados (solo id externo; sin cédula)</span>
+                <div class="small text-muted">Columna <code>usuario</code> = mismo id que en homologación</div>
             </div>
         </div>
         <div class="card-body">
             <div class="imp-seccion">
-                <h6>Qué hace el sistema</h6>
-                <p class="small mb-0">Cada fila = un jugador en una mesa y ronda. Sustituye la identidad del jugador por el <code>id_usuario</code> de Mistorneos (usando cédula o pareja+jugador del paso 2). Luego inserta en <code>partiresul</code> igual que al registrar resultados en el panel (mesa, secuencia 1–4, puntos, efectividad, zapato/chancleta, FF, etc.).</p>
+                <h6>Sustitución</h6>
+                <p class="small mb-0">Aquí <strong>no</strong> se usa cédula. Solo el <strong>mismo id</strong> que en la tabla de homologación (ej. <code>usuario</code> = 37). El sistema hace: <strong>37 → id_usuario 7009</strong> (según el mapa) y graba en <code>partiresul</code>.</p>
             </div>
             <div class="imp-seccion">
-                <h6>Columnas obligatorias en el archivo de resultados</h6>
+                <h6>Columnas</h6>
                 <ul class="small mb-0 ps-3">
-                    <li><code>partida</code> (o ronda)</li>
-                    <li><code>mesa</code></li>
-                    <li><code>secuencia</code> (1 a 4 = puesto en la mesa, igual que en el panel)</li>
-                    <li><code>resultado1</code>, <code>resultado2</code></li>
-                    <li>Identificación del jugador en cada fila: columna <strong>usuario</strong> (id del otro sistema) si en paso 2 tiene el mismo código + cédula; o <strong>cédula</strong>; o <strong>pareja</strong> + <strong>jugador</strong></li>
+                    <li><code>partida</code>, <code>mesa</code>, <code>secuencia</code>, <code>r1</code>/<code>r2</code> (u resultado1/2)</li>
+                    <li><code>usuario</code> = id externo (37). <em>No hace falta cédula en esta tabla.</em></li>
                 </ul>
             </div>
             <div class="imp-seccion border border-success bg-success bg-opacity-10">
-                <h6 class="text-success">Columna usuario en resultados</h6>
-                <p class="small mb-0">Ese número <strong>no</strong> es el id de Mistorneos. Se traduce con el archivo de homologación: misma columna <code>usuario</code> + <code>cédula</code> por fila → el sistema guarda el <code>id_usuario</code> correcto.</p>
+                <h6 class="text-success">Ejemplo</h6>
+                <p class="small mb-0">Homologación: 37 + 4906763 → 7009. Resultados: <code>usuario</code> 37 → se guarda <strong>7009</strong>.</p>
             </div>
         </div>
     </div>
