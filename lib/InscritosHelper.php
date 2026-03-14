@@ -252,7 +252,11 @@ class InscritosHelper {
         $numero = isset($datos['numero']) && $datos['numero'] !== null ? (int)$datos['numero'] : 0;
         // clasiequi: Clasificación de equipo (INT), valor por defecto 0
         $clasiequi = isset($datos['clasiequi']) && $datos['clasiequi'] !== null ? (int)$datos['clasiequi'] : 0;
+        /* Individual en sitio no trae equipo: la columna suele ser NOT NULL → placeholder reservado (no es un equipo real) */
         $codigo_equipo = isset($datos['codigo_equipo']) ? trim((string)$datos['codigo_equipo']) : '';
+        if ($codigo_equipo === '') {
+            $codigo_equipo = '000-000';
+        }
         // nacionalidad y cedula en inscritos (obligatorios para búsqueda NIVEL 1)
         $nacionalidad_inscrito = isset($datos['nacionalidad']) ? strtoupper(trim((string)$datos['nacionalidad'])) : 'V';
         if (!in_array($nacionalidad_inscrito, ['V', 'E', 'J', 'P'], true)) {
@@ -308,7 +312,7 @@ class InscritosHelper {
             $push('id_club', '?', $id_club);
         }
         if ($H('codigo_equipo')) {
-            $push('codigo_equipo', '?', $codigo_equipo !== '' ? $codigo_equipo : null);
+            $push('codigo_equipo', '?', $codigo_equipo);
         }
         foreach (['posicion', 'ganados', 'perdidos', 'efectividad', 'puntos', 'ptosrnk', 'sancion', 'chancletas', 'zapatos', 'tarjeta'] as $c) {
             if ($H($c)) {

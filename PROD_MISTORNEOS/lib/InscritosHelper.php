@@ -250,6 +250,9 @@ class InscritosHelper {
         // clasiequi: Clasificación de equipo (INT), valor por defecto 0
         $clasiequi = isset($datos['clasiequi']) && $datos['clasiequi'] !== null ? (int)$datos['clasiequi'] : 0;
         $codigo_equipo = isset($datos['codigo_equipo']) ? trim((string)$datos['codigo_equipo']) : '';
+        if ($codigo_equipo === '') {
+            $codigo_equipo = '000-000';
+        }
         $nacionalidad_inscrito = isset($datos['nacionalidad']) ? strtoupper(trim((string)$datos['nacionalidad'])) : 'V';
         if (!in_array($nacionalidad_inscrito, ['V', 'E', 'J', 'P'], true)) {
             $nacionalidad_inscrito = 'V';
@@ -301,7 +304,7 @@ class InscritosHelper {
             $push('id_club', '?', $id_club);
         }
         if ($H('codigo_equipo')) {
-            $push('codigo_equipo', '?', $codigo_equipo !== '' ? $codigo_equipo : null);
+            $push('codigo_equipo', '?', $codigo_equipo);
         }
         foreach (['posicion', 'ganados', 'perdidos', 'efectividad', 'puntos', 'ptosrnk', 'sancion', 'chancletas', 'zapatos', 'tarjeta'] as $c) {
             if ($H($c)) {

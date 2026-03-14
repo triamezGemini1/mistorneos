@@ -1351,7 +1351,7 @@ function obtenerDatosPanel($torneo_id) {
         $total_equipos = (int)$stmt->fetchColumn();
         
         // Total de jugadores inscritos en equipos (con codigo_equipo)
-        $stmt = $pdo->prepare("SELECT COUNT(*) FROM inscritos WHERE torneo_id = ? AND codigo_equipo IS NOT NULL AND estatus != 4");
+        $stmt = $pdo->prepare("SELECT COUNT(*) FROM inscritos WHERE torneo_id = ? AND codigo_equipo IS NOT NULL AND codigo_equipo != '' AND codigo_equipo != '000-000' AND estatus != 4");
         $stmt->execute([$torneo_id]);
         $total_jugadores_inscritos = (int)$stmt->fetchColumn();
     }
@@ -2077,8 +2077,8 @@ function obtenerDatosPanelEquipos($torneo_id) {
     $stmt->execute([$torneo_id]);
     $total_equipos = (int)$stmt->fetchColumn();
     
-    // Obtener total de jugadores inscritos (con codigo_equipo)
-    $stmt = $pdo->prepare("SELECT COUNT(*) FROM inscritos WHERE torneo_id = ? AND codigo_equipo IS NOT NULL AND estatus != 4");
+    // Obtener total de jugadores inscritos (con codigo_equipo real; 000-000 = individual en sitio)
+    $stmt = $pdo->prepare("SELECT COUNT(*) FROM inscritos WHERE torneo_id = ? AND codigo_equipo IS NOT NULL AND codigo_equipo != '' AND codigo_equipo != '000-000' AND estatus != 4");
     $stmt->execute([$torneo_id]);
     $total_jugadores_inscritos = (int)$stmt->fetchColumn();
     
@@ -2999,6 +2999,7 @@ function guardarInscripcionSitio($torneo_id, $user_id, $is_admin_general) {
                 $nac_u = 'V';
             }
             $ced_u = preg_replace('/\D/', '', (string)($usuario_datos['cedula'] ?? ''));
+            /* Individual en sitio: codigo_equipo NOT NULL — placeholder hasta asignar mesa/equipo (mismo criterio que 000-000 en helper) */
             $id_inscrito = InscritosHelper::insertarInscrito($pdo, [
                 'id_usuario' => $id_usuario,
                 'torneo_id' => $torneo_id,
@@ -3008,6 +3009,7 @@ function guardarInscripcionSitio($torneo_id, $user_id, $is_admin_general) {
                 'numero' => 0,
                 'nacionalidad' => $nac_u,
                 'cedula' => $ced_u,
+                'codigo_equipo' => '000-000',
             ]);
             UserActivationHelper::activateUser($pdo, $id_usuario);
             $_SESSION['success'] = 'Jugador inscrito exitosamente';
@@ -3358,7 +3360,7 @@ function obtenerDatosHojasAnotacion($torneo_id, $ronda) {
         // Estadísticas y posición de equipos desde tabla equipos (posicion/clasiequi ya calculada)
         $sql = "SELECT codigo_equipo, posicion, puntos, ganados, perdidos, efectividad
                 FROM equipos
-                WHERE id_torneo = ? AND estatus = 0 AND codigo_equipo IS NOT NULL AND codigo_equipo != ''
+                WHERE id_torneo = ? AND estatus = 0 AND codigo_equipo IS NOT NULL AND codigo_equipo != '' AND codigo_equipo != '000-000'
                 ORDER BY posicion ASC";
         $stmt = $pdo->prepare($sql);
         $stmt->execute([$torneo_id]);
@@ -4969,7 +4971,7 @@ function actualizarEstadisticasEquipos($torneo_id) {
                 COUNT(*) as total_jugadores
             FROM inscritos
             WHERE torneo_id = ? 
-                AND codigo_equipo IS NOT NULL 
+                AND codigo_equipo IS NOT NULL AND codigo_equipo != '000-000' 
                 AND codigo_equipo != ''
                 AND estatus != 4
             GROUP BY codigo_equipo";
@@ -5079,7 +5081,7 @@ function asignarNumeroSecuencialPorEquipo($torneo_id) {
     $stmtEquipos = $pdo->prepare("
         SELECT DISTINCT codigo_equipo
         FROM inscritos
-        WHERE torneo_id = ? AND codigo_equipo IS NOT NULL AND codigo_equipo != '' AND estatus != 4
+        WHERE torneo_id = ? AND codigo_equipo IS NOT NULL AND codigo_equipo != '' AND codigo_equipo != '000-000' AND estatus != 4
     ");
     $stmtEquipos->execute([$torneo_id]);
     $codigos = $stmtEquipos->fetchAll(PDO::FETCH_COLUMN);
