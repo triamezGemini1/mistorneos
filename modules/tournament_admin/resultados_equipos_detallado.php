@@ -447,11 +447,11 @@ $base_url_return = $use_standalone ? $script_actual : 'index.php?page=torneo_ges
                 </div>
             </div>
             <div class="text-right flex flex-wrap gap-2 justify-end">
-                <a href="<?php echo htmlspecialchars(AppHelpers::torneoGestionUrl('export_resultados_pdf', $torneo_id, ['tipo' => 'equipos_detallado'])); ?>"
+                <a href="<?php echo htmlspecialchars(AppHelpers::url('index.php', ['page' => 'torneo_gestion', 'action' => 'export_resultados_pdf', 'torneo_id' => $torneo_id, 'tipo' => 'equipos_detallado'])); ?>"
                    class="px-4 py-3 bg-amber-200 text-black font-bold rounded-lg border border-black text-sm">PDF Letter</a>
-                <a href="<?php echo htmlspecialchars(AppHelpers::torneoGestionUrl('resultados_reportes_print', $torneo_id, ['tipo' => 'equipos_detallado'])); ?>" target="_blank" rel="noopener"
+                <a href="<?php echo htmlspecialchars(AppHelpers::url('index.php', ['page' => 'torneo_gestion', 'action' => 'resultados_reportes_print', 'torneo_id' => $torneo_id, 'tipo' => 'equipos_detallado'])); ?>" target="_blank" rel="noopener"
                    class="px-4 py-3 bg-slate-200 text-black font-bold rounded-lg border border-black text-sm">Vista impresión</a>
-                <a href="<?php echo htmlspecialchars(AppHelpers::torneoGestionUrl('resultados_reportes', $torneo_id)); ?>"
+                <a href="<?php echo htmlspecialchars(AppHelpers::url('index.php', ['page' => 'torneo_gestion', 'action' => 'resultados_reportes', 'torneo_id' => $torneo_id])); ?>"
                    class="px-4 py-3 bg-green-200 text-black font-bold rounded-lg border border-black text-sm">Todos los reportes</a>
                 <button onclick="window.print()" class="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-bold">
                     <i class="fas fa-print mr-2"></i> Imprimir página

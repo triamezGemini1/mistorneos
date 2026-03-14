@@ -64,7 +64,7 @@ $title = $titles[$tipo] ?? 'Reporte';
 <body>
 <div class="no-print">
     <button type="button" onclick="window.print()">Imprimir / Guardar PDF</button>
-    <a href="<?= $esc(AppHelpers::torneoGestionUrl('resultados_reportes', (int)$torneo_id)) ?>">Volver a reportes</a>
+    <a href="<?= $esc(AppHelpers::url('index.php', ['page' => 'torneo_gestion', 'action' => 'resultados_reportes', 'torneo_id' => (int)$torneo_id])) ?>">Volver a reportes</a>
     <?php
     $origen = [
         'por_club' => 'resultados_por_club',
@@ -76,7 +76,7 @@ $title = $titles[$tipo] ?? 'Reporte';
     ];
     $act = $origen[$tipo] ?? 'resultados_reportes';
     ?>
-    <a href="<?= $esc(AppHelpers::torneoGestionUrl($act, (int)$torneo_id)) ?>">Volver al origen</a>
+    <a href="<?= $esc(AppHelpers::url('index.php', ['page' => 'torneo_gestion', 'action' => $act, 'torneo_id' => (int)$torneo_id])) ?>">Volver al origen</a>
 </div>
 
 <?php
