@@ -295,24 +295,20 @@ class InscritosHelper {
                 $params[] = $param;
             }
         };
-        $push('id_usuario', '?', $id_usuario);
-        $push('torneo_id', '?', $torneo_id);
-        if ($H('id_club')) {
-            $push('id_club', '?', $id_club);
-        }
-        $push('estatus', '?', $estatus_for_db);
-        if ($H('inscrito_por')) {
-            $push('inscrito_por', '?', $inscrito_por);
-        }
-        if ($H('fecha_inscripcion')) {
-            $insertCols[] = '`' . $have['fecha_inscripcion'] . '`';
-            $insertVals[] = 'NOW()';
-        }
+        /* Orden alineado a esquemas habituales: nac/cédula, usuario/torneo/club/código, stats, fecha, inscrito, número, notas, clasiequi, estatus */
         if ($H('nacionalidad')) {
             $push('nacionalidad', '?', $nacionalidad_inscrito);
         }
         if ($H('cedula')) {
             $push('cedula', '?', $cedula_inscrito);
+        }
+        $push('id_usuario', '?', $id_usuario);
+        $push('torneo_id', '?', $torneo_id);
+        if ($H('id_club')) {
+            $push('id_club', '?', $id_club);
+        }
+        if ($H('codigo_equipo')) {
+            $push('codigo_equipo', '?', $codigo_equipo !== '' ? $codigo_equipo : null);
         }
         foreach (['posicion', 'ganados', 'perdidos', 'efectividad', 'puntos', 'ptosrnk', 'sancion', 'chancletas', 'zapatos', 'tarjeta'] as $c) {
             if ($H($c)) {
@@ -320,15 +316,23 @@ class InscritosHelper {
                 $insertVals[] = '0';
             }
         }
+        if ($H('fecha_inscripcion')) {
+            $insertCols[] = '`' . $have['fecha_inscripcion'] . '`';
+            $insertVals[] = 'NOW()';
+        }
+        if ($H('inscrito_por')) {
+            $push('inscrito_por', '?', $inscrito_por);
+        }
         if ($H('numero')) {
             $push('numero', '?', $numero);
+        }
+        if ($H('notas')) {
+            $push('notas', '?', '');
         }
         if ($H('clasiequi')) {
             $push('clasiequi', '?', $clasiequi);
         }
-        if ($H('codigo_equipo')) {
-            $push('codigo_equipo', '?', $codigo_equipo);
-        }
+        $push('estatus', '?', $estatus_for_db);
         if ($H('entidad_id')) {
             $ent = 0;
             if (class_exists('DB', false) && method_exists('DB', 'getEntidadId')) {
@@ -342,6 +346,12 @@ class InscritosHelper {
         }
         if ($insertCols === []) {
             throw new Exception('Tabla inscritos sin columnas reconocidas');
+        }
+        if (count($insertCols) !== count($insertVals)) {
+            throw new Exception('INSERT inscritos: columnas=' . count($insertCols) . ' valores=' . count($insertVals) . ' (error interno; avisar soporte)');
+        }
+        if (count($params) !== substr_count(implode(',', $insertVals), '?')) {
+            throw new Exception('INSERT inscritos: placeholders no coinciden con parámetros');
         }
         $sql = 'INSERT INTO inscritos (' . implode(', ', $insertCols) . ') VALUES (' . implode(', ', $insertVals) . ')';
         $stmt = $pdo->prepare($sql);

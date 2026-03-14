@@ -250,33 +250,103 @@ class InscritosHelper {
         // clasiequi: Clasificación de equipo (INT), valor por defecto 0
         $clasiequi = isset($datos['clasiequi']) && $datos['clasiequi'] !== null ? (int)$datos['clasiequi'] : 0;
         $codigo_equipo = isset($datos['codigo_equipo']) ? trim((string)$datos['codigo_equipo']) : '';
-        
+        $nacionalidad_inscrito = isset($datos['nacionalidad']) ? strtoupper(trim((string)$datos['nacionalidad'])) : 'V';
+        if (!in_array($nacionalidad_inscrito, ['V', 'E', 'J', 'P'], true)) {
+            $nacionalidad_inscrito = 'V';
+        }
+        $cedula_inscrito = isset($datos['cedula']) ? preg_replace('/\D/', '', (string)$datos['cedula']) : '';
+
         // Verificar que no esté ya inscrito (excluir retirados)
         $stmt = $pdo->prepare("SELECT id FROM inscritos WHERE id_usuario = ? AND torneo_id = ? AND " . self::SQL_WHERE_NO_RETIRADO);
         $stmt->execute([$id_usuario, $torneo_id]);
         if ($stmt->fetch()) {
             throw new Exception('Este usuario ya está inscrito en el torneo');
         }
-        
-        // Insertar con TODOS los campos necesarios para evitar errores de constraint
-        // Incluir todos los campos posibles con valores por defecto seguros
-        $stmt = $pdo->prepare("
-            INSERT INTO inscritos (
-                id_usuario, torneo_id, id_club, estatus, inscrito_por, fecha_inscripcion,
-                posicion, ganados, perdidos, efectividad, puntos, ptosrnk, 
-                sancion, chancletas, zapatos, tarjeta, numero, clasiequi, codigo_equipo
-            ) VALUES (?, ?, ?, ?, ?, NOW(), 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, ?, ?, ?)
-        ");
-        
-        $params = [$id_usuario, $torneo_id, $id_club, (string)$estatus, $inscrito_por, $numero, $clasiequi, $codigo_equipo];
-        
+
+        $estatus_for_db = is_numeric($estatus) && isset(self::ESTATUS_MAP[(int)$estatus])
+            ? (int)$estatus
+            : (int) self::getEstatusNumero(is_string($estatus) ? $estatus : 'confirmado');
+
+        $colNames = $pdo->query('SHOW COLUMNS FROM inscritos')->fetchAll(PDO::FETCH_COLUMN);
+        $have = [];
+        foreach ($colNames as $c) {
+            $have[strtolower((string)$c)] = $c;
+        }
+        $H = static function (string $n) use ($have): bool {
+            return isset($have[strtolower($n)]);
+        };
+        $insertCols = [];
+        $insertVals = [];
+        $params = [];
+        $push = static function (string $col, string $sql, $param = null) use (&$insertCols, &$insertVals, &$params, $have): void {
+            $k = strtolower($col);
+            if (!isset($have[$k])) {
+                return;
+            }
+            $insertCols[] = '`' . str_replace('`', '``', $have[$k]) . '`';
+            $insertVals[] = $sql;
+            if ($sql === '?') {
+                $params[] = $param;
+            }
+        };
+        if ($H('nacionalidad')) {
+            $push('nacionalidad', '?', $nacionalidad_inscrito);
+        }
+        if ($H('cedula')) {
+            $push('cedula', '?', $cedula_inscrito);
+        }
+        $push('id_usuario', '?', $id_usuario);
+        $push('torneo_id', '?', $torneo_id);
+        if ($H('id_club')) {
+            $push('id_club', '?', $id_club);
+        }
+        if ($H('codigo_equipo')) {
+            $push('codigo_equipo', '?', $codigo_equipo !== '' ? $codigo_equipo : null);
+        }
+        foreach (['posicion', 'ganados', 'perdidos', 'efectividad', 'puntos', 'ptosrnk', 'sancion', 'chancletas', 'zapatos', 'tarjeta'] as $c) {
+            if ($H($c)) {
+                $insertCols[] = '`' . $have[strtolower($c)] . '`';
+                $insertVals[] = '0';
+            }
+        }
+        if ($H('fecha_inscripcion')) {
+            $insertCols[] = '`' . $have['fecha_inscripcion'] . '`';
+            $insertVals[] = 'NOW()';
+        }
+        if ($H('inscrito_por')) {
+            $push('inscrito_por', '?', $inscrito_por);
+        }
+        if ($H('numero')) {
+            $push('numero', '?', $numero);
+        }
+        if ($H('notas')) {
+            $push('notas', '?', '');
+        }
+        if ($H('clasiequi')) {
+            $push('clasiequi', '?', $clasiequi);
+        }
+        $push('estatus', '?', $estatus_for_db);
+        if ($H('entidad_id')) {
+            $ent = 0;
+            if (class_exists('DB', false) && method_exists('DB', 'getEntidadId')) {
+                $ent = (int) DB::getEntidadId();
+            } elseif (defined('DESKTOP_ENTIDAD_ID')) {
+                $ent = (int) constant('DESKTOP_ENTIDAD_ID');
+            }
+            if ($ent > 0) {
+                $push('entidad_id', '?', $ent);
+            }
+        }
+        if ($insertCols === [] || count($insertCols) !== count($insertVals)) {
+            throw new Exception('INSERT inscritos inconsistente (cols/vals). Ejecute migraciones inscritos.');
+        }
+        $sql = 'INSERT INTO inscritos (' . implode(', ', $insertCols) . ') VALUES (' . implode(', ', $insertVals) . ')';
+        $stmt = $pdo->prepare($sql);
         $resultado = $stmt->execute($params);
-        
         if (!$resultado) {
             $error_info = $stmt->errorInfo();
             throw new Exception('Error al insertar la inscripción: ' . ($error_info[2] ?? 'Error desconocido'));
         }
-        
         return (int)$pdo->lastInsertId();
     }
     

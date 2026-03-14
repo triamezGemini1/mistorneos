@@ -2930,7 +2930,7 @@ function guardarInscripcionSitio($torneo_id, $user_id, $is_admin_general) {
         }
         
         // Validar que el usuario tenga todos los campos obligatorios completos
-        $stmt = $pdo->prepare("SELECT nombre, cedula, sexo, email, username, entidad FROM usuarios WHERE id = ?");
+        $stmt = $pdo->prepare("SELECT nombre, cedula, sexo, email, username, entidad, nacionalidad FROM usuarios WHERE id = ?");
         $stmt->execute([$id_usuario]);
         $usuario_datos = $stmt->fetch(PDO::FETCH_ASSOC);
         
@@ -2994,13 +2994,20 @@ function guardarInscripcionSitio($torneo_id, $user_id, $is_admin_general) {
         // Insertar inscripción usando función centralizada
         try {
             // Usar función centralizada que valida y maneja todos los campos
+            $nac_u = strtoupper(trim((string)($usuario_datos['nacionalidad'] ?? 'V')));
+            if (!in_array($nac_u, ['V', 'E', 'J', 'P'], true)) {
+                $nac_u = 'V';
+            }
+            $ced_u = preg_replace('/\D/', '', (string)($usuario_datos['cedula'] ?? ''));
             $id_inscrito = InscritosHelper::insertarInscrito($pdo, [
                 'id_usuario' => $id_usuario,
                 'torneo_id' => $torneo_id,
                 'id_club' => $id_club,
                 'estatus' => $estatus,
                 'inscrito_por' => $inscrito_por,
-                'numero' => 0 // Se asignará después si es necesario para equipos
+                'numero' => 0,
+                'nacionalidad' => $nac_u,
+                'cedula' => $ced_u,
             ]);
             UserActivationHelper::activateUser($pdo, $id_usuario);
             $_SESSION['success'] = 'Jugador inscrito exitosamente';
