@@ -267,22 +267,84 @@ class InscritosHelper {
             throw new Exception('Este usuario ya está inscrito en el torneo');
         }
         
-        // Insertar con todos los campos necesarios (incl. nacionalidad y cedula para búsqueda NIVEL 1)
-        // estatus siempre numérico (1 = confirmado); nunca string ni comillas
+        // estatus siempre numérico (1 = confirmado)
         $estatus_for_db = is_numeric($estatus) && isset(self::ESTATUS_MAP[(int)$estatus])
             ? (int)$estatus
             : (int) self::getEstatusNumero(is_string($estatus) ? $estatus : 'confirmado');
-        
-        $stmt = $pdo->prepare("
-            INSERT INTO inscritos (
-                id_usuario, torneo_id, id_club, estatus, inscrito_por, fecha_inscripcion,
-                nacionalidad, cedula,
-                posicion, ganados, perdidos, efectividad, puntos, ptosrnk, 
-                sancion, chancletas, zapatos, tarjeta, numero, clasiequi, codigo_equipo
-            ) VALUES (?, ?, ?, ?, ?, NOW(), ?, ?, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, ?, ?, ?)
-        ");
-        $params = [$id_usuario, $torneo_id, $id_club, $estatus_for_db, $inscrito_por, $nacionalidad_inscrito, $cedula_inscrito, $numero, $clasiequi, $codigo_equipo];
-        
+
+        // INSERT alineado al esquema real (evita 1136 si faltan/sobran columnas vs VALUES fijos)
+        $colNames = $pdo->query('SHOW COLUMNS FROM inscritos')->fetchAll(PDO::FETCH_COLUMN);
+        $have = [];
+        foreach ($colNames as $c) {
+            $have[strtolower((string)$c)] = $c;
+        }
+        $H = static function (string $n) use ($have): bool {
+            return isset($have[strtolower($n)]);
+        };
+        $insertCols = [];
+        $insertVals = [];
+        $params = [];
+        $push = static function (string $col, string $sql, $param = null) use (&$insertCols, &$insertVals, &$params, $have): void {
+            $k = strtolower($col);
+            if (!isset($have[$k])) {
+                return;
+            }
+            $insertCols[] = '`' . str_replace('`', '``', $have[$k]) . '`';
+            $insertVals[] = $sql;
+            if ($sql === '?') {
+                $params[] = $param;
+            }
+        };
+        $push('id_usuario', '?', $id_usuario);
+        $push('torneo_id', '?', $torneo_id);
+        if ($H('id_club')) {
+            $push('id_club', '?', $id_club);
+        }
+        $push('estatus', '?', $estatus_for_db);
+        if ($H('inscrito_por')) {
+            $push('inscrito_por', '?', $inscrito_por);
+        }
+        if ($H('fecha_inscripcion')) {
+            $insertCols[] = '`' . $have['fecha_inscripcion'] . '`';
+            $insertVals[] = 'NOW()';
+        }
+        if ($H('nacionalidad')) {
+            $push('nacionalidad', '?', $nacionalidad_inscrito);
+        }
+        if ($H('cedula')) {
+            $push('cedula', '?', $cedula_inscrito);
+        }
+        foreach (['posicion', 'ganados', 'perdidos', 'efectividad', 'puntos', 'ptosrnk', 'sancion', 'chancletas', 'zapatos', 'tarjeta'] as $c) {
+            if ($H($c)) {
+                $insertCols[] = '`' . $have[strtolower($c)] . '`';
+                $insertVals[] = '0';
+            }
+        }
+        if ($H('numero')) {
+            $push('numero', '?', $numero);
+        }
+        if ($H('clasiequi')) {
+            $push('clasiequi', '?', $clasiequi);
+        }
+        if ($H('codigo_equipo')) {
+            $push('codigo_equipo', '?', $codigo_equipo);
+        }
+        if ($H('entidad_id')) {
+            $ent = 0;
+            if (class_exists('DB', false) && method_exists('DB', 'getEntidadId')) {
+                $ent = (int) DB::getEntidadId();
+            } elseif (defined('DESKTOP_ENTIDAD_ID')) {
+                $ent = (int) constant('DESKTOP_ENTIDAD_ID');
+            }
+            if ($ent > 0) {
+                $push('entidad_id', '?', $ent);
+            }
+        }
+        if ($insertCols === []) {
+            throw new Exception('Tabla inscritos sin columnas reconocidas');
+        }
+        $sql = 'INSERT INTO inscritos (' . implode(', ', $insertCols) . ') VALUES (' . implode(', ', $insertVals) . ')';
+        $stmt = $pdo->prepare($sql);
         $resultado = $stmt->execute($params);
         
         if (!$resultado) {
