@@ -218,6 +218,10 @@ final class ImportacionTorneoExternoService
         }
 
         $h0raw = $rowsHomologacion[0];
+        $maxCols = 0;
+        for ($k = 0; $k < min(5, count($rowsHomologacion)); $k++) {
+            $maxCols = max($maxCols, count($rowsHomologacion[$k] ?? []));
+        }
         $hNormHom = array_map(static function ($x) {
             $s = strtolower(trim((string)$x));
             $s = str_replace(['á', 'é', 'í', 'ó', 'ú', 'ñ', 'ü'], ['a', 'e', 'i', 'o', 'u', 'n', 'u'], $s);
@@ -251,8 +255,43 @@ final class ImportacionTorneoExternoService
                 }
             }
         }
+        $homologRows = $rowsHomologacion;
+        $dataStartIdx = 1;
         if ($mapHom['cedula'] < 0 || $iExtHom < 0) {
-            $stats['errores'][] = 'Homologación (1.ª hoja o bloque superior): fila 1 debe tener dos columnas — una de **cédula** (cedula, CI, documento) y otra del **id del otro sistema** (usuario, id, codigo). Ejemplo fila 2: 37 | 4906763';
+            if ($maxCols >= 2) {
+                $r0 = $rowsHomologacion[0] ?? [];
+                $r1 = $rowsHomologacion[1] ?? $r0;
+                $a0 = trim((string)($r0[0] ?? ''));
+                $b0 = trim((string)($r0[1] ?? ''));
+                $lenA = strlen(preg_replace('/\D/', '', $a0));
+                $lenB = strlen(preg_replace('/\D/', '', $b0));
+                $digitsA = preg_replace('/\D/', '', $a0);
+                $digitsB = preg_replace('/\D/', '', $b0);
+                if ($lenA >= 5 && $lenB < $lenA) {
+                    $mapHom['cedula'] = 0;
+                    $iExtHom = 1;
+                } else {
+                    $mapHom['cedula'] = 1;
+                    $iExtHom = 0;
+                }
+                $soloDatosNumericosFila0 = $a0 !== '' && $b0 !== ''
+                    && ctype_digit($digitsA) && ctype_digit($digitsB)
+                    && strlen($digitsA) <= 12 && strlen($digitsB) <= 12;
+                if ($soloDatosNumericosFila0) {
+                    if ($lenA >= 5 && $lenB < $lenA) {
+                        $mapHom['cedula'] = 0;
+                        $iExtHom = 1;
+                    } else {
+                        $mapHom['cedula'] = 1;
+                        $iExtHom = 0;
+                    }
+                    $homologRows = array_merge([['id_externo', 'cedula']], $rowsHomologacion);
+                    $dataStartIdx = 1;
+                }
+            }
+        }
+        if ($mapHom['cedula'] < 0 || $iExtHom < 0 || $mapHom['cedula'] === $iExtHom) {
+            $stats['errores'][] = 'Homologación: hoja 1 con al menos 2 columnas. Orden recomendado: id externo | cédula (ej. 37 y 4906763). Puede poner fila títulos usuario + cedula, o solo filas de datos.';
             $stats['filas_bloque_cedulas'] = max(0, count($rowsHomologacion) - 1);
             return $stats;
         }
@@ -263,8 +302,8 @@ final class ImportacionTorneoExternoService
         $extUsuarioToId = [];
         $filasHomologConId = 0;
         $noEncCed = [];
-        for ($i = 1; $i < count($rowsHomologacion); $i++) {
-            $row = $rowsHomologacion[$i];
+        for ($i = $dataStartIdx; $i < count($homologRows); $i++) {
+            $row = $homologRows[$i];
             while (count($row) <= max($mapHom['cedula'], $iExtHom)) {
                 $row[] = '';
             }
@@ -296,7 +335,7 @@ final class ImportacionTorneoExternoService
         $stats['homologacion_sin_usuario'] = count(array_unique($noEncCed));
         $stats['cedulas_no_encontradas'] = array_values(array_unique($noEncCed));
 
-        $enr = self::fase1Enriquecer($pdo, $rowsHomologacion);
+        $enr = self::fase1Enriquecer($pdo, $homologRows);
         $filasHom = $enr['filas'];
         if (count($filasHom) < 2) {
             $stats['errores'][] = 'Homologación sin filas de datos.';
