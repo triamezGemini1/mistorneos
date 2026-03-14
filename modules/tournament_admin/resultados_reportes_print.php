@@ -7,9 +7,12 @@ require_once __DIR__ . '/../../lib/ResultadosReporteData.php';
 require_once __DIR__ . '/../../lib/ResultadosPorClubHelper.php';
 
 $tipo = preg_replace('/[^a-z_]/', '', (string)($_GET['tipo'] ?? 'consolidado'));
-$allowed = ['por_club', 'general', 'posiciones', 'equipos_resumido', 'equipos_detallado', 'consolidado'];
+$allowed = ['por_club', 'clubes_resumido', 'clubes_detallado', 'general', 'posiciones', 'equipos_resumido', 'equipos_detallado', 'consolidado'];
 if (!in_array($tipo, $allowed, true)) {
     $tipo = 'consolidado';
+}
+if ($tipo === 'por_club') {
+    $tipo = 'clubes_detallado';
 }
 $esEquipos = (int)($torneo['modalidad'] ?? 0) === 3;
 if ($tipo === 'general' && !$esEquipos) {
@@ -19,19 +22,17 @@ if (in_array($tipo, ['equipos_resumido', 'equipos_detallado'], true) && !$esEqui
     $tipo = 'consolidado';
 }
 
-if (function_exists('recalcularPosiciones')) {
-    recalcularPosiciones($torneo_id);
-}
 $pdo = DB::pdo();
 $esc = static function ($s) {
     return htmlspecialchars((string)$s, ENT_QUOTES | ENT_HTML5, 'UTF-8');
 };
 $titles = [
-    'por_club' => 'Resultados por club',
-    'general' => 'Resultados general (individual)',
-    'posiciones' => 'Tabla de posiciones',
-    'equipos_resumido' => 'Resultados equipos — resumido',
-    'equipos_detallado' => 'Resultados equipos — detallado',
+    'clubes_resumido' => 'Clubes — resumido',
+    'clubes_detallado' => 'Clubes — detallado',
+    'general' => 'Clasificación con equipos',
+    'posiciones' => 'Clasificación general',
+    'equipos_resumido' => 'Equipos — resumido',
+    'equipos_detallado' => 'Equipos — detallado',
     'consolidado' => 'Reporte consolidado',
 ];
 $title = $titles[$tipo] ?? 'Reporte';
@@ -67,7 +68,8 @@ $title = $titles[$tipo] ?? 'Reporte';
     <a href="<?= $esc(AppHelpers::url('index.php', ['page' => 'torneo_gestion', 'action' => 'resultados_reportes', 'torneo_id' => (int)$torneo_id])) ?>">Volver a reportes</a>
     <?php
     $origen = [
-        'por_club' => 'resultados_por_club',
+        'clubes_resumido' => 'resultados_por_club',
+        'clubes_detallado' => 'resultados_por_club',
         'general' => 'resultados_general',
         'posiciones' => 'posiciones',
         'equipos_resumido' => 'resultados_equipos_resumido',
@@ -84,23 +86,27 @@ $nombreTorneo = $esc($torneo['nombre'] ?? '');
 $fechaTor = $esc($torneo['fechator'] ?? '');
 $fechaGen = $esc(date('d/m/Y H:i'));
 
-if ($tipo === 'por_club') {
+if ($tipo === 'clubes_resumido') {
     $topN = max(1, (int)($torneo['pareclub'] ?? 8));
     $dataClub = obtenerTopJugadoresPorClub($pdo, $torneo_id, $topN);
-    echo '<h1>Resultados por club — ' . $nombreTorneo . '</h1><div class="meta">Fecha torneo: ' . $fechaTor . ' · ' . $fechaGen . ' · Top ' . $topN . ' por club</div>';
-    echo '<h2>Resumen por club</h2><table><tr><th>Club</th><th>Jug.</th><th>∑G</th><th>∑P</th><th>Prom.ef.</th><th>∑Pts</th><th>∑GFF</th></tr>';
+    echo '<h1>Clubes — resumido — ' . $nombreTorneo . '</h1><div class="meta">Letter · Top ' . $topN . ' · ' . $fechaGen . '</div>';
+    echo '<table><tr><th>Club</th><th>Jug.</th><th>∑G</th><th>∑P</th><th>Prom.ef.</th><th>∑Pts</th><th>∑GFF</th><th>Mej.pos</th></tr>';
     foreach ($dataClub['estadisticas'] as $st) {
-        echo '<tr><td>' . $esc($st['club_nombre']) . '</td><td class="num">' . (int)$st['cantidad_jugadores'] . '</td><td class="num">' . (int)$st['total_ganados'] . '</td><td class="num">' . (int)$st['total_perdidos'] . '</td><td class="num">' . (int)$st['promedio_efectividad'] . '</td><td class="num">' . (int)$st['total_puntos_grupo'] . '</td><td class="num">' . (int)$st['total_gff'] . '</td></tr>';
+        echo '<tr><td>' . $esc($st['club_nombre']) . '</td><td class="num">' . (int)$st['cantidad_jugadores'] . '</td><td class="num">' . (int)$st['total_ganados'] . '</td><td class="num">' . (int)$st['total_perdidos'] . '</td><td class="num">' . (int)$st['promedio_efectividad'] . '</td><td class="num">' . (int)$st['total_puntos_grupo'] . '</td><td class="num">' . (int)$st['total_gff'] . '</td><td class="num">' . (int)$st['mejor_posicion'] . '</td></tr>';
     }
     echo '</table>';
+} elseif ($tipo === 'clubes_detallado') {
+    $topN = max(1, (int)($torneo['pareclub'] ?? 8));
+    $dataClub = obtenerTopJugadoresPorClub($pdo, $torneo_id, $topN);
+    echo '<h1>Clubes — detallado — ' . $nombreTorneo . '</h1><div class="meta">Letter · Top ' . $topN . ' · ' . $fechaGen . '</div>';
     $byClub = [];
     foreach ($dataClub['detalle'] as $row) {
         $byClub[$row['club_nombre']][] = $row;
     }
     foreach ($byClub as $clubNombre => $rows) {
-        echo '<div class="club-block"><h2>' . $esc($clubNombre) . '</h2><table><tr><th>#</th><th>Jugador</th><th>Pos</th><th>G</th><th>P</th><th>Ef.</th><th>Pts</th><th>GFF</th></tr>';
+        echo '<div class="club-block"><h2>' . $esc($clubNombre) . '</h2><table><tr><th>#</th><th>Jugador</th><th>Pos</th><th>G</th><th>P</th><th>Ef.</th><th>Pts</th><th>Rnk</th><th>GFF</th></tr>';
         foreach ($rows as $r) {
-            echo '<tr><td class="num">' . (int)$r['ranking'] . '</td><td>' . $esc($r['nombre']) . '</td><td class="num">' . (int)$r['posicion'] . '</td><td class="num">' . (int)$r['ganados'] . '</td><td class="num">' . (int)$r['perdidos'] . '</td><td class="num">' . (int)$r['efectividad'] . '</td><td class="num">' . (int)$r['puntos'] . '</td><td class="num">' . (int)$r['gff'] . '</td></tr>';
+            echo '<tr><td class="num">' . (int)$r['ranking'] . '</td><td>' . $esc($r['nombre']) . '</td><td class="num">' . (int)$r['posicion'] . '</td><td class="num">' . (int)$r['ganados'] . '</td><td class="num">' . (int)$r['perdidos'] . '</td><td class="num">' . (int)$r['efectividad'] . '</td><td class="num">' . (int)$r['puntos'] . '</td><td class="num">' . (int)$r['ptosrnk'] . '</td><td class="num">' . (int)$r['gff'] . '</td></tr>';
         }
         echo '</table></div>';
     }
@@ -118,23 +124,23 @@ if ($tipo === 'por_club') {
     }
     echo '</table>';
 } elseif ($tipo === 'equipos_resumido') {
-    $sql = "SELECT e.codigo_equipo, e.nombre_equipo, c.nombre AS club_nombre, e.ganados, e.perdidos, e.efectividad, e.puntos, e.gff, e.sancion FROM equipos e LEFT JOIN clubes c ON e.id_club = c.id WHERE e.id_torneo = ? AND e.estatus = 0 AND e.codigo_equipo != '' ORDER BY e.ganados DESC, e.efectividad DESC, e.puntos DESC";
+    $sql = "SELECT e.codigo_equipo, e.nombre_equipo, c.nombre AS club_nombre, e.ganados, e.perdidos, e.efectividad, e.puntos, e.sancion FROM equipos e LEFT JOIN clubes c ON e.id_club = c.id WHERE e.id_torneo = ? AND e.estatus = 0 AND e.codigo_equipo != '' ORDER BY e.ganados DESC, e.efectividad DESC, e.puntos DESC";
     $st = $pdo->prepare($sql);
     $st->execute([$torneo_id]);
     $eqs = $st->fetchAll(PDO::FETCH_ASSOC);
-    echo '<h1>Equipos (resumido) — ' . $nombreTorneo . '</h1><div class="meta">' . $fechaGen . '</div>';
-    echo '<table><tr><th>#</th><th>Cód.</th><th>Equipo</th><th>Club</th><th>G</th><th>P</th><th>Ef.</th><th>Pts</th><th>GFF</th></tr>';
+    echo '<h1>Equipos — resumido — ' . $nombreTorneo . '</h1><div class="meta">Letter · ' . $fechaGen . '</div>';
+    echo '<table><tr><th>#</th><th>Cód.</th><th>Equipo</th><th>Club</th><th>G</th><th>P</th><th>Ef.</th><th>Pts</th><th>Sanc.</th></tr>';
     $pos = 1;
     foreach ($eqs as $e) {
-        echo '<tr><td class="num">' . $pos++ . '</td><td>' . $esc($e['codigo_equipo']) . '</td><td>' . $esc($e['nombre_equipo'] ?? '') . '</td><td>' . $esc($e['club_nombre'] ?? '') . '</td><td class="num">' . (int)$e['ganados'] . '</td><td class="num">' . (int)$e['perdidos'] . '</td><td class="num">' . (int)$e['efectividad'] . '</td><td class="num">' . (int)$e['puntos'] . '</td><td class="num">' . (int)($e['gff'] ?? 0) . '</td></tr>';
+        echo '<tr><td class="num">' . $pos++ . '</td><td>' . $esc($e['codigo_equipo']) . '</td><td>' . $esc($e['nombre_equipo'] ?? '') . '</td><td>' . $esc($e['club_nombre'] ?? '') . '</td><td class="num">' . (int)$e['ganados'] . '</td><td class="num">' . (int)$e['perdidos'] . '</td><td class="num">' . (int)$e['efectividad'] . '</td><td class="num">' . (int)$e['puntos'] . '</td><td class="num">' . (int)($e['sancion'] ?? 0) . '</td></tr>';
     }
     echo '</table>';
 } elseif ($tipo === 'equipos_detallado') {
     $gffSql = ResultadosReporteData::SQL_GFF_SUBQUERY;
-    $sqlEq = "SELECT e.codigo_equipo, e.nombre_equipo, c.nombre AS club_nombre, e.ganados, e.perdidos, e.efectividad, e.puntos, e.gff FROM equipos e LEFT JOIN clubes c ON e.id_club = c.id WHERE e.id_torneo = ? AND e.estatus = 0 AND e.codigo_equipo != '' ORDER BY e.ganados DESC, e.efectividad DESC, e.puntos DESC";
+    $sqlEq = "SELECT e.codigo_equipo, e.nombre_equipo, c.nombre AS club_nombre, e.ganados, e.perdidos, e.efectividad, e.puntos, e.sancion FROM equipos e LEFT JOIN clubes c ON e.id_club = c.id WHERE e.id_torneo = ? AND e.estatus = 0 AND e.codigo_equipo != '' ORDER BY e.ganados DESC, e.efectividad DESC, e.puntos DESC";
     $eqs = $pdo->prepare($sqlEq);
     $eqs->execute([$torneo_id]);
-    echo '<h1>Equipos (detallado) — ' . $nombreTorneo . '</h1><div class="meta">' . $fechaGen . '</div>';
+    echo '<h1>Equipos — detallado — ' . $nombreTorneo . '</h1><div class="meta">Letter · ' . $fechaGen . '</div>';
     foreach ($eqs->fetchAll(PDO::FETCH_ASSOC) as $e) {
         echo '<div class="club-block"><h2>[' . $esc($e['codigo_equipo']) . '] ' . $esc($e['nombre_equipo'] ?? '') . '</h2>';
         $sj = $pdo->prepare("SELECT u.nombre AS nombre_completo, i.posicion, i.ganados, i.perdidos, i.efectividad, i.puntos, i.ptosrnk, {$gffSql} AS gff FROM inscritos i INNER JOIN usuarios u ON i.id_usuario = u.id WHERE i.torneo_id = ? AND i.codigo_equipo = ? AND i.estatus != 'retirado' ORDER BY i.ganados DESC");

@@ -1,7 +1,6 @@
 <?php
 /**
- * Reportes segmentados. PDF/Excel vía index.php (modules/ no es público).
- * URLs con AppHelpers::url (compatible sin torneoGestionUrl en app_helpers antiguo).
+ * Reportes segmentados. PDF/Excel vía public/export_*.php (modules/ no es público).
  */
 require_once __DIR__ . '/../../lib/app_helpers.php';
 
@@ -16,22 +15,23 @@ $tg = static function (string $action, array $extra = []) use ($torneo_id): stri
     ], $extra));
 };
 
-$urlPdf = static function (string $tipo) use ($tg): string {
-    return $tg('export_resultados_pdf', ['tipo' => $tipo]);
+$urlPdf = static function (string $tipo) use ($torneo_id): string {
+    return AppHelpers::url('export_resultados_pdf.php', ['torneo_id' => $torneo_id, 'tipo' => $tipo]);
 };
-$urlExcel = $tg('export_resultados_excel');
+$urlExcel = AppHelpers::url('export_resultados_excel.php', ['torneo_id' => $torneo_id]);
 $urlPrint = static function (string $tipo) use ($tg): string {
     return $tg('resultados_reportes_print', ['tipo' => $tipo]);
 };
 $urlPanel = $tg('panel');
 
 $bloques = [
-    ['tipo' => 'posiciones', 'titulo' => 'Tabla de posiciones', 'desc' => 'Misma clasificación que la vista Posiciones.', 'action_origen' => 'posiciones', 'siempre' => true],
-    ['tipo' => 'por_club', 'titulo' => 'Resultados por club', 'desc' => 'Top por club (pareclub).', 'action_origen' => 'resultados_por_club', 'siempre' => true],
-    ['tipo' => 'general', 'titulo' => 'Resultados general (individual)', 'desc' => 'Clasificación con equipo.', 'action_origen' => 'resultados_general', 'siempre' => false],
-    ['tipo' => 'equipos_resumido', 'titulo' => 'Resultados equipos — resumido', 'desc' => 'Tabla de equipos.', 'action_origen' => 'resultados_equipos_resumido', 'siempre' => false],
-    ['tipo' => 'equipos_detallado', 'titulo' => 'Resultados equipos — detallado', 'desc' => 'Por equipo + jugadores.', 'action_origen' => 'resultados_equipos_detallado', 'siempre' => false],
-    ['tipo' => 'consolidado', 'titulo' => 'Reporte consolidado', 'desc' => 'Rondas, equipos, por club y clasificación.', 'action_origen' => 'resultados_reportes', 'siempre' => true],
+    ['tipo' => 'posiciones', 'titulo' => 'Clasificación general', 'desc' => 'Tabla de posiciones (individual).', 'action_origen' => 'posiciones', 'siempre' => true],
+    ['tipo' => 'clubes_resumido', 'titulo' => 'Clubes — resumido', 'desc' => 'Solo tabla resumen por club (top pareclub).', 'action_origen' => 'resultados_por_club', 'siempre' => true],
+    ['tipo' => 'clubes_detallado', 'titulo' => 'Clubes — detallado', 'desc' => 'Jugadores por club (sin tabla resumen).', 'action_origen' => 'resultados_por_club', 'siempre' => true],
+    ['tipo' => 'general', 'titulo' => 'Clasificación con equipos', 'desc' => 'Misma vista que Resultados general (modalidad equipos).', 'action_origen' => 'resultados_general', 'siempre' => false],
+    ['tipo' => 'equipos_resumido', 'titulo' => 'Equipos — resumido', 'desc' => 'Tabla de equipos.', 'action_origen' => 'resultados_equipos_resumido', 'siempre' => false],
+    ['tipo' => 'equipos_detallado', 'titulo' => 'Equipos — detallado', 'desc' => 'Por equipo + jugadores.', 'action_origen' => 'resultados_equipos_detallado', 'siempre' => false],
+    ['tipo' => 'consolidado', 'titulo' => 'Reporte consolidado', 'desc' => 'Rondas, equipos, clubes y clasificación.', 'action_origen' => 'resultados_reportes', 'siempre' => true],
 ];
 ?>
 
@@ -47,9 +47,10 @@ $bloques = [
     <div class="bg-white rounded-2xl shadow-2xl p-6 max-w-5xl mx-auto mb-6">
         <h1 class="text-2xl font-bold text-gray-900"><i class="fas fa-file-alt text-amber-600 mr-2"></i> Reportes de resultados</h1>
         <p class="text-gray-700 font-medium"><?= htmlspecialchars($torneo['nombre'] ?? '') ?></p>
+        <p class="text-sm text-gray-600 mt-2">Impresión y PDF en formato <strong class="text-black">Letter</strong>. Cada bloque es un reporte independiente.</p>
         <div class="mt-4 p-4 bg-green-50 border border-green-300 rounded-lg">
-            <strong class="text-black">Excel completo:</strong>
-            <a href="<?= htmlspecialchars($urlExcel) ?>" class="ml-2 text-black font-bold underline">Descargar .xlsx</a>
+            <strong class="text-black">Excel (varias hojas):</strong>
+            <a href="<?= htmlspecialchars($urlExcel) ?>" class="ml-2 text-black font-bold underline">Descargar Excel</a>
         </div>
     </div>
 
@@ -65,7 +66,7 @@ $bloques = [
         <p class="text-sm text-gray-600 mb-4"><?= htmlspecialchars($b['desc']) ?></p>
         <div class="flex flex-wrap gap-2 items-center">
             <a href="<?= htmlspecialchars($origen) ?>" class="inline-flex items-center px-4 py-2 bg-gray-200 text-black font-bold rounded-lg border border-gray-700 text-sm">Volver al origen</a>
-            <a href="<?= htmlspecialchars($urlPdf($b['tipo'])) ?>" class="inline-flex items-center px-4 py-2 bg-red-200 text-black font-bold rounded-lg border border-red-600 text-sm">PDF</a>
+            <a href="<?= htmlspecialchars($urlPdf($b['tipo'])) ?>" class="inline-flex items-center px-4 py-2 bg-red-200 text-black font-bold rounded-lg border border-red-600 text-sm" target="_blank" rel="noopener">PDF</a>
             <a href="<?= htmlspecialchars($urlPrint($b['tipo'])) ?>" target="_blank" rel="noopener" class="inline-flex items-center px-4 py-2 bg-blue-200 text-black font-bold rounded-lg border border-blue-700 text-sm">Imprimir / vista</a>
             <a href="<?= htmlspecialchars($idx) ?>" class="inline-flex items-center px-4 py-2 bg-amber-100 text-black font-bold rounded-lg border border-amber-700 text-sm">Índice reportes</a>
         </div>

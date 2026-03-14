@@ -50,7 +50,7 @@ $base_url = $use_standalone ? $script_actual : 'index.php?page=torneo_gestion';
                 $u = static function (string $a, array $x = []) use ($tid) {
                     return AppHelpers::url('index.php', array_merge(['page' => 'torneo_gestion', 'action' => $a, 'torneo_id' => $tid], $x));
                 }; ?>
-            <a href="<?php echo htmlspecialchars($u('export_resultados_pdf', ['tipo' => 'posiciones'])); ?>" class="btn btn-danger text-dark fw-bold border border-dark">
+            <a href="<?php echo htmlspecialchars(AppHelpers::url('export_resultados_pdf.php', ['torneo_id' => $tid, 'tipo' => 'posiciones'])); ?>" target="_blank" rel="noopener" class="btn btn-danger text-dark fw-bold border border-dark">
                 <i class="fas fa-file-pdf mr-1"></i> PDF posiciones
             </a>
             <a href="<?php echo htmlspecialchars($u('resultados_reportes_print', ['tipo' => 'posiciones'])); ?>" target="_blank" rel="noopener" class="btn btn-warning text-dark fw-bold border border-dark">
@@ -78,7 +78,7 @@ $base_url = $use_standalone ? $script_actual : 'index.php?page=torneo_gestion';
         $u2 = static function (string $a, array $x = []) use ($tid) {
             return AppHelpers::url('index.php', array_merge(['page' => 'torneo_gestion', 'action' => $a, 'torneo_id' => $tid], $x));
         }; ?>
-    <a href="<?php echo htmlspecialchars($u2('export_resultados_pdf', ['tipo' => 'posiciones'])); ?>" class="btn btn-sm btn-danger text-dark fw-bold border border-dark">PDF</a>
+    <a href="<?php echo htmlspecialchars(AppHelpers::url('export_resultados_pdf.php', ['torneo_id' => $tid, 'tipo' => 'posiciones'])); ?>" target="_blank" rel="noopener" class="btn btn-sm btn-danger text-dark fw-bold border border-dark">PDF</a>
     <a href="<?php echo htmlspecialchars($u2('resultados_reportes_print', ['tipo' => 'posiciones'])); ?>" target="_blank" rel="noopener" class="btn btn-sm btn-warning text-dark fw-bold">Imprimir</a>
     <a href="<?php echo htmlspecialchars($u2('resultados_reportes')); ?>" class="btn btn-sm btn-outline-secondary fw-bold">Reportes</a>
     <?php endif; ?>
