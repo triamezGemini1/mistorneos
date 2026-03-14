@@ -217,21 +217,13 @@ final class ImportacionTorneoExternoService
             return $stats;
         }
 
-        $enr = self::fase1Enriquecer($pdo, $rowsHomologacion);
-        $filasHom = $enr['filas'];
-        if (count($filasHom) < 2) {
-            $stats['errores'][] = 'Homologación sin datos (después de leer cédulas). Revise la 1.ª hoja o bloque: fila títulos con columna cédula + usuario.';
-            $stats['filas_bloque_cedulas'] = max(0, count($rowsHomologacion) - 1);
-            return $stats;
-        }
-        $hHom = $filasHom[0];
-        $mapHom = self::mapearIndices($hHom, ['pareja' => ['pareja', 'id_pareja', 'parejas'], 'cedula' => ['cedula', 'cedula1', 'ci', 'documento', 'c_dula']]);
-        $idxIdUsuarioHom = count($hHom) - 1;
+        $h0raw = $rowsHomologacion[0];
         $hNormHom = array_map(static function ($x) {
             $s = strtolower(trim((string)$x));
             $s = str_replace(['á', 'é', 'í', 'ó', 'ú', 'ñ', 'ü'], ['a', 'e', 'i', 'o', 'u', 'n', 'u'], $s);
             return strtolower(preg_replace('/[^a-z0-9]+/i', '_', $s));
-        }, $hHom);
+        }, $h0raw);
+        $mapHom = self::mapearIndices($h0raw, ['pareja' => ['pareja', 'id_pareja', 'parejas'], 'cedula' => ['cedula', 'cedula1', 'ci', 'documento', 'c_dula']]);
         if ($mapHom['cedula'] < 0) {
             foreach ($hNormHom as $hi => $col) {
                 if ($col === 'cedula' || strpos($col, 'cedul') !== false || $col === 'ci' || strpos($col, 'documento') !== false) {
@@ -246,9 +238,6 @@ final class ImportacionTorneoExternoService
             if ($hi === $mapHom['cedula'] || $hi === $mapHom['pareja']) {
                 continue;
             }
-            if ($col === 'id_usuario') {
-                continue;
-            }
             if (in_array($col, $candidatosExt, true) || ($col !== '' && strpos($col, 'id_') === 0)) {
                 $iExtHom = $hi;
                 break;
@@ -256,43 +245,46 @@ final class ImportacionTorneoExternoService
         }
         if ($iExtHom < 0 && $mapHom['cedula'] >= 0) {
             foreach ($hNormHom as $hi => $col) {
-                if ($hi === $mapHom['cedula'] || $hi === $mapHom['pareja'] || $col === 'id_usuario') {
-                    continue;
+                if ($hi !== $mapHom['cedula'] && $hi !== $mapHom['pareja']) {
+                    $iExtHom = $hi;
+                    break;
                 }
-                $iExtHom = $hi;
-                break;
             }
         }
+        if ($mapHom['cedula'] < 0 || $iExtHom < 0) {
+            $stats['errores'][] = 'Homologación (1.ª hoja o bloque superior): fila 1 debe tener dos columnas — una de **cédula** (cedula, CI, documento) y otra del **id del otro sistema** (usuario, id, codigo). Ejemplo fila 2: 37 | 4906763';
+            $stats['filas_bloque_cedulas'] = max(0, count($rowsHomologacion) - 1);
+            return $stats;
+        }
 
+        $stmtCed = $pdo->prepare('SELECT id FROM usuarios WHERE cedula = ? OR cedula = ? LIMIT 1');
         $cedulaToId = [];
         $parejaToIds = [];
-        /** @var array<string, int> usuario externo (otra plataforma) → id_usuario Mistorneos */
         $extUsuarioToId = [];
         $filasHomologConId = 0;
-        for ($i = 1; $i < count($filasHom); $i++) {
-            $row = $filasHom[$i];
-            while (count($row) < count($hHom)) {
+        $noEncCed = [];
+        for ($i = 1; $i < count($rowsHomologacion); $i++) {
+            $row = $rowsHomologacion[$i];
+            while (count($row) <= max($mapHom['cedula'], $iExtHom)) {
                 $row[] = '';
             }
-            $idU = (int)($row[$idxIdUsuarioHom] ?? 0);
+            $ced = self::normalizarCedula($row[$mapHom['cedula']] ?? '');
+            $extKey = trim((string)($row[$iExtHom] ?? ''));
+            if ($ced === '' || $extKey === '') {
+                continue;
+            }
+            $stmtCed->execute([$ced, preg_replace('/\D/', '', $ced)]);
+            $idU = (int)($stmtCed->fetchColumn() ?: 0);
             if ($idU > 0) {
                 $filasHomologConId++;
-            }
-            if ($mapHom['cedula'] >= 0) {
-                $ced = self::normalizarCedula($row[$mapHom['cedula']] ?? '');
-                if ($ced !== '' && $idU > 0) {
-                    $cedulaToId[$ced] = $idU;
-                    $cedulaToId[preg_replace('/\D/', '', $ced)] = $idU;
+                $cedulaToId[$ced] = $idU;
+                $cedulaToId[preg_replace('/\D/', '', $ced)] = $idU;
+                $extUsuarioToId[$extKey] = $idU;
+                if (is_numeric($extKey)) {
+                    $extUsuarioToId[(string)(int)$extKey] = $idU;
                 }
-            }
-            if ($iExtHom >= 0 && $idU > 0) {
-                $extKey = trim((string)($row[$iExtHom] ?? ''));
-                if ($extKey !== '') {
-                    $extUsuarioToId[$extKey] = $idU;
-                    if (is_numeric($extKey)) {
-                        $extUsuarioToId[(string)(int)$extKey] = $idU;
-                    }
-                }
+            } else {
+                $noEncCed[] = $ced;
             }
             if ($mapHom['pareja'] >= 0 && $idU > 0) {
                 $pkey = trim((string)($row[$mapHom['pareja']] ?? ''));
@@ -300,11 +292,18 @@ final class ImportacionTorneoExternoService
                     $parejaToIds[$pkey][] = $idU;
                 }
             }
-            if ($idU <= 0 && $mapHom['cedula'] >= 0 && trim((string)($row[$mapHom['cedula']] ?? '')) !== '') {
-                $stats['homologacion_sin_usuario']++;
-            }
         }
-        $stats['cedulas_no_encontradas'] = $enr['no_encontradas'];
+        $stats['homologacion_sin_usuario'] = count(array_unique($noEncCed));
+        $stats['cedulas_no_encontradas'] = array_values(array_unique($noEncCed));
+
+        $enr = self::fase1Enriquecer($pdo, $rowsHomologacion);
+        $filasHom = $enr['filas'];
+        if (count($filasHom) < 2) {
+            $stats['errores'][] = 'Homologación sin filas de datos.';
+            return $stats;
+        }
+        $hHom = $filasHom[0];
+        $idxIdUsuarioHom = count($hHom) - 1;
         $stats['filas_bloque_cedulas'] = count($filasHom) - 1;
         $stats['mapeos_usuario_externo'] = count($extUsuarioToId);
         $stats['columna_usuario_homolog'] = $iExtHom >= 0;
@@ -348,7 +347,8 @@ final class ImportacionTorneoExternoService
         $stats['columna_usuario_resultados'] = $iExtRes >= 0;
         $puedePorExt = $iExtRes >= 0 && $extUsuarioToId !== [];
         if ($iExtRes >= 0 && $extUsuarioToId === []) {
-            $stats['errores'][] = 'No hay mapa id externo → Mistorneos: en homologación cada fila necesita cédula (en BD) + una columna con el id del otro sistema (37, 81…). Ese id se sustituye por el id_usuario de la cédula. Revise cédulas y que exista columna de id externo (usuario, id, codigo…).';
+            $muestra = array_slice($noEncCed, 0, 15);
+            $stats['errores'][] = 'Mapa vacío: ninguna cédula del bloque homologación existe en usuarios (o filas vacías). Cédulas no encontradas (muestra): ' . implode(', ', $muestra) . '. — Formato hoja 1: columna A id externo (37), columna B cédula (4906763), o al revés; fila 1 = títulos.';
             return $stats;
         }
         if ($iCed < 0 && ($iPareja < 0 || $iJug < 0) && !$puedePorExt) {
