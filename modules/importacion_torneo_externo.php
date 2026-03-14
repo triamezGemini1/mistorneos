@@ -98,6 +98,52 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         header('Location: ' . $baseList . '&torneo_id=' . $torneo_id);
         exit;
     }
+
+    if ($accion === 'fase2_unificado' && isset($_FILES['archivo_unico']) && is_uploaded_file($_FILES['archivo_unico']['tmp_name'])) {
+        $torneo_id = (int)($_POST['torneo_id'] ?? 0);
+        $reemplazar = !empty($_POST['reemplazar_unificado']);
+        if ($torneo_id <= 0) {
+            $_SESSION['error'] = 'Debe elegir el torneo (paso 1).';
+            header('Location: ' . $baseList);
+            exit;
+        }
+        $pdo = DB::pdo();
+        $st = $pdo->prepare('SELECT id, nombre, fechator FROM tournaments WHERE id = ?');
+        $st->execute([$torneo_id]);
+        $torneo = $st->fetch(PDO::FETCH_ASSOC);
+        if (!$torneo) {
+            $_SESSION['error'] = 'Torneo no encontrado.';
+            header('Location: ' . $baseList);
+            exit;
+        }
+        $fecha = substr((string)($torneo['fechator'] ?? ''), 0, 10);
+        if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $fecha)) {
+            $fecha = date('Y-m-d');
+        }
+        $tmp = (string)$_FILES['archivo_unico']['tmp_name'];
+        $nom = (string)($_FILES['archivo_unico']['name'] ?? 'x.xlsx');
+        if ($reemplazar) {
+            $pdo->prepare('DELETE FROM partiresul WHERE id_torneo = ?')->execute([$torneo_id]);
+        }
+        $res = ImportacionTorneoExternoService::importarUnSoloArchivoPartiresul($pdo, $torneo_id, $userId, $fecha, $tmp, $nom);
+        if (($res['split_error'] ?? '') !== '') {
+            $_SESSION['error'] = $res['split_error'];
+        } else {
+            $msg = 'Un solo archivo — partiresul: ' . $res['insertados'] . ' filas.';
+            if (($res['homologacion_sin_usuario'] ?? 0) > 0) {
+                $msg .= ' Homologación sin usuario BD: ' . $res['homologacion_sin_usuario'] . '.';
+            }
+            if (($res['resultados_sin_resolver'] ?? 0) > 0) {
+                $msg .= ' Filas sin asignar jugador: ' . $res['resultados_sin_resolver'] . '.';
+            }
+            $_SESSION['success'] = $msg;
+        }
+        if (($res['errores'] ?? []) !== []) {
+            $_SESSION['warning'] = implode(' ', array_slice($res['errores'], 0, 5));
+        }
+        header('Location: ' . $baseList . '&torneo_id=' . $torneo_id);
+        exit;
+    }
 }
 
 $pdo = DB::pdo();
@@ -134,7 +180,7 @@ $url_import_individual = $url_panel . '#importacion-masiva';
     <div class="card mb-4 shadow-sm border-0 bg-light">
         <div class="card-body py-3">
             <h1 class="h4 mb-1"><i class="fas fa-file-import text-primary me-2"></i>Carga de datos desde otra plataforma</h1>
-            <p class="text-muted small mb-0">Solo <strong>administrador general</strong>. Siga la secuencia en orden. Los pasos 2 y 3 se envían juntos en un solo formulario al final.</p>
+            <p class="text-muted small mb-0">Solo <strong>administrador general</strong>. Puede usar <strong>un solo Excel</strong> (recomendado) o dos archivos separados.</p>
         </div>
     </div>
 
@@ -174,12 +220,12 @@ $url_import_individual = $url_panel . '#importacion-masiva';
                 </div>
                 <div class="col-md-6 col-lg-4">
                     <div class="border rounded p-2 h-100 bg-success bg-opacity-10">
-                        <strong class="text-success">Pasos 2 + 3</strong> — Homologar (pareja/cédula) + resultados por mesa → <code>partiresul</code>.
+                        <strong class="text-success">Carga</strong> — Un Excel: arriba cédula + id externo; abajo resultados (usuario = id externo). Se reemplaza por <code>id_usuario</code> y se guarda en <code>partiresul</code>.
                     </div>
                 </div>
             </div>
-            <div class="alert alert-warning small mb-0 mt-3">
-                <strong>Importante:</strong> el id numérico del export de la otra plataforma <strong>no</strong> es el <code>id_usuario</code> de Mistorneos; el sistema <strong>no lo usa</strong>. Hace falta <strong>cédula</strong> o <strong>pareja + jugador</strong> en el archivo de resultados para enlazar con el paso 2.
+            <div class="alert alert-info small mb-0 mt-3">
+                El número en columna <code>usuario</code> del otro sistema se traduce con el <strong>primer bloque</strong> del Excel (misma columna <code>usuario</code> + <code>cédula</code> → consulta <code>usuarios</code>).
             </div>
         </div>
     </div>
@@ -236,6 +282,47 @@ $url_import_individual = $url_panel . '#importacion-masiva';
     </div>
 
     <?php if ($torneo_actual): ?>
+    <!-- UN SOLO ARCHIVO (recomendado) -->
+    <div class="card mb-4 shadow-lg imp-card-paso paso-4 border-primary">
+        <div class="card-header text-white d-flex align-items-center gap-2 py-3" style="background: linear-gradient(135deg,#0d6efd 0%,#0a58ca 100%);">
+            <span class="imp-paso-num bg-white text-primary"><i class="fas fa-file-excel"></i></span>
+            <div>
+                <span class="fw-bold">Un solo Excel — homologación + resultados</span>
+                <div class="small opacity-90">Recomendado: todo en un libro</div>
+            </div>
+        </div>
+        <div class="card-body">
+            <div class="imp-seccion">
+                <h6>Formato del archivo</h6>
+                <p class="small mb-2"><strong>Opción A — Dos hojas:</strong> <em>Hoja1</em> encabezados <code>cédula</code> (o cedula) y <code>usuario</code> (id del jugador en el torneo externo). Una fila por jugador. <em>Hoja2</em> = tabla de resultados (torneo, partida, mesa, secuencia, usuario, r1, r2, ff…).</p>
+                <p class="small mb-0"><strong>Opción B — Una hoja:</strong> arriba el mismo bloque cédula + usuario (todas las filas). En cuanto aparezca una <strong>fila de encabezados</strong> que tenga <code>partida</code>, <code>mesa</code> y <code>secuencia</code>, empieza el bloque de resultados (como en el otro sistema). Todo lo de arriba es homologación.</p>
+            </div>
+            <div class="imp-seccion">
+                <h6>Qué hace el sistema</h6>
+                <ol class="small mb-0 ps-3">
+                    <li>Lee el primer bloque: por cada cédula consulta <code>usuarios</code> y arma mapa <code>usuario externo → id_usuario</code> Mistorneos.</li>
+                    <li>Lee cada fila de resultados; sustituye <code>usuario</code> por ese <code>id_usuario</code>.</li>
+                    <li>Inserta en <code>partiresul</code> con los mismos parámetros que el panel (mesa, secuencia, r1/r2, ff, efectividad, zapato/chancleta, fecha torneo, registrado_por).</li>
+                </ol>
+            </div>
+            <form method="post" enctype="multipart/form-data" class="mt-2">
+                <input type="hidden" name="csrf_token" value="<?= htmlspecialchars(CSRF::token()) ?>">
+                <input type="hidden" name="accion" value="fase2_unificado">
+                <input type="hidden" name="torneo_id" value="<?= (int)$torneo_id_sel ?>">
+                <div class="mb-3">
+                    <label class="form-label fw-bold">Archivo Excel (.xlsx)</label>
+                    <input type="file" name="archivo_unico" class="form-control" accept=".xlsx,.csv,.txt" required>
+                    <div class="form-text">CSV solo si en un mismo archivo puede ponerse primero el bloque cédula+usuario y luego una fila con partida/mesa/secuencia (sin líneas en blanco entre bloques).</div>
+                </div>
+                <div class="form-check mb-3">
+                    <input type="checkbox" class="form-check-input" name="reemplazar_unificado" value="1" id="repU">
+                    <label class="form-check-label small" for="repU">Vaciar <code>partiresul</code> de este torneo antes de importar</label>
+                </div>
+                <button type="submit" class="btn btn-primary btn-lg"><i class="fas fa-cloud-upload-alt me-2"></i>Procesar un solo archivo → partiresul</button>
+            </form>
+        </div>
+    </div>
+
     <!-- OPCIONAL inscripciones -->
     <div class="card mb-4 shadow imp-card-paso paso-15">
         <div class="card-header bg-secondary text-white d-flex align-items-center gap-2 py-3">
@@ -324,13 +411,13 @@ $url_import_individual = $url_panel . '#importacion-masiva';
         </div>
     </div>
 
-    <!-- Formulario ejecución 2+3 -->
+    <!-- Formulario ejecución 2+3 (dos archivos) -->
     <div class="card mb-4 shadow-lg imp-card-paso paso-4 border-success">
         <div class="card-header bg-success text-white d-flex align-items-center gap-2 py-3">
-            <span class="imp-paso-num bg-white text-success"><i class="fas fa-play"></i></span>
+            <span class="imp-paso-num bg-white text-success"><i class="fas fa-copy"></i></span>
             <div>
-                <span class="fw-bold">Ejecutar pasos 2 y 3 — Subir archivos e ingresar a partiresul</span>
-                <div class="small opacity-90">Un solo envío: homologación + resultados</div>
+                <span class="fw-bold">Alternativa — Dos archivos (homologación + resultados)</span>
+                <div class="small opacity-90">Mismo proceso que un solo Excel, en dos ficheros</div>
             </div>
         </div>
         <div class="card-body">

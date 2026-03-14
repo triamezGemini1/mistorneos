@@ -43,6 +43,40 @@ final class CargaMasivaXlsxReader
     }
 
     /**
+     * Todas las hojas en orden (sheet1, sheet2, …). Solo hojas con al menos una fila.
+     *
+     * @return list<list<list<string>>>
+     */
+    public static function leerTodasHojasEnOrden(string $path): array
+    {
+        $out = [];
+        if (!is_readable($path) || !class_exists('ZipArchive', false)) {
+            return $out;
+        }
+        $zip = new ZipArchive();
+        if ($zip->open($path) !== true) {
+            return $out;
+        }
+        $shared = self::cargarSharedStrings($zip);
+        $sheetNames = [];
+        for ($i = 0; $i < $zip->numFiles; $i++) {
+            $n = $zip->getNameIndex($i);
+            if (preg_match('#^xl/worksheets/sheet(\d+)\.xml$#i', (string)$n, $m)) {
+                $sheetNames[(int)$m[1]] = $n;
+            }
+        }
+        ksort($sheetNames);
+        foreach ($sheetNames as $sheetFile) {
+            $filas = self::leerSheetXml($zip->getFromName($sheetFile), $shared);
+            if ($filas !== []) {
+                $out[] = $filas;
+            }
+        }
+        $zip->close();
+        return $out;
+    }
+
+    /**
      * @return list<string>
      */
     private static function cargarSharedStrings(ZipArchive $zip): array

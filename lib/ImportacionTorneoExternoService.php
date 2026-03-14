@@ -365,6 +365,84 @@ final class ImportacionTorneoExternoService
         return $stats;
     }
 
+    /**
+     * Un solo Excel/CSV:
+     * - Opción A: dos hojas — Hoja1 = homologación (cédula + usuario id externo), Hoja2 = resultados.
+     * - Opción B: una hoja — arriba bloque homologación (1ª fila encabezados cédula + usuario), debajo fila de encabezados
+     *   de resultados (partida, mesa, secuencia, usuario, r1, r2…) y el resto de filas.
+     *
+     * @return array{0: list<list<string>>, 1: list<list<string>>, error: string}
+     */
+    public static function dividirArchivoUnico(string $path, string $originalName): array
+    {
+        $ext = strtolower(pathinfo($originalName, PATHINFO_EXTENSION));
+        if ($ext === 'xlsx' && is_readable($path)) {
+            require_once __DIR__ . '/CargaMasivaXlsxReader.php';
+            $sheets = CargaMasivaXlsxReader::leerTodasHojasEnOrden($path);
+            if (count($sheets) >= 2) {
+                return [$sheets[0], $sheets[1], ''];
+            }
+            if (count($sheets) === 1) {
+                [$a, $b] = self::dividirUnaTablaEnDosBloques($sheets[0]);
+                return [$a, $b, ($a === [] || $b === []) ? 'En una sola hoja no se encontró el bloque de resultados (fila con columnas partida, mesa, secuencia) después del bloque cédula+usuario.' : ''];
+            }
+            return [[], [], 'No se pudo leer el Excel.'];
+        }
+        $rows = self::leerExcelOCsv($path, $originalName);
+        [$a, $b] = self::dividirUnaTablaEnDosBloques($rows);
+        return [$a, $b, ($a === [] || $b === []) ? 'No se detectaron dos bloques: arriba cédula+usuario, abajo cabecera partida/mesa/secuencia.' : ''];
+    }
+
+    /**
+     * @return array{0: list<list<string>>, 1: list<list<string>>}
+     */
+    private static function dividirUnaTablaEnDosBloques(array $rows): array
+    {
+        if (count($rows) < 2) {
+            return [[], []];
+        }
+        for ($i = 0; $i < count($rows); $i++) {
+            $h = array_map(static fn ($x) => strtolower(preg_replace('/[^a-z0-9]+/i', '_', trim((string)$x))), $rows[$i]);
+            $part = $mesa = $seq = false;
+            foreach ($h as $c) {
+                if ($c === 'partida' || str_contains((string)$c, 'partida')) {
+                    $part = true;
+                }
+                if ($c === 'mesa') {
+                    $mesa = true;
+                }
+                if ($c === 'secuencia' || str_contains((string)$c, 'secuencia') || $c === 'seq') {
+                    $seq = true;
+                }
+            }
+            if ($part && $mesa && $seq) {
+                $homolog = array_slice($rows, 0, $i);
+                if ($homolog === []) {
+                    return [[], []];
+                }
+                return [$homolog, array_slice($rows, $i)];
+            }
+        }
+        return [[], []];
+    }
+
+    /**
+     * @return array{insertados: int, errores: list<string>, homologacion_sin_usuario: int, resultados_sin_resolver: int, cedulas_no_encontradas: list<string>, split_error: string}
+     */
+    public static function importarUnSoloArchivoPartiresul(
+        PDO $pdo,
+        int $torneo_id,
+        int $registrado_por,
+        string $fechaTorneoYmd,
+        string $path,
+        string $originalName
+    ): array {
+        [$hom, $res, $err] = self::dividirArchivoUnico($path, $originalName);
+        $stats = self::importarDosArchivosPartiresul($pdo, $torneo_id, $registrado_por, $fechaTorneoYmd, $hom, $res);
+        $stats['split_error'] = $err;
+        return $stats;
+    }
+
     private static function normalizarCedula(string $c): string
     {
         return trim(preg_replace('/\s+/', '', $c));
