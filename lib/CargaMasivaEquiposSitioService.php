@@ -671,19 +671,23 @@ final class CargaMasivaEquiposSitioService
         if (!in_array($nacionalidad, ['V', 'E', 'J', 'P'], true)) {
             $nacionalidad = 'V';
         }
+        $numfvd = preg_replace('/\D/', '', $cedula);
+        if ($numfvd === '') {
+            $numfvd = '0';
+        }
         try {
             $stmt = $pdo->prepare(
-                'INSERT INTO usuarios (nombre, cedula, nacionalidad, sexo, fechnac, email, username, password_hash, role, club_id, entidad, status)
-                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, \'usuario\', ?, 0, \'approved\')'
+                'INSERT INTO usuarios (nombre, cedula, nacionalidad, numfvd, sexo, fechnac, email, username, password_hash, role, club_id, entidad, status)
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, \'usuario\', ?, 0, \'approved\')'
             );
-            $stmt->execute([$nombre, $cedula, $nacionalidad, $sexo, $fechnac, $email, $username, $hash, $club_id]);
+            $stmt->execute([$nombre, $cedula, $nacionalidad, $numfvd, $sexo, $fechnac, $email, $username, $hash, $club_id]);
         } catch (Throwable $e) {
             try {
                 $stmt = $pdo->prepare(
-                    'INSERT INTO usuarios (nombre, cedula, nacionalidad, sexo, fechnac, email, username, password_hash, role, club_id, entidad, status)
-                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, \'usuario\', ?, 0, 0)'
+                    'INSERT INTO usuarios (nombre, cedula, nacionalidad, numfvd, sexo, fechnac, email, username, password_hash, role, club_id, entidad, status)
+                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, \'usuario\', ?, 0, 0)'
                 );
-                $stmt->execute([$nombre, $cedula, $nacionalidad, $sexo, $fechnac, $email, $username, $hash, $club_id]);
+                $stmt->execute([$nombre, $cedula, $nacionalidad, $numfvd, $sexo, $fechnac, $email, $username, $hash, $club_id]);
             } catch (Throwable $e2) {
                 $stmt = $pdo->prepare('SELECT id FROM usuarios WHERE cedula = ? LIMIT 1');
                 $stmt->execute([$cedula]);
