@@ -1,6 +1,6 @@
 <?php
 /**
- * Sección Reportes: PDF, Excel e impresión de resultados del torneo.
+ * Reportes segmentados (mismo modelo que cada pantalla de resultados). PDF Letter por tipo.
  */
 require_once __DIR__ . '/../../lib/app_helpers.php';
 
@@ -9,77 +9,107 @@ $use_standalone = in_array($script_actual, ['admin_torneo.php', 'panel_torneo.ph
 $base = $use_standalone ? $script_actual : 'index.php?page=torneo_gestion';
 $sep = $use_standalone ? '?' : '&';
 $torneo_id = (int)($torneo_id ?? 0);
-
 $exportBase = rtrim(AppHelpers::getBaseUrl(), '/') . '/modules/tournament_admin/';
-$urlPdf = $exportBase . 'resultados_export_pdf.php?torneo_id=' . $torneo_id;
-$urlXlsx = $exportBase . 'resultados_export_excel.php?torneo_id=' . $torneo_id;
-$urlPrint = $base . $sep . 'action=resultados_reportes_print&torneo_id=' . $torneo_id;
+$esEquipos = (int)($torneo['modalidad'] ?? 0) === 3;
+
+function rp_url_pdf(string $exportBase, int $tid, string $tipo): string {
+    return $exportBase . 'resultados_export_pdf.php?torneo_id=' . $tid . '&tipo=' . rawurlencode($tipo);
+}
+function rp_url_print(string $base, string $sep, int $tid, string $tipo): string {
+    return $base . $sep . 'action=resultados_reportes_print&torneo_id=' . $tid . '&tipo=' . rawurlencode($tipo);
+}
+function rp_url_xlsx(string $exportBase, int $tid): string {
+    return $exportBase . 'resultados_export_excel.php?torneo_id=' . $tid;
+}
+
+$bloques = [
+    [
+        'tipo' => 'por_club',
+        'titulo' => 'Resultados por club',
+        'desc' => 'Top por club (pareclub), resumen y detalle por club — como la vista «Resultados clubes».',
+        'action_origen' => 'resultados_por_club',
+        'siempre' => true,
+    ],
+    [
+        'tipo' => 'general',
+        'titulo' => 'Resultados general (individual)',
+        'desc' => 'Clasificación individual con equipo — como «Resultados general».',
+        'action_origen' => 'resultados_general',
+        'siempre' => false,
+    ],
+    [
+        'tipo' => 'equipos_resumido',
+        'titulo' => 'Resultados equipos — resumido',
+        'desc' => 'Tabla de equipos con G, P, efectividad, puntos — como vista resumida.',
+        'action_origen' => 'resultados_equipos_resumido',
+        'siempre' => false,
+    ],
+    [
+        'tipo' => 'equipos_detallado',
+        'titulo' => 'Resultados equipos — detallado',
+        'desc' => 'Por equipo, listado de jugadores — como vista detallada.',
+        'action_origen' => 'resultados_equipos_detallado',
+        'siempre' => false,
+    ],
+    [
+        'tipo' => 'consolidado',
+        'titulo' => 'Reporte consolidado',
+        'desc' => 'Rondas, equipos (si aplica), por club y clasificación en un solo documento.',
+        'action_origen' => 'resultados_reportes',
+        'siempre' => true,
+    ],
+];
 ?>
 
 <link rel="stylesheet" href="assets/dist/output.css">
 
 <div class="min-h-screen bg-gradient-to-br from-slate-700 via-slate-800 to-slate-900 p-6">
-    <div class="mb-4 flex flex-wrap gap-3">
+    <div class="mb-4">
         <a href="<?= htmlspecialchars($base . $sep . 'action=panel&torneo_id=' . $torneo_id) ?>"
-           class="inline-flex items-center px-5 py-2.5 bg-amber-200 hover:bg-amber-300 text-black font-bold rounded-lg shadow border border-gray-400">
-            <i class="fas fa-arrow-left mr-2 text-black"></i> Volver al panel
+           class="inline-flex items-center px-5 py-2.5 bg-amber-200 hover:bg-amber-300 text-black font-bold rounded-lg border border-gray-800">
+            <i class="fas fa-arrow-left mr-2"></i> Volver al panel
         </a>
     </div>
 
-    <div class="bg-white rounded-2xl shadow-2xl p-8 max-w-4xl mx-auto">
-        <h1 class="text-2xl font-bold text-gray-900 mb-1">
-            <i class="fas fa-file-alt text-amber-600 mr-2"></i> Reportes de resultados
-        </h1>
-        <p class="text-gray-600 mb-2"><?= htmlspecialchars($torneo['nombre'] ?? 'Torneo') ?></p>
-        <p class="text-sm text-gray-500 mb-8">
-            Descarga o imprime la clasificación individual, resumen por club, rondas y, si el torneo es por equipos, la tabla de equipos.
-        </p>
-
-        <div class="grid md:grid-cols-2 gap-6">
-            <div class="border border-gray-200 rounded-xl p-6 bg-gradient-to-br from-red-50 to-white">
-                <div class="text-red-700 text-3xl mb-3"><i class="fas fa-file-pdf"></i></div>
-                <h2 class="text-lg font-bold text-gray-900 mb-2">PDF</h2>
-                <p class="text-sm text-gray-600 mb-4">Un solo documento listo para archivar o enviar (orientación horizontal).</p>
-                <a href="<?= htmlspecialchars($urlPdf) ?>"
-                   class="inline-flex items-center px-5 py-3 bg-red-200 hover:bg-red-300 text-black font-bold rounded-lg shadow border border-red-400">
-                    <i class="fas fa-download mr-2 text-black"></i> Descargar PDF
-                </a>
-            </div>
-
-            <div class="border border-gray-200 rounded-xl p-6 bg-gradient-to-br from-green-50 to-white">
-                <div class="text-green-700 text-3xl mb-3"><i class="fas fa-file-excel"></i></div>
-                <h2 class="text-lg font-bold text-gray-900 mb-2">Excel</h2>
-                <p class="text-sm text-gray-600 mb-4">Varias hojas: torneo, rondas, por club, equipos (si aplica) y clasificación completa.</p>
-                <a href="<?= htmlspecialchars($urlXlsx) ?>"
-                   class="inline-flex items-center px-5 py-3 bg-green-200 hover:bg-green-300 text-black font-bold rounded-lg shadow border border-green-500">
-                    <i class="fas fa-download mr-2 text-black"></i> Descargar Excel (.xlsx)
-                </a>
-            </div>
-        </div>
-
-        <div class="mt-8 border border-gray-200 rounded-xl p-6 bg-gray-50">
-            <div class="text-gray-700 text-2xl mb-3"><i class="fas fa-print"></i></div>
-            <h2 class="text-lg font-bold text-gray-900 mb-2">Vista para imprimir</h2>
-            <p class="text-sm text-gray-600 mb-4">Se abre una página optimizada para imprimir o guardar como PDF desde el navegador.</p>
-            <a href="<?= htmlspecialchars($urlPrint) ?>" target="_blank"
-               class="inline-flex items-center px-5 py-3 bg-slate-200 hover:bg-slate-300 text-black font-bold rounded-lg shadow mr-3 border border-slate-500">
-                <i class="fas fa-external-link-alt mr-2 text-black"></i> Abrir vista imprimible
-            </a>
-            <button type="button" onclick="var w=window.open('<?= htmlspecialchars($urlPrint, ENT_QUOTES) ?>','_blank'); if(w) w.onload=function(){ w.print(); };"
-                    class="mt-3 md:mt-0 inline-flex items-center px-5 py-3 bg-blue-200 hover:bg-blue-300 text-black font-bold rounded-lg shadow border border-blue-600">
-                <i class="fas fa-print mr-2 text-black"></i> Imprimir (nueva ventana)
-            </button>
-        </div>
-
-        <div class="mt-8 text-sm text-gray-500">
-            <p class="font-semibold text-gray-700 mb-2">Contenido incluido</p>
-            <ul class="list-disc pl-5 space-y-1">
-                <li>Datos del torneo y conteo de participantes activos</li>
-                <li>Resumen por ronda (mesas y registros)</li>
-                <li>Agregados por club</li>
-                <li>Clasificación individual completa (G, P, efectividad, puntos, ranking, GFF, sanciones, tarjeta)</li>
-                <li>Torneos por equipos: tabla de clasificación de equipos</li>
-            </ul>
+    <div class="bg-white rounded-2xl shadow-2xl p-6 max-w-5xl mx-auto mb-6">
+        <h1 class="text-2xl font-bold text-gray-900"><i class="fas fa-file-alt text-amber-600 mr-2"></i> Reportes de resultados</h1>
+        <p class="text-gray-700 font-medium"><?= htmlspecialchars($torneo['nombre'] ?? '') ?></p>
+        <p class="text-sm text-gray-500 mt-2">Cada bloque corresponde a un tipo de vista de resultados. PDF en formato <strong>Letter</strong> vertical.</p>
+        <div class="mt-4 p-4 bg-green-50 border border-green-300 rounded-lg">
+            <strong class="text-black">Excel completo</strong> (todas las hojas):
+            <a href="<?= htmlspecialchars(rp_url_xlsx($exportBase, $torneo_id)) ?>" class="ml-2 text-black font-bold underline">Descargar .xlsx</a>
         </div>
     </div>
+
+    <?php foreach ($bloques as $b):
+        if (!$b['siempre'] && !$esEquipos && in_array($b['tipo'], ['general', 'equipos_resumido', 'equipos_detallado'], true)) {
+            continue;
+        }
+        $origen = $base . $sep . 'action=' . $b['action_origen'] . '&torneo_id=' . $torneo_id;
+        $pdf = rp_url_pdf($exportBase, $torneo_id, $b['tipo']);
+        $print = rp_url_print($base, $sep, $torneo_id, $b['tipo']);
+    ?>
+    <div class="bg-white rounded-xl shadow-lg p-6 max-w-5xl mx-auto mb-4 border-2 border-gray-200">
+        <h2 class="text-lg font-bold text-gray-900 mb-1"><?= htmlspecialchars($b['titulo']) ?></h2>
+        <p class="text-sm text-gray-600 mb-4"><?= htmlspecialchars($b['desc']) ?></p>
+        <div class="flex flex-wrap gap-2 items-center">
+            <a href="<?= htmlspecialchars($origen) ?>"
+               class="inline-flex items-center px-4 py-2 bg-gray-200 hover:bg-gray-300 text-black font-bold rounded-lg border border-gray-700 text-sm">
+                <i class="fas fa-arrow-left mr-1"></i> Volver al origen
+            </a>
+            <a href="<?= htmlspecialchars($pdf) ?>"
+               class="inline-flex items-center px-4 py-2 bg-red-200 hover:bg-red-300 text-black font-bold rounded-lg border border-red-600 text-sm">
+                <i class="fas fa-file-pdf mr-1"></i> PDF
+            </a>
+            <a href="<?= htmlspecialchars($print) ?>" target="_blank"
+               class="inline-flex items-center px-4 py-2 bg-blue-200 hover:bg-blue-300 text-black font-bold rounded-lg border border-blue-700 text-sm">
+                <i class="fas fa-print mr-1"></i> Imprimir / vista
+            </a>
+            <a href="<?= htmlspecialchars($base . $sep . 'action=resultados_reportes&torneo_id=' . $torneo_id) ?>"
+               class="inline-flex items-center px-4 py-2 bg-amber-100 hover:bg-amber-200 text-black font-bold rounded-lg border border-amber-700 text-sm">
+                <i class="fas fa-list mr-1"></i> Índice reportes
+            </a>
+        </div>
+    </div>
+    <?php endforeach; ?>
 </div>

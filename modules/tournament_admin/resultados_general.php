@@ -268,6 +268,11 @@ $base_url_return = $use_standalone ? $script_actual : 'index.php?page=torneo_ges
                    class="px-6 py-3 bg-amber-600 hover:bg-amber-700 text-white rounded-lg shadow-lg font-bold inline-flex items-center">
                     <i class="fas fa-file-alt mr-2"></i> Reportes PDF/Excel
                 </a>
+                <?php $rg_b = rtrim(AppHelpers::getBaseUrl(), '/') . '/modules/tournament_admin/'; $rg_s = $use_standalone ? '?' : '&'; ?>
+                <a href="<?php echo htmlspecialchars($rg_b . 'resultados_export_pdf.php?torneo_id=' . $torneo_id . '&tipo=general'); ?>"
+                   class="px-4 py-3 bg-red-200 text-black font-bold rounded-lg border-2 border-black inline-flex items-center text-sm">PDF este reporte</a>
+                <a href="<?php echo htmlspecialchars($base_url_return . $rg_s . 'action=resultados_reportes_print&torneo_id=' . $torneo_id . '&tipo=general'); ?>" target="_blank"
+                   class="px-4 py-3 bg-blue-200 text-black font-bold rounded-lg border-2 border-black inline-flex items-center text-sm">Imprimir (modelo)</a>
                 <button onclick="window.print()" 
                         class="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg shadow-lg transition-all transform hover:scale-105 font-bold">
                     <i class="fas fa-print mr-2"></i> Imprimir
