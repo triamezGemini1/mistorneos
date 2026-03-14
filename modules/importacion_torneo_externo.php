@@ -1,8 +1,8 @@
 <?php
 /**
- * Módulo solo admin_general: importar desde otra plataforma + enlaces a cargas masivas del panel.
- * Fase 1: Excel/CSV pareja + cédula → CSV con id_usuario.
- * Fase 2: Excel resultados → partiresul (torneo elegido). Estadísticas = mismas que al registrar en el torneo.
+ * Admin general — Flujo acordado:
+ * Paso 1: torneo. Paso 2: tabla parejas+cédula → id_usuario (usuarios).
+ * Paso 3: tabla resultados → reemplazar por id_usuario → INSERT partiresul (mismo criterio que registrar resultados en panel).
  */
 declare(strict_types=1);
 
@@ -52,7 +52,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $torneo_id = (int)($_POST['torneo_id'] ?? 0);
         $reemplazar = !empty($_POST['reemplazar_partiresul_dual']);
         if ($torneo_id <= 0) {
-            $_SESSION['error'] = 'Debe elegir el torneo destino.';
+            $_SESSION['error'] = 'Debe elegir el torneo (paso 1).';
             header('Location: ' . $baseList);
             exit;
         }
@@ -81,54 +81,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $pdo->prepare('DELETE FROM partiresul WHERE id_torneo = ?')->execute([$torneo_id]);
         }
         $res = ImportacionTorneoExternoService::importarDosArchivosPartiresul($pdo, $torneo_id, $userId, $fecha, $rowsH, $rowsR);
-        $msg = 'Insertados en partiresul: ' . $res['insertados'] . '.';
+        $msg = 'Carga por mesa/secuencia (como el panel): ' . $res['insertados'] . ' filas en partiresul.';
         if ($res['homologacion_sin_usuario'] > 0) {
-            $msg .= ' Filas en homologación sin id_usuario: ' . $res['homologacion_sin_usuario'] . '.';
+            $msg .= ' En homologación, filas sin usuario en BD: ' . $res['homologacion_sin_usuario'] . '.';
         }
         if ($res['resultados_sin_resolver'] > 0) {
-            $msg .= ' Filas de resultados sin poder asignar jugador: ' . $res['resultados_sin_resolver'] . ' (revise cédula/pareja/jugador).';
+            $msg .= ' Resultados sin poder asignar jugador: ' . $res['resultados_sin_resolver'] . '.';
         }
         if ($res['cedulas_no_encontradas'] !== []) {
-            $msg .= ' Cédulas sin usuario en BD (muestra): ' . implode(', ', array_slice($res['cedulas_no_encontradas'], 0, 8)) . '.';
+            $msg .= ' Cédulas sin usuario (muestra): ' . implode(', ', array_slice($res['cedulas_no_encontradas'], 0, 8)) . '.';
         }
         $_SESSION['success'] = $msg;
-        if ($res['errores'] !== []) {
-            $_SESSION['warning'] = implode(' ', array_slice($res['errores'], 0, 5));
-        }
-        header('Location: ' . $baseList . '&torneo_id=' . $torneo_id);
-        exit;
-    }
-
-    if ($accion === 'fase2' && isset($_FILES['archivo_resultados']) && is_uploaded_file($_FILES['archivo_resultados']['tmp_name'])) {
-        $torneo_id = (int)($_POST['torneo_id'] ?? 0);
-        $reemplazar = !empty($_POST['reemplazar_partiresul']);
-        if ($torneo_id <= 0) {
-            $_SESSION['error'] = 'Debe elegir el torneo destino antes de importar resultados.';
-            header('Location: ' . $baseList);
-            exit;
-        }
-        $pdo = DB::pdo();
-        $st = $pdo->prepare('SELECT id, nombre, fechator FROM tournaments WHERE id = ?');
-        $st->execute([$torneo_id]);
-        $torneo = $st->fetch(PDO::FETCH_ASSOC);
-        if (!$torneo) {
-            $_SESSION['error'] = 'Torneo no encontrado.';
-            header('Location: ' . $baseList);
-            exit;
-        }
-        $fecha = substr((string)($torneo['fechator'] ?? ''), 0, 10);
-        if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $fecha)) {
-            $fecha = date('Y-m-d');
-        }
-        $rows = ImportacionTorneoExternoService::leerExcelOCsv(
-            (string)$_FILES['archivo_resultados']['tmp_name'],
-            (string)($_FILES['archivo_resultados']['name'] ?? 'x.xlsx')
-        );
-        if ($reemplazar) {
-            $pdo->prepare('DELETE FROM partiresul WHERE id_torneo = ?')->execute([$torneo_id]);
-        }
-        $res = ImportacionTorneoExternoService::fase2InsertarPartiresul($pdo, $torneo_id, $userId, $fecha, $rows);
-        $_SESSION['success'] = 'Filas insertadas en partiresul: ' . $res['insertados'] . '. Las estadísticas del torneo siguen el flujo habitual del panel (misma modalidad).';
         if ($res['errores'] !== []) {
             $_SESSION['warning'] = implode(' ', array_slice($res['errores'], 0, 5));
         }
@@ -157,7 +120,18 @@ $url_import_individual = $url_panel . '#importacion-masiva';
 ?>
 <div class="container-fluid py-4" style="max-width:980px">
     <h1 class="h3 mb-2"><i class="fas fa-file-import text-primary"></i> Carga datos torneo externo</h1>
-    <p class="text-muted small mb-3">Solo <strong>administrador general</strong>. Cree el torneo en Mistorneos, elija aquí el torneo y use las cargas masivas de inscripción (igual que en el panel) y, si aplica, la importación de resultados a <code>partiresul</code>.</p>
+    <p class="text-muted small mb-2">Solo <strong>administrador general</strong>. Recapitulación del procedimiento:</p>
+
+    <div class="alert alert-warning border mb-4">
+        <h2 class="h6 text-dark mb-2"><i class="fas fa-exclamation-triangle me-1"></i> Procedimiento completo (obligatorio)</h2>
+        <p class="small mb-2">Siempre deben cumplirse los <strong>tres pasos</strong>. El <strong>id numérico que trae el archivo de resultados de la otra plataforma no es</strong> el <code>id</code> de <code>usuarios</code> en Mistorneos; <strong>no se usa para cargar</strong>. Solo sirven la <strong>cédula</strong> (o <strong>pareja + jugador</strong> alineado al archivo del paso 2) para obtener el <code>id_usuario</code> correcto.</p>
+        <ol class="mb-0 ps-3 small">
+            <li class="mb-2"><strong>Paso 1 — Torneo.</strong> Destino en <code>partiresul</code>; misma fecha de partida que el torneo.</li>
+            <li class="mb-2"><strong>Paso 2 — Tabla parejas / cédula.</strong> Homologación contra <code>usuarios</code> → <code>id_usuario</code>.</li>
+            <li class="mb-2"><strong>Paso 3 — Resultados por mesa.</strong> Misma lógica que el panel: <strong>por mesa</strong>, una fila por jugador con <strong>secuencia 1–4</strong> (asiento en la mesa), más partida/ronda y puntos. Tras sustituir cada jugador por su <code>id_usuario</code>, el INSERT en <code>partiresul</code> es el mismo que al registrar resultados en el panel (efectividad, zapato/chancleta, FF, etc.).</li>
+        </ol>
+        <p class="small mb-0 mt-2"><strong>Pasos 2 y 3 en una sola acción:</strong> suba los dos archivos juntos en el formulario de abajo.</p>
+    </div>
 
     <?php if (!empty($_SESSION['success'])): ?>
         <div class="alert alert-success"><?= htmlspecialchars((string)$_SESSION['success']) ?></div>
@@ -172,11 +146,10 @@ $url_import_individual = $url_panel . '#importacion-masiva';
         <?php unset($_SESSION['warning']); ?>
     <?php endif; ?>
 
-    <!-- Paso 0: Torneo obligatorio para resultados y para enlaces de carga masiva -->
     <div class="card mb-4 shadow border-primary">
-        <div class="card-header bg-primary text-white fw-bold"><i class="fas fa-trophy me-2"></i>1. Torneo de trabajo</div>
+        <div class="card-header bg-primary text-white fw-bold"><i class="fas fa-trophy me-2"></i>Paso 1 — Seleccionar torneo</div>
         <div class="card-body">
-            <p class="mb-2">Seleccione el torneo <strong>ya creado</strong> sobre el que va a cargar inscripciones o resultados.</p>
+            <p class="mb-2 small">Torneo ya creado; es el destino de <code>partiresul</code> y la fecha de partida tomada del torneo.</p>
             <form method="get" action="index.php" class="row g-2 align-items-end">
                 <input type="hidden" name="page" value="importacion_torneo_externo">
                 <div class="col-md-10">
@@ -196,74 +169,49 @@ $url_import_individual = $url_panel . '#importacion-masiva';
             </form>
             <?php if ($torneo_actual): ?>
                 <div class="mt-3 p-3 bg-light rounded border">
-                    <strong><?= htmlspecialchars((string)$torneo_actual['nombre']) ?></strong>
+                    <strong>Torneo activo:</strong> <?= htmlspecialchars((string)$torneo_actual['nombre']) ?>
                     <span class="badge bg-secondary ms-2"><?= htmlspecialchars($etiqueta_modalidad) ?></span>
                     <div class="mt-2 small">
-                        <a href="<?= htmlspecialchars($url_panel) ?>" class="btn btn-sm btn-outline-secondary" target="_blank" rel="noopener"><i class="fas fa-external-link-alt"></i> Abrir panel del torneo</a>
+                        <a href="<?= htmlspecialchars($url_panel) ?>" class="btn btn-sm btn-outline-secondary" target="_blank" rel="noopener"><i class="fas fa-external-link-alt"></i> Panel del torneo (registrar resultados manual)</a>
                     </div>
                 </div>
             <?php else: ?>
-                <p class="text-warning small mt-2 mb-0"><i class="fas fa-info-circle"></i> Sin torneo no puede importar resultados ni usar los accesos directos a carga masiva abajo.</p>
+                <p class="text-warning small mt-2 mb-0">Complete el paso 1 para habilitar pasos 2–3 e inscripciones masivas.</p>
             <?php endif; ?>
         </div>
     </div>
 
     <?php if ($torneo_actual): ?>
-    <!-- Cargas masivas (misma lógica que el panel) -->
     <div class="card mb-4 shadow-sm">
-        <div class="card-header bg-success text-white fw-bold"><i class="fas fa-users me-2"></i>2. Carga masiva de inscripciones (panel)</div>
-        <div class="card-body">
-            <p class="small text-muted">Misma funcionalidad que en el panel del torneo. Tras cargar, las estadísticas se calculan con el procedimiento habitual de cada modalidad.</p>
+        <div class="card-header bg-secondary text-white fw-bold"><i class="fas fa-users me-2"></i>Inscripciones (antes de resultados, si aplica)</div>
+        <div class="card-body small">
+            <p class="text-muted">Misma carga masiva que en el panel del torneo (no sustituye pasos 2–3 de resultados).</p>
             <?php if ($es_equipos): ?>
-                <p>Este torneo es <strong>modalidad equipos</strong>. Use la carga masiva de equipos (Excel/CSV/ADEAZ).</p>
-                <a href="<?= htmlspecialchars($url_carga_equipos) ?>" class="btn btn-success"><i class="fas fa-file-upload"></i> Carga masiva equipos</a>
-                <a href="<?= htmlspecialchars($url_plantilla_equipos) ?>" class="btn btn-outline-success ms-1"><i class="fas fa-download"></i> Plantilla CSV</a>
+                <a href="<?= htmlspecialchars($url_carga_equipos) ?>" class="btn btn-success btn-sm"><i class="fas fa-file-upload"></i> Carga masiva equipos</a>
+                <a href="<?= htmlspecialchars($url_plantilla_equipos) ?>" class="btn btn-outline-success btn-sm ms-1"><i class="fas fa-download"></i> Plantilla</a>
             <?php else: ?>
-                <p>Torneo <strong>individual</strong> (o parejas según modalidad). En el panel use <em>Importación masiva</em> (Excel/CSV).</p>
-                <a href="<?= htmlspecialchars($url_import_individual) ?>" class="btn btn-success"><i class="fas fa-file-csv"></i> Ir al panel e importación masiva</a>
-                <span class="small text-muted ms-2">Se abre el modal de importación al cargar la página.</span>
+                <a href="<?= htmlspecialchars($url_import_individual) ?>" class="btn btn-success btn-sm"><i class="fas fa-file-csv"></i> Importación masiva (panel)</a>
             <?php endif; ?>
         </div>
     </div>
-    <?php endif; ?>
 
-    <div class="card mb-4 shadow-sm">
-        <div class="card-header bg-info text-white fw-bold">Fase A — Enriquecer listado (pareja + cédula → id_usuario)</div>
-        <div class="card-body">
-            <p class="small">No requiere torneo. Útil para revisar o mezclar a mano. Si usa arriba <strong>Dos archivos en un solo envío</strong>, no hace falta descargar este CSV.</p>
-            <form method="post" enctype="multipart/form-data" class="mt-2">
-                <input type="hidden" name="csrf_token" value="<?= htmlspecialchars(CSRF::token()) ?>">
-                <input type="hidden" name="accion" value="fase1">
-                <div class="mb-2">
-                    <input type="file" name="archivo" class="form-control" accept=".xlsx,.csv,.txt" required>
-                </div>
-                <button type="submit" class="btn btn-info text-white"><i class="fas fa-file-export"></i> Procesar y descargar CSV</button>
-            </form>
-        </div>
-    </div>
-
-    <?php if ($torneo_actual): ?>
     <div class="card mb-4 shadow-lg border-success">
-        <div class="card-header bg-success text-white fw-bold"><i class="fas fa-layer-group me-2"></i>Recomendado — Dos archivos → <code>partiresul</code> (un solo envío)</div>
+        <div class="card-header bg-success text-white fw-bold"><i class="fas fa-link me-2"></i>Pasos 2 + 3 — Homologar e ingresar a <code>partiresul</code> (única carga de resultados aquí)</div>
         <div class="card-body">
-            <p class="mb-2"><strong>Archivo 1 — Homologación:</strong> mismas columnas que la Fase A (<code>pareja</code> o <code>id_pareja</code> + <code>cédula</code>). El sistema resuelve <code>id_usuario</code> en Mistorneos y arma el mapa pareja↔jugadores.</p>
-            <p class="mb-2"><strong>Archivo 2 — Resultados:</strong> <code>partida</code>, <code>mesa</code>, <code>secuencia</code>, <code>resultado1</code>, <code>resultado2</code>. Identificación del jugador, en este orden:</p>
-            <ol class="small">
-                <li>Si trae <code>id_usuario</code> o <code>cédula</code>, se usa (la homologación refuerza cédulas iguales al archivo 1).</li>
-                <li>Si solo trae <code>pareja</code> + <code>jugador</code> (1 = primer integrante en el archivo 1, 2 = segundo…), se asigna según el orden de filas del archivo 1 para esa pareja.</li>
-            </ol>
-            <div class="alert alert-danger small mb-3"><strong>Vaciar partiresul:</strong> borra resultados previos de este torneo antes de insertar.</div>
+            <p class="small mb-2"><strong>Archivo paso 2:</strong> pareja + cédula → mapa a <code>id_usuario</code> (usuarios).</p>
+            <p class="small mb-2"><strong>Archivo paso 3:</strong> una fila por jugador en cada mesa: <code>partida</code> (ronda), <code>mesa</code>, <code>secuencia</code> (1–4 = orden en la mesa, igual que el panel), <code>resultado1</code>, <code>resultado2</code>. Cada fila debe poder resolverse con columna <strong>cédula</strong> o con <strong>pareja</strong> + <strong>jugador</strong> (1, 2… según el orden de ese jugador en el archivo paso 2). <em>Los ids del otro sistema en este archivo se ignoran.</em></p>
+            <div class="alert alert-danger small mb-3"><strong>Vaciar partiresul del torneo</strong> antes de insertar solo si rehace la carga completa.</div>
             <form method="post" enctype="multipart/form-data">
                 <input type="hidden" name="csrf_token" value="<?= htmlspecialchars(CSRF::token()) ?>">
                 <input type="hidden" name="accion" value="fase2_dual">
                 <input type="hidden" name="torneo_id" value="<?= (int)$torneo_id_sel ?>">
                 <div class="row g-2 mb-2">
                     <div class="col-md-6">
-                        <label class="form-label">Archivo 1 — Homologación (pareja + cédula)</label>
+                        <label class="form-label fw-semibold">Paso 2 — Tabla parejas / cédula</label>
                         <input type="file" name="archivo_homologacion" class="form-control" accept=".xlsx,.csv,.txt" required>
                     </div>
                     <div class="col-md-6">
-                        <label class="form-label">Archivo 2 — Resultados (mesa / ronda / puntos)</label>
+                        <label class="form-label fw-semibold">Paso 3 — Tabla resultados (otra plataforma)</label>
                         <input type="file" name="archivo_resultados" class="form-control" accept=".xlsx,.csv,.txt" required>
                     </div>
                 </div>
@@ -271,32 +219,26 @@ $url_import_individual = $url_panel . '#importacion-masiva';
                     <input type="checkbox" class="form-check-input" name="reemplazar_partiresul_dual" value="1" id="rep2">
                     <label class="form-check-label" for="rep2">Vaciar <code>partiresul</code> de este torneo antes de importar</label>
                 </div>
-                <button type="submit" class="btn btn-success"><i class="fas fa-bolt"></i> Homologar e importar</button>
-            </form>
-        </div>
-    </div>
-
-    <div class="card mb-4 shadow-sm border-warning">
-        <div class="card-header bg-warning text-dark fw-bold">Opcional — Solo archivo de resultados (ya con id_usuario o cédula por fila)</div>
-        <div class="card-body">
-            <p class="small">Si el archivo 2 ya incluye <code>id_usuario</code> o <code>cédula</code> por fila, puede usar solo este formulario sin el archivo de homologación.</p>
-            <div class="alert alert-danger small"><strong>Vaciar partiresul:</strong> borra resultados previos de este torneo antes de insertar.</div>
-            <form method="post" enctype="multipart/form-data">
-                <input type="hidden" name="csrf_token" value="<?= htmlspecialchars(CSRF::token()) ?>">
-                <input type="hidden" name="accion" value="fase2">
-                <input type="hidden" name="torneo_id" value="<?= (int)$torneo_id_sel ?>">
-                <div class="mb-2 form-check">
-                    <input type="checkbox" class="form-check-input" name="reemplazar_partiresul" value="1" id="rep">
-                    <label class="form-check-label" for="rep">Vaciar <code>partiresul</code> de este torneo antes de importar</label>
-                </div>
-                <div class="mb-2">
-                    <input type="file" name="archivo_resultados" class="form-control" accept=".xlsx,.csv,.txt" required>
-                </div>
-                <button type="submit" class="btn btn-warning"><i class="fas fa-database"></i> Importar solo resultados</button>
+                <button type="submit" class="btn btn-success"><i class="fas fa-save"></i> Ejecutar pasos 2 y 3 → partiresul</button>
             </form>
         </div>
     </div>
     <?php else: ?>
-    <div class="alert alert-secondary"><i class="fas fa-arrow-up"></i> Elija un torneo arriba para habilitar la <strong>carga masiva</strong> y la <strong>importación a partiresul</strong>.</div>
+    <div class="alert alert-secondary"><i class="fas fa-arrow-up"></i> Complete el <strong>paso 1</strong> para continuar.</div>
     <?php endif; ?>
+
+    <div class="card mb-2 border-info">
+        <div class="card-header bg-info text-white py-2 small fw-bold">Auxiliar — Descargar CSV homologación (paso 2 solo para revisar)</div>
+        <div class="card-body py-2 small">
+            <p class="mb-2">Genera CSV con columna <code>id_usuario</code> sin subir resultados. Útil para auditoría; el flujo normal es <strong>Pasos 2+3 juntos</strong> arriba.</p>
+            <form method="post" enctype="multipart/form-data" class="d-flex flex-wrap gap-2 align-items-end">
+                <input type="hidden" name="csrf_token" value="<?= htmlspecialchars(CSRF::token()) ?>">
+                <input type="hidden" name="accion" value="fase1">
+                <div class="flex-grow-1" style="min-width:200px">
+                    <input type="file" name="archivo" class="form-control form-control-sm" accept=".xlsx,.csv,.txt" required>
+                </div>
+                <button type="submit" class="btn btn-sm btn-info text-white">Descargar CSV</button>
+            </form>
+        </div>
+    </div>
 </div>

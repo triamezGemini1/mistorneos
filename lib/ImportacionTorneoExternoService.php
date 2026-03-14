@@ -186,9 +186,10 @@ final class ImportacionTorneoExternoService
     }
 
     /**
-     * Proceso expeditivo: archivo 1 = homologación (pareja + cédula → id_usuario);
-     * archivo 2 = resultados (partida, mesa, secuencia, resultado1, resultado2).
-     * Se unen en memoria: cada fila de resultados obtiene id_usuario vía cédula o vía (pareja + jugador).
+     * Procedimiento obligatorio en dos archivos (no usar id numérico del export de resultados: no es id de usuarios).
+     * Archivo 1: pareja + cédula → id_usuario (usuarios). Archivo 2: una fila por jugador en mesa (partida, mesa,
+     * secuencia 1–4 como en el panel, resultado1/2). Cada fila de resultados se resuelve solo por cédula o (pareja+jugador)
+     * contra el mapa del archivo 1; nunca se toma id_usuario/id del Excel de resultados.
      *
      * @return array{insertados: int, errores: list<string>, homologacion_sin_usuario: int, resultados_sin_resolver: int, cedulas_no_encontradas: list<string>}
      */
@@ -268,13 +269,16 @@ final class ImportacionTorneoExternoService
         $iR1 = $find($hNorm, ['resultado1', 'r1', 'pts1']);
         $iR2 = $find($hNorm, ['resultado2', 'r2', 'pts2']);
         $iFf = $find($hNorm, ['ff', 'forfait']);
-        $iUsr = $find($hNorm, ['id_usuario', 'idusuario']);
         $iCed = $find($hNorm, ['cedula', 'cedula1', 'ci', 'documento']);
         $iPareja = $find($hNorm, ['pareja', 'id_pareja', 'parejas']);
         $iJug = $find($hNorm, ['jugador', 'miembro', 'pos_pareja', 'jp', 'slot']);
 
         if ($iPart < 0 || $iMesa < 0 || $iSeq < 0 || $iR1 < 0 || $iR2 < 0) {
-            $stats['errores'][] = 'Resultados: faltan partida, mesa, secuencia, resultado1 o resultado2.';
+            $stats['errores'][] = 'Resultados: faltan partida, mesa, secuencia, resultado1 o resultado2 (misma lógica que el panel: por mesa y secuencia de jugador en la mesa).';
+            return $stats;
+        }
+        if ($iCed < 0 && ($iPareja < 0 || $iJug < 0)) {
+            $stats['errores'][] = 'En resultados debe existir columna cédula, o columnas pareja + jugador (1,2… según orden en archivo homologación). El id numérico del otro sistema no es id_usuario y no se usa.';
             return $stats;
         }
 
@@ -284,8 +288,8 @@ final class ImportacionTorneoExternoService
 
         for ($r = 1; $r < count($rowsResultados); $r++) {
             $row = $rowsResultados[$r];
-            $idUsuario = $iUsr >= 0 ? (int)($row[$iUsr] ?? 0) : 0;
-            if ($idUsuario <= 0 && $iCed >= 0) {
+            $idUsuario = 0;
+            if ($iCed >= 0) {
                 $ced = self::normalizarCedula($row[$iCed] ?? '');
                 if ($ced !== '') {
                     $idUsuario = (int)($cedulaToId[$ced] ?? $cedulaToId[preg_replace('/\D/', '', $ced)] ?? 0);
@@ -298,10 +302,8 @@ final class ImportacionTorneoExternoService
             if ($idUsuario <= 0 && $iPareja >= 0) {
                 $pkey = trim((string)($row[$iPareja] ?? ''));
                 $j = $iJug >= 0 ? max(1, (int)($row[$iJug] ?? 1)) : 1;
-                if ($pkey !== '' && isset($parejaToIds[$pkey][$j - 1])) {
+                if ($pkey !== '' && $iJug >= 0 && isset($parejaToIds[$pkey][$j - 1])) {
                     $idUsuario = (int)$parejaToIds[$pkey][$j - 1];
-                } elseif ($pkey !== '' && $iJug < 0 && isset($parejaToIds[$pkey][0])) {
-                    $idUsuario = (int)$parejaToIds[$pkey][0];
                 }
             }
             if ($idUsuario <= 0) {
