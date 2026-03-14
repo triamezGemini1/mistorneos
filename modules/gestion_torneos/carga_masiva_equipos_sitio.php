@@ -13,74 +13,184 @@ $post_ejecutar = $base_url . ($use_standalone ? '?' : '&') . 'action=carga_masiv
 $href_plantilla = $base_url . ($use_standalone ? '?' : '&') . 'action=carga_masiva_equipos_plantilla&torneo_id=' . $torneo_id;
 $frase = CargaMasivaEquiposSitioService::CONFIRMACION_REEMPLAZO;
 ?>
+<style>
+    .cm-ayuda-card {
+        border: 1px solid #dee2e6;
+        border-radius: 12px;
+        box-shadow: 0 4px 18px rgba(0,0,0,.08);
+        overflow: hidden;
+        max-width: 920px;
+        font-size: 1rem;
+        line-height: 1.55;
+    }
+    .cm-ayuda-card .cm-head {
+        background: linear-gradient(135deg, #1e3a5f 0%, #2c5282 100%);
+        color: #fff;
+        padding: 1.1rem 1.35rem;
+        font-weight: 600;
+        font-size: 1.15rem;
+        letter-spacing: .02em;
+    }
+    .cm-ayuda-card .cm-body { padding: 0; background: #f8fafc; }
+    .cm-seccion {
+        padding: 1.15rem 1.35rem;
+        border-bottom: 1px solid #e2e8f0;
+    }
+    .cm-seccion:last-child { border-bottom: 0; }
+    .cm-seccion h3 {
+        font-size: 1.05rem;
+        font-weight: 700;
+        color: #1e293b;
+        margin: 0 0 .65rem 0;
+        display: flex;
+        align-items: center;
+        gap: .5rem;
+    }
+    .cm-seccion h3 i { color: #3b82f6; width: 1.35rem; text-align: center; }
+    .cm-pasos { margin: 0; padding-left: 1.25rem; }
+    .cm-pasos li { margin-bottom: .5rem; }
+    .cm-advertencia {
+        background: #fff5f5;
+        border: 2px solid #f56565;
+        border-radius: 8px;
+        padding: 1rem 1.15rem;
+        margin-top: .5rem;
+    }
+    .cm-advertencia .cm-adv-title {
+        color: #c53030;
+        font-weight: 800;
+        font-size: 1.05rem;
+        margin-bottom: .6rem;
+        display: flex;
+        align-items: center;
+        gap: .45rem;
+    }
+    .cm-advertencia ul { margin: 0; padding-left: 1.2rem; color: #742a2a; }
+    .cm-advertencia li { margin-bottom: .35rem; }
+    .cm-info-box {
+        background: #eff6ff;
+        border-left: 4px solid #3b82f6;
+        padding: .85rem 1rem;
+        border-radius: 0 8px 8px 0;
+        color: #1e3a8a;
+    }
+    .cm-formato dt { font-weight: 700; color: #334155; margin-top: .5rem; }
+    .cm-formato dd { margin-left: 0; color: #475569; font-size: .95rem; }
+    #panelValidacion.cm-result-card,
+    #resultadoCarga .cm-result-card {
+        max-width: 920px;
+        border-radius: 12px;
+        border: 1px solid #cbd5e1;
+        box-shadow: 0 2px 12px rgba(0,0,0,.06);
+    }
+    #panelValidacion .cm-result-head { font-weight: 700; padding: .75rem 1.15rem; }
+    #contenidoValidacion.cm-result-body,
+    .cm-result-body { padding: 1rem 1.25rem; font-size: .98rem; }
+    .cm-valid-ok { background: #f0fdf4; border-color: #86efac !important; }
+    .cm-valid-err { background: #fffbeb; border-color: #fcd34d !important; }
+</style>
+
 <div class="container-fluid py-3">
     <nav aria-label="breadcrumb">
         <ol class="breadcrumb">
             <li class="breadcrumb-item"><a href="<?= htmlspecialchars($base_url . $sep . 'action=panel_equipos&torneo_id=' . $torneo_id) ?>">Panel equipos</a></li>
-            <li class="breadcrumb-item active">Carga masiva</li>
+            <li class="breadcrumb-item active">Carga automática de equipos</li>
         </ol>
     </nav>
-    <h1 class="h4"><i class="fas fa-file-upload text-primary"></i> Carga masiva — <?= htmlspecialchars((string)($torneo['nombre'] ?? '')) ?></h1>
+    <h1 class="h4 mb-3"><i class="fas fa-users-cog text-primary"></i> Carga automática — <?= htmlspecialchars((string)($torneo['nombre'] ?? '')) ?></h1>
 
     <?php if ($locked): ?>
-        <div class="alert alert-secondary">Torneo cerrado.</div>
+        <div class="card border-secondary cm-ayuda-card" style="max-width:520px">
+            <div class="cm-head bg-secondary">Torneo cerrado</div>
+            <div class="p-3">No se puede usar la carga automática mientras el torneo esté cerrado.</div>
+        </div>
     <?php else: ?>
 
-        <div class="alert alert-danger">
-            <strong><i class="fas fa-exclamation-triangle"></i> Antes de ejecutar la carga</strong>
-            <ul class="mb-0 mt-2">
-                <li>Se <strong>eliminarán todos los registros en <code>inscritos</code></strong> de este torneo.</li>
-                <li>Se <strong>eliminarán todos los <code>equipos</code></strong> registrados en este torneo.</li>
-                <li>Luego se crearán de nuevo solo lo que venga en el archivo (mismo criterio que inscripción en sitio).</li>
-            </ul>
-            <p class="mb-0 mt-2 small">No se ejecuta nada hasta que el archivo pase la validación y usted escriba la frase de confirmación.</p>
-        </div>
-
-        <div class="card mb-3">
-            <div class="card-header d-flex justify-content-between align-items-center">
-                <span>Plantilla</span>
-                <a class="btn btn-sm btn-outline-primary" href="<?= htmlspecialchars($href_plantilla) ?>"><i class="fas fa-download"></i> Descargar CSV</a>
+        <!-- Tarjeta única: información + advertencias + formato -->
+        <div class="card cm-ayuda-card mb-4">
+            <div class="cm-head">
+                <i class="fas fa-info-circle mr-2"></i> Guía del proceso de carga automática
             </div>
-            <div class="card-body small">
-                <p class="mb-1">Cada equipo: fila <code>NAC=R</code> con <code>equipo</code>, <code>club</code>, <code>organizacion</code> (opcional).</p>
-                <p class="mb-1">Justo debajo, <strong>exactamente 4 filas</strong> por equipo con <code>Cedula</code> + <code>N1</code> (nombre). Sin cédulas repetidas en todo el archivo.</p>
-                <p class="mb-0">Si el club no existe en la organización del torneo, se asignará al club por defecto cuyo nombre es el <strong>código de la organización</strong> (o <code>ORG-{id}</code> si no hay columna código).</p>
-            </div>
-        </div>
+            <div class="cm-body">
 
-        <form id="formCargaMasiva" class="card mb-3" enctype="multipart/form-data">
-            <input type="hidden" name="action" value="carga_masiva_equipos_validar">
-            <input type="hidden" name="torneo_id" value="<?= $torneo_id ?>">
-            <input type="hidden" name="csrf_token" value="<?= htmlspecialchars(CSRF::token()) ?>">
-            <div class="card-body">
-                <div class="form-group">
-                    <label for="archivo">Archivo CSV o Excel</label>
-                    <input type="file" class="form-control-file" name="archivo" id="archivo" accept=".csv,.txt,.xlsx,.xls" required>
+                <div class="cm-seccion">
+                    <h3><i class="fas fa-list-ol"></i> Cómo funciona (2 pasos)</h3>
+                    <ol class="cm-pasos">
+                        <li><strong>Validar archivo:</strong> el sistema revisa el archivo <em>sin modificar</em> el torneo. Comprueba que no haya cédulas duplicadas, que cada equipo tenga exactamente 4 jugadores (cédula + nombre) y que el formato sea legible.</li>
+                        <li><strong>Ejecutar carga:</strong> solo si la validación es correcta. Debe escribir la frase de confirmación. Entonces se borra lo anterior del torneo y se vuelve a crear todo según el archivo (igual que inscribir en sitio, pero masivo).</li>
+                    </ol>
+                    <div class="cm-info-box mt-2 mb-0">
+                        <strong>Importante:</strong> hasta que no pulse «Ejecutar» y confirme con la frase, <strong>no se borra ni se guarda nada</strong> en inscripciones ni equipos.
+                    </div>
                 </div>
-                <button type="button" id="btnValidar" class="btn btn-primary"><i class="fas fa-check-circle"></i> 1. Validar archivo</button>
-                <a href="<?= htmlspecialchars($base_url . $sep . 'action=inscribir_equipo_sitio&torneo_id=' . $torneo_id) ?>" class="btn btn-outline-secondary">Volver</a>
-            </div>
-        </form>
 
-        <div id="panelValidacion" class="d-none card border-warning mb-3">
-            <div class="card-header bg-warning text-dark">Resultado de la validación</div>
-            <div class="card-body" id="contenidoValidacion"></div>
-        </div>
-
-        <div id="panelEjecutar" class="d-none card border-danger mb-3">
-            <div class="card-header bg-danger text-white">Ejecutar reemplazo total</div>
-            <div class="card-body">
-                <p>Solo si la validación fue correcta. Copie y pegue exactamente:</p>
-                <code class="d-block p-2 bg-light mb-2 user-select-all"><?= htmlspecialchars($frase) ?></code>
-                <div class="form-group">
-                    <label for="confirmar_reemplazo">Frase de confirmación</label>
-                    <input type="text" class="form-control" id="confirmar_reemplazo" name="confirmar_reemplazo" autocomplete="off" placeholder="<?= htmlspecialchars($frase) ?>">
+                <div class="cm-seccion" style="background:#fff;">
+                    <h3><i class="fas fa-exclamation-triangle"></i> Advertencia antes de ejecutar</h3>
+                    <div class="cm-advertencia">
+                        <div class="cm-adv-title"><i class="fas fa-bomb"></i> Al ejecutar la carga se hará lo siguiente</div>
+                        <ul>
+                            <li>Se <strong>eliminarán todos los inscritos</strong> de este torneo (tabla de inscripciones).</li>
+                            <li>Se <strong>eliminarán todos los equipos</strong> registrados en este torneo.</li>
+                            <li>Después se crearán <strong>solo</strong> los equipos y jugadores que vengan en su archivo.</li>
+                        </ul>
+                        <p class="mb-0 mt-2 small font-weight-bold text-danger">Si ya había rondas o datos que dependen de esos inscritos, evalúe el impacto antes de continuar.</p>
+                    </div>
                 </div>
-                <button type="button" id="btnEjecutar" class="btn btn-danger"><i class="fas fa-bolt"></i> 2. Borrar inscritos/equipos y cargar</button>
+
+                <div class="cm-seccion">
+                    <h3><i class="fas fa-file-alt"></i> Archivos y formatos aceptados</h3>
+                    <dl class="cm-formato mb-0">
+                        <dt>Tipos de archivo</dt>
+                        <dd><strong>Excel</strong> (.xlsx, .xls), <strong>CSV</strong>, o <strong>texto separado por tabuladores</strong> (.txt). Puede descargar una plantilla CSV de ejemplo.</dd>
+                        <dt>Formato tipo ADEAZ (tabuladores)</dt>
+                        <dd>Primera columna <code>0</code> y en la segunda el <strong>nombre del equipo</strong>; debajo, 4 filas con <strong>cédula</strong> y <strong>nombre</strong> por jugador. Columnas <code>club</code> y <code>organizacion</code> suelen ser IDs numéricos (ej. club 6).</dd>
+                        <dt>Formato alternativo (plantilla CSV)</dt>
+                        <dd>Fila con <code>NAC=R</code>, nombre del equipo, club y organización; luego 4 filas de jugadores con cédula y N1.</dd>
+                        <dt>Reglas que debe cumplir el archivo</dt>
+                        <dd>Sin cédulas repetidas en todo el archivo. Cada equipo: <strong>exactamente 4</strong> integrantes con cédula y nombre. El club indicado debe existir en el sistema (o se usará la lógica de club por organización del torneo).</dd>
+                    </dl>
+                    <a class="btn btn-primary btn-sm mt-3" href="<?= htmlspecialchars($href_plantilla) ?>"><i class="fas fa-download"></i> Descargar plantilla CSV</a>
+                </div>
             </div>
         </div>
 
-        <div id="resultadoCarga" class="mt-3"></div>
+        <div class="card mb-3" style="max-width:920px">
+            <div class="card-header font-weight-bold"><i class="fas fa-upload mr-1"></i> Subir archivo y validar</div>
+            <div class="card-body">
+                <form id="formCargaMasiva" enctype="multipart/form-data">
+                    <input type="hidden" name="action" value="carga_masiva_equipos_validar">
+                    <input type="hidden" name="torneo_id" value="<?= $torneo_id ?>">
+                    <input type="hidden" name="csrf_token" value="<?= htmlspecialchars(CSRF::token()) ?>">
+                    <div class="form-group">
+                        <label for="archivo" class="font-weight-bold">Archivo</label>
+                        <input type="file" class="form-control-file" name="archivo" id="archivo" accept=".csv,.txt,.xlsx,.xls" required>
+                        <small class="form-text text-muted">Seleccione el mismo archivo que usará luego al ejecutar (p. ej. exportación ADEAZ o Excel).</small>
+                    </div>
+                    <button type="button" id="btnValidar" class="btn btn-primary btn-lg"><i class="fas fa-check-circle"></i> Paso 1 — Validar archivo</button>
+                    <a href="<?= htmlspecialchars($base_url . $sep . 'action=inscribir_equipo_sitio&torneo_id=' . $torneo_id) ?>" class="btn btn-outline-secondary">Volver a inscripción en sitio</a>
+                </form>
+            </div>
+        </div>
+
+        <div id="panelValidacion" class="d-none card mb-3 cm-result-card">
+            <div class="cm-result-head bg-light border-bottom" id="panelValidacionTitulo">Resultado de la validación</div>
+            <div class="cm-result-body" id="contenidoValidacion"></div>
+        </div>
+
+        <div id="panelEjecutar" class="d-none card mb-3 cm-result-card border-danger">
+            <div class="cm-result-head bg-danger text-white">Paso 2 — Confirmar y ejecutar carga</div>
+            <div class="cm-result-body">
+                <p class="mb-2">Solo si arriba indicó que el archivo es <strong>válido</strong>. Escriba <strong>exactamente</strong> esta frase (mayúsculas y guiones bajos):</p>
+                <code class="d-block p-3 bg-dark text-warning mb-3 rounded user-select-all" style="font-size:.95rem;word-break:break-all"><?= htmlspecialchars($frase) ?></code>
+                <div class="form-group">
+                    <label for="confirmar_reemplazo" class="font-weight-bold">Frase de confirmación</label>
+                    <input type="text" class="form-control form-control-lg" id="confirmar_reemplazo" name="confirmar_reemplazo" autocomplete="off" placeholder="Pegue aquí la frase">
+                </div>
+                <button type="button" id="btnEjecutar" class="btn btn-danger btn-lg"><i class="fas fa-bolt"></i> Paso 2 — Borrar datos anteriores y cargar equipos</button>
+            </div>
+        </div>
+
+        <div id="resultadoCarga" class="mb-4" style="max-width:920px"></div>
     <?php endif; ?>
 </div>
 <script>
@@ -92,6 +202,13 @@ $frase = CargaMasivaEquiposSitioService::CONFIRMACION_REEMPLAZO;
     var torneoId = <?= (int)$torneo_id ?>;
     var csrf = form ? form.querySelector('input[name="csrf_token"]').value : '';
 
+    function esc(s) {
+        if (!s) return '';
+        var d = document.createElement('div');
+        d.textContent = s;
+        return d.innerHTML;
+    }
+
     document.getElementById('btnValidar').addEventListener('click', function () {
         if (!archivoInput.files.length) { alert('Seleccione un archivo.'); return; }
         var fd = new FormData();
@@ -100,57 +217,70 @@ $frase = CargaMasivaEquiposSitioService::CONFIRMACION_REEMPLAZO;
         fd.append('csrf_token', csrf);
         fd.append('archivo', archivoInput.files[0]);
         var panel = document.getElementById('panelValidacion');
+        var titulo = document.getElementById('panelValidacionTitulo');
         var cont = document.getElementById('contenidoValidacion');
         var panelEj = document.getElementById('panelEjecutar');
-        panel.classList.remove('d-none');
+        panel.classList.remove('d-none', 'cm-valid-ok', 'cm-valid-err');
         panelEj.classList.add('d-none');
-        cont.innerHTML = '<p class="text-muted">Validando…</p>';
+        titulo.textContent = 'Validando archivo…';
+        cont.innerHTML = '<p class="text-muted mb-0"><i class="fas fa-spinner fa-spin"></i> Analizando, espere un momento.</p>';
         fetch(postValidar, { method: 'POST', body: fd, credentials: 'same-origin' })
             .then(function (r) { return r.json(); })
             .then(function (data) {
-                var html = '';
                 var v = data.validacion || {};
                 var rsum = v.resumen || {};
-                html += '<p><strong>Inscritos actuales en el torneo:</strong> ' + (rsum.total_inscritos_torneo || 0) +
-                    ' &nbsp;|&nbsp; <strong>Equipos actuales:</strong> ' + (rsum.total_equipos_torneo || 0) +
-                    ' &nbsp;|&nbsp; <strong>Equipos en archivo:</strong> ' + (rsum.equipos_en_archivo || 0) + '</p>';
+                var html = '';
+
+                html += '<div class="cm-info-box mb-3"><strong>Resumen del torneo y del archivo</strong><br>';
+                html += '• Inscritos actuales en este torneo: <strong>' + (rsum.total_inscritos_torneo || 0) + '</strong><br>';
+                html += '• Equipos actuales en este torneo: <strong>' + (rsum.total_equipos_torneo || 0) + '</strong><br>';
+                html += '• Equipos detectados en el archivo: <strong>' + (rsum.equipos_en_archivo || 0) + '</strong></div>';
+
                 if (v.cedulas_duplicadas && v.cedulas_duplicadas.length) {
-                    html += '<div class="alert alert-danger"><strong>Cédulas repetidas en el archivo</strong> (corrija antes de cargar):<ul>';
+                    html += '<div class="alert alert-danger border-0" style="font-size:1rem"><strong><i class="fas fa-clone"></i> Cédulas repetidas</strong> — Corrija el archivo; no puede haber la misma cédula en dos equipos.<ul class="mb-0 mt-2">';
                     v.cedulas_duplicadas.forEach(function (d) {
-                        html += '<li><code>' + (d.cedula || '') + '</code> aparece en: ';
+                        html += '<li>Cédula <code>' + esc(d.cedula) + '</code> — aparece en: ';
                         (d.apariciones || []).forEach(function (a) {
-                            html += 'equipo «' + (a.equipo || '') + '» (aprox. línea ' + (a.linea || '') + '); ';
+                            html += '«' + esc(a.equipo) + '» (aprox. línea ' + esc(String(a.linea)) + '); ';
                         });
                         html += '</li>';
                     });
                     html += '</ul></div>';
                 }
                 if (v.equipos_incompletos && v.equipos_incompletos.length) {
-                    html += '<div class="alert alert-danger"><strong>Equipos no completos</strong> (se exigen 4 integrantes con Cedula + N1 cada uno):<ul>';
+                    html += '<div class="alert alert-warning border-0 text-dark" style="font-size:1rem"><strong><i class="fas fa-user-times"></i> Equipos incompletos</strong> — Cada equipo debe tener 4 jugadores con cédula y nombre.<ul class="mb-0 mt-2">';
                     v.equipos_incompletos.forEach(function (e) {
-                        html += '<li>«' + (e.equipo || '') + '» (fila equipo ~línea ' + (e.linea_inicio || '') + '): ' +
-                            (e.integrantes || 0) + '/' + (e.requeridos || 4) + ' — ' + (e.detalle || '') + '</li>';
+                        html += '<li><strong>' + esc(e.equipo) + '</strong> (cabecera ~línea ' + esc(String(e.linea_inicio)) + '): tiene ' +
+                            (e.integrantes || 0) + ' de ' + (e.requeridos || 4) + ' jugadores. ' + esc(e.detalle || '') + '</li>';
                     });
                     html += '</ul></div>';
                 }
                 if (v.bloques_sin_r && v.bloques_sin_r.length) {
-                    html += '<div class="alert alert-warning"><ul>';
-                    v.bloques_sin_r.forEach(function (b) { html += '<li>' + b + '</li>'; });
+                    html += '<div class="alert alert-secondary border-0"><strong>Formato / estructura</strong><ul class="mb-0">';
+                    v.bloques_sin_r.forEach(function (b) { html += '<li>' + esc(b) + '</li>'; });
                     html += '</ul></div>';
                 }
+
                 if (data.success) {
-                    html += '<div class="alert alert-success">' + (data.message || 'Válido.') + '</div>';
+                    titulo.textContent = 'Validación correcta — puede pasar al paso 2';
+                    panel.classList.add('cm-valid-ok');
+                    html += '<div class="alert alert-success border-0 mb-0" style="font-size:1.05rem"><i class="fas fa-check-circle"></i> <strong>El archivo es válido.</strong> ' + esc(data.message || '') + ' Revise el recuadro rojo de la guía: al ejecutar se borrarán inscritos y equipos actuales.</div>';
                     panelEj.classList.remove('d-none');
                 } else {
-                    html += '<div class="alert alert-warning">' + (data.message || 'Con errores.') + '</div>';
+                    titulo.textContent = 'Validación con errores — corrija el archivo';
+                    panel.classList.add('cm-valid-err');
+                    html += '<div class="alert alert-warning border-0 mb-0 text-dark" style="font-size:1.05rem"><i class="fas fa-exclamation-circle"></i> <strong>No puede ejecutar la carga</strong> hasta corregir lo indicado arriba. ' + esc(data.message || '') + '</div>';
                 }
                 cont.innerHTML = html;
             })
-            .catch(function () { cont.innerHTML = '<div class="alert alert-danger">Error de red.</div>'; });
+            .catch(function () {
+                titulo.textContent = 'Error al validar';
+                cont.innerHTML = '<div class="alert alert-danger mb-0">No se pudo contactar al servidor o la respuesta no es válida. Recargue e intente de nuevo.</div>';
+            });
     });
 
     document.getElementById('btnEjecutar').addEventListener('click', function () {
-        if (!archivoInput.files.length) { alert('Vuelva a elegir el mismo archivo validado.'); return; }
+        if (!archivoInput.files.length) { alert('Seleccione de nuevo el archivo validado.'); return; }
         var confirmTxt = (document.getElementById('confirmar_reemplazo').value || '').trim();
         var fd = new FormData();
         fd.append('action', 'carga_masiva_equipos_sitio');
@@ -159,25 +289,34 @@ $frase = CargaMasivaEquiposSitioService::CONFIRMACION_REEMPLAZO;
         fd.append('confirmar_reemplazo', confirmTxt);
         fd.append('archivo', archivoInput.files[0]);
         var out = document.getElementById('resultadoCarga');
-        out.innerHTML = '<div class="alert alert-info">Ejecutando (borrado + carga)…</div>';
+        out.innerHTML = '<div class="card cm-result-card"><div class="cm-result-body"><i class="fas fa-spinner fa-spin"></i> Ejecutando: borrando inscripciones y equipos del torneo y cargando el archivo…</div></div>';
         fetch(postEjecutar, { method: 'POST', body: fd, credentials: 'same-origin' })
             .then(function (r) { return r.json(); })
             .then(function (data) {
-                var cls = data.success ? 'success' : 'danger';
-                var html = '<div class="alert alert-' + cls + '">' + (data.message || '') + '</div>';
+                var ok = data.success;
+                var headBg = ok ? 'bg-success text-white' : 'bg-danger text-white';
+                var headTxt = ok ? 'Carga finalizada correctamente' : 'La carga terminó con errores o no se ejecutó';
+                var html = '<div class="card cm-result-card border-' + (ok ? 'success' : 'danger') + '">';
+                html += '<div class="cm-result-head ' + headBg + '">' + headTxt + '</div>';
+                html += '<div class="cm-result-body">';
+                html += '<p class="lead mb-3">' + esc(data.message || '') + '</p>';
                 if (data.validacion && !data.success) {
-                    html += '<p class="small">Validación en servidor: corrija el archivo.</p>';
+                    html += '<p class="text-muted">Revise la validación y el archivo.</p>';
                 }
                 if (data.detalles && data.detalles.length) {
-                    html += '<table class="table table-sm table-bordered"><thead><tr><th>Equipo</th><th></th><th>Mensaje</th></tr></thead><tbody>';
+                    html += '<h6 class="font-weight-bold mt-2">Detalle por equipo</h6>';
+                    html += '<div class="table-responsive"><table class="table table-bordered table-sm bg-white"><thead class="thead-light"><tr><th>Equipo</th><th>Estado</th><th>Mensaje</th></tr></thead><tbody>';
                     data.detalles.forEach(function (d) {
-                        html += '<tr><td>' + (d.equipo || '') + '</td><td>' + (d.ok ? 'OK' : 'Error') + '</td><td>' + (d.message || '') + '</td></tr>';
+                        html += '<tr><td>' + esc(d.equipo) + '</td><td>' + (d.ok ? '<span class="text-success font-weight-bold">OK</span>' : '<span class="text-danger font-weight-bold">Error</span>') + '</td><td>' + esc(d.message) + '</td></tr>';
                     });
-                    html += '</tbody></table>';
+                    html += '</tbody></table></div>';
                 }
+                html += '</div></div>';
                 out.innerHTML = html;
             })
-            .catch(function () { out.innerHTML = '<div class="alert alert-danger">Error de red.</div>'; });
+            .catch(function () {
+                out.innerHTML = '<div class="card cm-result-card border-danger"><div class="cm-result-head bg-danger text-white">Error de red</div><div class="cm-result-body">No se pudo completar la petición.</div></div>';
+            });
     });
 })();
 </script>

@@ -35,9 +35,16 @@ final class CargaMasivaEquiposSitioService
         if ($ext === '' || $ext === 'tsv') {
             $ext = 'txt';
         }
-        $rows = self::leerFilas($tmpPath, $ext);
+        $errLectura = null;
+        $rows = self::leerFilas($tmpPath, $ext, $errLectura);
         if ($rows === []) {
-            return ['filas' => [], 'map' => [], 'bloques' => [], 'error' => 'Archivo vacío o ilegible.'];
+            $msg = 'No se pudo leer el archivo o no tiene filas con datos.';
+            if ($errLectura) {
+                $msg .= ' ' . $errLectura;
+            } elseif (in_array($ext, ['xlsx', 'xls'], true)) {
+                $msg .= ' Si es Excel: use .xlsx (no .xls antiguo sin PhpSpreadsheet), primera hoja con datos, o guarde como CSV UTF-8 e intente de nuevo.';
+            }
+            return ['filas' => [], 'map' => [], 'bloques' => [], 'error' => $msg];
         }
         $header = array_shift($rows);
         $map = self::mapearCabeceras($header);
@@ -381,8 +388,13 @@ final class CargaMasivaEquiposSitioService
         }
     }
 
-    private static function leerFilas(string $path, string $ext): array
+    /**
+     * @param string|null $errorDetalle se rellena si falla la lectura
+     * @return list<list<string>>
+     */
+    private static function leerFilas(string $path, string $ext, ?string &$errorDetalle = null): array
     {
+        $errorDetalle = null;
         /** CSV / TXT / TSV: detectar tabulador (exportaciones tipo ADEAZ). */
         if (in_array($ext, ['csv', 'txt'], true)) {
             $raw = @file_get_contents($path);
@@ -419,23 +431,75 @@ final class CargaMasivaEquiposSitioService
             }
             return $rows;
         }
-        if (in_array($ext, ['xlsx', 'xls'], true) && is_file(__DIR__ . '/../vendor/autoload.php')) {
-            require_once __DIR__ . '/../vendor/autoload.php';
-            try {
-                $spreadsheet = \PhpOffice\PhpSpreadsheet\IOFactory::load($path);
-                $sheet = $spreadsheet->getActiveSheet();
-                $rows = [];
-                foreach ($sheet->toArray(null, true, true, false) as $row) {
-                    if (!is_array($row)) {
-                        continue;
-                    }
-                    $rows[] = array_map(static fn ($c) => $c === null ? '' : (string)$c, $row);
-                }
+        if (in_array($ext, ['xlsx'], true)) {
+            require_once __DIR__ . '/CargaMasivaXlsxReader.php';
+            $rows = CargaMasivaXlsxReader::leerHojas($path);
+            if ($rows !== []) {
                 return $rows;
-            } catch (Throwable $e) {
-                return [];
             }
+            $errorDetalle = 'Lector nativo XLSX no obtuvo filas (¿hoja vacía o archivo dañado?).';
+            $autoloads = [
+                __DIR__ . '/../vendor/autoload.php',
+                dirname(__DIR__, 2) . '/vendor/autoload.php',
+            ];
+            foreach ($autoloads as $auto) {
+                if (!is_file($auto)) {
+                    continue;
+                }
+                require_once $auto;
+                try {
+                    $spreadsheet = \PhpOffice\PhpSpreadsheet\IOFactory::load($path);
+                    $rows = [];
+                    foreach ($spreadsheet->getWorksheetIterator() as $sheet) {
+                        $chunk = [];
+                        foreach ($sheet->toArray(null, true, true, false) as $row) {
+                            if (!is_array($row)) {
+                                continue;
+                            }
+                            $chunk[] = array_map(static fn ($c) => $c === null ? '' : (string)$c, $row);
+                        }
+                        if (count($chunk) > count($rows)) {
+                            $rows = $chunk;
+                        }
+                    }
+                    if ($rows !== []) {
+                        $errorDetalle = null;
+                        return $rows;
+                    }
+                } catch (Throwable $e) {
+                    $errorDetalle = 'PhpSpreadsheet: ' . $e->getMessage();
+                }
+                break;
+            }
+            if (!class_exists('ZipArchive', false)) {
+                $errorDetalle = 'PHP necesita la extensión ZipArchive para leer .xlsx.';
+            }
+            return [];
         }
+        if ($ext === 'xls') {
+            foreach ([__DIR__ . '/../vendor/autoload.php', dirname(__DIR__, 2) . '/vendor/autoload.php'] as $auto) {
+                if (!is_file($auto)) {
+                    continue;
+                }
+                require_once $auto;
+                try {
+                    $spreadsheet = \PhpOffice\PhpSpreadsheet\IOFactory::load($path);
+                    $rows = [];
+                    foreach ($spreadsheet->getActiveSheet()->toArray(null, true, true, false) as $row) {
+                        if (is_array($row)) {
+                            $rows[] = array_map(static fn ($c) => $c === null ? '' : (string)$c, $row);
+                        }
+                    }
+                    return $rows;
+                } catch (Throwable $e) {
+                    $errorDetalle = $e->getMessage();
+                }
+                break;
+            }
+            $errorDetalle = 'Archivo .xls requiere PhpSpreadsheet (ejecute composer install). Guarde en Excel como .xlsx o CSV.';
+            return [];
+        }
+        $errorDetalle = 'Extensión no soportada para lectura directa. Use .xlsx, .csv o .txt.';
         return [];
     }
 
