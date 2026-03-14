@@ -46,6 +46,17 @@ $base_url = $use_standalone ? $script_actual : 'index.php?page=torneo_gestion';
             <a href="<?php echo htmlspecialchars($urlVolver); ?>" class="btn btn-secondary">
                 <i class="fas fa-arrow-left mr-2"></i> <?php echo htmlspecialchars($labelVolver); ?>
             </a>
+            <?php if (class_exists('AppHelpers')): $tid = (int)($torneo['id'] ?? 0); ?>
+            <a href="<?php echo htmlspecialchars(AppHelpers::torneoGestionUrl('export_resultados_pdf', $tid, ['tipo' => 'posiciones'])); ?>" class="btn btn-danger text-dark fw-bold border border-dark">
+                <i class="fas fa-file-pdf mr-1"></i> PDF posiciones
+            </a>
+            <a href="<?php echo htmlspecialchars(AppHelpers::torneoGestionUrl('resultados_reportes_print', $tid, ['tipo' => 'posiciones'])); ?>" target="_blank" rel="noopener" class="btn btn-warning text-dark fw-bold border border-dark">
+                <i class="fas fa-print mr-1"></i> Imprimir / vista
+            </a>
+            <a href="<?php echo htmlspecialchars(AppHelpers::torneoGestionUrl('resultados_reportes', $tid)); ?>" class="btn btn-outline-secondary fw-bold">
+                <i class="fas fa-file-alt mr-1"></i> Todos los reportes
+            </a>
+            <?php endif; ?>
         </div>
     </div>
 <?php else: ?>
@@ -60,6 +71,11 @@ $base_url = $use_standalone ? $script_actual : 'index.php?page=torneo_gestion';
     <a href="<?php echo $base_url . ($use_standalone ? '?' : '&'); ?>action=panel&torneo_id=<?php echo $torneo['id']; ?>" class="btn btn-primary btn-sm flex-shrink-0">
         <i class="fas fa-arrow-left me-1"></i> Volver al Panel de Control
     </a>
+    <?php if (class_exists('AppHelpers')): $tid = (int)($torneo['id'] ?? 0); ?>
+    <a href="<?php echo htmlspecialchars(AppHelpers::torneoGestionUrl('export_resultados_pdf', $tid, ['tipo' => 'posiciones'])); ?>" class="btn btn-sm btn-danger text-dark fw-bold border border-dark">PDF</a>
+    <a href="<?php echo htmlspecialchars(AppHelpers::torneoGestionUrl('resultados_reportes_print', $tid, ['tipo' => 'posiciones'])); ?>" target="_blank" rel="noopener" class="btn btn-sm btn-warning text-dark fw-bold">Imprimir</a>
+    <a href="<?php echo htmlspecialchars(AppHelpers::torneoGestionUrl('resultados_reportes', $tid)); ?>" class="btn btn-sm btn-outline-secondary fw-bold">Reportes</a>
+    <?php endif; ?>
 </div>
 <?php endif; ?>
 

@@ -412,14 +412,13 @@ $base_url_return = $use_standalone ? $script_actual : 'index.php?page=torneo_ges
             <i class="fas fa-arrow-left mr-2"></i>
             Volver al Panel de Control
         </a>
-        <a href="<?php echo $base_url_return . ($use_standalone ? '?' : '&'); ?>action=resultados_reportes&torneo_id=<?php echo $torneo_id; ?>"
+        <a href="<?php echo htmlspecialchars(AppHelpers::torneoGestionUrl('resultados_reportes', $torneo_id)); ?>"
            class="inline-flex items-center px-6 py-3 bg-amber-600 hover:bg-amber-700 text-white rounded-lg shadow-lg font-bold">
             <i class="fas fa-file-alt mr-2"></i> Reportes PDF/Excel
         </a>
-        <?php $rp_b = rtrim(AppHelpers::getBaseUrl(), '/') . '/modules/tournament_admin/'; $rp_s = $use_standalone ? '?' : '&'; ?>
-        <a href="<?php echo htmlspecialchars($rp_b . 'resultados_export_pdf.php?torneo_id=' . $torneo_id . '&tipo=por_club'); ?>"
+        <a href="<?php echo htmlspecialchars(AppHelpers::torneoGestionUrl('export_resultados_pdf', $torneo_id, ['tipo' => 'por_club'])); ?>"
            class="inline-flex items-center px-6 py-3 bg-red-200 text-black font-bold rounded-lg border-2 border-black">PDF este reporte</a>
-        <a href="<?php echo htmlspecialchars($base_url_return . $rp_s . 'action=resultados_reportes_print&torneo_id=' . $torneo_id . '&tipo=por_club'); ?>" target="_blank"
+        <a href="<?php echo htmlspecialchars(AppHelpers::torneoGestionUrl('resultados_reportes_print', $torneo_id, ['tipo' => 'por_club'])); ?>" target="_blank" rel="noopener"
            class="inline-flex items-center px-6 py-3 bg-blue-200 text-black font-bold rounded-lg border-2 border-black">Imprimir (modelo)</a>
     </div>
     

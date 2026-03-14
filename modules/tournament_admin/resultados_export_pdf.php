@@ -15,7 +15,7 @@ Auth::requireRole(['admin_general', 'admin_torneo', 'admin_club']);
 
 $torneoId = (int)($_GET['torneo_id'] ?? 0);
 $tipo = preg_replace('/[^a-z_]/', '', (string)($_GET['tipo'] ?? 'consolidado'));
-$allowed = ['por_club', 'general', 'equipos_resumido', 'equipos_detallado', 'consolidado'];
+$allowed = ['por_club', 'general', 'posiciones', 'equipos_resumido', 'equipos_detallado', 'consolidado'];
 if (!in_array($tipo, $allowed, true)) {
     $tipo = 'consolidado';
 }
@@ -91,10 +91,11 @@ if ($tipo === 'por_club') {
         }
         echo '</table></div>';
     }
-} elseif ($tipo === 'general') {
+} elseif ($tipo === 'general' || $tipo === 'posiciones') {
     $data = ResultadosReporteData::cargar($pdo, $torneoId, $torneo);
     $participantes = $data['participantes'];
-    echo '<h1>Resultados general — Clasificación individual — ' . $nombreTorneo . '</h1>';
+    $h1 = $tipo === 'posiciones' ? 'Tabla de posiciones — ' : 'Resultados general — Clasificación individual — ';
+    echo '<h1>' . $h1 . $nombreTorneo . '</h1>';
     echo '<div class="meta">Fecha torneo: ' . $fechaTor . ' · Generado: ' . $esc($fechaGen) . '</div>';
     echo '<table><tr><th>Pos</th><th>Jugador</th><th>Club</th><th>Equipo</th><th>G</th><th>P</th><th>Ef.</th><th>Pts</th><th>Rnk</th><th>GFF</th><th>Sanc.</th><th>Tarj.</th></tr>';
     $n = 0;

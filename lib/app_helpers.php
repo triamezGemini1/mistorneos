@@ -164,6 +164,15 @@ class AppHelpers {
         $params['page'] = $page;
         return self::url('index.php', $params);
     }
+
+    /** URL segura a torneo_gestion (siempre vía public/index.php; evita enlaces rotos a modules/). */
+    public static function torneoGestionUrl(string $action, int $torneoId, array $extra = []): string {
+        return self::url('index.php', array_merge([
+            'page' => 'torneo_gestion',
+            'action' => $action,
+            'torneo_id' => $torneoId,
+        ], $extra));
+    }
     
     /**
      * Genera URL para archivos espec�ficos

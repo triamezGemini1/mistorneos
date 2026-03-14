@@ -254,6 +254,15 @@ if ($page === 'organizaciones' && ($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'GET
 }
 
 // Acciones que redirigen sin layout (evitan acceso directo a modules/ bloqueado por .htaccess)
+if ($page === 'torneo_gestion' && in_array($action, ['export_resultados_pdf', 'export_resultados_excel'], true)) {
+    if ($action === 'export_resultados_pdf') {
+        require_once __DIR__ . '/../modules/tournament_admin/resultados_export_pdf.php';
+    } else {
+        require_once __DIR__ . '/../modules/tournament_admin/resultados_export_excel.php';
+    }
+    exit;
+}
+
 if ($page === 'admin_clubs' && $action === 'send_notification') {
     require_once __DIR__ . '/../modules/admin_clubs/send_notification.php';
     exit;

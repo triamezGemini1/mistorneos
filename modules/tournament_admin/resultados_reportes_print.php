@@ -7,7 +7,7 @@ require_once __DIR__ . '/../../lib/ResultadosReporteData.php';
 require_once __DIR__ . '/../../lib/ResultadosPorClubHelper.php';
 
 $tipo = preg_replace('/[^a-z_]/', '', (string)($_GET['tipo'] ?? 'consolidado'));
-$allowed = ['por_club', 'general', 'equipos_resumido', 'equipos_detallado', 'consolidado'];
+$allowed = ['por_club', 'general', 'posiciones', 'equipos_resumido', 'equipos_detallado', 'consolidado'];
 if (!in_array($tipo, $allowed, true)) {
     $tipo = 'consolidado';
 }
@@ -29,6 +29,7 @@ $esc = static function ($s) {
 $titles = [
     'por_club' => 'Resultados por club',
     'general' => 'Resultados general (individual)',
+    'posiciones' => 'Tabla de posiciones',
     'equipos_resumido' => 'Resultados equipos — resumido',
     'equipos_detallado' => 'Resultados equipos — detallado',
     'consolidado' => 'Reporte consolidado',
@@ -63,18 +64,19 @@ $title = $titles[$tipo] ?? 'Reporte';
 <body>
 <div class="no-print">
     <button type="button" onclick="window.print()">Imprimir / Guardar PDF</button>
-    <a href="<?= $esc('index.php?page=torneo_gestion&action=resultados_reportes&torneo_id=' . (int)$torneo_id) ?>">Volver a reportes</a>
+    <a href="<?= $esc(AppHelpers::torneoGestionUrl('resultados_reportes', (int)$torneo_id)) ?>">Volver a reportes</a>
     <?php
     $origen = [
         'por_club' => 'resultados_por_club',
         'general' => 'resultados_general',
+        'posiciones' => 'posiciones',
         'equipos_resumido' => 'resultados_equipos_resumido',
         'equipos_detallado' => 'resultados_equipos_detallado',
         'consolidado' => 'resultados_reportes',
     ];
     $act = $origen[$tipo] ?? 'resultados_reportes';
     ?>
-    <a href="<?= $esc('index.php?page=torneo_gestion&action=' . $act . '&torneo_id=' . (int)$torneo_id) ?>">Volver al origen</a>
+    <a href="<?= $esc(AppHelpers::torneoGestionUrl($act, (int)$torneo_id)) ?>">Volver al origen</a>
 </div>
 
 <?php
@@ -102,9 +104,10 @@ if ($tipo === 'por_club') {
         }
         echo '</table></div>';
     }
-} elseif ($tipo === 'general') {
+} elseif ($tipo === 'general' || $tipo === 'posiciones') {
     $data = ResultadosReporteData::cargar($pdo, $torneo_id, $torneo);
-    echo '<h1>Resultados general — ' . $nombreTorneo . '</h1><div class="meta">' . $fechaTor . ' · ' . $fechaGen . '</div>';
+    $h1p = $tipo === 'posiciones' ? 'Tabla de posiciones — ' : 'Resultados general — ';
+    echo '<h1>' . $h1p . $nombreTorneo . '</h1><div class="meta">' . $fechaTor . ' · ' . $fechaGen . '</div>';
     echo '<table><tr><th>Pos</th><th>Jugador</th><th>Club</th><th>Equipo</th><th>G</th><th>P</th><th>Ef.</th><th>Pts</th><th>Rnk</th><th>GFF</th><th>Sanc.</th><th>Tarj.</th></tr>';
     $n = 0;
     foreach ($data['participantes'] as $p) {

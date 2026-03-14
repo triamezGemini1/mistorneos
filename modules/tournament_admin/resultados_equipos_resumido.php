@@ -430,12 +430,11 @@ $base_url_return = $use_standalone ? $script_actual : 'index.php?page=torneo_ges
                 </div>
             </div>
             <div class="text-right flex flex-wrap gap-2 justify-end">
-                <?php $rp_export = rtrim(AppHelpers::getBaseUrl(), '/') . '/modules/tournament_admin/'; $rp_ap = $use_standalone ? '?' : '&'; ?>
-                <a href="<?php echo htmlspecialchars($rp_export . 'resultados_export_pdf.php?torneo_id=' . $torneo_id . '&tipo=equipos_resumido'); ?>"
+                <a href="<?php echo htmlspecialchars(AppHelpers::torneoGestionUrl('export_resultados_pdf', $torneo_id, ['tipo' => 'equipos_resumido'])); ?>"
                    class="px-4 py-3 bg-amber-200 hover:bg-amber-300 text-black font-bold rounded-lg border border-gray-800 text-sm">PDF Letter</a>
-                <a href="<?php echo htmlspecialchars($base_url_return . $rp_ap . 'action=resultados_reportes_print&torneo_id=' . $torneo_id . '&tipo=equipos_resumido'); ?>" target="_blank"
+                <a href="<?php echo htmlspecialchars(AppHelpers::torneoGestionUrl('resultados_reportes_print', $torneo_id, ['tipo' => 'equipos_resumido'])); ?>" target="_blank" rel="noopener"
                    class="px-4 py-3 bg-slate-200 hover:bg-slate-300 text-black font-bold rounded-lg border border-gray-800 text-sm">Vista impresión</a>
-                <a href="<?php echo htmlspecialchars($base_url_return . $rp_ap . 'action=resultados_reportes&torneo_id=' . $torneo_id); ?>"
+                <a href="<?php echo htmlspecialchars(AppHelpers::torneoGestionUrl('resultados_reportes', $torneo_id)); ?>"
                    class="px-4 py-3 bg-green-200 text-black font-bold rounded-lg border border-gray-800 text-sm">Todos los reportes</a>
                 <button onclick="window.print()" 
                         class="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg shadow-lg font-bold">
