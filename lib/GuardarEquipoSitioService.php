@@ -33,7 +33,11 @@ final class GuardarEquipoSitioService
         require_once __DIR__ . '/InscritosHelper.php';
         require_once __DIR__ . '/UserActivationHelper.php';
 
-        $pdo->beginTransaction();
+        /* Carga masiva u otro caller puede tener ya una transacción abierta; PDO no admite anidar beginTransaction. */
+        $transaccionPropia = !$pdo->inTransaction();
+        if ($transaccionPropia) {
+            $pdo->beginTransaction();
+        }
         try {
             if ($equipo_id > 0) {
                 $stmt = $pdo->prepare('UPDATE equipos SET nombre_equipo = UPPER(?), id_club = ? WHERE id = ? AND id_torneo = ?');
@@ -112,14 +116,16 @@ final class GuardarEquipoSitioService
                 $stmt->execute([$club_id, $codigo_equipo, $id_inscrito]);
             }
 
-            $pdo->commit();
+            if ($transaccionPropia) {
+                $pdo->commit();
+            }
             return [
                 'success' => true,
                 'message' => 'Equipo guardado exitosamente',
                 'equipo_id' => $equipo_id,
             ];
         } catch (Throwable $e) {
-            if ($pdo->inTransaction()) {
+            if ($transaccionPropia && $pdo->inTransaction()) {
                 $pdo->rollBack();
             }
             throw $e;
