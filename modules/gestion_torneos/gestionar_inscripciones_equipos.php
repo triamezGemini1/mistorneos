@@ -184,6 +184,10 @@ $csrf_token = class_exists('CSRF') ? CSRF::token() : '';
                        class="btn btn-primary btn-sm">
                         <i class="fas fa-plus me-1"></i>Inscribir Equipo
                     </a>
+                    <a href="<?php echo $base_url . ($use_standalone ? '?' : '&'); ?>action=carga_masiva_equipos_sitio&torneo_id=<?php echo $torneo['id']; ?>" 
+                       class="btn btn-outline-primary btn-sm">
+                        <i class="fas fa-file-upload me-1"></i>Carga masiva
+                    </a>
                     <a href="<?php echo $base_url . ($use_standalone ? '?' : '&'); ?>action=panel&torneo_id=<?php echo $torneo['id']; ?>" 
                        class="btn btn-secondary btn-sm">
                         <i class="fas fa-arrow-left me-1"></i>Retornar al Panel

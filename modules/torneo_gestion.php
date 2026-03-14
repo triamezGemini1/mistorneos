@@ -126,6 +126,16 @@ $ronda = isset($_GET['ronda']) ? (int)$_GET['ronda'] : null;
 $mesa = isset($_GET['mesa']) ? (int)$_GET['mesa'] : null;
 $inscrito_id = isset($_GET['inscrito_id']) ? (int)$_GET['inscrito_id'] : null;
 
+// Plantilla CSV carga masiva (GET, sin layout)
+if ($action === 'carga_masiva_equipos_plantilla' && ($_SERVER['REQUEST_METHOD'] ?? '') === 'GET' && $torneo_id) {
+    verificarPermisosTorneo($torneo_id, $user_id, $is_admin_general);
+    require_once __DIR__ . '/../lib/CargaMasivaEquiposSitioService.php';
+    header('Content-Type: text/csv; charset=UTF-8');
+    header('Content-Disposition: attachment; filename="plantilla_carga_equipos_torneo_' . $torneo_id . '.csv"');
+    echo CargaMasivaEquiposSitioService::contenidoPlantillaCsv();
+    exit;
+}
+
 // Manejar acciones POST - DEBE estar antes de cualquier output
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $post_action = $_POST['action'] ?? $action;
@@ -181,6 +191,81 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 http_response_code(500);
                 error_log('guardar_equipo_sitio: ' . $e->getMessage());
                 echo json_encode(['success' => false, 'message' => 'Error al guardar: ' . $e->getMessage()], JSON_UNESCAPED_UNICODE);
+            }
+            exit;
+
+        /** Carga masiva: solo validación (sin borrar ni cargar). */
+        case 'carga_masiva_equipos_validar':
+            $tid = (int)($_POST['torneo_id'] ?? 0);
+            if ($tid <= 0) {
+                header('Content-Type: application/json; charset=utf-8');
+                echo json_encode(['success' => false, 'message' => 'Torneo no especificado'], JSON_UNESCAPED_UNICODE);
+                exit;
+            }
+            verificarPermisosTorneo($tid, $user_id, $is_admin_general);
+            if (!isset($_FILES['archivo']) || !is_uploaded_file($_FILES['archivo']['tmp_name'] ?? '')) {
+                header('Content-Type: application/json; charset=utf-8');
+                echo json_encode(['success' => false, 'message' => 'Adjunte el archivo.'], JSON_UNESCAPED_UNICODE);
+                exit;
+            }
+            require_once __DIR__ . '/../lib/CargaMasivaEquiposSitioService.php';
+            header('Content-Type: application/json; charset=utf-8');
+            $pdo = DB::pdo();
+            $parsed = CargaMasivaEquiposSitioService::parseArchivo(
+                (string)$_FILES['archivo']['tmp_name'],
+                (string)($_FILES['archivo']['name'] ?? 'upload.csv')
+            );
+            if (isset($parsed['error'])) {
+                echo json_encode(['success' => false, 'message' => $parsed['error']], JSON_UNESCAPED_UNICODE);
+                exit;
+            }
+            $val = CargaMasivaEquiposSitioService::validarPrevio($pdo, $tid, $parsed['bloques']);
+            echo json_encode([
+                'success' => $val['puede_proceder'],
+                'message' => $val['puede_proceder']
+                    ? 'Archivo válido. Revise el aviso de borrado y confirme para ejecutar.'
+                    : 'Revise errores antes de continuar.',
+                'validacion' => $val,
+                'frase_confirmacion' => CargaMasivaEquiposSitioService::CONFIRMACION_REEMPLAZO,
+            ], JSON_UNESCAPED_UNICODE);
+            exit;
+
+        /** Carga masiva: borra inscritos + equipos del torneo y vuelve a cargar (requiere confirmación exacta). */
+        case 'carga_masiva_equipos_sitio':
+            $tid = (int)($_GET['torneo_id'] ?? $_POST['torneo_id'] ?? 0);
+            if ($tid <= 0 || ($_SERVER['REQUEST_METHOD'] ?? '') !== 'POST') {
+                header('Content-Type: application/json; charset=utf-8');
+                echo json_encode(['success' => false, 'message' => 'Torneo no especificado o método inválido'], JSON_UNESCAPED_UNICODE);
+                exit;
+            }
+            verificarPermisosTorneo($tid, $user_id, $is_admin_general);
+            if (isTorneoLocked($tid)) {
+                header('Content-Type: application/json; charset=utf-8');
+                echo json_encode(['success' => false, 'message' => 'Torneo cerrado.'], JSON_UNESCAPED_UNICODE);
+                exit;
+            }
+            if (!isset($_FILES['archivo']) || !is_uploaded_file($_FILES['archivo']['tmp_name'] ?? '')) {
+                header('Content-Type: application/json; charset=utf-8');
+                echo json_encode(['success' => false, 'message' => 'No se recibió archivo.'], JSON_UNESCAPED_UNICODE);
+                exit;
+            }
+            require_once __DIR__ . '/../lib/CargaMasivaEquiposSitioService.php';
+            header('Content-Type: application/json; charset=utf-8');
+            try {
+                $pdo = DB::pdo();
+                $out = CargaMasivaEquiposSitioService::ejecutarDesdeArchivo(
+                    $pdo,
+                    $tid,
+                    (string)$_FILES['archivo']['tmp_name'],
+                    (string)($_FILES['archivo']['name'] ?? 'upload.csv'),
+                    Auth::id() ?: null,
+                    trim((string)($_POST['confirmar_reemplazo'] ?? ''))
+                );
+                echo json_encode($out, JSON_UNESCAPED_UNICODE);
+            } catch (Throwable $e) {
+                http_response_code(500);
+                error_log('carga_masiva_equipos_sitio: ' . $e->getMessage());
+                echo json_encode(['success' => false, 'message' => $e->getMessage()], JSON_UNESCAPED_UNICODE);
             }
             exit;
 
@@ -426,6 +511,21 @@ try {
             verificarPermisosTorneo($torneo_id, $user_id, $is_admin_general);
             $view_file = __DIR__ . '/gestion_torneos/inscribir_equipo_sitio.php';
             $view_data = obtenerDatosInscribirEquipoSitio($torneo_id);
+            break;
+
+        case 'carga_masiva_equipos_sitio':
+            if (!$torneo_id) {
+                throw new Exception('Debe especificar un torneo');
+            }
+            verificarPermisosTorneo($torneo_id, $user_id, $is_admin_general);
+            $stmt = DB::pdo()->prepare('SELECT id, nombre, modalidad, locked FROM tournaments WHERE id = ?');
+            $stmt->execute([$torneo_id]);
+            $torneo_cm = $stmt->fetch(PDO::FETCH_ASSOC);
+            if (!$torneo_cm || (int)($torneo_cm['modalidad'] ?? 0) !== 3) {
+                throw new Exception('Solo torneos modalidad equipos (4 integrantes).');
+            }
+            $view_file = __DIR__ . '/gestion_torneos/carga_masiva_equipos_sitio.php';
+            $view_data = ['torneo' => $torneo_cm, 'torneo_id' => $torneo_id];
             break;
 
         case 'guardar_pareja_fija':
