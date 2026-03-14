@@ -1,6 +1,8 @@
 <?php
 declare(strict_types=1);
 
+require_once __DIR__ . '/ResultadosReporteData.php';
+
 /**
  * ResultadosPublicHelper - Datos para reportes públicos de torneos
  * Usado por evento_resultados.php para mostrar resultados sin autenticación
@@ -246,7 +248,7 @@ class ResultadosPublicHelper
         foreach ($equipos as &$eq) {
             $cod = $eq['codigo_equipo'];
             $stmt = $pdo->prepare("
-                SELECT i.id_usuario, u.nombre as nombre_completo, i.posicion, i.ganados, i.perdidos, i.efectividad, i.puntos, i.ptosrnk, i.gff, i.sancion, i.tarjeta
+                SELECT i.id_usuario, u.nombre as nombre_completo, i.posicion, i.ganados, i.perdidos, i.efectividad, i.puntos, i.ptosrnk, " . \ResultadosReporteData::SQL_GFF_SUBQUERY . " AS gff, i.sancion, i.tarjeta
                 FROM inscritos i
                 INNER JOIN usuarios u ON i.id_usuario = u.id
                 WHERE i.torneo_id = ? AND i.codigo_equipo = ? AND (i.estatus IS NULL OR (i.estatus != 4 AND i.estatus != 'retirado'))

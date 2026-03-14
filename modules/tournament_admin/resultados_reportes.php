@@ -21,8 +21,8 @@ $urlPrint = $base . $sep . 'action=resultados_reportes_print&torneo_id=' . $torn
 <div class="min-h-screen bg-gradient-to-br from-slate-700 via-slate-800 to-slate-900 p-6">
     <div class="mb-4 flex flex-wrap gap-3">
         <a href="<?= htmlspecialchars($base . $sep . 'action=panel&torneo_id=' . $torneo_id) ?>"
-           class="inline-flex items-center px-5 py-2.5 bg-gray-800 hover:bg-gray-900 text-white rounded-lg font-semibold shadow">
-            <i class="fas fa-arrow-left mr-2"></i> Volver al panel
+           class="inline-flex items-center px-5 py-2.5 bg-amber-200 hover:bg-amber-300 text-black font-bold rounded-lg shadow border border-gray-400">
+            <i class="fas fa-arrow-left mr-2 text-black"></i> Volver al panel
         </a>
     </div>
 
@@ -41,8 +41,8 @@ $urlPrint = $base . $sep . 'action=resultados_reportes_print&torneo_id=' . $torn
                 <h2 class="text-lg font-bold text-gray-900 mb-2">PDF</h2>
                 <p class="text-sm text-gray-600 mb-4">Un solo documento listo para archivar o enviar (orientación horizontal).</p>
                 <a href="<?= htmlspecialchars($urlPdf) ?>"
-                   class="inline-flex items-center px-5 py-3 bg-red-600 hover:bg-red-700 text-white rounded-lg font-bold shadow">
-                    <i class="fas fa-download mr-2"></i> Descargar PDF
+                   class="inline-flex items-center px-5 py-3 bg-red-200 hover:bg-red-300 text-black font-bold rounded-lg shadow border border-red-400">
+                    <i class="fas fa-download mr-2 text-black"></i> Descargar PDF
                 </a>
             </div>
 
@@ -51,8 +51,8 @@ $urlPrint = $base . $sep . 'action=resultados_reportes_print&torneo_id=' . $torn
                 <h2 class="text-lg font-bold text-gray-900 mb-2">Excel</h2>
                 <p class="text-sm text-gray-600 mb-4">Varias hojas: torneo, rondas, por club, equipos (si aplica) y clasificación completa.</p>
                 <a href="<?= htmlspecialchars($urlXlsx) ?>"
-                   class="inline-flex items-center px-5 py-3 bg-green-600 hover:bg-green-700 text-white rounded-lg font-bold shadow">
-                    <i class="fas fa-download mr-2"></i> Descargar Excel (.xlsx)
+                   class="inline-flex items-center px-5 py-3 bg-green-200 hover:bg-green-300 text-black font-bold rounded-lg shadow border border-green-500">
+                    <i class="fas fa-download mr-2 text-black"></i> Descargar Excel (.xlsx)
                 </a>
             </div>
         </div>
@@ -62,12 +62,12 @@ $urlPrint = $base . $sep . 'action=resultados_reportes_print&torneo_id=' . $torn
             <h2 class="text-lg font-bold text-gray-900 mb-2">Vista para imprimir</h2>
             <p class="text-sm text-gray-600 mb-4">Se abre una página optimizada para imprimir o guardar como PDF desde el navegador.</p>
             <a href="<?= htmlspecialchars($urlPrint) ?>" target="_blank"
-               class="inline-flex items-center px-5 py-3 bg-slate-700 hover:bg-slate-800 text-white rounded-lg font-bold shadow mr-3">
-                <i class="fas fa-external-link-alt mr-2"></i> Abrir vista imprimible
+               class="inline-flex items-center px-5 py-3 bg-slate-200 hover:bg-slate-300 text-black font-bold rounded-lg shadow mr-3 border border-slate-500">
+                <i class="fas fa-external-link-alt mr-2 text-black"></i> Abrir vista imprimible
             </a>
             <button type="button" onclick="var w=window.open('<?= htmlspecialchars($urlPrint, ENT_QUOTES) ?>','_blank'); if(w) w.onload=function(){ w.print(); };"
-                    class="mt-3 md:mt-0 inline-flex items-center px-5 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-bold shadow">
-                <i class="fas fa-print mr-2"></i> Imprimir (nueva ventana)
+                    class="mt-3 md:mt-0 inline-flex items-center px-5 py-3 bg-blue-200 hover:bg-blue-300 text-black font-bold rounded-lg shadow border border-blue-600">
+                <i class="fas fa-print mr-2 text-black"></i> Imprimir (nueva ventana)
             </button>
         </div>
 

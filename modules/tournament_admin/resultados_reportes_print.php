@@ -43,7 +43,7 @@ $esc = static function ($s) {
 </head>
 <body>
     <div class="no-print">
-        <button type="button" onclick="window.print()" style="padding:10px 16px;cursor:pointer;font-weight:bold;">Imprimir / Guardar PDF</button>
+        <button type="button" onclick="window.print()" style="padding:12px 20px;cursor:pointer;font-weight:700;color:#000;background:#fde68a;border:2px solid #000;border-radius:8px;">Imprimir / Guardar PDF</button>
     </div>
     <h1>Resultados — <?= $esc($torneo['nombre'] ?? '') ?></h1>
     <p style="margin:0;font-size:10pt;color:#444;">Fecha torneo: <?= $esc($torneo['fechator'] ?? '') ?> · Impreso <?= $esc(date('d/m/Y H:i')) ?></p>

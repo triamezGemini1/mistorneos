@@ -1,11 +1,17 @@
 <?php
 /**
  * Datos agregados para reportes PDF/Excel del módulo de resultados.
+ *
+ * GFF (ganadas por forfait): mismo criterio que resultados_detalle.php y
+ * ResultadosPublicHelper::getPosiciones — COUNT en partiresul con ff = 1 por jugador/torneo.
  */
 declare(strict_types=1);
 
 final class ResultadosReporteData
 {
+    /** Subconsulta alineada con ganadas_por_forfait (partiresul.ff = 1). */
+    public const SQL_GFF_SUBQUERY = '(SELECT COUNT(*) FROM partiresul pr_gff WHERE pr_gff.id_usuario = i.id_usuario AND pr_gff.id_torneo = i.torneo_id AND pr_gff.ff = 1)';
+
     /**
      * @return array{torneo: array, participantes: array, resumen_clubes: array, equipos: array, rondas: array}
      */
@@ -15,6 +21,7 @@ final class ResultadosReporteData
             recalcularPosiciones($torneoId);
         }
 
+        $gffSql = self::SQL_GFF_SUBQUERY;
         $sqlParticipantes = "
             SELECT
                 i.id,
@@ -27,7 +34,7 @@ final class ResultadosReporteData
                 i.efectividad,
                 i.puntos,
                 i.ptosrnk,
-                i.gff,
+                {$gffSql} AS gff,
                 i.sancion,
                 i.tarjeta,
                 (SELECT COUNT(*) FROM partiresul pr WHERE pr.id_usuario = i.id_usuario AND pr.id_torneo = i.torneo_id

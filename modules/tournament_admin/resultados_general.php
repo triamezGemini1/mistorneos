@@ -6,6 +6,7 @@
  */
 
 require_once __DIR__ . '/../../lib/app_helpers.php';
+require_once __DIR__ . '/../../lib/ResultadosReporteData.php';
 
 // Asegurar que las posiciones estén actualizadas
 if (function_exists('recalcularPosiciones')) {
@@ -147,7 +148,7 @@ try {
             i.efectividad,
             i.puntos,
             i.ptosrnk,
-            i.gff,
+            " . \ResultadosReporteData::SQL_GFF_SUBQUERY . " AS gff,
             i.sancion,
             i.tarjeta,
             (SELECT COUNT(*) FROM partiresul WHERE id_usuario = i.id_usuario AND id_torneo = i.torneo_id AND registrado = 1 AND mesa = 0 AND resultado1 > resultado2) as partidas_bye,
