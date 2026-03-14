@@ -231,7 +231,12 @@ final class ImportacionTorneoExternoService
                             $params[] = '';
                             break;
                         case 'foto_acta':
+                            $params[] = $nullable ? null : '';
+                            break;
                         case 'origen_dato':
+                            /* ENUM('admin','qr'); '' o NULL suelen disparar 1265 según sql_mode */
+                            $params[] = 'admin';
+                            break;
                         case 'estatus':
                             $params[] = $nullable ? null : '';
                             break;
