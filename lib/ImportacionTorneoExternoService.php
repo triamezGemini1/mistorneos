@@ -133,19 +133,31 @@ final class ImportacionTorneoExternoService
         }
 
         $stmtU = $pdo->prepare('SELECT id FROM usuarios WHERE cedula = ? OR cedula = ? LIMIT 1');
-        $cols = $pdo->query("SHOW COLUMNS FROM partiresul")->fetchAll(PDO::FETCH_COLUMN);
-        $tieneObs = in_array('observaciones', $cols, true);
-
-        /* tarjeta/sancion=0; chancleta,zapato,fecha,registrado_por = 4 ?; registrado=1 (13 ? + opc. observaciones) */
-        $sql = "INSERT INTO partiresul (id_torneo, partida, mesa, secuencia, id_usuario, resultado1, resultado2, efectividad, ff, tarjeta, sancion, chancleta, zapato, fecha_partida, registrado_por, registrado"
-            . ($tieneObs ? ", observaciones" : '') . ") VALUES (?,?,?,?,?,?,?,?,0,0,?,?,?,?,1"
-            . ($tieneObs ? ",?" : '') . ")";
+        /** @var list<array{Field: string, Null: string, Default: mixed, Extra: string}> $meta */
+        $meta = $pdo->query('SHOW COLUMNS FROM partiresul')->fetchAll(PDO::FETCH_ASSOC);
+        $insertFields = [];
+        foreach ($meta as $c) {
+            if (strtolower((string)$c['Field']) === 'id' && str_contains((string)$c['Extra'], 'auto_increment')) {
+                continue;
+            }
+            $insertFields[] = $c;
+        }
+        if ($insertFields === []) {
+            return ['insertados' => 0, 'errores' => ['partiresul: sin columnas insertables']];
+        }
+        $sqlParts = [];
+        $placeholders = [];
+        foreach ($insertFields as $c) {
+            $sqlParts[] = '`' . str_replace('`', '``', $c['Field']) . '`';
+            $placeholders[] = '?';
+        }
+        $sqlInsert = 'INSERT INTO partiresul (' . implode(', ', $sqlParts) . ') VALUES (' . implode(', ', $placeholders) . ')';
+        $stmtI = $pdo->prepare($sqlInsert);
 
         $insertados = 0;
         $errores = [];
         $pdo->beginTransaction();
         try {
-            $stmtI = $pdo->prepare($sql);
             for ($r = 1; $r < count($rows); $r++) {
                 $row = $rows[$r];
                 $partida = (int)($row[$iPart] ?? 0);
@@ -167,9 +179,73 @@ final class ImportacionTorneoExternoService
                 $zap = ($r1 === 0 && $ff === 0) ? 1 : 0;
                 $chan = $zap;
                 $fecha = $fechaTorneoYmd . ' 12:00:00';
-                $params = [$torneo_id, $partida, $mesa, $secuencia, $idUsuario, $r1, $r2, $efect, $ff, $chan, $zap, $fecha, $registrado_por];
-                if ($tieneObs) {
-                    $params[] = '';
+                $params = [];
+                foreach ($insertFields as $c) {
+                    $f = strtolower((string)$c['Field']);
+                    $nullable = ($c['Null'] ?? '') === 'YES';
+                    $def = $c['Default'] ?? null;
+                    switch ($f) {
+                        case 'id_torneo':
+                            $params[] = $torneo_id;
+                            break;
+                        case 'partida':
+                            $params[] = $partida;
+                            break;
+                        case 'mesa':
+                            $params[] = $mesa;
+                            break;
+                        case 'secuencia':
+                            $params[] = $secuencia;
+                            break;
+                        case 'id_usuario':
+                            $params[] = $idUsuario;
+                            break;
+                        case 'resultado1':
+                            $params[] = $r1;
+                            break;
+                        case 'resultado2':
+                            $params[] = $r2;
+                            break;
+                        case 'efectividad':
+                            $params[] = $efect;
+                            break;
+                        case 'ff':
+                            $params[] = $ff;
+                            break;
+                        case 'tarjeta':
+                        case 'sancion':
+                        case 'chancleta':
+                        case 'zapato':
+                            $params[] = 0;
+                            break;
+                        case 'fecha_partida':
+                            $params[] = $fecha;
+                            break;
+                        case 'registrado_por':
+                            $params[] = $registrado_por;
+                            break;
+                        case 'registrado':
+                            $params[] = 1;
+                            break;
+                        case 'observaciones':
+                            $params[] = '';
+                            break;
+                        case 'foto_acta':
+                        case 'origen_dato':
+                        case 'estatus':
+                            $params[] = $nullable ? null : '';
+                            break;
+                        default:
+                            if ($nullable) {
+                                $params[] = null;
+                            } elseif (is_numeric($def)) {
+                                $params[] = (int)$def;
+                            } elseif ($def !== null) {
+                                $params[] = $def;
+                            } else {
+                                $params[] = 0;
+                            }
+                    }
                 }
                 try {
                     $stmtI->execute($params);
@@ -371,11 +447,25 @@ final class ImportacionTorneoExternoService
         $iCed = $find($hNorm, ['cedula', 'cedula1', 'ci', 'documento']);
         $iPareja = $find($hNorm, ['pareja', 'id_pareja', 'parejas']);
         $iJug = $find($hNorm, ['jugador', 'miembro', 'pos_pareja', 'jp', 'slot']);
+        /* Id del otro sistema en hoja resultados (no es id_usuario Mistorneos hasta homologar) */
         $iExtRes = -1;
+        $candidatosExt = ['usuario', 'id_externo', 'id_jugador_externo', 'cod_jugador', 'codigo', 'cod', 'externo'];
         foreach ($hNorm as $ri => $col) {
-            if ($col === 'usuario') {
+            if ($col === 'usuario' || $col === 'id_usuario_externo') {
                 $iExtRes = $ri;
                 break;
+            }
+            if (in_array($col, $candidatosExt, true)) {
+                $iExtRes = $ri;
+                break;
+            }
+        }
+        if ($iExtRes < 0) {
+            foreach ($hNorm as $ri => $col) {
+                if ($col !== '' && (str_contains((string)$col, 'usuario') || str_contains((string)$col, 'codigo') || $col === 'id')) {
+                    $iExtRes = $ri;
+                    break;
+                }
             }
         }
 
