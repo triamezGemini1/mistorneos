@@ -32,6 +32,9 @@ final class CargaMasivaEquiposSitioService
     {
         require_once __DIR__ . '/EquiposHelper.php';
         $ext = strtolower(pathinfo($originalName, PATHINFO_EXTENSION));
+        if ($ext === '' || $ext === 'tsv') {
+            $ext = 'txt';
+        }
         $rows = self::leerFilas($tmpPath, $ext);
         if ($rows === []) {
             return ['filas' => [], 'map' => [], 'bloques' => [], 'error' => 'Archivo vacío o ilegible.'];
@@ -114,7 +117,7 @@ final class CargaMasivaEquiposSitioService
         $nEq = (int)$stmt->fetchColumn();
 
         if (count($bloques) === 0) {
-            $bloquesSinR[] = 'No se encontró ningún bloque de equipo (fila con NAC=R, equipo y club).';
+            $bloquesSinR[] = 'No se encontró ningún bloque: use NAC=R + equipo + club, o fila con 0 en cédula y nombre del equipo en N1 (formato ADEAZ/TSV).';
         }
         $puede = $duplicadas === [] && $equiposIncompletos === [] && $bloquesSinR === [] && count($bloques) > 0;
 
@@ -212,7 +215,16 @@ final class CargaMasivaEquiposSitioService
                 $linea = $bloque['linea_inicio'];
                 $miembros = $bloque['miembros'];
 
-                $club_id = self::resolverClubId($pdo, $clubNombre, $orgNombre, $orgTorneo);
+                $club_id = (int)($bloque['club_id_directo'] ?? 0);
+                if ($club_id <= 0) {
+                    $club_id = self::resolverClubId($pdo, $clubNombre, $orgNombre, $orgTorneo);
+                } elseif ($club_id > 0) {
+                    $st = $pdo->prepare('SELECT id FROM clubes WHERE id = ? AND estatus = 1 LIMIT 1');
+                    $st->execute([$club_id]);
+                    if (!$st->fetchColumn()) {
+                        $club_id = self::resolverClubId($pdo, $clubNombre, $orgNombre, $orgTorneo);
+                    }
+                }
                 if ($club_id <= 0) {
                     $err++;
                     $detalles[] = ['equipo' => $nombreEquipo, 'ok' => false, 'message' => 'No se pudo resolver club.', 'linea_inicio' => $linea];
@@ -371,25 +383,39 @@ final class CargaMasivaEquiposSitioService
 
     private static function leerFilas(string $path, string $ext): array
     {
-        if ($ext === 'csv') {
-            $rows = [];
-            $fh = fopen($path, 'rb');
-            if ($fh === false) {
+        /** CSV / TXT / TSV: detectar tabulador (exportaciones tipo ADEAZ). */
+        if (in_array($ext, ['csv', 'txt'], true)) {
+            $raw = @file_get_contents($path);
+            if ($raw === false || $raw === '') {
                 return [];
             }
-            while (($line = fgetcsv($fh, 0, ',', '"', '\\')) !== false) {
-                $rows[] = array_map(static fn ($c) => (string)$c, $line);
+            if (strncmp($raw, "\xEF\xBB\xBF", 3) === 0) {
+                $raw = substr($raw, 3);
             }
-            fclose($fh);
-            if ($rows === [] || (count($rows) === 1 && trim(implode('', $rows[0])) === '')) {
-                $rows = [];
-                $fh = fopen($path, 'rb');
-                if ($fh !== false) {
-                    while (($line = fgetcsv($fh, 0, ';', '"', '\\')) !== false) {
-                        $rows[] = array_map(static fn ($c) => (string)$c, $line);
-                    }
-                    fclose($fh);
+            $lines = preg_split('/\r\n|\r|\n/', $raw);
+            $lines = array_values(array_filter($lines, static fn ($l) => trim((string)$l) !== ''));
+            if ($lines === []) {
+                return [];
+            }
+            $first = (string)$lines[0];
+            $tabCount = substr_count($first, "\t");
+            $semiCount = substr_count($first, ';');
+            $commaCount = substr_count($first, ',');
+            $delim = ',';
+            if ($tabCount >= 2) {
+                $delim = "\t";
+            } elseif ($semiCount >= 2 && $commaCount < 2) {
+                $delim = ';';
+            }
+            $rows = [];
+            foreach ($lines as $line) {
+                if ($delim === "\t") {
+                    $row = array_map('trim', explode("\t", $line));
+                } else {
+                    $row = str_getcsv($line, $delim, '"', '\\');
+                    $row = array_map(static fn ($c) => trim((string)$c), $row);
                 }
+                $rows[] = array_map(static fn ($c) => (string)$c, $row);
             }
             return $rows;
         }
@@ -417,16 +443,33 @@ final class CargaMasivaEquiposSitioService
     {
         $map = [];
         foreach ($header as $i => $h) {
-            $key = strtolower(trim(preg_replace('/\s+/', '_', (string)$h)));
-            if ($key !== '' && !isset($map[$key])) {
-                $map[$key] = $i;
+            $norm = strtolower(preg_replace('/[^a-z0-9]+/i', '_', trim((string)$h)));
+            $norm = trim($norm, '_');
+            if ($norm !== '' && !isset($map[$norm])) {
+                $map[$norm] = $i;
+            }
+            if (str_contains($norm, 'cedula') || $norm === 'cedula1') {
+                $map['cedula'] = $i;
+            }
+            if ($norm === 'n1' || str_contains($norm, 'nombre')) {
+                $map['n1'] = $i;
             }
         }
-        $defaults = ['nac' => 0, 'cedula' => 1, 'n1' => 3, 'sexo' => 5, 'fecha_nac' => 6, 'telefono' => 7, 'email' => 8, 'equipo' => 9, 'club' => 10, 'organizacion' => 11];
+        // Formato ancho (NAC, cedula col 1, N1 col 3…)
+        $wide = ['nac' => 0, 'cedula' => 1, 'n1' => 3, 'sexo' => 5, 'fecha_nac' => 6, 'telefono' => 7, 'email' => 8, 'equipo' => 9, 'club' => 10, 'organizacion' => 11];
+        // Formato ADEAZ/TSV: Cedula1, N1, sexo, fecha_nac, telefono, email, equipo, club, organizacion → índices 0..8
+        $tsv = ['cedula' => 0, 'n1' => 1, 'sexo' => 2, 'fecha_nac' => 3, 'telefono' => 4, 'email' => 5, 'equipo' => 6, 'club' => 7, 'organizacion' => 8];
+        $colCount = count($header);
+        $useTsv = $colCount >= 7 && $colCount <= 11
+            && (int)($map['cedula'] ?? 99) === 0 && (int)($map['n1'] ?? 99) === 1;
+        $defaults = $useTsv ? $tsv : $wide;
         foreach ($defaults as $k => $i) {
-            if (!isset($map[$k])) {
+            if (!isset($map[$k]) || $useTsv) {
                 $map[$k] = $i;
             }
+        }
+        if ($useTsv) {
+            $map['nac'] = 0;
         }
         return $map;
     }
@@ -436,32 +479,63 @@ final class CargaMasivaEquiposSitioService
         $bloques = [];
         $current = null;
         $lineNum = 2;
+        $idxCed = (int)($map['cedula'] ?? 0);
+        $idxN1 = (int)($map['n1'] ?? 1);
         foreach ($rows as $row) {
             $nac = strtoupper(trim(self::cel($row, $map['nac'] ?? 0)));
-            $equipo = trim(self::cel($row, $map['equipo'] ?? 9));
+            $equipoNom = trim(self::cel($row, $map['equipo'] ?? 9));
             $club = trim(self::cel($row, $map['club'] ?? 10));
             $org = trim(self::cel($row, $map['organizacion'] ?? 11));
-            if ($nac === 'R' && $equipo !== '' && $club !== '') {
+            $c0 = trim(self::cel($row, $idxCed));
+            $n1 = trim(self::cel($row, $idxN1));
+
+            // Formato clásico: NAC=R + nombre equipo + club
+            if ($nac === 'R' && $equipoNom !== '' && $club !== '') {
                 if ($current !== null) {
                     $bloques[] = $current;
                 }
                 $current = [
-                    'nombre_equipo' => $equipo,
+                    'nombre_equipo' => $equipoNom,
                     'club' => $club,
                     'organizacion' => $org,
+                    'club_id_directo' => 0,
                     'linea_inicio' => $lineNum,
                     'miembros' => [],
                 ];
-            } elseif ($current !== null && $nac !== 'R') {
-                $cedula = trim(self::cel($row, $map['cedula'] ?? 1));
-                if ($cedula !== '') {
+                $lineNum++;
+                continue;
+            }
+
+            // Formato ADEAZ: primera columna 0 = fila de equipo; N1 = nombre del equipo; club/org numéricos = ids
+            $esFilaEquipoCero = ($c0 === '0' && $n1 !== '' && !ctype_digit($n1));
+            if ($esFilaEquipoCero) {
+                if ($current !== null) {
+                    $bloques[] = $current;
+                }
+                $clubRaw = trim(self::cel($row, $map['club'] ?? 7));
+                $clubId = ctype_digit($clubRaw) ? (int)$clubRaw : 0;
+                $current = [
+                    'nombre_equipo' => $n1,
+                    'club' => $clubRaw,
+                    'organizacion' => trim(self::cel($row, $map['organizacion'] ?? 8)),
+                    'club_id_directo' => $clubId,
+                    'linea_inicio' => $lineNum,
+                    'miembros' => [],
+                ];
+                $lineNum++;
+                continue;
+            }
+
+            if ($current !== null) {
+                $cedula = $c0;
+                if ($cedula !== '' && $cedula !== '0' && $n1 !== '') {
                     $current['miembros'][] = [
                         'cedula' => $cedula,
-                        'n1' => trim(self::cel($row, $map['n1'] ?? 3)),
-                        'sexo' => trim(self::cel($row, $map['sexo'] ?? 5)),
-                        'fecha_nac' => trim(self::cel($row, $map['fecha_nac'] ?? 6)),
-                        'telefono' => trim(self::cel($row, $map['telefono'] ?? 7)),
-                        'email' => trim(self::cel($row, $map['email'] ?? 8)),
+                        'n1' => $n1,
+                        'sexo' => trim(self::cel($row, $map['sexo'] ?? 2)),
+                        'fecha_nac' => trim(self::cel($row, $map['fecha_nac'] ?? 3)),
+                        'telefono' => trim(self::cel($row, $map['telefono'] ?? 4)),
+                        'email' => trim(self::cel($row, $map['email'] ?? 5)),
                     ];
                 }
             }

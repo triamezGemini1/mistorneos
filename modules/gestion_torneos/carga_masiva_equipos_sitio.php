@@ -55,7 +55,7 @@ $frase = CargaMasivaEquiposSitioService::CONFIRMACION_REEMPLAZO;
             <div class="card-body">
                 <div class="form-group">
                     <label for="archivo">Archivo CSV o Excel</label>
-                    <input type="file" class="form-control-file" name="archivo" id="archivo" accept=".csv,.xlsx,.xls" required>
+                    <input type="file" class="form-control-file" name="archivo" id="archivo" accept=".csv,.txt,.xlsx,.xls" required>
                 </div>
                 <button type="button" id="btnValidar" class="btn btn-primary"><i class="fas fa-check-circle"></i> 1. Validar archivo</button>
                 <a href="<?= htmlspecialchars($base_url . $sep . 'action=inscribir_equipo_sitio&torneo_id=' . $torneo_id) ?>" class="btn btn-outline-secondary">Volver</a>
