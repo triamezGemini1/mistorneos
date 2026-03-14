@@ -1190,5 +1190,12 @@ async function confirmarCierreTorneo(event) {
             })
             .catch(function() { document.getElementById('importMasivaLoading').classList.add('d-none'); alert('Error de conexión'); });
     });
+
+    if (window.location.hash === '#importacion-masiva') {
+        var btnImp = document.getElementById('btnAbrirImportacionMasiva');
+        if (btnImp) {
+            setTimeout(function() { btnImp.click(); }, 300);
+        }
+    }
 })();
 </script>

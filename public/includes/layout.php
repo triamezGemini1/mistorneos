@@ -377,6 +377,14 @@ if ($from_url !== '') {
             <span class="nav-text">Torneos</span>
           </a>
         </li>
+        <?php if (($user['role'] ?? '') === 'admin_general'): ?>
+        <li class="mb-2">
+          <a href="<?= htmlspecialchars($dashboard_href('importacion_torneo_externo')) ?>" class="nav-link <?= $current_page === 'importacion_torneo_externo' ? 'active' : '' ?>">
+            <i class="fas fa-file-import me-3"></i>
+            <span class="nav-text">Importar torneo externo</span>
+          </a>
+        </li>
+        <?php endif; ?>
         <!-- Usuarios -->
         <li class="mb-2">
           <a href="<?= htmlspecialchars($dashboard_href('users')) ?>" class="nav-link <?= $current_page === 'users' ? 'active' : '' ?>">
