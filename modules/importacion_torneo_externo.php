@@ -118,44 +118,100 @@ $url_carga_equipos = 'index.php?page=torneo_gestion&action=carga_masiva_equipos_
 $url_plantilla_equipos = 'index.php?page=torneo_gestion&action=carga_masiva_equipos_plantilla&torneo_id=' . $torneo_id_sel;
 $url_import_individual = $url_panel . '#importacion-masiva';
 ?>
-<div class="container-fluid py-4" style="max-width:980px">
-    <h1 class="h3 mb-2"><i class="fas fa-file-import text-primary"></i> Carga datos torneo externo</h1>
-    <p class="text-muted small mb-2">Solo <strong>administrador general</strong>. Recapitulación del procedimiento:</p>
-
-    <div class="alert alert-warning border mb-4">
-        <h2 class="h6 text-dark mb-2"><i class="fas fa-exclamation-triangle me-1"></i> Procedimiento completo (obligatorio)</h2>
-        <p class="small mb-2">Siempre deben cumplirse los <strong>tres pasos</strong>. El <strong>id numérico que trae el archivo de resultados de la otra plataforma no es</strong> el <code>id</code> de <code>usuarios</code> en Mistorneos; <strong>no se usa para cargar</strong>. Solo sirven la <strong>cédula</strong> (o <strong>pareja + jugador</strong> alineado al archivo del paso 2) para obtener el <code>id_usuario</code> correcto.</p>
-        <ol class="mb-0 ps-3 small">
-            <li class="mb-2"><strong>Paso 1 — Torneo.</strong> Destino en <code>partiresul</code>; misma fecha de partida que el torneo.</li>
-            <li class="mb-2"><strong>Paso 2 — Tabla parejas / cédula.</strong> Homologación contra <code>usuarios</code> → <code>id_usuario</code>.</li>
-            <li class="mb-2"><strong>Paso 3 — Resultados por mesa.</strong> Misma lógica que el panel: <strong>por mesa</strong>, una fila por jugador con <strong>secuencia 1–4</strong> (asiento en la mesa), más partida/ronda y puntos. Tras sustituir cada jugador por su <code>id_usuario</code>, el INSERT en <code>partiresul</code> es el mismo que al registrar resultados en el panel (efectividad, zapato/chancleta, FF, etc.).</li>
-        </ol>
-        <p class="small mb-0 mt-2"><strong>Pasos 2 y 3 en una sola acción:</strong> suba los dos archivos juntos en el formulario de abajo.</p>
+<style>
+    .imp-paso-num { width:2.25rem; height:2.25rem; border-radius:50%; display:inline-flex; align-items:center; justify-content:center; font-weight:700; font-size:1.1rem; }
+    .imp-card-paso { border-left: 4px solid var(--bs-card-border-color); }
+    .imp-card-paso.paso-1 { border-left-color: #0d6efd; }
+    .imp-card-paso.paso-15 { border-left-color: #6c757d; }
+    .imp-card-paso.paso-2 { border-left-color: #198754; }
+    .imp-card-paso.paso-3 { border-left-color: #0dcaf0; }
+    .imp-card-paso.paso-4 { border-left-color: #198754; }
+    .imp-card-paso.paso-aux { border-left-color: #0dcaf0; }
+    .imp-seccion { background: #f8f9fa; border-radius: 8px; padding: .75rem 1rem; margin-bottom: .75rem; }
+    .imp-seccion h6 { font-size: .72rem; text-transform: uppercase; letter-spacing: .04em; color: #6c757d; margin-bottom: .35rem; }
+</style>
+<div class="container-fluid py-4" style="max-width:1040px">
+    <div class="card mb-4 shadow-sm border-0 bg-light">
+        <div class="card-body py-3">
+            <h1 class="h4 mb-1"><i class="fas fa-file-import text-primary me-2"></i>Carga de datos desde otra plataforma</h1>
+            <p class="text-muted small mb-0">Solo <strong>administrador general</strong>. Siga la secuencia en orden. Los pasos 2 y 3 se envían juntos en un solo formulario al final.</p>
+        </div>
     </div>
 
     <?php if (!empty($_SESSION['success'])): ?>
-        <div class="alert alert-success"><?= htmlspecialchars((string)$_SESSION['success']) ?></div>
+        <div class="alert alert-success shadow-sm"><?= htmlspecialchars((string)$_SESSION['success']) ?></div>
         <?php unset($_SESSION['success']); ?>
     <?php endif; ?>
     <?php if (!empty($_SESSION['error'])): ?>
-        <div class="alert alert-danger"><?= htmlspecialchars((string)$_SESSION['error']) ?></div>
+        <div class="alert alert-danger shadow-sm"><?= htmlspecialchars((string)$_SESSION['error']) ?></div>
         <?php unset($_SESSION['error']); ?>
     <?php endif; ?>
     <?php if (!empty($_SESSION['warning'])): ?>
-        <div class="alert alert-warning"><?= htmlspecialchars((string)$_SESSION['warning']) ?></div>
+        <div class="alert alert-warning shadow-sm"><?= htmlspecialchars((string)$_SESSION['warning']) ?></div>
         <?php unset($_SESSION['warning']); ?>
     <?php endif; ?>
 
-    <div class="card mb-4 shadow border-primary">
-        <div class="card-header bg-primary text-white fw-bold"><i class="fas fa-trophy me-2"></i>Paso 1 — Seleccionar torneo</div>
+    <!-- Tarjeta índice -->
+    <div class="card mb-4 shadow imp-card-paso paso-1">
+        <div class="card-header bg-white d-flex align-items-center gap-2 py-3">
+            <span class="imp-paso-num bg-primary text-white">0</span>
+            <div>
+                <span class="fw-bold">Secuencia del proceso</span>
+                <div class="small text-muted">Vista rápida antes de ejecutar cada paso</div>
+            </div>
+        </div>
+        <div class="card-body pt-0">
+            <div class="row g-2 small">
+                <div class="col-md-6 col-lg-4">
+                    <div class="border rounded p-2 h-100 bg-primary bg-opacity-10">
+                        <strong class="text-primary">Paso 1</strong> — Elegir torneo destino y fecha de partida.
+                    </div>
+                </div>
+                <div class="col-md-6 col-lg-4">
+                    <div class="border rounded p-2 h-100 bg-secondary bg-opacity-10">
+                        <strong class="text-secondary">(Opcional)</strong> — Inscribir jugadores/equipos si aún no están.
+                    </div>
+                </div>
+                <div class="col-md-6 col-lg-4">
+                    <div class="border rounded p-2 h-100 bg-success bg-opacity-10">
+                        <strong class="text-success">Pasos 2 + 3</strong> — Homologar (pareja/cédula) + resultados por mesa → <code>partiresul</code>.
+                    </div>
+                </div>
+            </div>
+            <div class="alert alert-warning small mb-0 mt-3">
+                <strong>Importante:</strong> el id numérico del export de la otra plataforma <strong>no</strong> es el <code>id_usuario</code> de Mistorneos; el sistema <strong>no lo usa</strong>. Hace falta <strong>cédula</strong> o <strong>pareja + jugador</strong> en el archivo de resultados para enlazar con el paso 2.
+            </div>
+        </div>
+    </div>
+
+    <!-- PASO 1 -->
+    <div class="card mb-4 shadow imp-card-paso paso-1">
+        <div class="card-header bg-primary text-white d-flex align-items-center gap-2 flex-wrap py-3">
+            <span class="imp-paso-num bg-white text-primary">1</span>
+            <div>
+                <span class="fw-bold">Paso 1 — Seleccionar torneo</span>
+                <div class="small opacity-90">Primero fije dónde se guardarán los resultados</div>
+            </div>
+        </div>
         <div class="card-body">
-            <p class="mb-2 small">Torneo ya creado; es el destino de <code>partiresul</code> y la fecha de partida tomada del torneo.</p>
-            <form method="get" action="index.php" class="row g-2 align-items-end">
+            <div class="imp-seccion">
+                <h6>Qué hace este paso</h6>
+                <p class="small mb-0">Asocia toda la carga al torneo que elija. Los registros van a <code>partiresul</code> con ese <code>id_torneo</code>. La <strong>fecha de partida</strong> de cada fila será la <strong>fecha del torneo</strong> en Mistorneos.</p>
+            </div>
+            <div class="imp-seccion">
+                <h6>Qué debe hacer usted</h6>
+                <ol class="small mb-0 ps-3">
+                    <li>El torneo debe existir ya (creado en gestión de torneos).</li>
+                    <li>Elija el torneo en la lista y pulse <strong>Aplicar</strong>.</li>
+                    <li>Solo después podrá subir los archivos de los pasos 2 y 3.</li>
+                </ol>
+            </div>
+            <form method="get" action="index.php" class="row g-2 align-items-end mt-2">
                 <input type="hidden" name="page" value="importacion_torneo_externo">
-                <div class="col-md-10">
-                    <label class="form-label">Torneo</label>
+                <div class="col-md-9">
+                    <label class="form-label fw-semibold">Torneo destino</label>
                     <select name="torneo_id" class="form-select" required>
-                        <option value="">— Elija un torneo —</option>
+                        <option value="">— Seleccione un torneo —</option>
                         <?php foreach ($torneos as $t): ?>
                             <option value="<?= (int)$t['id'] ?>" <?= $torneo_id_sel === (int)$t['id'] ? 'selected' : '' ?>>
                                 <?= htmlspecialchars($t['nombre'] . ' · ' . $t['fechator'] . ' · mod.' . (int)$t['modalidad']) ?>
@@ -163,81 +219,187 @@ $url_import_individual = $url_panel . '#importacion-masiva';
                         <?php endforeach; ?>
                     </select>
                 </div>
-                <div class="col-md-2">
-                    <button type="submit" class="btn btn-primary w-100"><i class="fas fa-check"></i> Aplicar</button>
+                <div class="col-md-3">
+                    <button type="submit" class="btn btn-primary w-100"><i class="fas fa-check me-1"></i> Aplicar paso 1</button>
                 </div>
             </form>
             <?php if ($torneo_actual): ?>
-                <div class="mt-3 p-3 bg-light rounded border">
-                    <strong>Torneo activo:</strong> <?= htmlspecialchars((string)$torneo_actual['nombre']) ?>
-                    <span class="badge bg-secondary ms-2"><?= htmlspecialchars($etiqueta_modalidad) ?></span>
-                    <div class="mt-2 small">
-                        <a href="<?= htmlspecialchars($url_panel) ?>" class="btn btn-sm btn-outline-secondary" target="_blank" rel="noopener"><i class="fas fa-external-link-alt"></i> Panel del torneo (registrar resultados manual)</a>
-                    </div>
+                <div class="mt-3 p-3 border border-success rounded bg-success bg-opacity-10">
+                    <div class="small text-success fw-bold mb-1"><i class="fas fa-check-circle me-1"></i> Paso 1 completado</div>
+                    <div><strong><?= htmlspecialchars((string)$torneo_actual['nombre']) ?></strong> <span class="badge bg-secondary"><?= htmlspecialchars($etiqueta_modalidad) ?></span></div>
+                    <a href="<?= htmlspecialchars($url_panel) ?>" class="btn btn-sm btn-outline-dark mt-2" target="_blank" rel="noopener"><i class="fas fa-external-link-alt me-1"></i> Abrir panel del torneo</a>
                 </div>
             <?php else: ?>
-                <p class="text-warning small mt-2 mb-0">Complete el paso 1 para habilitar pasos 2–3 e inscripciones masivas.</p>
+                <p class="text-warning small mt-3 mb-0"><i class="fas fa-hand-point-up me-1"></i> Debe completar el paso 1 para desbloquear el envío de archivos (pasos 2 y 3).</p>
             <?php endif; ?>
         </div>
     </div>
 
     <?php if ($torneo_actual): ?>
-    <div class="card mb-4 shadow-sm">
-        <div class="card-header bg-secondary text-white fw-bold"><i class="fas fa-users me-2"></i>Inscripciones (antes de resultados, si aplica)</div>
-        <div class="card-body small">
-            <p class="text-muted">Misma carga masiva que en el panel del torneo (no sustituye pasos 2–3 de resultados).</p>
+    <!-- OPCIONAL inscripciones -->
+    <div class="card mb-4 shadow imp-card-paso paso-15">
+        <div class="card-header bg-secondary text-white d-flex align-items-center gap-2 py-3">
+            <span class="imp-paso-num bg-white text-secondary">1b</span>
+            <div>
+                <span class="fw-bold">Opcional — Inscripciones antes de resultados</span>
+                <div class="small opacity-90">Solo si el torneo aún no tiene inscritos</div>
+            </div>
+        </div>
+        <div class="card-body">
+            <div class="imp-seccion">
+                <h6>Qué hace este paso</h6>
+                <p class="small mb-0">Es el mismo flujo que en el <strong>panel del torneo</strong>: carga masiva de equipos o importación masiva individual. No sustituye la homologación ni el archivo de resultados.</p>
+            </div>
+            <div class="imp-seccion">
+                <h6>Cuándo usarlo</h6>
+                <p class="small mb-0">Si los jugadores aún no están inscritos en este torneo, hágalo antes o después del paso 1, pero <strong>antes</strong> de depender de listados del panel (posiciones, etc.).</p>
+            </div>
             <?php if ($es_equipos): ?>
-                <a href="<?= htmlspecialchars($url_carga_equipos) ?>" class="btn btn-success btn-sm"><i class="fas fa-file-upload"></i> Carga masiva equipos</a>
-                <a href="<?= htmlspecialchars($url_plantilla_equipos) ?>" class="btn btn-outline-success btn-sm ms-1"><i class="fas fa-download"></i> Plantilla</a>
+                <a href="<?= htmlspecialchars($url_carga_equipos) ?>" class="btn btn-success"><i class="fas fa-file-upload me-1"></i> Carga masiva equipos</a>
+                <a href="<?= htmlspecialchars($url_plantilla_equipos) ?>" class="btn btn-outline-secondary ms-1"><i class="fas fa-download me-1"></i> Plantilla CSV</a>
             <?php else: ?>
-                <a href="<?= htmlspecialchars($url_import_individual) ?>" class="btn btn-success btn-sm"><i class="fas fa-file-csv"></i> Importación masiva (panel)</a>
+                <a href="<?= htmlspecialchars($url_import_individual) ?>" class="btn btn-success"><i class="fas fa-file-csv me-1"></i> Importación masiva (abre panel)</a>
             <?php endif; ?>
         </div>
     </div>
 
-    <div class="card mb-4 shadow-lg border-success">
-        <div class="card-header bg-success text-white fw-bold"><i class="fas fa-link me-2"></i>Pasos 2 + 3 — Homologar e ingresar a <code>partiresul</code> (única carga de resultados aquí)</div>
+    <!-- Indicaciones paso 2 (solo texto) -->
+    <div class="card mb-3 shadow imp-card-paso paso-2">
+        <div class="card-header bg-success bg-opacity-10 text-success border-success d-flex align-items-center gap-2 py-3">
+            <span class="imp-paso-num bg-success text-white">2</span>
+            <div>
+                <span class="fw-bold text-dark">Paso 2 — Archivo de homologación (parejas y cédulas)</span>
+                <div class="small text-muted">Lo subirá en el formulario del paso final junto al archivo de resultados</div>
+            </div>
+        </div>
         <div class="card-body">
-            <p class="small mb-2"><strong>Archivo paso 2:</strong> pareja + cédula → mapa a <code>id_usuario</code> (usuarios).</p>
-            <p class="small mb-2"><strong>Archivo paso 3:</strong> una fila por jugador en cada mesa: <code>partida</code> (ronda), <code>mesa</code>, <code>secuencia</code> (1–4 = orden en la mesa, igual que el panel), <code>resultado1</code>, <code>resultado2</code>. Cada fila debe poder resolverse con columna <strong>cédula</strong> o con <strong>pareja</strong> + <strong>jugador</strong> (1, 2… según el orden de ese jugador en el archivo paso 2). <em>Los ids del otro sistema en este archivo se ignoran.</em></p>
-            <div class="alert alert-danger small mb-3"><strong>Vaciar partiresul del torneo</strong> antes de insertar solo si rehace la carga completa.</div>
+            <div class="imp-seccion">
+                <h6>Qué hace el sistema con este archivo</h6>
+                <p class="small mb-0">Por cada fila lee la <strong>cédula</strong>, busca al usuario en Mistorneos (<code>usuarios</code>) y obtiene <code>id_usuario</code>. Agrupa por <strong>pareja</strong> para saber quién es el jugador 1, 2, … de cada pareja (orden de las filas en este archivo).</p>
+            </div>
+            <div class="imp-seccion">
+                <h6>Qué debe traer el archivo (primera fila = encabezados)</h6>
+                <ul class="small mb-0 ps-3">
+                    <li>Columna de <strong>cédula</strong> (nombre flexible: cédula, cedula1, ci, documento…).</li>
+                    <li>Columna de <strong>pareja</strong> (pareja, id_pareja…), misma clave que usará en el archivo de resultados si no lleva cédula por fila.</li>
+                    <li>Formato: Excel <code>.xlsx</code> o CSV.</li>
+                </ul>
+            </div>
+            <div class="imp-seccion border border-warning">
+                <h6 class="text-warning">Atención</h6>
+                <p class="small mb-0">Toda cédula debe existir en Mistorneos; si no, esa fila no tendrá <code>id_usuario</code> y fallará el enlace en el paso 3 para ese jugador.</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Indicaciones paso 3 -->
+    <div class="card mb-3 shadow imp-card-paso paso-3">
+        <div class="card-header bg-info bg-opacity-10 text-info border-info d-flex align-items-center gap-2 py-3">
+            <span class="imp-paso-num bg-info text-dark">3</span>
+            <div>
+                <span class="fw-bold text-dark">Paso 3 — Archivo de resultados (por mesa, como el panel)</span>
+                <div class="small text-muted">Export de la otra plataforma — se sube junto al paso 2</div>
+            </div>
+        </div>
+        <div class="card-body">
+            <div class="imp-seccion">
+                <h6>Qué hace el sistema</h6>
+                <p class="small mb-0">Cada fila = un jugador en una mesa y ronda. Sustituye la identidad del jugador por el <code>id_usuario</code> de Mistorneos (usando cédula o pareja+jugador del paso 2). Luego inserta en <code>partiresul</code> igual que al registrar resultados en el panel (mesa, secuencia 1–4, puntos, efectividad, zapato/chancleta, FF, etc.).</p>
+            </div>
+            <div class="imp-seccion">
+                <h6>Columnas obligatorias en el archivo de resultados</h6>
+                <ul class="small mb-0 ps-3">
+                    <li><code>partida</code> (o ronda)</li>
+                    <li><code>mesa</code></li>
+                    <li><code>secuencia</code> (1 a 4 = puesto en la mesa, igual que en el panel)</li>
+                    <li><code>resultado1</code>, <code>resultado2</code></li>
+                    <li>Y además, en <strong>cada fila</strong>: o bien <strong>cédula</strong>, o bien <strong>pareja</strong> + <strong>jugador</strong> (1 o 2… según el orden en el archivo del paso 2)</li>
+                </ul>
+            </div>
+            <div class="imp-seccion border border-danger bg-danger bg-opacity-10">
+                <h6 class="text-danger">No usar el id del otro sistema</h6>
+                <p class="small mb-0">Cualquier id numérico que venga del otro software <strong>no</strong> se utiliza para cargar. Solo cédula o pareja+jugador.</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Formulario ejecución 2+3 -->
+    <div class="card mb-4 shadow-lg imp-card-paso paso-4 border-success">
+        <div class="card-header bg-success text-white d-flex align-items-center gap-2 py-3">
+            <span class="imp-paso-num bg-white text-success"><i class="fas fa-play"></i></span>
+            <div>
+                <span class="fw-bold">Ejecutar pasos 2 y 3 — Subir archivos e ingresar a partiresul</span>
+                <div class="small opacity-90">Un solo envío: homologación + resultados</div>
+            </div>
+        </div>
+        <div class="card-body">
+            <div class="imp-seccion mb-3">
+                <h6>Secuencia al pulsar el botón</h6>
+                <ol class="small mb-0 ps-3">
+                    <li>Lee el archivo del <strong>paso 2</strong> y construye mapas cédula → usuario y pareja → lista de usuarios.</li>
+                    <li>Lee el archivo del <strong>paso 3</strong> y para cada fila asigna el <code>id_usuario</code> correcto.</li>
+                    <li>Si marcó vaciar, borra antes los resultados previos de este torneo en <code>partiresul</code>.</li>
+                    <li>Inserta cada fila con la misma lógica que el panel (por mesa y secuencia).</li>
+                </ol>
+            </div>
             <form method="post" enctype="multipart/form-data">
                 <input type="hidden" name="csrf_token" value="<?= htmlspecialchars(CSRF::token()) ?>">
                 <input type="hidden" name="accion" value="fase2_dual">
                 <input type="hidden" name="torneo_id" value="<?= (int)$torneo_id_sel ?>">
-                <div class="row g-2 mb-2">
+                <div class="row g-3 mb-3">
                     <div class="col-md-6">
-                        <label class="form-label fw-semibold">Paso 2 — Tabla parejas / cédula</label>
+                        <label class="form-label fw-bold"><span class="badge bg-success me-1">2</span> Archivo homologación (pareja + cédula)</label>
                         <input type="file" name="archivo_homologacion" class="form-control" accept=".xlsx,.csv,.txt" required>
+                        <div class="form-text">Mismo contenido descrito en la tarjeta del paso 2.</div>
                     </div>
                     <div class="col-md-6">
-                        <label class="form-label fw-semibold">Paso 3 — Tabla resultados (otra plataforma)</label>
+                        <label class="form-label fw-bold"><span class="badge bg-info text-dark me-1">3</span> Archivo resultados (mesa, secuencia, puntos)</label>
                         <input type="file" name="archivo_resultados" class="form-control" accept=".xlsx,.csv,.txt" required>
+                        <div class="form-text">Mismo contenido descrito en la tarjeta del paso 3.</div>
                     </div>
                 </div>
-                <div class="mb-2 form-check">
-                    <input type="checkbox" class="form-check-input" name="reemplazar_partiresul_dual" value="1" id="rep2">
-                    <label class="form-check-label" for="rep2">Vaciar <code>partiresul</code> de este torneo antes de importar</label>
+                <div class="card bg-light mb-3">
+                    <div class="card-body py-2">
+                        <div class="form-check">
+                            <input type="checkbox" class="form-check-input" name="reemplazar_partiresul_dual" value="1" id="rep2">
+                            <label class="form-check-label small" for="rep2"><strong>Vaciar partiresul</strong> de este torneo antes de importar (solo si va a recargar todo el histórico de resultados de una vez).</label>
+                        </div>
+                    </div>
                 </div>
-                <button type="submit" class="btn btn-success"><i class="fas fa-save"></i> Ejecutar pasos 2 y 3 → partiresul</button>
+                <button type="submit" class="btn btn-success btn-lg"><i class="fas fa-save me-2"></i>Ejecutar pasos 2 y 3 → guardar en partiresul</button>
             </form>
         </div>
     </div>
     <?php else: ?>
-    <div class="alert alert-secondary"><i class="fas fa-arrow-up"></i> Complete el <strong>paso 1</strong> para continuar.</div>
+    <div class="card mb-4 border-secondary imp-card-paso paso-15">
+        <div class="card-body text-center py-4 text-muted">
+            <i class="fas fa-lock fa-2x mb-2 d-block"></i>
+            <strong>Pasos 2 y 3 bloqueados</strong>
+            <p class="small mb-0">Complete primero el <strong>paso 1</strong> (seleccionar torneo y Aplicar) para ver las indicaciones y el formulario de archivos.</p>
+        </div>
+    </div>
     <?php endif; ?>
 
-    <div class="card mb-2 border-info">
-        <div class="card-header bg-info text-white py-2 small fw-bold">Auxiliar — Descargar CSV homologación (paso 2 solo para revisar)</div>
-        <div class="card-body py-2 small">
-            <p class="mb-2">Genera CSV con columna <code>id_usuario</code> sin subir resultados. Útil para auditoría; el flujo normal es <strong>Pasos 2+3 juntos</strong> arriba.</p>
-            <form method="post" enctype="multipart/form-data" class="d-flex flex-wrap gap-2 align-items-end">
+    <!-- Auxiliar -->
+    <div class="card mb-2 shadow-sm imp-card-paso paso-aux">
+        <div class="card-header bg-info text-white d-flex align-items-center gap-2 py-2">
+            <span class="imp-paso-num bg-white text-info small" style="width:1.75rem;height:1.75rem;font-size:.85rem;">A</span>
+            <span class="fw-bold">Auxiliar — Revisar homologación sin cargar resultados</span>
+        </div>
+        <div class="card-body">
+            <div class="imp-seccion">
+                <h6>Qué hace</h6>
+                <p class="small mb-0">Sube el mismo archivo del paso 2 y descarga un CSV con la columna <code>id_usuario</code> para revisar cédulas mal cargadas o usuarios faltantes, <strong>sin</strong> tocar <code>partiresul</code>.</p>
+            </div>
+            <form method="post" enctype="multipart/form-data" class="row g-2 align-items-end">
                 <input type="hidden" name="csrf_token" value="<?= htmlspecialchars(CSRF::token()) ?>">
                 <input type="hidden" name="accion" value="fase1">
-                <div class="flex-grow-1" style="min-width:200px">
-                    <input type="file" name="archivo" class="form-control form-control-sm" accept=".xlsx,.csv,.txt" required>
+                <div class="col-md-8">
+                    <input type="file" name="archivo" class="form-control" accept=".xlsx,.csv,.txt" required>
                 </div>
-                <button type="submit" class="btn btn-sm btn-info text-white">Descargar CSV</button>
+                <div class="col-md-4">
+                    <button type="submit" class="btn btn-info text-white w-100"><i class="fas fa-download me-1"></i> Descargar CSV revisión</button>
+                </div>
             </form>
         </div>
     </div>
