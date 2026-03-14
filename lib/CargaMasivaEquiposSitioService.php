@@ -591,11 +591,30 @@ final class CargaMasivaEquiposSitioService
             }
 
             if ($current !== null) {
+                $nacionalidad = 'V';
                 $cedula = $c0;
-                if ($cedula !== '' && $cedula !== '0' && $n1 !== '') {
+                $nombreJ = $n1;
+                $c1 = trim(self::cel($row, $idxCed + 1));
+                // Fila tipo Excel: col0 = V/E/J/P, col1 = número cédula, col2 = nombre
+                if (strlen($c0) === 1 && in_array(strtoupper($c0), ['V', 'E', 'J', 'P'], true)
+                    && preg_match('/^\d{6,12}$/', $c1)) {
+                    $nacionalidad = strtoupper($c0);
+                    $cedula = $c1;
+                    $nombreJ = trim(self::cel($row, $idxCed + 2));
                     $current['miembros'][] = [
                         'cedula' => $cedula,
-                        'n1' => $n1,
+                        'n1' => $nombreJ,
+                        'nacionalidad' => $nacionalidad,
+                        'sexo' => trim(self::cel($row, $idxCed + 4)),
+                        'fecha_nac' => trim(self::cel($row, $idxCed + 3)),
+                        'telefono' => trim(self::cel($row, $idxCed + 6)),
+                        'email' => trim(self::cel($row, $idxCed + 7)),
+                    ];
+                } elseif ($cedula !== '' && $cedula !== '0' && $nombreJ !== '' && preg_match('/\d/', $cedula)) {
+                    $current['miembros'][] = [
+                        'cedula' => $cedula,
+                        'n1' => $nombreJ,
+                        'nacionalidad' => $nacionalidad,
                         'sexo' => trim(self::cel($row, $map['sexo'] ?? 2)),
                         'fecha_nac' => trim(self::cel($row, $map['fecha_nac'] ?? 3)),
                         'telefono' => trim(self::cel($row, $map['telefono'] ?? 4)),
@@ -648,19 +667,23 @@ final class CargaMasivaEquiposSitioService
             $fechnac = '1990-01-01';
         }
         $hash = Security::hashPassword(bin2hex(random_bytes(8)));
+        $nacionalidad = strtoupper(substr(trim((string)($m['nacionalidad'] ?? '')), 0, 1));
+        if (!in_array($nacionalidad, ['V', 'E', 'J', 'P'], true)) {
+            $nacionalidad = 'V';
+        }
         try {
             $stmt = $pdo->prepare(
-                'INSERT INTO usuarios (nombre, cedula, sexo, fechnac, email, username, password_hash, role, club_id, entidad, status)
-                 VALUES (?, ?, ?, ?, ?, ?, ?, \'usuario\', ?, 0, \'approved\')'
+                'INSERT INTO usuarios (nombre, cedula, nacionalidad, sexo, fechnac, email, username, password_hash, role, club_id, entidad, status)
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, \'usuario\', ?, 0, \'approved\')'
             );
-            $stmt->execute([$nombre, $cedula, $sexo, $fechnac, $email, $username, $hash, $club_id]);
+            $stmt->execute([$nombre, $cedula, $nacionalidad, $sexo, $fechnac, $email, $username, $hash, $club_id]);
         } catch (Throwable $e) {
             try {
                 $stmt = $pdo->prepare(
-                    'INSERT INTO usuarios (nombre, cedula, sexo, fechnac, email, username, password_hash, role, club_id, entidad, status)
-                     VALUES (?, ?, ?, ?, ?, ?, ?, \'usuario\', ?, 0, 0)'
+                    'INSERT INTO usuarios (nombre, cedula, nacionalidad, sexo, fechnac, email, username, password_hash, role, club_id, entidad, status)
+                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, \'usuario\', ?, 0, 0)'
                 );
-                $stmt->execute([$nombre, $cedula, $sexo, $fechnac, $email, $username, $hash, $club_id]);
+                $stmt->execute([$nombre, $cedula, $nacionalidad, $sexo, $fechnac, $email, $username, $hash, $club_id]);
             } catch (Throwable $e2) {
                 $stmt = $pdo->prepare('SELECT id FROM usuarios WHERE cedula = ? LIMIT 1');
                 $stmt->execute([$cedula]);
