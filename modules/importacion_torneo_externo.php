@@ -13,13 +13,78 @@ Auth::requireRole(['admin_general']);
 
 require_once __DIR__ . '/../lib/ImportacionTorneoExternoService.php';
 
+/**
+ * @param array<string, mixed> $res
+ * @return array{icon: string, title: string, html: string}
+ */
+function importacionTorneoExternoSwalPayload(array $res, string $origen, string $splitError = ''): array
+{
+    $ins = (int)($res['insertados'] ?? 0);
+    $fh = (int)($res['filas_bloque_cedulas'] ?? $res['filas_hoja_homolog_raw'] ?? 0);
+    $fr = (int)($res['filas_bloque_resultados'] ?? $res['filas_hoja_resultados_raw'] ?? 0);
+    $map = (int)($res['mapeos_usuario_externo'] ?? 0);
+    $sinBd = (int)($res['homologacion_sin_usuario'] ?? 0);
+    $sinJug = (int)($res['resultados_sin_resolver'] ?? 0);
+    $listas = (int)($res['filas_listas_para_insertar'] ?? 0);
+    $ch = !empty($res['columna_usuario_homolog']);
+    $cr = !empty($res['columna_usuario_resultados']);
+    $errList = $res['errores'] ?? [];
+    $cedNo = $res['cedulas_no_encontradas'] ?? [];
+
+    $html = '<div class="text-start small" style="max-width:420px">';
+    $html .= '<table class="table table-sm table-bordered mb-2"><tbody>';
+    $html .= '<tr><td>Origen</td><td><strong>' . htmlspecialchars($origen) . '</strong></td></tr>';
+    if ($splitError !== '') {
+        $html .= '<tr class="table-danger"><td colspan="2">' . htmlspecialchars($splitError) . '</td></tr>';
+    }
+    $html .= '<tr><td>Filas bloque cédulas (datos)</td><td><strong>' . $fh . '</strong></td></tr>';
+    $html .= '<tr><td>Con usuario en Mistorneos (homolog.)</td><td><strong>' . (int)($res['cedulas_con_usuario_mistorneos'] ?? max(0, $fh - $sinBd)) . '</strong></td></tr>';
+    $html .= '<tr><td>Sin usuario en BD (cédula no encontrada)</td><td><strong>' . $sinBd . '</strong></td></tr>';
+    $html .= '<tr><td>Mapeos usuario externo → id</td><td><strong>' . $map . '</strong> ' . ($ch ? '(col. usuario en homolog.)' : '(sin col. usuario)') . '</td></tr>';
+    $html .= '<tr><td>Filas bloque resultados (datos)</td><td><strong>' . $fr . '</strong></td></tr>';
+    $html .= '<tr><td>Columna usuario en resultados</td><td>' . ($cr ? 'Sí' : 'No') . '</td></tr>';
+    $html .= '<tr><td>Filas que podían insertarse</td><td><strong>' . $listas . '</strong></td></tr>';
+    $html .= '<tr><td>Sin asignar jugador</td><td><strong>' . $sinJug . '</strong></td></tr>';
+    $html .= '<tr class="table-' . ($ins > 0 ? 'success' : 'warning') . '"><td><strong>Insertadas partiresul</strong></td><td><strong>' . $ins . '</strong></td></tr>';
+    $html .= '</tbody></table>';
+    if ($cedNo !== []) {
+        $html .= '<p class="mb-1"><strong>Cédulas sin usuario (muestra):</strong> ' . htmlspecialchars(implode(', ', array_slice($cedNo, 0, 12))) . '</p>';
+    }
+    if ($errList !== []) {
+        $html .= '<p class="text-danger mb-0"><strong>SQL / detalle:</strong> ' . htmlspecialchars(implode(' | ', array_slice($errList, 0, 3))) . '</p>';
+    }
+    if ($ins === 0 && $sinJug > 0 && $map === 0 && $ch) {
+        $html .= '<p class="text-warning mt-2 mb-0">El mapa usuario externo está vacío: ninguna fila de cédulas obtuvo id_usuario. Revise cédulas en BD y que la 1.ª fila del bloque tenga columnas <code>cédula</code> y <code>usuario</code>.</p>';
+    }
+    if ($ins === 0 && $sinJug > 0 && $map > 0) {
+        $html .= '<p class="text-warning mt-2 mb-0">Hay mapeos pero muchas filas sin jugador: los valores en columna <code>usuario</code> del bloque resultados deben coincidir exactamente con los del bloque cédulas (mismo número).</p>';
+    }
+    $html .= '</div>';
+
+    $icon = 'error';
+    $title = 'Error en la importación';
+    if ($splitError !== '') {
+        $title = 'No se pudo separar el archivo';
+    } elseif ($ins > 0) {
+        $icon = 'success';
+        $title = 'Importación completada';
+    } elseif (!empty($errList) && strpos((string)($errList[0] ?? ''), 'Faltan') !== false) {
+        $icon = 'error';
+    } else {
+        $icon = 'warning';
+        $title = '0 filas insertadas — revisar resumen';
+    }
+
+    return ['icon' => $icon, 'title' => $title, 'html' => $html];
+}
+
 $userId = (int)(Auth::id() ?: 0);
 $baseList = 'index.php?page=importacion_torneo_externo';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $csrf = (string)($_POST['csrf_token'] ?? '');
     if (!$csrf || !hash_equals($_SESSION['csrf_token'] ?? '', $csrf)) {
-        $_SESSION['error'] = 'Token CSRF inválido.';
+        $_SESSION['import_swal'] = ['icon' => 'error', 'title' => 'Sesión', 'html' => '<p>Token CSRF inválido. Recargue la página e intente de nuevo.</p>'];
         $tid = (int)($_POST['torneo_id'] ?? $_GET['torneo_id'] ?? 0);
         header('Location: ' . $baseList . ($tid > 0 ? '&torneo_id=' . $tid : ''));
         exit;
@@ -52,7 +117,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $torneo_id = (int)($_POST['torneo_id'] ?? 0);
         $reemplazar = !empty($_POST['reemplazar_partiresul_dual']);
         if ($torneo_id <= 0) {
-            $_SESSION['error'] = 'Debe elegir el torneo (paso 1).';
+            $_SESSION['import_swal'] = ['icon' => 'warning', 'title' => 'Paso 1', 'html' => '<p>Seleccione el torneo y pulse <strong>Aplicar</strong> antes de importar.</p>'];
             header('Location: ' . $baseList);
             exit;
         }
@@ -61,7 +126,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $st->execute([$torneo_id]);
         $torneo = $st->fetch(PDO::FETCH_ASSOC);
         if (!$torneo) {
-            $_SESSION['error'] = 'Torneo no encontrado.';
+            $_SESSION['import_swal'] = ['icon' => 'error', 'title' => 'Torneo', 'html' => '<p>Torneo no encontrado.</p>'];
             header('Location: ' . $baseList);
             exit;
         }
@@ -81,20 +146,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $pdo->prepare('DELETE FROM partiresul WHERE id_torneo = ?')->execute([$torneo_id]);
         }
         $res = ImportacionTorneoExternoService::importarDosArchivosPartiresul($pdo, $torneo_id, $userId, $fecha, $rowsH, $rowsR);
-        $msg = 'Carga por mesa/secuencia (como el panel): ' . $res['insertados'] . ' filas en partiresul.';
-        if ($res['homologacion_sin_usuario'] > 0) {
-            $msg .= ' En homologación, filas sin usuario en BD: ' . $res['homologacion_sin_usuario'] . '.';
-        }
-        if ($res['resultados_sin_resolver'] > 0) {
-            $msg .= ' Resultados sin poder asignar jugador: ' . $res['resultados_sin_resolver'] . '.';
-        }
-        if ($res['cedulas_no_encontradas'] !== []) {
-            $msg .= ' Cédulas sin usuario (muestra): ' . implode(', ', array_slice($res['cedulas_no_encontradas'], 0, 8)) . '.';
-        }
-        $_SESSION['success'] = $msg;
-        if ($res['errores'] !== []) {
-            $_SESSION['warning'] = implode(' ', array_slice($res['errores'], 0, 5));
-        }
+        $_SESSION['import_swal'] = importacionTorneoExternoSwalPayload($res, 'Dos archivos');
         header('Location: ' . $baseList . '&torneo_id=' . $torneo_id);
         exit;
     }
@@ -103,7 +155,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $torneo_id = (int)($_POST['torneo_id'] ?? 0);
         $reemplazar = !empty($_POST['reemplazar_unificado']);
         if ($torneo_id <= 0) {
-            $_SESSION['error'] = 'Debe elegir el torneo (paso 1).';
+            $_SESSION['import_swal'] = ['icon' => 'warning', 'title' => 'Paso 1', 'html' => '<p>Seleccione el torneo y pulse <strong>Aplicar</strong> antes de importar.</p>'];
             header('Location: ' . $baseList);
             exit;
         }
@@ -112,7 +164,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $st->execute([$torneo_id]);
         $torneo = $st->fetch(PDO::FETCH_ASSOC);
         if (!$torneo) {
-            $_SESSION['error'] = 'Torneo no encontrado.';
+            $_SESSION['import_swal'] = ['icon' => 'error', 'title' => 'Torneo', 'html' => '<p>Torneo no encontrado.</p>'];
             header('Location: ' . $baseList);
             exit;
         }
@@ -126,21 +178,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $pdo->prepare('DELETE FROM partiresul WHERE id_torneo = ?')->execute([$torneo_id]);
         }
         $res = ImportacionTorneoExternoService::importarUnSoloArchivoPartiresul($pdo, $torneo_id, $userId, $fecha, $tmp, $nom);
-        if (($res['split_error'] ?? '') !== '') {
-            $_SESSION['error'] = $res['split_error'];
-        } else {
-            $msg = 'Un solo archivo — partiresul: ' . $res['insertados'] . ' filas.';
-            if (($res['homologacion_sin_usuario'] ?? 0) > 0) {
-                $msg .= ' Homologación sin usuario BD: ' . $res['homologacion_sin_usuario'] . '.';
-            }
-            if (($res['resultados_sin_resolver'] ?? 0) > 0) {
-                $msg .= ' Filas sin asignar jugador: ' . $res['resultados_sin_resolver'] . '.';
-            }
-            $_SESSION['success'] = $msg;
-        }
-        if (($res['errores'] ?? []) !== []) {
-            $_SESSION['warning'] = implode(' ', array_slice($res['errores'], 0, 5));
-        }
+        $_SESSION['import_swal'] = importacionTorneoExternoSwalPayload($res, 'Un solo archivo', $res['split_error'] ?? '');
         header('Location: ' . $baseList . '&torneo_id=' . $torneo_id);
         exit;
     }
@@ -184,17 +222,30 @@ $url_import_individual = $url_panel . '#importacion-masiva';
         </div>
     </div>
 
-    <?php if (!empty($_SESSION['success'])): ?>
-        <div class="alert alert-success shadow-sm"><?= htmlspecialchars((string)$_SESSION['success']) ?></div>
-        <?php unset($_SESSION['success']); ?>
-    <?php endif; ?>
-    <?php if (!empty($_SESSION['error'])): ?>
-        <div class="alert alert-danger shadow-sm"><?= htmlspecialchars((string)$_SESSION['error']) ?></div>
-        <?php unset($_SESSION['error']); ?>
-    <?php endif; ?>
-    <?php if (!empty($_SESSION['warning'])): ?>
-        <div class="alert alert-warning shadow-sm"><?= htmlspecialchars((string)$_SESSION['warning']) ?></div>
-        <?php unset($_SESSION['warning']); ?>
+    <?php
+    $swalJson = null;
+    if (!empty($_SESSION['import_swal']) && is_array($_SESSION['import_swal'])) {
+        $swalJson = json_encode($_SESSION['import_swal'], JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_APOS);
+        unset($_SESSION['import_swal']);
+    }
+    ?>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <?php if ($swalJson): ?>
+    <script>
+    document.addEventListener('DOMContentLoaded', function() {
+        try {
+            var o = <?= $swalJson ?>;
+            Swal.fire({
+                icon: o.icon || 'info',
+                title: o.title || 'Mensaje',
+                html: o.html || '',
+                width: '32rem',
+                confirmButtonText: 'Aceptar',
+                confirmButtonColor: '#0d6efd'
+            });
+        } catch (e) { console.error(e); }
+    });
+    </script>
     <?php endif; ?>
 
     <!-- Tarjeta índice -->

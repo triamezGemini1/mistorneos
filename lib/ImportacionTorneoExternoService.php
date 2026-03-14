@@ -206,6 +206,11 @@ final class ImportacionTorneoExternoService
             'homologacion_sin_usuario' => 0,
             'resultados_sin_resolver' => 0,
             'cedulas_no_encontradas' => [],
+            'filas_bloque_cedulas' => max(0, count($rowsHomologacion) - 1),
+            'filas_bloque_resultados' => max(0, count($rowsResultados) - 1),
+            'mapeos_usuario_externo' => 0,
+            'columna_usuario_homolog' => false,
+            'columna_usuario_resultados' => false,
         ];
         if ($rowsHomologacion === [] || $rowsResultados === []) {
             $stats['errores'][] = 'Faltan filas en archivo de homologación o de resultados.';
@@ -215,7 +220,8 @@ final class ImportacionTorneoExternoService
         $enr = self::fase1Enriquecer($pdo, $rowsHomologacion);
         $filasHom = $enr['filas'];
         if (count($filasHom) < 2) {
-            $stats['errores'][] = 'Homologación sin datos.';
+            $stats['errores'][] = 'Homologación sin datos (después de leer cédulas). Revise la 1.ª hoja o bloque: fila títulos con columna cédula + usuario.';
+            $stats['filas_bloque_cedulas'] = max(0, count($rowsHomologacion) - 1);
             return $stats;
         }
         $hHom = $filasHom[0];
@@ -234,12 +240,16 @@ final class ImportacionTorneoExternoService
         $parejaToIds = [];
         /** @var array<string, int> usuario externo (otra plataforma) → id_usuario Mistorneos */
         $extUsuarioToId = [];
+        $filasHomologConId = 0;
         for ($i = 1; $i < count($filasHom); $i++) {
             $row = $filasHom[$i];
             while (count($row) < count($hHom)) {
                 $row[] = '';
             }
             $idU = (int)($row[$idxIdUsuarioHom] ?? 0);
+            if ($idU > 0) {
+                $filasHomologConId++;
+            }
             if ($mapHom['cedula'] >= 0) {
                 $ced = self::normalizarCedula($row[$mapHom['cedula']] ?? '');
                 if ($ced !== '' && $idU > 0) {
@@ -267,6 +277,10 @@ final class ImportacionTorneoExternoService
             }
         }
         $stats['cedulas_no_encontradas'] = $enr['no_encontradas'];
+        $stats['filas_bloque_cedulas'] = count($filasHom) - 1;
+        $stats['mapeos_usuario_externo'] = count($extUsuarioToId);
+        $stats['columna_usuario_homolog'] = $iExtHom >= 0;
+        $stats['cedulas_con_usuario_mistorneos'] = $filasHomologConId;
 
         $headerRes = $rowsResultados[0];
         $hNorm = array_map(static fn ($x) => strtolower(preg_replace('/[^a-z0-9]+/i', '_', trim((string)$x))), $headerRes);
@@ -300,8 +314,10 @@ final class ImportacionTorneoExternoService
 
         if ($iPart < 0 || $iMesa < 0 || $iSeq < 0 || $iR1 < 0 || $iR2 < 0) {
             $stats['errores'][] = 'Resultados: faltan partida, mesa, secuencia, r1/resultado1 o r2/resultado2.';
+            $stats['columna_usuario_resultados'] = $iExtRes >= 0;
             return $stats;
         }
+        $stats['columna_usuario_resultados'] = $iExtRes >= 0;
         $puedePorExt = $iExtRes >= 0 && $extUsuarioToId !== [];
         if ($iExtRes >= 0 && $extUsuarioToId === [] && $iExtHom < 0) {
             $stats['errores'][] = 'El archivo de resultados usa columna usuario (id del otro sistema). En el archivo de homologación debe haber las mismas columnas usuario + cédula por fila, para traducir a id_usuario de Mistorneos.';
@@ -361,6 +377,7 @@ final class ImportacionTorneoExternoService
         $resInsert = self::fase2InsertarPartiresul($pdo, $torneo_id, $registrado_por, $fechaTorneoYmd, $nuevasFilas);
         $stats['insertados'] = $resInsert['insertados'];
         $stats['errores'] = $resInsert['errores'];
+        $stats['filas_listas_para_insertar'] = max(0, count($nuevasFilas) - 1);
 
         return $stats;
     }
@@ -440,6 +457,8 @@ final class ImportacionTorneoExternoService
         [$hom, $res, $err] = self::dividirArchivoUnico($path, $originalName);
         $stats = self::importarDosArchivosPartiresul($pdo, $torneo_id, $registrado_por, $fechaTorneoYmd, $hom, $res);
         $stats['split_error'] = $err;
+        $stats['filas_hoja_homolog_raw'] = max(0, count($hom) - 1);
+        $stats['filas_hoja_resultados_raw'] = max(0, count($res) - 1);
         return $stats;
     }
 
