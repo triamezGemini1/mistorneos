@@ -185,6 +185,148 @@ final class ImportacionTorneoExternoService
         return ['insertados' => $insertados, 'errores' => $errores];
     }
 
+    /**
+     * Proceso expeditivo: archivo 1 = homologación (pareja + cédula → id_usuario);
+     * archivo 2 = resultados (partida, mesa, secuencia, resultado1, resultado2).
+     * Se unen en memoria: cada fila de resultados obtiene id_usuario vía cédula o vía (pareja + jugador).
+     *
+     * @return array{insertados: int, errores: list<string>, homologacion_sin_usuario: int, resultados_sin_resolver: int, cedulas_no_encontradas: list<string>}
+     */
+    public static function importarDosArchivosPartiresul(
+        PDO $pdo,
+        int $torneo_id,
+        int $registrado_por,
+        string $fechaTorneoYmd,
+        array $rowsHomologacion,
+        array $rowsResultados
+    ): array {
+        $stats = [
+            'insertados' => 0,
+            'errores' => [],
+            'homologacion_sin_usuario' => 0,
+            'resultados_sin_resolver' => 0,
+            'cedulas_no_encontradas' => [],
+        ];
+        if ($rowsHomologacion === [] || $rowsResultados === []) {
+            $stats['errores'][] = 'Faltan filas en archivo de homologación o de resultados.';
+            return $stats;
+        }
+
+        $enr = self::fase1Enriquecer($pdo, $rowsHomologacion);
+        $filasHom = $enr['filas'];
+        if (count($filasHom) < 2) {
+            $stats['errores'][] = 'Homologación sin datos.';
+            return $stats;
+        }
+        $hHom = $filasHom[0];
+        $mapHom = self::mapearIndices($hHom, ['pareja' => ['pareja', 'id_pareja', 'parejas'], 'cedula' => ['cedula', 'cedula1', 'ci', 'documento']]);
+        $idxIdUsuarioHom = count($hHom) - 1;
+
+        $cedulaToId = [];
+        $parejaToIds = [];
+        for ($i = 1; $i < count($filasHom); $i++) {
+            $row = $filasHom[$i];
+            while (count($row) < count($hHom)) {
+                $row[] = '';
+            }
+            $idU = (int)($row[$idxIdUsuarioHom] ?? 0);
+            if ($mapHom['cedula'] >= 0) {
+                $ced = self::normalizarCedula($row[$mapHom['cedula']] ?? '');
+                if ($ced !== '' && $idU > 0) {
+                    $cedulaToId[$ced] = $idU;
+                    $cedulaToId[preg_replace('/\D/', '', $ced)] = $idU;
+                }
+            }
+            if ($mapHom['pareja'] >= 0 && $idU > 0) {
+                $pkey = trim((string)($row[$mapHom['pareja']] ?? ''));
+                if ($pkey !== '') {
+                    $parejaToIds[$pkey][] = $idU;
+                }
+            }
+            if ($idU <= 0 && $mapHom['cedula'] >= 0 && trim((string)($row[$mapHom['cedula']] ?? '')) !== '') {
+                $stats['homologacion_sin_usuario']++;
+            }
+        }
+        $stats['cedulas_no_encontradas'] = $enr['no_encontradas'];
+
+        $headerRes = $rowsResultados[0];
+        $hNorm = array_map(static fn ($x) => strtolower(preg_replace('/[^a-z0-9]+/i', '_', trim((string)$x))), $headerRes);
+        $find = static function (array $h, array $names): int {
+            foreach ($names as $n) {
+                $n = strtolower($n);
+                foreach ($h as $i => $col) {
+                    if (str_contains((string)$col, $n) || $col === $n) {
+                        return $i;
+                    }
+                }
+            }
+            return -1;
+        };
+        $iPart = $find($hNorm, ['partida', 'ronda']);
+        $iMesa = $find($hNorm, ['mesa']);
+        $iSeq = $find($hNorm, ['secuencia', 'seq']);
+        $iR1 = $find($hNorm, ['resultado1', 'r1', 'pts1']);
+        $iR2 = $find($hNorm, ['resultado2', 'r2', 'pts2']);
+        $iFf = $find($hNorm, ['ff', 'forfait']);
+        $iUsr = $find($hNorm, ['id_usuario', 'idusuario']);
+        $iCed = $find($hNorm, ['cedula', 'cedula1', 'ci', 'documento']);
+        $iPareja = $find($hNorm, ['pareja', 'id_pareja', 'parejas']);
+        $iJug = $find($hNorm, ['jugador', 'miembro', 'pos_pareja', 'jp', 'slot']);
+
+        if ($iPart < 0 || $iMesa < 0 || $iSeq < 0 || $iR1 < 0 || $iR2 < 0) {
+            $stats['errores'][] = 'Resultados: faltan partida, mesa, secuencia, resultado1 o resultado2.';
+            return $stats;
+        }
+
+        $stmtU = $pdo->prepare('SELECT id FROM usuarios WHERE cedula = ? OR cedula = ? LIMIT 1');
+        $nuevasFilas = [];
+        $nuevasFilas[] = ['partida', 'mesa', 'secuencia', 'id_usuario', 'resultado1', 'resultado2', 'ff'];
+
+        for ($r = 1; $r < count($rowsResultados); $r++) {
+            $row = $rowsResultados[$r];
+            $idUsuario = $iUsr >= 0 ? (int)($row[$iUsr] ?? 0) : 0;
+            if ($idUsuario <= 0 && $iCed >= 0) {
+                $ced = self::normalizarCedula($row[$iCed] ?? '');
+                if ($ced !== '') {
+                    $idUsuario = (int)($cedulaToId[$ced] ?? $cedulaToId[preg_replace('/\D/', '', $ced)] ?? 0);
+                    if ($idUsuario <= 0) {
+                        $stmtU->execute([$ced, preg_replace('/\D/', '', $ced)]);
+                        $idUsuario = (int)($stmtU->fetchColumn() ?: 0);
+                    }
+                }
+            }
+            if ($idUsuario <= 0 && $iPareja >= 0) {
+                $pkey = trim((string)($row[$iPareja] ?? ''));
+                $j = $iJug >= 0 ? max(1, (int)($row[$iJug] ?? 1)) : 1;
+                if ($pkey !== '' && isset($parejaToIds[$pkey][$j - 1])) {
+                    $idUsuario = (int)$parejaToIds[$pkey][$j - 1];
+                } elseif ($pkey !== '' && $iJug < 0 && isset($parejaToIds[$pkey][0])) {
+                    $idUsuario = (int)$parejaToIds[$pkey][0];
+                }
+            }
+            if ($idUsuario <= 0) {
+                $stats['resultados_sin_resolver']++;
+                continue;
+            }
+            $ff = ($iFf >= 0 && (int)($row[$iFf] ?? 0) === 1) ? 1 : 0;
+            $nuevasFilas[] = [
+                (string)(int)($row[$iPart] ?? 0),
+                (string)(int)($row[$iMesa] ?? 0),
+                (string)(int)($row[$iSeq] ?? 0),
+                (string)$idUsuario,
+                (string)(int)($row[$iR1] ?? 0),
+                (string)(int)($row[$iR2] ?? 0),
+                (string)$ff,
+            ];
+        }
+
+        $resInsert = self::fase2InsertarPartiresul($pdo, $torneo_id, $registrado_por, $fechaTorneoYmd, $nuevasFilas);
+        $stats['insertados'] = $resInsert['insertados'];
+        $stats['errores'] = $resInsert['errores'];
+
+        return $stats;
+    }
+
     private static function normalizarCedula(string $c): string
     {
         return trim(preg_replace('/\s+/', '', $c));
