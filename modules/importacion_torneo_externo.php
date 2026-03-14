@@ -280,8 +280,9 @@ $url_import_individual = $url_panel . '#importacion-masiva';
             <div class="imp-seccion">
                 <h6>Qué debe traer el archivo (primera fila = encabezados)</h6>
                 <ul class="small mb-0 ps-3">
-                    <li>Columna de <strong>cédula</strong> (nombre flexible: cédula, cedula1, ci, documento…).</li>
-                    <li>Columna de <strong>pareja</strong> (pareja, id_pareja…), misma clave que usará en el archivo de resultados si no lleva cédula por fila.</li>
+                    <li><strong>Cédula</strong> (cédula, cedula1, ci, documento…) — obligatoria para resolver <code>id_usuario</code> en Mistorneos.</li>
+                    <li>Si el Excel de <strong>resultados</strong> trae columna <code>usuario</code> (77, 81… = id del otro sistema), en homologación una fila por jugador con las columnas <strong>usuario</strong> (mismo número) y <strong>cédula</strong>.</li>
+                    <li>Opcional: <strong>pareja</strong> si en resultados usa pareja+jugador en vez de usuario/cédula.</li>
                     <li>Formato: Excel <code>.xlsx</code> o CSV.</li>
                 </ul>
             </div>
@@ -313,12 +314,12 @@ $url_import_individual = $url_panel . '#importacion-masiva';
                     <li><code>mesa</code></li>
                     <li><code>secuencia</code> (1 a 4 = puesto en la mesa, igual que en el panel)</li>
                     <li><code>resultado1</code>, <code>resultado2</code></li>
-                    <li>Y además, en <strong>cada fila</strong>: o bien <strong>cédula</strong>, o bien <strong>pareja</strong> + <strong>jugador</strong> (1 o 2… según el orden en el archivo del paso 2)</li>
+                    <li>Identificación del jugador en cada fila: columna <strong>usuario</strong> (id del otro sistema) si en paso 2 tiene el mismo código + cédula; o <strong>cédula</strong>; o <strong>pareja</strong> + <strong>jugador</strong></li>
                 </ul>
             </div>
-            <div class="imp-seccion border border-danger bg-danger bg-opacity-10">
-                <h6 class="text-danger">No usar el id del otro sistema</h6>
-                <p class="small mb-0">Cualquier id numérico que venga del otro software <strong>no</strong> se utiliza para cargar. Solo cédula o pareja+jugador.</p>
+            <div class="imp-seccion border border-success bg-success bg-opacity-10">
+                <h6 class="text-success">Columna usuario en resultados</h6>
+                <p class="small mb-0">Ese número <strong>no</strong> es el id de Mistorneos. Se traduce con el archivo de homologación: misma columna <code>usuario</code> + <code>cédula</code> por fila → el sistema guarda el <code>id_usuario</code> correcto.</p>
             </div>
         </div>
     </div>

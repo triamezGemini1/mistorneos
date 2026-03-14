@@ -186,10 +186,9 @@ final class ImportacionTorneoExternoService
     }
 
     /**
-     * Procedimiento obligatorio en dos archivos (no usar id numérico del export de resultados: no es id de usuarios).
-     * Archivo 1: pareja + cédula → id_usuario (usuarios). Archivo 2: una fila por jugador en mesa (partida, mesa,
-     * secuencia 1–4 como en el panel, resultado1/2). Cada fila de resultados se resuelve solo por cédula o (pareja+jugador)
-     * contra el mapa del archivo 1; nunca se toma id_usuario/id del Excel de resultados.
+     * Dos archivos. Archivo 1: cédula → id_usuario (usuarios); opcional pareja; opcional columna usuario (id del otro
+     * sistema) para mapear resultado.usuario → id_usuario. Archivo 2: partida, mesa, secuencia, r1/r2, usuario (externo)
+     * o cédula o pareja+jugador. El valor "usuario" del export NO es id de Mistorneos: se traduce con el archivo 1.
      *
      * @return array{insertados: int, errores: list<string>, homologacion_sin_usuario: int, resultados_sin_resolver: int, cedulas_no_encontradas: list<string>}
      */
@@ -222,9 +221,19 @@ final class ImportacionTorneoExternoService
         $hHom = $filasHom[0];
         $mapHom = self::mapearIndices($hHom, ['pareja' => ['pareja', 'id_pareja', 'parejas'], 'cedula' => ['cedula', 'cedula1', 'ci', 'documento']]);
         $idxIdUsuarioHom = count($hHom) - 1;
+        $hNormHom = array_map(static fn ($x) => strtolower(preg_replace('/[^a-z0-9]+/i', '_', trim((string)$x))), $hHom);
+        $iExtHom = -1;
+        foreach ($hNormHom as $hi => $col) {
+            if ($col === 'usuario' || $col === 'id_externo' || $col === 'cod_jugador' || $col === 'id_jugador') {
+                $iExtHom = $hi;
+                break;
+            }
+        }
 
         $cedulaToId = [];
         $parejaToIds = [];
+        /** @var array<string, int> usuario externo (otra plataforma) → id_usuario Mistorneos */
+        $extUsuarioToId = [];
         for ($i = 1; $i < count($filasHom); $i++) {
             $row = $filasHom[$i];
             while (count($row) < count($hHom)) {
@@ -236,6 +245,15 @@ final class ImportacionTorneoExternoService
                 if ($ced !== '' && $idU > 0) {
                     $cedulaToId[$ced] = $idU;
                     $cedulaToId[preg_replace('/\D/', '', $ced)] = $idU;
+                }
+            }
+            if ($iExtHom >= 0 && $idU > 0) {
+                $extKey = trim((string)($row[$iExtHom] ?? ''));
+                if ($extKey !== '') {
+                    $extUsuarioToId[$extKey] = $idU;
+                    if (is_numeric($extKey)) {
+                        $extUsuarioToId[(string)(int)$extKey] = $idU;
+                    }
                 }
             }
             if ($mapHom['pareja'] >= 0 && $idU > 0) {
@@ -272,13 +290,25 @@ final class ImportacionTorneoExternoService
         $iCed = $find($hNorm, ['cedula', 'cedula1', 'ci', 'documento']);
         $iPareja = $find($hNorm, ['pareja', 'id_pareja', 'parejas']);
         $iJug = $find($hNorm, ['jugador', 'miembro', 'pos_pareja', 'jp', 'slot']);
+        $iExtRes = -1;
+        foreach ($hNorm as $ri => $col) {
+            if ($col === 'usuario') {
+                $iExtRes = $ri;
+                break;
+            }
+        }
 
         if ($iPart < 0 || $iMesa < 0 || $iSeq < 0 || $iR1 < 0 || $iR2 < 0) {
-            $stats['errores'][] = 'Resultados: faltan partida, mesa, secuencia, resultado1 o resultado2 (misma lógica que el panel: por mesa y secuencia de jugador en la mesa).';
+            $stats['errores'][] = 'Resultados: faltan partida, mesa, secuencia, r1/resultado1 o r2/resultado2.';
             return $stats;
         }
-        if ($iCed < 0 && ($iPareja < 0 || $iJug < 0)) {
-            $stats['errores'][] = 'En resultados debe existir columna cédula, o columnas pareja + jugador (1,2… según orden en archivo homologación). El id numérico del otro sistema no es id_usuario y no se usa.';
+        $puedePorExt = $iExtRes >= 0 && $extUsuarioToId !== [];
+        if ($iExtRes >= 0 && $extUsuarioToId === [] && $iExtHom < 0) {
+            $stats['errores'][] = 'El archivo de resultados usa columna usuario (id del otro sistema). En el archivo de homologación debe haber las mismas columnas usuario + cédula por fila, para traducir a id_usuario de Mistorneos.';
+            return $stats;
+        }
+        if ($iCed < 0 && ($iPareja < 0 || $iJug < 0) && !$puedePorExt) {
+            $stats['errores'][] = 'En resultados: columna usuario (con homologación usuario+cédula), o cédula, o pareja+jugador.';
             return $stats;
         }
 
@@ -289,7 +319,13 @@ final class ImportacionTorneoExternoService
         for ($r = 1; $r < count($rowsResultados); $r++) {
             $row = $rowsResultados[$r];
             $idUsuario = 0;
-            if ($iCed >= 0) {
+            if ($iExtRes >= 0 && $extUsuarioToId !== []) {
+                $uk = trim((string)($row[$iExtRes] ?? ''));
+                if ($uk !== '') {
+                    $idUsuario = (int)($extUsuarioToId[$uk] ?? $extUsuarioToId[(string)(int)$uk] ?? 0);
+                }
+            }
+            if ($idUsuario <= 0 && $iCed >= 0) {
                 $ced = self::normalizarCedula($row[$iCed] ?? '');
                 if ($ced !== '') {
                     $idUsuario = (int)($cedulaToId[$ced] ?? $cedulaToId[preg_replace('/\D/', '', $ced)] ?? 0);
