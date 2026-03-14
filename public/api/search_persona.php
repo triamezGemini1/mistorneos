@@ -56,17 +56,50 @@ if ($cedula === '') {
 try {
     $pdo = DB::pdo();
 
-    // ─── BLOQUE 1: INSCRITO. Si está inscrito → una sola acción: ya_inscrito (mensaje; front limpia y foco nacionalidad). ───
+    // ─── BLOQUE 1: INSCRITO. Si está inscrito → ya_inscrito.
+    // 1a) Por torneo_id + nacionalidad + cédula (réplica en inscritos).
+    // 1b) Si no hay fila: muchas inscripciones tienen cedula vacía en inscritos; entonces por id_usuario
+    //     resuelto desde usuarios (mismas variantes que BLOQUE USUARIO).
     if ($torneo_id > 0) {
         error_log("search_persona.php - BLOQUE INSCRITO: Buscando en inscritos (torneo_id=" . $torneo_id . ", nac=" . $nacionalidad . ", cedula=" . $cedula . ")");
         try {
+            $row = null;
             $stmt = $pdo->prepare("
                 SELECT id FROM inscritos
                 WHERE torneo_id = ? AND nacionalidad = ? AND cedula = ?
                 LIMIT 1
             ");
             $stmt->execute([$torneo_id, $nacionalidad, $cedula]);
-            $row = $stmt->fetch();
+            $row = $stmt->fetch(PDO::FETCH_ASSOC);
+            if (!$row && $cedula !== '') {
+                $stmt2 = $pdo->prepare("
+                    SELECT id FROM inscritos
+                    WHERE torneo_id = ? AND cedula = ?
+                    LIMIT 1
+                ");
+                $stmt2->execute([$torneo_id, $cedula]);
+                $row = $stmt2->fetch(PDO::FETCH_ASSOC);
+            }
+            if (!$row) {
+                $variantes = array_unique([$cedula, $nacionalidad . $cedula]);
+                foreach ($variantes as $c) {
+                    if ($c === '') {
+                        continue;
+                    }
+                    $stmtU = $pdo->prepare('SELECT id FROM usuarios WHERE cedula = ? LIMIT 1');
+                    $stmtU->execute([$c]);
+                    $uid = (int) ($stmtU->fetchColumn() ?: 0);
+                    if ($uid > 0) {
+                        $stmtI = $pdo->prepare('SELECT id FROM inscritos WHERE torneo_id = ? AND id_usuario = ? LIMIT 1');
+                        $stmtI->execute([$torneo_id, $uid]);
+                        $row = $stmtI->fetch(PDO::FETCH_ASSOC);
+                        if ($row) {
+                            error_log("search_persona.php - BLOQUE INSCRITO: YA_INSCRITO por id_usuario=" . $uid . " (inscritos.cedula puede estar vacía)");
+                            break;
+                        }
+                    }
+                }
+            }
             if ($row) {
                 error_log("search_persona.php - BLOQUE INSCRITO: YA_INSCRITO (id=" . ($row['id'] ?? '') . ")");
                 echo json_encode([
