@@ -191,17 +191,62 @@ if ($tipo === 'clubes_resumido') {
 echo '</body></html>';
 $html = ob_get_clean();
 
-if (!class_exists(\Dompdf\Dompdf::class)) {
-    require_once __DIR__ . '/../../vendor/autoload.php';
+$baseName = 'resultados_' . $tipo . '_' . preg_replace('/[^a-zA-Z0-9_-]/', '_', $torneo['nombre'] ?? 't') . '_' . date('Y-m-d');
+$autoload = __DIR__ . '/../../vendor/autoload.php';
+$dompdfOk = file_exists($autoload) && is_readable($autoload);
+
+if ($dompdfOk) {
+    try {
+        if (!class_exists(\Dompdf\Dompdf::class, false)) {
+            require_once $autoload;
+        }
+        if (!class_exists(\Dompdf\Dompdf::class, false)) {
+            $dompdfOk = false;
+        }
+    } catch (Throwable $e) {
+        $dompdfOk = false;
+        if (function_exists('error_log')) {
+            error_log('[resultados_export_pdf] autoload: ' . $e->getMessage());
+        }
+    }
 }
-$options = new \Dompdf\Options();
-$options->set('isRemoteEnabled', false);
-$options->set('isHtml5ParserEnabled', true);
-$options->set('defaultFont', 'DejaVu Sans');
-$dompdf = new \Dompdf\Dompdf($options);
-$dompdf->loadHtml($html);
-$dompdf->setPaper('letter', 'portrait');
-$dompdf->render();
-$fname = 'resultados_' . $tipo . '_' . preg_replace('/[^a-zA-Z0-9_-]/', '_', $torneo['nombre'] ?? 't') . '_' . date('Y-m-d') . '.pdf';
-$dompdf->stream($fname, ['Attachment' => true]);
+
+if ($dompdfOk) {
+    try {
+        @ini_set('memory_limit', '256M');
+        @set_time_limit(120);
+        $options = new \Dompdf\Options();
+        $options->set('isRemoteEnabled', false);
+        $options->set('isHtml5ParserEnabled', true);
+        $options->set('defaultFont', 'DejaVu Sans');
+        $options->set('chroot', realpath(__DIR__ . '/../../') ?: __DIR__ . '/../../');
+        $dompdf = new \Dompdf\Dompdf($options);
+        $dompdf->loadHtml($html, 'UTF-8');
+        $dompdf->setPaper('letter', 'portrait');
+        $dompdf->render();
+        while (ob_get_level()) {
+            ob_end_clean();
+        }
+        $dompdf->stream($baseName . '.pdf', ['Attachment' => true]);
+        exit;
+    } catch (Throwable $e) {
+        if (function_exists('error_log')) {
+            error_log('[resultados_export_pdf] Dompdf: ' . $e->getMessage() . ' @ ' . $e->getFile() . ':' . $e->getLine());
+        }
+        $dompdfOk = false;
+    }
+}
+
+// Fallback: HTML listo para imprimir (evita HTTP 500 si falta vendor o Dompdf falla en el servidor)
+while (ob_get_level()) {
+    ob_end_clean();
+}
+header('Content-Type: text/html; charset=UTF-8');
+header('Content-Disposition: attachment; filename="' . $baseName . '_imprimir.html"');
+echo '<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"><title>' . htmlspecialchars($baseName, ENT_QUOTES, 'UTF-8') . '</title>';
+echo '<style>@page{size:letter portrait;margin:12mm}body{font-family:system-ui,sans-serif;padding:12px}</style></head><body>';
+echo '<p style="background:#fff3cd;padding:10px;border:1px solid #856404"><strong>PDF no generado en el servidor</strong> (falta <code>vendor/</code> o error al renderizar). ';
+echo 'Abra este archivo y use <strong>Imprimir → Guardar como PDF</strong> en el navegador, o ejecute en el servidor: <code>composer install</code>.</p>';
+echo $html;
+echo '</body></html>';
 exit;
