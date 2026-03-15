@@ -111,6 +111,7 @@
                         <small class="text-muted"><?php echo $inscritos_confirmados; ?> confirmados</small>
                     </div>
                     <?php if ($isLocked): ?>
+                        <!-- Torneo finalizado: inscripciones cerradas -->
                         <button type="button" class="btn btn-sm btn-secondary w-100" disabled>
                             <i class="fas fa-lock mr-1"></i> Gestionar Inscripciones (Cerrado)
                         </button>

@@ -158,6 +158,10 @@ try {
                 echo json_encode(['success' => false, 'error' => 'No se pudo crear el usuario']);
                 exit;
             }
+            $stmt = $pdo->prepare("SELECT modalidad FROM tournaments WHERE id = ?");
+            $stmt->execute([$torneo_id]);
+            $modalidad = (int)($stmt->fetchColumn() ?? 0);
+            $codigo_equipo = InscritosHelper::codigoEquipoParaInscripcionSitioIndividual($pdo, $torneo_id, $id_club, $modalidad);
             $id_inscrito = InscritosHelper::insertarInscrito($pdo, [
                 'id_usuario' => $id_usuario,
                 'torneo_id' => $torneo_id,
@@ -166,7 +170,8 @@ try {
                 'inscrito_por' => Auth::id(),
                 'numero' => 0,
                 'nacionalidad' => $nacionalidad,
-                'cedula' => $cedula
+                'cedula' => $cedula,
+                'codigo_equipo' => $codigo_equipo
             ]);
             UserActivationHelper::activateUser($pdo, $id_usuario);
             $pdo->commit();
@@ -274,6 +279,10 @@ try {
         $nac_inscrito = isset($usuario_datos['nacionalidad']) && in_array(strtoupper(trim($usuario_datos['nacionalidad'])), ['V', 'E', 'J', 'P'], true)
             ? strtoupper(trim($usuario_datos['nacionalidad'])) : 'V';
         $ced_inscrito = isset($usuario_datos['cedula']) ? preg_replace('/\D/', '', (string)$usuario_datos['cedula']) : '';
+        $stmt = $pdo->prepare("SELECT modalidad FROM tournaments WHERE id = ?");
+        $stmt->execute([$torneo_id]);
+        $modalidad = (int)($stmt->fetchColumn() ?? 0);
+        $codigo_equipo = InscritosHelper::codigoEquipoParaInscripcionSitioIndividual($pdo, $torneo_id, $id_club, $modalidad);
         try {
             $id_inscrito = InscritosHelper::insertarInscrito($pdo, [
                 'id_usuario' => $id_usuario,
@@ -283,7 +292,8 @@ try {
                 'inscrito_por' => Auth::id(),
                 'numero' => 0,
                 'nacionalidad' => $nac_inscrito,
-                'cedula' => $ced_inscrito
+                'cedula' => $ced_inscrito,
+                'codigo_equipo' => $codigo_equipo
             ]);
             UserActivationHelper::activateUser($pdo, $id_usuario);
             echo json_encode(['success' => true, 'message' => 'Jugador inscrito exitosamente', 'id' => $id_inscrito]);

@@ -1098,17 +1098,13 @@ if (isset($_GET['ajax']) && $_GET['ajax'] === 'deuda') {
                                     </td>
                                     <td class="text-center">
                                         <?php
-                                        // Confirmar / Retirar (mientras el torneo no esté cerrado)
-                                        if (!empty($torneo_cerrado_reg)) {
-                                            $puede_confirmar_retirar = false;
-                                        } else {
-                                            $puede_confirmar_retirar = true;
-                                        }
+                                        // Confirmar: solo si el torneo no está cerrado. Retirar: siempre permitido durante el torneo.
+                                        $puede_confirmar = empty($torneo_cerrado_reg);
+                                        $puede_retirar = true; // Retirar jugadores habilitado durante todo el torneo (no eliminar, solo retirar)
                                         $es_confirmado = ($est_num === 1 || $est === 'confirmado' || $est === 'solvente');
                                         $es_retirado = ($est_num === 4 || $est === 'retirado');
                                         $csrf_val = class_exists('CSRF') ? CSRF::token() : '';
-                                        if ($puede_confirmar_retirar): ?>
-                                            <?php if (!$es_confirmado): ?>
+                                        if ($puede_confirmar && !$es_confirmado): ?>
                                             <form method="post" action="" class="d-inline">
                                                 <input type="hidden" name="action" value="cambiar_estatus_inscrito">
                                                 <input type="hidden" name="torneo_id" value="<?= (int)$filter_torneo ?>">
@@ -1118,8 +1114,8 @@ if (isset($_GET['ajax']) && $_GET['ajax'] === 'deuda') {
                                                 <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrf_val) ?>">
                                                 <button type="submit" class="btn btn-sm btn-success" title="Confirmar">Confirmar</button>
                                             </form>
-                                            <?php endif; ?>
-                                            <?php if (!$es_retirado): ?>
+                                        <?php endif; ?>
+                                        <?php if ($puede_retirar && !$es_retirado): ?>
                                             <form method="post" action="" class="d-inline">
                                                 <input type="hidden" name="action" value="cambiar_estatus_inscrito">
                                                 <input type="hidden" name="torneo_id" value="<?= (int)$filter_torneo ?>">
@@ -1129,14 +1125,18 @@ if (isset($_GET['ajax']) && $_GET['ajax'] === 'deuda') {
                                                 <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrf_val) ?>">
                                                 <button type="submit" class="btn btn-sm btn-outline-danger" title="Retirar">Retirar</button>
                                             </form>
-                                            <?php endif; ?>
                                         <?php endif; ?>
                                         <?php
                                         // Verificar si el admin_torneo tiene permisos sobre este inscrito
                                         $puede_editar = true;
                                         $puede_eliminar = true;
                                         $razon_bloqueado = '';
-                                        
+                                        // Durante torneo cerrado no se permite eliminar ni editar, solo retirar
+                                        if (!empty($torneo_cerrado_reg)) {
+                                            $puede_editar = false;
+                                            $puede_eliminar = false;
+                                            $razon_bloqueado = $razon_bloqueado ?: 'Torneo cerrado: solo puede retirar jugadores, no eliminar ni editar';
+                                        }
                                         if ($is_admin_torneo) {
                                             // Debug: mostrar valores comparados
                                             $debug_info = sprintf(

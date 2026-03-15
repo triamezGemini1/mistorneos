@@ -465,10 +465,20 @@ tailwind.config = {
                             <i class="fas fa-paper-plane mr-2"></i> Invitar Clubes
                         </a>
                         <!-- Inscripciones: un solo bloque (Gestionar + Inscribir en sitio) -->
-                        <?php if ($isLocked || $torneo_bloqueado_inscripciones): ?>
+                        <?php if ($isLocked): ?>
+                            <!-- Torneo finalizado: inscripciones totalmente cerradas -->
                             <button type="button" disabled class="tw-btn bg-gray-400 text-white">
                                 <i class="fas fa-lock"></i> Inscripciones (Cerrado)
                             </button>
+                        <?php elseif ($torneo_bloqueado_inscripciones): ?>
+                            <!-- Torneo ya comenzó pero no finalizado: solo permitir retirar jugadores -->
+                            <a href="index.php?page=registrants&torneo_id=<?php echo $torneo['id']; ?><?php echo $use_standalone ? '&return_to=panel_torneo' : ''; ?>" class="tw-btn bg-blue-500 hover:bg-blue-600 text-white">
+                                <i class="fas fa-clipboard-list"></i> Gestionar Inscripciones (retirar)
+                            </a>
+                            <a href="<?php echo $base_url . ($use_standalone ? '?' : '&'); ?>action=activar_participantes&torneo_id=<?php echo (int)$torneo['id']; ?>" class="tw-btn bg-green-500 hover:bg-green-600 text-white"><i class="fas fa-user-check"></i> Activar participantes</a>
+                            <?php if (!$es_modalidad_equipos && $ultima_ronda >= 1): ?>
+                            <a href="index.php?page=torneo_gestion&action=sustituir_jugador&torneo_id=<?php echo (int)$torneo['id']; ?>" class="tw-btn bg-amber-500 hover:bg-amber-600 text-white"><i class="fas fa-user-exchange"></i> Sustituir jugador retirado</a>
+                            <?php endif; ?>
                         <?php else: ?>
                             <div class="d-flex flex-column gap-1">
                                 <?php if ($es_modalidad_equipos): ?>
@@ -485,14 +495,6 @@ tailwind.config = {
                                 <?php endif; ?>
                                 <a href="<?php echo $base_url . ($use_standalone ? '?' : '&'); ?>action=activar_participantes&torneo_id=<?php echo (int)$torneo['id']; ?>" class="tw-btn bg-green-500 hover:bg-green-600 text-white"><i class="fas fa-user-check"></i> Activar participantes</a>
                             </div>
-                        <?php endif; ?>
-                        <?php if ($isLocked || $torneo_bloqueado_inscripciones): ?>
-                        <div class="d-flex flex-column gap-1 mt-2">
-                            <a href="<?php echo $base_url . ($use_standalone ? '?' : '&'); ?>action=activar_participantes&torneo_id=<?php echo (int)$torneo['id']; ?>" class="tw-btn bg-green-500 hover:bg-green-600 text-white"><i class="fas fa-user-check"></i> Activar participantes</a>
-                            <?php if (!$es_modalidad_equipos && $ultima_ronda >= 1): ?>
-                            <a href="index.php?page=torneo_gestion&action=sustituir_jugador&torneo_id=<?php echo (int)$torneo['id']; ?>" class="tw-btn bg-amber-500 hover:bg-amber-600 text-white"><i class="fas fa-user-exchange"></i> Sustituir jugador retirado</a>
-                            <?php endif; ?>
-                        </div>
                         <?php endif; ?>
                         
                         <!-- Mostrar Asignaciones (solo si hay rondas generadas) -->

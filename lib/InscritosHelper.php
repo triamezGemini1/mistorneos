@@ -371,6 +371,28 @@ class InscritosHelper {
     }
     
     /**
+     * Obtiene el código de equipo para inscripción en sitio en torneo individual o parejas.
+     * Formato: código club (2 dígitos) + '-' + consecutivo por club en el torneo (3 dígitos).
+     * Ejemplo: club id=2 con 4 jugadores ya inscritos → "02-005" para el quinto.
+     *
+     * @param \PDO $pdo Conexión a la base de datos
+     * @param int $torneo_id ID del torneo
+     * @param int|null $id_club ID del club (si null se devuelve '000-000')
+     * @param int $modalidad Modalidad del torneo (1=individual, 2=parejas; otro valor devuelve '000-000')
+     * @return string Código equipo ej. "02-001" o "000-000"
+     */
+    public static function codigoEquipoParaInscripcionSitioIndividual(PDO $pdo, int $torneo_id, ?int $id_club, int $modalidad): string {
+        if (!$id_club || ($modalidad !== 1 && $modalidad !== 2)) {
+            return '000-000';
+        }
+        $codigo_club = str_pad((string)$id_club, 2, '0', STR_PAD_LEFT);
+        $stmt = $pdo->prepare("SELECT COUNT(*) FROM inscritos WHERE torneo_id = ? AND id_club = ? AND estatus != 4");
+        $stmt->execute([$torneo_id, $id_club]);
+        $consecutivo = (int)$stmt->fetchColumn() + 1;
+        return $codigo_club . '-' . str_pad((string)$consecutivo, 3, '0', STR_PAD_LEFT);
+    }
+
+    /**
      * Verifica si un usuario puede inscribirse en línea en eventos masivos (es_evento_masivo = 2)
      * 
      * Un usuario NO puede inscribirse en línea si:

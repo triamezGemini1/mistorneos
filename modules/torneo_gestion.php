@@ -2991,6 +2991,12 @@ function guardarInscripcionSitio($torneo_id, $user_id, $is_admin_general) {
             throw new Exception('ID de torneo inválido');
         }
         
+        // Calcular codigo_equipo para torneo individual/parejas: código club + consecutivo (02-001, 02-002, ...)
+        $stmt = $pdo->prepare("SELECT modalidad FROM tournaments WHERE id = ?");
+        $stmt->execute([$torneo_id]);
+        $modalidad = (int)($stmt->fetchColumn() ?? 0);
+        $codigo_equipo_inscripcion = InscritosHelper::codigoEquipoParaInscripcionSitioIndividual($pdo, $torneo_id, $id_club, $modalidad);
+        
         // Insertar inscripción usando función centralizada
         try {
             // Usar función centralizada que valida y maneja todos los campos
@@ -2999,7 +3005,6 @@ function guardarInscripcionSitio($torneo_id, $user_id, $is_admin_general) {
                 $nac_u = 'V';
             }
             $ced_u = preg_replace('/\D/', '', (string)($usuario_datos['cedula'] ?? ''));
-            /* Individual en sitio: codigo_equipo NOT NULL — placeholder hasta asignar mesa/equipo (mismo criterio que 000-000 en helper) */
             $id_inscrito = InscritosHelper::insertarInscrito($pdo, [
                 'id_usuario' => $id_usuario,
                 'torneo_id' => $torneo_id,
@@ -3009,7 +3014,7 @@ function guardarInscripcionSitio($torneo_id, $user_id, $is_admin_general) {
                 'numero' => 0,
                 'nacionalidad' => $nac_u,
                 'cedula' => $ced_u,
-                'codigo_equipo' => '000-000',
+                'codigo_equipo' => $codigo_equipo_inscripcion,
             ]);
             UserActivationHelper::activateUser($pdo, $id_usuario);
             $_SESSION['success'] = 'Jugador inscrito exitosamente';
