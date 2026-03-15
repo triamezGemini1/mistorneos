@@ -89,9 +89,9 @@ $url_panel = $base_public . '/' . basename($script) . '?page=torneo_gestion&acti
     height: 18mm;
     display: block;
 }
-.tarjeta-id .nombre { font-size: 8pt; font-weight: bold; color: #212121; margin-bottom: 0.5mm; line-height: 1.15; }
-.tarjeta-id .cedula { font-size: 7pt; color: #424242; margin-bottom: 0.5mm; }
-.tarjeta-id .id-jugador { font-size: 9pt; font-weight: bold; color: #0d47a1; }
+.tarjeta-id .nombre { font-size: 16pt; font-weight: bold; color: #212121; margin-bottom: 0.5mm; line-height: 1.15; }
+.tarjeta-id .cedula { font-size: 14pt; color: #424242; margin-bottom: 0.5mm; }
+.tarjeta-id .id-jugador { font-size: 18pt; font-weight: bold; color: #0d47a1; }
 .tarjeta-id .qr-label { font-size: 5pt; color: #666; text-align: center; margin-top: 0.5mm; }
 
 @media print {
