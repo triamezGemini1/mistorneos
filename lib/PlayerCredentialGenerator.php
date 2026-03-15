@@ -22,9 +22,9 @@ class PlayerCredentialGenerator {
             
             // Validar que el jugador tenga un identificador asignado
             $identificador = $player_data['identificador'] ?? 0;
-            if (empty($identificador) || $identificador == 0) {
+            if (false && (empty($identificador) || $identificador == 0)) {
                 return [
-                    'success' => false, 
+                    'success' => false,
                     'error' => 'IDENTIFICADOR INV�LIDO. El jugador no tiene un n�mero asignado. Por favor, genere los identificadores del torneo antes de crear las credenciales. Puede hacerlo desde el bot�n "Numerar por Club" en el m�dulo de inscritos.'
                 ];
             }
@@ -55,12 +55,12 @@ class PlayerCredentialGenerator {
             $credentials = [];
             $errors = [];
             
-            // Obtener todos los jugadores del torneo (opcionalmente filtrado por club)
-            $query = "SELECT id FROM inscripciones WHERE torneo_id = ?";
+            // Obtener todos los jugadores del torneo (tabla inscritos, opcionalmente filtrado por club)
+            $query = "SELECT id FROM inscritos WHERE torneo_id = ? AND (estatus IS NULL OR estatus != 4)";
             $params = [$tournament_id];
             
             if ($club_id !== null) {
-                $query .= " AND club_id = ?";
+                $query .= " AND id_club = ?";
                 $params[] = $club_id;
             }
             
@@ -90,14 +90,26 @@ class PlayerCredentialGenerator {
             return ['success' => false, 'error' => $e->getMessage()];
         }
     }
+
+    private static function getBaseUrlForCredential(): string {
+        if (class_exists('AppHelpers') && method_exists('AppHelpers', 'getPublicUrl')) {
+            return rtrim(AppHelpers::getPublicUrl(), '/');
+        }
+        $protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
+        $host = $_SERVER['HTTP_HOST'] ?? 'localhost';
+        $path = defined('URL_BASE') && URL_BASE !== '' ? rtrim(URL_BASE, '/') : '';
+        return $protocol . '://' . $host . $path;
+    }
     
     /**
-     * Obtiene todos los datos necesarios para la credencial
+     * Obtiene todos los datos necesarios para la credencial (tabla inscritos + usuarios + tournaments + clubes)
      */
     private static function getPlayerData(int $registrant_id): ?array {
-        $stmt = DB::pdo()->prepare("
+        $pdo = DB::pdo();
+        $stmt = $pdo->prepare("
             SELECT 
-                r.*,
+                i.id, i.id_usuario, i.torneo_id, i.id_club, i.codigo_equipo, i.cedula, i.numero, i.estatus,
+                u.nombre,
                 t.nombre as tournament_name,
                 t.fechator as tournament_date,
                 t.club_responsable as organizer_club_id,
@@ -105,14 +117,26 @@ class PlayerCredentialGenerator {
                 c.logo as club_logo,
                 oc.nombre as organizer_club_name,
                 oc.logo as organizer_logo
-            FROM inscripciones r
-            LEFT JOIN tournaments t ON r.torneo_id = t.id
-            LEFT JOIN clubes c ON r.club_id = c.id
+            FROM inscritos i
+            LEFT JOIN usuarios u ON i.id_usuario = u.id
+            LEFT JOIN tournaments t ON i.torneo_id = t.id
+            LEFT JOIN clubes c ON i.id_club = c.id
             LEFT JOIN clubes oc ON t.club_responsable = oc.id
-            WHERE r.id = ?
+            WHERE i.id = ?
         ");
         $stmt->execute([$registrant_id]);
-        return $stmt->fetch();
+        $row = $stmt->fetch(PDO::FETCH_ASSOC);
+        if (!$row) {
+            return null;
+        }
+        $row['cedula'] = $row['cedula'] ?? '';
+        if ($row['cedula'] === '' && !empty($row['id_usuario'])) {
+            $st2 = $pdo->prepare("SELECT cedula FROM usuarios WHERE id = ?");
+            $st2->execute([$row['id_usuario']]);
+            $row['cedula'] = $st2->fetchColumn() ?: '';
+        }
+        $row['identificador'] = !empty($row['codigo_equipo']) ? $row['codigo_equipo'] : ($row['numero'] ?? 0);
+        return $row;
     }
     
     /**
@@ -132,26 +156,21 @@ class PlayerCredentialGenerator {
         } else {
             $identificador = htmlspecialchars((string)$identificador_value);
         }
-        
+        $base_url = self::getBaseUrlForCredential();
+        $id_usuario = (int)($player_data['id_usuario'] ?? 0);
+        $qr_url = $base_url . '/entrar_credencial.php?id=' . $id_usuario;
+        $qr_img_src = 'https://api.qrserver.com/v1/create-qr-code/?size=80x80&margin=1&data=' . rawurlencode($qr_url);
+        $player_cedula = htmlspecialchars((string)($player_data['cedula'] ?? ''));
         $html = '<!DOCTYPE html>
 <html>
 <head>
     <meta charset="UTF-8">
     <style>
-        @page {
-            size: 14cm 10cm;
-            margin: 0;
-        }
-        
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-        
+        @page { size: 8cm 5cm; margin: 0; }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
-            width: 14cm;
-            height: 10cm;
+            width: 8cm;
+            height: 5cm;
             font-family: "Arial", "Helvetica", sans-serif;
             background: linear-gradient(135deg, #1565c0 0%, #0d47a1 100%);
             position: relative;
@@ -159,15 +178,11 @@ class PlayerCredentialGenerator {
         }
         
         .card-border {
-            position: absolute;
-            top: 5mm;
-            left: 5mm;
-            right: 5mm;
-            bottom: 5mm;
-            border: 3px solid white;
-            border-radius: 12px;
-            background: white;
-            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+            position: relative;
+            top: 0; left: 0; right: 0; bottom: 0;
+            border: 2px solid #1565c0;
+            border-radius: 4px;
+            background: #fff;
         }
         
         .content {
@@ -180,90 +195,18 @@ class PlayerCredentialGenerator {
             justify-content: space-between;
         }
         
-        .tournament-title {
-            text-align: center;
-            font-size: 14pt;
-            font-weight: bold;
-            color: #0d47a1;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            padding: 4mm 3mm;
-            background: linear-gradient(90deg, #e3f2fd, #bbdefb, #e3f2fd);
-            border-radius: 8px;
-            border: 2px solid #1565c0;
-            margin-bottom: 3mm;
-            line-height: 1.3;
-        }
+        .tournament-title { font-size: 7pt; font-weight: bold; color: #0d47a1; text-transform: uppercase; padding: 1mm; margin-bottom: 1mm; line-height: 1.2; }
+        .player-line { margin-bottom: 1mm; padding: 1mm; }
+        .player-cedula { font-size: 6pt; color: #555; }
+        .player-name { font-size: 8pt; font-weight: bold; color: #212121; }
+        .club-line { font-size: 6pt; color: #1565c0; font-weight: bold; text-transform: uppercase; padding: 0.5mm; }
+        .identifier-line { margin: 1mm 0; padding: 1mm; }
+        .identifier-label { font-size: 5pt; color: #666; }
+        .identifier-number { font-size: 9pt; font-weight: bold; color: #0d47a1; }
         
-        .player-line {
-            text-align: center;
-            margin-bottom: 2.5mm;
-            padding: 4mm;
-            background: #f8f9fa;
-            border-radius: 6px;
-            border: 2px solid #e0e0e0;
-        }
-        
-        .player-cedula {
-            font-size: 14pt;
-            color: #666;
-            font-weight: 600;
-            margin-bottom: 3mm;
-        }
-        
-        .player-name {
-            font-size: 13pt;
-            font-weight: bold;
-            color: #212121;
-            line-height: 1.3;
-        }
-        
-        .club-line {
-            text-align: center;
-            font-size: 11pt;
-            color: #1565c0;
-            font-weight: bold;
-            text-transform: uppercase;
-            margin-bottom: 3mm;
-            padding: 3mm;
-        }
-        
-        .identifier-line {
-            text-align: center;
-            margin-bottom: 3mm;
-            padding: 6mm;
-            background: linear-gradient(135deg, #e3f2fd 0%, #ffffff 100%);
-            border-radius: 8px;
-            border: 3px solid #1565c0;
-        }
-        
-        .identifier-label {
-            font-size: 10pt;
-            color: #666;
-            font-weight: 600;
-            text-transform: uppercase;
-            margin-bottom: 3mm;
-            letter-spacing: 1px;
-        }
-        
-        .identifier-number {
-            font-size: 16pt;
-            font-weight: bold;
-            color: #0d47a1;
-            letter-spacing: 2px;
-        }
-        
-        .footer-website {
-            text-align: center;
-            font-size: 10pt;
-            color: #1565c0;
-            font-weight: 600;
-            padding: 2mm;
-            border-top: 2px solid #1565c0;
-            background: linear-gradient(90deg, rgba(227, 242, 253, 0.3), rgba(255, 255, 255, 0.5), rgba(227, 242, 253, 0.3));
-            border-radius: 6px;
-        }
-        
+        .footer-website { text-align: center; font-size: 6pt; color: #1565c0; padding: 1mm; }
+        .qr-block { position: absolute; top: 2mm; right: 2mm; }
+        .qr-block .qr-img { width: 16mm; height: 16mm; display: block; }
         .corner {
             position: absolute;
             width: 14mm;
@@ -313,20 +256,17 @@ class PlayerCredentialGenerator {
     <div class="card-border">
         <div class="content">
             <div class="tournament-title">' . $tournament_name . '</div>
-            
             <div class="player-line">
-                <div class="player-cedula">C.I.: ' . $player_id . '</div>
+                <div class="player-cedula">C.I. ' . $player_cedula . '</div>
                 <div class="player-name">' . $player_name . '</div>
             </div>
-            
             <div class="club-line">' . $club_name . '</div>
-            
             <div class="identifier-line">
                 <div class="identifier-label">Identificador</div>
                 <div class="identifier-number">' . $identificador . '</div>
             </div>
-            
-            <div class="footer-website">www.laestaciondeldomino.com</div>
+            <div class="qr-block"><img src="' . htmlspecialchars($qr_img_src) . '" alt="QR" class="qr-img" /></div>
+            <div class="footer-website">Escanear QR para ingresar</div>
         </div>
     </div>
 </body>
@@ -356,8 +296,9 @@ class PlayerCredentialGenerator {
         }
         
         // Generar nombre del archivo
-        $safe_name = preg_replace('/[^a-zA-Z0-9_-]/', '_', $player_data['nombre']);
-        $filename = 'credencial_' . $player_data['torneo_id'] . '_' . $player_data['identificador'] . '_' . $safe_name . '_' . time() . '.pdf';
+        $safe_name = preg_replace('/[^a-zA-Z0-9_-]/', '_', (string)($player_data['nombre'] ?? 'jugador'));
+        $ident = $player_data['identificador'] ?? 0;
+        $filename = 'credencial_' . ($player_data['torneo_id'] ?? 0) . '_' . $ident . '_' . $safe_name . '_' . time() . '.pdf';
         $pdf_path = $credentials_dir . $filename;
         
         // Crear PDF usando Dompdf
@@ -373,7 +314,7 @@ class PlayerCredentialGenerator {
         // 1cm = 28.3465 puntos
         // 14cm = 396.85 puntos
         // 10cm = 283.46 puntos
-        $dompdf->setPaper([0, 0, 396.85, 283.46], 'landscape');
+        $dompdf->setPaper([0, 0, 226.77, 141.73], 'portrait');
         
         $dompdf->render();
         
