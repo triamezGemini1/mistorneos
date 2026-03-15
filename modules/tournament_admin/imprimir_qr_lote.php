@@ -1,7 +1,7 @@
 <?php
 /**
- * Vista de impresión: tarjetas de identificación en cuadrícula (estilo asignación de mesas).
- * Papel CARTA. Tarjeta 4,3cm × 4cm. 4 columnas × 6 filas (24 por hoja). Sin encabezado al imprimir.
+ * Vista de impresión: tarjetas de identificación en cuadrícula (tamaño tarjeta de crédito).
+ * Papel CARTA. Tarjeta 8cm × 5cm. 2 columnas × 5 filas (10 por hoja). Incluye QR personal para ingresar por id/cédula.
  */
 
 $pdo = DB::pdo();
@@ -32,7 +32,8 @@ function formatear_cedula_tarjeta($valor) {
 
 $script = $_SERVER['SCRIPT_NAME'] ?? 'index.php';
 $base_url = ((!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http') . '://' . ($_SERVER['HTTP_HOST'] ?? '') . dirname($script);
-$url_panel = rtrim($base_url, '/') . '/' . basename($script) . '?page=torneo_gestion&action=panel&torneo_id=' . (int)$torneo_id;
+$base_public = rtrim($base_url, '/');
+$url_panel = $base_public . '/' . basename($script) . '?page=torneo_gestion&action=panel&torneo_id=' . (int)$torneo_id;
 ?>
 <style>
 * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -40,41 +41,58 @@ $url_panel = rtrim($base_url, '/') . '/' . basename($script) . '?page=torneo_ges
 .cuadricula-tarjetas-container {
     background: #fff;
     margin: 0 auto;
-    width: 95%;
-    max-width: 95%;
+    width: 100%;
+    max-width: 17cm;
 }
 
 .cuadricula-tarjetas-grid {
     display: grid;
-    grid-template-columns: repeat(4, 4.3cm);
-    grid-template-rows: repeat(6, 4cm);
+    grid-template-columns: repeat(2, 8cm);
+    grid-template-rows: repeat(5, 5cm);
     gap: 0;
-    border-collapse: collapse;
-    width: 100%;
+    width: 16cm;
     margin: 0 auto;
     page-break-after: always;
 }
 .cuadricula-tarjetas-grid:last-child { page-break-after: auto; }
 
 .tarjeta-id {
-    width: 4.3cm;
-    min-height: 4cm;
+    width: 8cm;
+    height: 5cm;
     box-sizing: border-box;
-    border: 0.5mm solid #000;
+    border: 0.5mm solid #333;
     display: flex;
-    flex-direction: column;
-    justify-content: center;
-    align-items: center;
-    text-align: center;
+    flex-direction: row;
+    align-items: stretch;
     font-family: Calibri, 'Lato', Arial, sans-serif;
     page-break-inside: avoid;
     background: #fff;
-    padding: 1.5mm;
+    padding: 2mm;
 }
-.tarjeta-id .nombre { font-size: 10.5pt; font-weight: bold; color: #212121; margin-bottom: 0.5mm; line-height: 1.1; }
-.tarjeta-id .tarjeta-username { font-size: 15pt; font-weight: bold; color: #37474f; margin-bottom: 0.5mm; display: block; }
-.tarjeta-id .cedula { font-size: 13pt; font-weight: bold; color: #424242; margin-bottom: 0.5mm; }
-.tarjeta-id .id-jugador { font-size: 18pt; font-weight: bold; color: #0d47a1; margin-bottom: 0; }
+.tarjeta-id .tarjeta-info {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    text-align: left;
+    padding-right: 2mm;
+    min-width: 0;
+}
+.tarjeta-id .tarjeta-qr-wrap {
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.tarjeta-id .tarjeta-qr-wrap img {
+    width: 18mm;
+    height: 18mm;
+    display: block;
+}
+.tarjeta-id .nombre { font-size: 8pt; font-weight: bold; color: #212121; margin-bottom: 0.5mm; line-height: 1.15; }
+.tarjeta-id .cedula { font-size: 7pt; color: #424242; margin-bottom: 0.5mm; }
+.tarjeta-id .id-jugador { font-size: 9pt; font-weight: bold; color: #0d47a1; }
+.tarjeta-id .qr-label { font-size: 5pt; color: #666; text-align: center; margin-top: 0.5mm; }
 
 @media print {
     @page { size: letter; margin: 1cm; }
@@ -103,23 +121,30 @@ $url_panel = rtrim($base_url, '/') . '/' . basename($script) . '?page=torneo_ges
             <div class="cuadricula-tarjetas-container">
                 <div id="area-impresion-tarjetas">
                     <?php
-                    $por_pagina = 24;
+                    $por_pagina = 10;
                     $paginas = array_chunk($jugadores, $por_pagina);
                     foreach ($paginas as $grupo):
                     ?>
                     <div class="cuadricula-tarjetas-grid">
                         <?php foreach ($grupo as $j):
                             $nombre = htmlspecialchars($j['nombre'] ?? '—');
-                            $username = trim((string)($j['user_login'] ?? $j['username'] ?? ''));
-                            $usuario = $username !== '' ? htmlspecialchars($username) : '—';
                             $cedula = htmlspecialchars(formatear_cedula_tarjeta($j['cedula'] ?? ''));
                             $id_jugador = (int)($j['id_usuario'] ?? 0);
+                            $url_entrar = $base_public . '/entrar_credencial.php?id=' . $id_jugador;
+                            $qr_src = 'https://api.qrserver.com/v1/create-qr-code/?size=80x80&margin=1&data=' . rawurlencode($url_entrar);
                         ?>
                         <div class="tarjeta-id">
-                            <div class="nombre"><?= $nombre ?></div>
-                            <div class="tarjeta-username" style="font-size: 15pt; font-weight: bold; color: #37474f; display: block !important; visibility: visible !important;"><?= $usuario ?></div>
-                            <div class="cedula"><?= $cedula ?></div>
-                            <div class="id-jugador"><?= $id_jugador ?></div>
+                            <div class="tarjeta-info">
+                                <div class="nombre"><?= $nombre ?></div>
+                                <div class="cedula">C.I. <?= $cedula ?></div>
+                                <div class="id-jugador">#<?= $id_jugador ?></div>
+                            </div>
+                            <div class="tarjeta-qr-wrap">
+                                <div>
+                                    <img src="<?= htmlspecialchars($qr_src) ?>" alt="QR" />
+                                    <div class="qr-label">Escanear para ingresar</div>
+                                </div>
+                            </div>
                         </div>
                         <?php endforeach; ?>
                     </div>
