@@ -399,7 +399,21 @@ $api_guardar_equipo = $base_url . ($use_standalone ? '?' : '&') . 'action=guarda
         gap: 0.2rem;
         flex-shrink: 0;
     }
-    /* Modelo: filas alineadas — codigo | id | cedula | nombre | botón */
+    /* Modelo: filas alineadas — codigo (+50%, 2 filas) | id (+20%) | cedula (+20%) | nombre (-50%) | botón */
+    .page-inscripcion-sitio.form-parejas-amigable .grid-parejas-filas {
+        display: grid;
+        grid-template-columns: 6.75rem 3.3rem 5.4rem minmax(2rem, 0.5fr) auto auto;
+        grid-template-rows: auto auto;
+        gap: 0.35rem 0.35rem;
+        align-items: end;
+    }
+    .page-inscripcion-sitio.form-parejas-amigable .celda-codigo-span {
+        grid-row: 1 / -1;
+        align-self: stretch;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+    }
     .page-inscripcion-sitio.form-parejas-amigable .fila-parejas-modelo {
         display: flex;
         align-items: flex-end;
@@ -407,19 +421,22 @@ $api_guardar_equipo = $base_url . ($use_standalone ? '?' : '&') . 'action=guarda
         margin-bottom: 0.25rem;
     }
     .page-inscripcion-sitio.form-parejas-amigable .celda-codigo-parejas {
-        width: 4.5rem;
-        min-width: 4.5rem;
+        width: 6.75rem;
+        min-width: 6.75rem;
         flex-shrink: 0;
     }
-    .page-inscripcion-sitio.form-parejas-amigable .celda-id-parejas { width: 2.75rem; min-width: 2.75rem; flex-shrink: 0; }
-    .page-inscripcion-sitio.form-parejas-amigable .celda-cedula-parejas { width: 4.5rem; min-width: 4.5rem; flex-shrink: 0; }
-    .page-inscripcion-sitio.form-parejas-amigable .celda-nombre-parejas { flex: 1; min-width: 4rem; }
+    .page-inscripcion-sitio.form-parejas-amigable .celda-id-parejas { width: 3.3rem; min-width: 3.3rem; flex-shrink: 0; }
+    .page-inscripcion-sitio.form-parejas-amigable .celda-cedula-parejas { width: 5.4rem; min-width: 5.4rem; flex-shrink: 0; }
+    .page-inscripcion-sitio.form-parejas-amigable .celda-nombre-parejas { flex: 0.5 1 0; min-width: 2rem; }
     .page-inscripcion-sitio.form-parejas-amigable .celda-codigo-parejas input,
     .page-inscripcion-sitio.form-parejas-amigable .celda-id-parejas input,
     .page-inscripcion-sitio.form-parejas-amigable .celda-cedula-parejas input,
     .page-inscripcion-sitio.form-parejas-amigable .celda-nombre-parejas input {
         width: 100%;
         max-width: 100%;
+    }
+    .page-inscripcion-sitio.form-parejas-amigable .celda-codigo-span .badge {
+        font-size: 0.95em;
     }
     .page-inscripcion-sitio.form-parejas-amigable .btn-parejas-fila {
         flex-shrink: 0;
@@ -531,13 +548,13 @@ $api_guardar_equipo = $base_url . ($use_standalone ? '?' : '&') . 'action=guarda
                                 <input type="text" id="cedula_buscar_parejas" class="form-control form-control-sm w-100" placeholder="Salir del campo para buscar" inputmode="numeric" autocomplete="off">
                             </div>
                         </div>
-                        <!-- Fila jugador 1: Código (oculto) | id | cedula | nombre | Nueva -->
-                        <div class="fila-parejas-compacta fila-parejas-modelo fila-jugador-compacta" data-posicion="1" data-jugador-asignado="">
-                            <div id="wrap_codigo_equipo_barra" class="celda-codigo-parejas" style="visibility:hidden;" aria-hidden="true">
+                        <!-- Grid 2 filas: Código (+50%, ocupa las dos filas) | id (+20%) | cedula (+20%) | nombre (-50%) | botones -->
+                        <div class="grid-parejas-filas">
+                            <div id="wrap_codigo_equipo_barra" class="celda-codigo-parejas celda-codigo-span" style="visibility:hidden;" aria-hidden="true">
                                 <span class="small text-muted fw-bold">Código</span>
                                 <span id="codigo_equipo_visible" class="badge bg-secondary px-2 py-0"></span>
                             </div>
-                            <div class="celda-id-parejas">
+                            <div class="celda-id-parejas fila-jugador-compacta" data-posicion="1" data-jugador-asignado="">
                                 <label class="form-label small mb-0 d-block">id</label>
                                 <input type="text" class="form-control form-control-sm jugador-id-usuario input-id-usuario" id="jugador_id_usuario_1" placeholder="ID" readonly style="background:#e9ecef;">
                                 <input type="hidden" id="jugador_id_usuario_h_1" name="jugadores[1][id_usuario]">
@@ -551,14 +568,12 @@ $api_guardar_equipo = $base_url . ($use_standalone ? '?' : '&') . 'action=guarda
                                 <label class="form-label small mb-0 d-block">nombre</label>
                                 <input type="text" class="form-control form-control-sm jugador-nombre input-nombre-jug" id="jugador_nombre_1" name="jugadores[1][nombre]" placeholder="Nombre" readonly style="background:#e9ecef;" oninput="validarFormulario()">
                             </div>
-                            <input type="hidden" id="es_capitan_1" name="jugadores[1][es_capitan]" value="1">
-                            <button type="button" class="btn btn-sm btn-outline-danger py-0 px-1 align-self-end" onclick="limpiarJugadorYDevolver(1)" title="Quitar" id="btn_limpiar_1" style="display:none;"><i class="fas fa-times"></i></button>
-                            <button type="button" class="btn btn-secondary btn-sm align-self-end btn-parejas-fila" onclick="limpiarFormulario()" <?= $torneo_iniciado ? 'disabled' : '' ?>><i class="fas fa-redo me-1"></i>Nueva</button>
-                        </div>
-                        <!-- Fila jugador 2: (mismo ancho código) | id | cedula | nombre | Guardar -->
-                        <div class="fila-parejas-compacta fila-parejas-modelo fila-jugador-compacta" data-posicion="2" data-jugador-asignado="">
-                            <div class="celda-codigo-parejas"></div>
-                            <div class="celda-id-parejas">
+                            <div style="display:flex;align-items:flex-end;gap:0.2rem;">
+                                <input type="hidden" id="es_capitan_1" name="jugadores[1][es_capitan]" value="1">
+                                <button type="button" class="btn btn-sm btn-outline-danger py-0 px-1" onclick="limpiarJugadorYDevolver(1)" title="Quitar" id="btn_limpiar_1" style="display:none;"><i class="fas fa-times"></i></button>
+                                <button type="button" class="btn btn-secondary btn-sm btn-parejas-fila" onclick="limpiarFormulario()" <?= $torneo_iniciado ? 'disabled' : '' ?>><i class="fas fa-redo me-1"></i>Nueva</button>
+                            </div>
+                            <div class="celda-id-parejas fila-jugador-compacta" data-posicion="2" data-jugador-asignado="">
                                 <label class="form-label small mb-0 d-block">id</label>
                                 <input type="text" class="form-control form-control-sm jugador-id-usuario input-id-usuario" id="jugador_id_usuario_2" placeholder="ID" readonly style="background:#e9ecef;">
                                 <input type="hidden" id="jugador_id_usuario_h_2" name="jugadores[2][id_usuario]">
@@ -572,9 +587,11 @@ $api_guardar_equipo = $base_url . ($use_standalone ? '?' : '&') . 'action=guarda
                                 <label class="form-label small mb-0 d-block">nombre</label>
                                 <input type="text" class="form-control form-control-sm jugador-nombre input-nombre-jug" id="jugador_nombre_2" name="jugadores[2][nombre]" placeholder="Nombre" readonly style="background:#e9ecef;" oninput="validarFormulario()">
                             </div>
-                            <input type="hidden" id="es_capitan_2" name="jugadores[2][es_capitan]" value="0">
-                            <button type="button" class="btn btn-sm btn-outline-danger py-0 px-1 align-self-end" onclick="limpiarJugadorYDevolver(2)" title="Quitar" id="btn_limpiar_2" style="display:none;"><i class="fas fa-times"></i></button>
-                            <button type="submit" class="btn btn-success btn-sm align-self-end btn-parejas-fila" id="btnGuardarEquipo" <?= $torneo_iniciado ? 'disabled' : '' ?>><i class="fas fa-save me-1"></i>Guardar</button>
+                            <div style="display:flex;align-items:flex-end;gap:0.2rem;">
+                                <input type="hidden" id="es_capitan_2" name="jugadores[2][es_capitan]" value="0">
+                                <button type="button" class="btn btn-sm btn-outline-danger py-0 px-1" onclick="limpiarJugadorYDevolver(2)" title="Quitar" id="btn_limpiar_2" style="display:none;"><i class="fas fa-times"></i></button>
+                                <button type="submit" class="btn btn-success btn-sm btn-parejas-fila" id="btnGuardarEquipo" <?= $torneo_iniciado ? 'disabled' : '' ?>><i class="fas fa-save me-1"></i>Guardar</button>
+                            </div>
                         </div>
                     </form>
                 </div>
