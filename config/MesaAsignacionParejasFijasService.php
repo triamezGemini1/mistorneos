@@ -23,6 +23,8 @@ class MesaAsignacionParejasFijasService
     private const JUGADORES_POR_MESA = 4;
     /** Máximo jugadores en BYE por ronda (hasta 2 parejas = 4 jugadores). */
     private const MAX_JUGADORES_BYE = 4;
+    /** Máximo de parejas BYE por ronda. */
+    private const MAX_PAREJAS_BYE = 2;
 
     public function __construct()
     {
@@ -77,7 +79,7 @@ class MesaAsignacionParejasFijasService
         ksort($porNumero, SORT_NUMERIC);
 
         $mesasArray = [];
-        $jugadoresBye = [];
+        $codigosBye = [];
 
         foreach ($porNumero as $numero => $lista) {
             // Mezclar al azar (no en bloque por club)
@@ -93,13 +95,12 @@ class MesaAsignacionParejasFijasService
             if ($i < count($lista)) {
                 // Pareja sin rival → BYE (ambos jugadores)
                 $codigoBye = (string)($lista[$i]['codigo_equipo'] ?? '');
-                foreach ($this->obtenerJugadoresDeCodigo($codigoBye, $jugadoresPorCodigo) as $jug) {
-                    $jugadoresBye[] = $jug;
+                if ($codigoBye !== '') {
+                    $codigosBye[] = $codigoBye;
                 }
             }
         }
-
-        $jugadoresBye = array_slice($jugadoresBye, 0, self::MAX_JUGADORES_BYE);
+        $jugadoresBye = $this->expandirByesPorCodigo($codigosBye, $jugadoresPorCodigo);
 
         $this->guardarAsignacionRonda($torneoId, 1, $mesasArray);
         if (!empty($jugadoresBye)) {
@@ -152,14 +153,14 @@ class MesaAsignacionParejasFijasService
             $mesasArray[] = $mesa;
         }
 
-        $jugadoresBye = [];
+        $codigosBye = [];
         foreach ($parejasEmparejadas['byes'] as $parejaBye) {
             $codigoBye = (string)($parejaBye['codigo_equipo'] ?? '');
-            foreach ($this->obtenerJugadoresDeCodigo($codigoBye, $jugadoresPorCodigo) as $jug) {
-                $jugadoresBye[] = $jug;
+            if ($codigoBye !== '') {
+                $codigosBye[] = $codigoBye;
             }
         }
-        $jugadoresBye = array_slice($jugadoresBye, 0, self::MAX_JUGADORES_BYE);
+        $jugadoresBye = $this->expandirByesPorCodigo($codigosBye, $jugadoresPorCodigo);
 
         $this->guardarAsignacionRonda($torneoId, $numRonda, $mesasArray);
         if (!empty($jugadoresBye)) {
@@ -417,6 +418,7 @@ class MesaAsignacionParejasFijasService
     {
         $parejaA = $this->obtenerJugadoresDeCodigo($codigoA, $jugadoresPorCodigo);
         $parejaB = $this->obtenerJugadoresDeCodigo($codigoB, $jugadoresPorCodigo);
+        // Estructura fija de mesa: primera pareja = A-C, segunda pareja = B-D.
         return [$parejaA[0], $parejaA[1], $parejaB[0], $parejaB[1]];
     }
 
@@ -431,6 +433,24 @@ class MesaAsignacionParejasFijasService
             throw new RuntimeException("La pareja {$codigo} no tiene 2 atletas activos para asignación.");
         }
         return $jugadores;
+    }
+
+    /**
+     * Convierte BYE por codigo_equipo en lista de jugadores manteniendo unidad de pareja.
+     */
+    private function expandirByesPorCodigo(array $codigosBye, array $jugadoresPorCodigo): array
+    {
+        $codigosBye = array_values(array_unique(array_map('strval', $codigosBye)));
+        $codigosBye = array_slice($codigosBye, 0, self::MAX_PAREJAS_BYE);
+
+        $out = [];
+        foreach ($codigosBye as $codigo) {
+            foreach ($this->obtenerJugadoresDeCodigo($codigo, $jugadoresPorCodigo) as $jug) {
+                $out[] = $jug;
+            }
+        }
+        // Respaldo de seguridad por límite legado.
+        return array_slice($out, 0, self::MAX_JUGADORES_BYE);
     }
 
     private function seleccionarRival(
