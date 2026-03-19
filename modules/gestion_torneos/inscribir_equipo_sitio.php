@@ -331,8 +331,53 @@ $api_guardar_equipo = $base_url . ($use_standalone ? '?' : '&') . 'action=guarda
     .equipo-sidebar-integrantes li { padding: 0.15rem 0; font-weight: 700; }
     #wrap_codigo_equipo_barra { min-height: 1.5rem; }
     .btn-editar-equipo-form { font-size: 0.7rem; padding: 0.1rem 0.35rem; }
-    /* Parejas: formulario arriba ancho completo; abajo dos columnas 50% */
+    /* Parejas: sin scroll vertical, margen vertical, Volver siempre visible */
     <?php if ($es_parejas): ?>
+    .page-inscripcion-sitio.form-parejas-amigable {
+        max-height: calc(100vh - 2rem);
+        height: calc(100vh - 2rem);
+        margin: 1rem 0;
+        overflow: hidden;
+        padding-top: 0.5rem !important;
+        padding-bottom: 0.5rem !important;
+        display: flex;
+        flex-direction: column;
+        min-height: 0;
+    }
+    .page-inscripcion-sitio.form-parejas-amigable .breadcrumb {
+        margin-bottom: 0.2rem !important;
+        padding: 0.15rem 0 !important;
+        flex-shrink: 0;
+    }
+    .page-inscripcion-sitio.form-parejas-amigable .card.mb-4:first-of-type {
+        margin-bottom: 0.35rem !important;
+        flex-shrink: 0;
+    }
+    .page-inscripcion-sitio.form-parejas-amigable .card.mb-4:first-of-type .card-body {
+        padding: 0.35rem 0.5rem !important;
+    }
+    .page-inscripcion-sitio.form-parejas-amigable .form-parejas-top {
+        flex-shrink: 0;
+    }
+    .page-inscripcion-sitio.form-parejas-amigable .row-columnas-parejas {
+        flex: 1 1 0;
+        min-height: 0;
+        overflow: hidden;
+        margin-bottom: 0 !important;
+    }
+    .page-inscripcion-sitio.form-parejas-amigable .col-disponibles-parejas .card,
+    .page-inscripcion-sitio.form-parejas-amigable .col-insc-equipos-parejas .card {
+        min-height: 0;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+    }
+    .page-inscripcion-sitio.form-parejas-amigable .col-disponibles-parejas .card-body,
+    .page-inscripcion-sitio.form-parejas-amigable .col-insc-equipos-parejas .card-body {
+        flex: 1 1 0;
+        min-height: 0;
+        overflow-y: auto;
+    }
     .page-inscripcion-sitio.form-parejas-amigable .form-parejas-top {
         border: 2px solid #0d6efd;
         border-radius: 10px;
@@ -518,17 +563,17 @@ $api_guardar_equipo = $base_url . ($use_standalone ? '?' : '&') . 'action=guarda
     </div>
 
     <?php if ($es_parejas): ?>
-    <!-- Parejas: formulario arriba ancho completo -->
-    <div class="row mb-3">
+    <!-- Parejas: formulario arriba ancho completo (compacto para evitar scroll) -->
+    <div class="row mb-2 form-parejas-row">
         <div class="col-12">
             <div class="card border-0 shadow-sm form-parejas-top">
-                <div class="card-header bg-warning text-dark py-2">
-                    <h6 class="mb-0">
+                <div class="card-header bg-warning text-dark py-1 px-2">
+                    <h6 class="mb-0 small">
                         <i class="fas fa-edit me-1"></i>Inscripción por parejas
-                        <span class="d-block mt-1 fw-normal small text-muted">Club, nombre (opcional) y cédula en la fila del jugador; al salir del campo se busca automáticamente.</span>
+                        <span class="d-block mt-0 fw-normal small text-muted">Club, nombre (opcional) y cédula; al salir del campo se busca automáticamente.</span>
                     </h6>
                 </div>
-                <div class="card-body py-2">
+                <div class="card-body py-1 px-2">
                     <?php if ($torneo_iniciado): ?>
                         <div class="alert alert-warning mb-1 py-1"><i class="fas fa-exclamation-triangle me-1"></i>El torneo ya inició. No se permiten nuevas inscripciones.</div>
                     <?php endif; ?>
@@ -583,7 +628,7 @@ $api_guardar_equipo = $base_url . ($use_standalone ? '?' : '&') . 'action=guarda
                             </div>
                             <div class="celda-quitar-parejas">
                                 <input type="hidden" id="es_capitan_1" name="jugadores[1][es_capitan]" value="1">
-                                <button type="button" class="btn btn-sm btn-outline-danger py-0 px-1" onclick="limpiarJugadorYDevolver(1)" title="Quitar" id="btn_limpiar_1" style="display:none;"><i class="fas fa-times"></i></button>
+                                <button type="button" class="btn btn-sm btn-outline-danger py-0 px-1" onclick="limpiarJugadorYDevolver(1)" title="Volver disponible" id="btn_limpiar_1" style="display:none;"><i class="fas fa-undo me-0" aria-hidden="true"></i></button>
                             </div>
                             <!-- Fila 2: id, cedula, nombre, quitar (misma estructura) -->
                             <div class="celda-id-parejas fila-jugador-compacta" data-posicion="2" data-jugador-asignado="">
@@ -602,7 +647,7 @@ $api_guardar_equipo = $base_url . ($use_standalone ? '?' : '&') . 'action=guarda
                             </div>
                             <div class="celda-quitar-parejas">
                                 <input type="hidden" id="es_capitan_2" name="jugadores[2][es_capitan]" value="0">
-                                <button type="button" class="btn btn-sm btn-outline-danger py-0 px-1" onclick="limpiarJugadorYDevolver(2)" title="Quitar" id="btn_limpiar_2" style="display:none;"><i class="fas fa-times"></i></button>
+                                <button type="button" class="btn btn-sm btn-outline-danger py-0 px-1" onclick="limpiarJugadorYDevolver(2)" title="Volver disponible" id="btn_limpiar_2" style="display:none;"><i class="fas fa-undo me-0" aria-hidden="true"></i></button>
                             </div>
                             <!-- Botones uno sobre el otro al final -->
                             <div class="celda-botones-parejas-apilados">
@@ -616,11 +661,11 @@ $api_guardar_equipo = $base_url . ($use_standalone ? '?' : '&') . 'action=guarda
         </div>
     </div>
     <!-- Dos columnas 50%: Disponibles | Inscritos -->
-    <div class="row g-2">
+    <div class="row g-2 row-columnas-parejas">
         <div class="col-12 col-md-6 col-disponibles-parejas">
             <div class="card border-0 shadow-sm h-100 d-flex flex-column overflow-hidden">
-                <div class="card-header bg-primary text-white py-2">
-                    <h6 class="mb-0"><i class="fas fa-user-friends me-1"></i>Atletas de su entidad</h6>
+                <div class="card-header bg-primary text-white py-1 px-2">
+                    <h6 class="mb-0 small"><i class="fas fa-user-friends me-1"></i>Atletas de su entidad</h6>
                 </div>
                 <div class="search-box">
                     <small class="text-muted d-block">Clic en un atleta para asignarlo a una posición.</small>
@@ -644,12 +689,12 @@ $api_guardar_equipo = $base_url . ($use_standalone ? '?' : '&') . 'action=guarda
             </div>
         </div>
         <div class="col-12 col-md-6 col-insc-equipos-parejas">
-            <div class="card border-0 shadow-sm equipo-sidebar-card h-100">
-                <div class="card-header bg-success text-white py-2">
-                    <h6 class="mb-0"><i class="fas fa-users me-1"></i>Parejas inscritas (<?php echo count($equipos_registrados); ?>)</h6>
-                    <small class="opacity-75 d-block">Clic en la fila para ver integrantes · Editar para cargar en el formulario</small>
+            <div class="card border-0 shadow-sm equipo-sidebar-card h-100 d-flex flex-column overflow-hidden">
+                <div class="card-header bg-success text-white py-1 px-2">
+                    <h6 class="mb-0 small"><i class="fas fa-users me-1"></i>Parejas inscritas (<?php echo count($equipos_registrados); ?>)</h6>
+                    <small class="opacity-75 d-block small">Clic para ver · Editar para cargar en el formulario</small>
                 </div>
-                <div class="card-body p-2">
+                <div class="card-body p-2 flex-grow-1 overflow-auto">
                     <?php if (empty($equipos_registrados)): ?>
                         <div class="text-center py-3 text-muted small">Aún no hay parejas</div>
                     <?php else: ?>
