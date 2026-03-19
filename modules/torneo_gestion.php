@@ -2281,11 +2281,16 @@ function obtenerDatosGestionarInscripcionesEquipos($torneo_id) {
     }
     $equipos_por_club = $equipos_por_club_ordenado;
     
+    $modalidad = (int)($torneo['modalidad'] ?? 0);
+    $es_parejas = ($modalidad === 2);
+    $jugadores_por_equipo = $es_parejas ? 2 : max(2, (int)($torneo['pareclub'] ?? 4));
+    
     return [
         'torneo' => $torneo,
         'equipos' => $equipos,
         'equipos_por_club' => $equipos_por_club,
-        'jugadores_por_equipo' => max(2, (int)($torneo['pareclub'] ?? 4))
+        'jugadores_por_equipo' => $jugadores_por_equipo,
+        'es_parejas' => $es_parejas,
     ];
 }
 
@@ -2568,6 +2573,10 @@ function obtenerDatosInscribirEquipoSitio(int $torneo_id): array
     }
     unset($eq);
 
+    $modalidad = (int)($torneo['modalidad'] ?? 0);
+    $es_parejas = ($modalidad === 2);
+    $jugadores_por_equipo = $es_parejas ? 2 : max(2, (int)($torneo['pareclub'] ?? 4));
+
     return [
         'torneo' => $torneo,
         'jugadores_disponibles' => $jugadores_disponibles,
@@ -2575,7 +2584,8 @@ function obtenerDatosInscribirEquipoSitio(int $torneo_id): array
         'equipos_registrados' => $equipos_registrados,
         'total_jugadores_disponibles' => count($jugadores_disponibles),
         'total_equipos' => count($equipos_registrados),
-        'jugadores_por_equipo' => max(2, (int)($torneo['pareclub'] ?? 4)),
+        'jugadores_por_equipo' => $jugadores_por_equipo,
+        'es_parejas' => $es_parejas,
         'is_admin_club' => $is_admin_club,
         'jugadores_lista_lazy' => $jugadores_lista_lazy,
     ];

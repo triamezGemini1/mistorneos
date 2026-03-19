@@ -116,11 +116,12 @@
                             <i class="fas fa-lock mr-1"></i> Gestionar Inscripciones (Cerrado)
                         </button>
                     <?php else: ?>
-                        <?php if ((int)($torneo['modalidad'] ?? 0) === 3): ?>
-                            <!-- Modalidad Equipos: Redirigir a gestionar inscripciones -->
+                        <?php if (in_array((int)($torneo['modalidad'] ?? 0), [2, 3], true)): ?>
+                            <?php $es_parejas_panel = (int)($torneo['modalidad'] ?? 0) === 2; ?>
+                            <!-- Modalidad Parejas (2) o Equipos (3): mismo flujo inscripción -->
                             <a href="<?php echo $base_url . ($use_standalone ? '?' : '&'); ?>action=gestionar_inscripciones_equipos&torneo_id=<?php echo $torneo['id']; ?>" 
                                class="btn btn-sm btn-primary w-100">
-                                <i class="fas fa-users mr-1"></i> Inscripciones por Equipos
+                                <i class="fas fa-users mr-1"></i> <?php echo $es_parejas_panel ? 'Inscripciones por Parejas' : 'Inscripciones por Equipos'; ?>
                             </a>
                         <?php else: ?>
                             <!-- Modalidad Individual/Parejas: Redirigir a inscripciones normales -->
@@ -175,23 +176,24 @@
             </div>
         </div>
 
-        <!-- Gadget Equipos (Solo para modalidad Equipos) -->
-        <?php if ((int)($torneo['modalidad'] ?? 0) === 3): ?>
+        <!-- Gadget Equipos/Parejas (modalidad 2 = Parejas, 3 = Equipos) -->
+        <?php if (in_array((int)($torneo['modalidad'] ?? 0), [2, 3], true)): ?>
+        <?php $es_parejas_gadget = (int)($torneo['modalidad'] ?? 0) === 2; ?>
         <div class="col-12 col-md-6 col-lg-6">
             <div class="card">
                 <div class="card-body p-2">
                     <div class="bg-light rounded p-2 mb-2 text-center">
                         <div class="h5 mb-0 text-indigo fw-bold"><?php echo $total_equipos ?? 0; ?></div>
-                        <small class="text-muted">Equipos inscritos</small>
+                        <small class="text-muted"><?php echo $es_parejas_gadget ? 'Parejas inscritas' : 'Equipos inscritos'; ?></small>
                     </div>
                     <?php if ($isLocked): ?>
                         <button type="button" class="btn btn-sm btn-secondary w-100" disabled>
-                            <i class="fas fa-lock mr-1"></i> Gestionar Equipos (Cerrado)
+                            <i class="fas fa-lock mr-1"></i> <?php echo $es_parejas_gadget ? 'Gestionar Parejas (Cerrado)' : 'Gestionar Equipos (Cerrado)'; ?>
                         </button>
                     <?php else: ?>
-                        <a href="<?php echo $base_url . ($use_standalone ? '?' : '&'); ?>action=equipos&torneo_id=<?php echo $torneo['id']; ?>" 
+                        <a href="<?php echo $base_url . ($use_standalone ? '?' : '&'); ?>action=<?php echo $es_parejas_gadget ? 'gestionar_inscripciones_equipos' : 'equipos'; ?>&torneo_id=<?php echo $torneo['id']; ?>" 
                            class="btn btn-sm btn-indigo w-100 text-white" style="background-color: #6610f2;">
-                            <i class="fas fa-users mr-1"></i> Gestionar Equipos
+                            <i class="fas fa-users mr-1"></i> <?php echo $es_parejas_gadget ? 'Gestionar Parejas' : 'Gestionar Equipos'; ?>
                         </a>
                     <?php endif; ?>
                 </div>

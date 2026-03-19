@@ -36,14 +36,17 @@ if (!isset($torneo) || empty($torneo) || !is_array($torneo)) {
 
 $page_title = 'Panel de Control - ' . htmlspecialchars($torneo['nombre'] ?? 'Torneo');
 
-// Detectar modalidad del torneo (3 = Equipos, 4 = Parejas fijas)
-$es_modalidad_equipos = isset($torneo['modalidad']) && (int)$torneo['modalidad'] === 3;
-$es_modalidad_parejas_fijas = isset($torneo['modalidad']) && (int)$torneo['modalidad'] === 4;
+// Detectar modalidad del torneo (2 = Parejas, 3 = Equipos, 4 = Parejas fijas)
+$modalidad_num_panel = (int)($torneo['modalidad'] ?? 0);
+$es_modalidad_equipos = ($modalidad_num_panel === 3);
+$es_modalidad_parejas = ($modalidad_num_panel === 2); // Parejas por equipos (mismo flujo que equipos de 4)
+$es_modalidad_parejas_fijas = ($modalidad_num_panel === 4);
+$es_modalidad_equipos_o_parejas = ($es_modalidad_equipos || $es_modalidad_parejas);
 
-// Lógica de bloqueo de inscripciones: equipos y parejas fijas bloquean desde ronda >=1; otros desde ronda >=2
+// Lógica de bloqueo de inscripciones: equipos, parejas y parejas fijas bloquean desde ronda >=1; otros desde ronda >=2
 $torneo_bloqueado_inscripciones = false;
 if ($ultima_ronda > 0) {
-    $torneo_bloqueado_inscripciones = ($es_modalidad_equipos || $es_modalidad_parejas_fijas) ? ($ultima_ronda >= 1) : ($ultima_ronda >= 2);
+    $torneo_bloqueado_inscripciones = ($es_modalidad_equipos || $es_modalidad_parejas || $es_modalidad_parejas_fijas) ? ($ultima_ronda >= 1) : ($ultima_ronda >= 2);
 }
 
 // Variables de estado (asegurar que estén disponibles desde view_data después del extract)
@@ -481,10 +484,12 @@ tailwind.config = {
                             <?php endif; ?>
                         <?php else: ?>
                             <div class="d-flex flex-column gap-1">
-                                <?php if ($es_modalidad_equipos): ?>
-                                    <a href="<?php echo $base_url . ($use_standalone ? '?' : '&'); ?>action=gestionar_inscripciones_equipos&torneo_id=<?php echo $torneo['id']; ?>" class="tw-btn bg-blue-500 hover:bg-blue-600 text-white"><i class="fas fa-clipboard-list"></i> Gestionar Inscripciones</a>
-                                    <a href="<?php echo $base_url . ($use_standalone ? '?' : '&'); ?>action=inscribir_equipo_sitio&torneo_id=<?php echo $torneo['id']; ?>" class="tw-btn bg-amber-500 hover:bg-amber-600 text-white"><i class="fas fa-user-plus"></i> Inscribir en Sitio</a>
+                                <?php if ($es_modalidad_equipos_o_parejas): ?>
+                                    <a href="<?php echo $base_url . ($use_standalone ? '?' : '&'); ?>action=gestionar_inscripciones_equipos&torneo_id=<?php echo $torneo['id']; ?>" class="tw-btn bg-blue-500 hover:bg-blue-600 text-white"><i class="fas fa-clipboard-list"></i> <?php echo $es_modalidad_parejas ? 'Gestionar Inscripciones (Parejas)' : 'Gestionar Inscripciones'; ?></a>
+                                    <a href="<?php echo $base_url . ($use_standalone ? '?' : '&'); ?>action=inscribir_equipo_sitio&torneo_id=<?php echo $torneo['id']; ?>" class="tw-btn bg-amber-500 hover:bg-amber-600 text-white"><i class="fas fa-user-plus"></i> <?php echo $es_modalidad_parejas ? 'Inscribir pareja' : 'Inscribir en Sitio'; ?></a>
+                                    <?php if ($es_modalidad_equipos): ?>
                                     <a href="<?php echo $base_url . ($use_standalone ? '?' : '&'); ?>action=carga_masiva_equipos_sitio&torneo_id=<?php echo $torneo['id']; ?>" class="tw-btn bg-amber-700 hover:bg-amber-800 text-white ml-1"><i class="fas fa-file-upload"></i> Carga masiva</a>
+                                    <?php endif; ?>
                                 <?php elseif ($es_modalidad_parejas_fijas): ?>
                                     <a href="<?php echo $base_url . ($use_standalone ? '?' : '&'); ?>action=gestionar_inscripciones_parejas_fijas&torneo_id=<?php echo $torneo['id']; ?>" class="tw-btn bg-blue-500 hover:bg-blue-600 text-white"><i class="fas fa-clipboard-list"></i> Gestionar Inscripciones</a>
                                     <a href="<?php echo $base_url . ($use_standalone ? '?' : '&'); ?>action=inscribir_pareja_sitio&torneo_id=<?php echo $torneo['id']; ?>" class="tw-btn bg-amber-500 hover:bg-amber-600 text-white"><i class="fas fa-user-plus"></i> Inscribir Pareja en Sitio</a>

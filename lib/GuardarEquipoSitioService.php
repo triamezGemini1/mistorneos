@@ -25,8 +25,15 @@ final class GuardarEquipoSitioService
             $jugadores = [];
         }
 
-        if ($torneo_id <= 0 || $nombre_equipo === '' || $club_id <= 0) {
+        if ($torneo_id <= 0 || $club_id <= 0) {
             return ['success' => false, 'message' => 'Datos incompletos'];
+        }
+        $stmt = $pdo->prepare('SELECT modalidad FROM tournaments WHERE id = ? LIMIT 1');
+        $stmt->execute([$torneo_id]);
+        $modalidad = (int)($stmt->fetchColumn() ?: 0);
+        $es_parejas = ($modalidad === 2);
+        if (!$es_parejas && $nombre_equipo === '') {
+            return ['success' => false, 'message' => 'El nombre del equipo es obligatorio'];
         }
 
         require_once __DIR__ . '/EquiposHelper.php';
@@ -40,8 +47,18 @@ final class GuardarEquipoSitioService
         }
         try {
             if ($equipo_id > 0) {
-                $stmt = $pdo->prepare('UPDATE equipos SET nombre_equipo = UPPER(?), id_club = ? WHERE id = ? AND id_torneo = ?');
-                $stmt->execute([$nombre_equipo, $club_id, $equipo_id, $torneo_id]);
+                $nombre_actualizar = $nombre_equipo !== '' ? strtoupper($nombre_equipo) : null;
+                if ($nombre_actualizar !== null) {
+                    $stmt = $pdo->prepare('UPDATE equipos SET nombre_equipo = ?, id_club = ? WHERE id = ? AND id_torneo = ?');
+                    $stmt->execute([$nombre_actualizar, $club_id, $equipo_id, $torneo_id]);
+                } else {
+                    $stmt = $pdo->prepare('SELECT codigo_equipo FROM equipos WHERE id = ? AND id_torneo = ? LIMIT 1');
+                    $stmt->execute([$equipo_id, $torneo_id]);
+                    $codigo_actual = trim((string)($stmt->fetchColumn() ?: ''));
+                    $nombre_actualizar = $codigo_actual !== '' ? ('Pareja ' . $codigo_actual) : 'Pareja';
+                    $stmt = $pdo->prepare('UPDATE equipos SET nombre_equipo = ?, id_club = ? WHERE id = ? AND id_torneo = ?');
+                    $stmt->execute([$nombre_actualizar, $club_id, $equipo_id, $torneo_id]);
+                }
                 $stmt = $pdo->prepare('SELECT codigo_equipo FROM equipos WHERE id = ?');
                 $stmt->execute([$equipo_id]);
                 $codigo_equipo = $stmt->fetchColumn() ?: null;
@@ -52,7 +69,7 @@ final class GuardarEquipoSitioService
                 $stmt = $pdo->prepare('UPDATE inscritos SET codigo_equipo = ? WHERE torneo_id = ? AND codigo_equipo = ?');
                 $stmt->execute(['', $torneo_id, $codigo_equipo]);
             } else {
-                $result = EquiposHelper::crearEquipo($torneo_id, $club_id, $nombre_equipo, $creado_por);
+                $result = EquiposHelper::crearEquipo($torneo_id, $club_id, $nombre_equipo !== '' ? $nombre_equipo : '', $creado_por);
                 if (empty($result['success'])) {
                     throw new RuntimeException($result['message'] ?? 'Error al crear equipo');
                 }

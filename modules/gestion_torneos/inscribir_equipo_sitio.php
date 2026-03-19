@@ -12,7 +12,10 @@ $jugadores_disponibles = $view_data['jugadores_disponibles'] ?? [];
 $clubes_disponibles = $view_data['clubes_disponibles'] ?? [];
 $equipos_registrados = $view_data['equipos_registrados'] ?? [];
 $jugadores_por_equipo = $view_data['jugadores_por_equipo'] ?? 4;
+$es_parejas = !empty($view_data['es_parejas']);
 $jugadores_lista_lazy = !empty($view_data['jugadores_lista_lazy']);
+$etiqueta_equipo = $es_parejas ? 'Pareja' : 'Equipo';
+$etiqueta_equipos = $es_parejas ? 'Parejas' : 'Equipos';
 
 /** Base URL hacia public/api/ — obligatoria para buscar_jugador, obtener_equipo, eliminar_equipo */
 $api_base_path = (function_exists('AppHelpers') ? AppHelpers::getPublicPath() : '/mistorneos/public/') . 'api/';
@@ -346,11 +349,11 @@ $api_guardar_equipo = $base_url . ($use_standalone ? '?' : '&') . 'action=guarda
             <div class="d-flex justify-content-between align-items-center flex-wrap">
                 <div>
                     <h2 class="h4 mb-1">
-                        <i class="fas fa-user-plus text-warning me-2"></i>Inscribir Equipo en Sitio
+                        <i class="fas fa-user-plus text-warning me-2"></i>Inscribir <?php echo $etiqueta_equipo; ?> en Sitio
                     </h2>
                     <p class="text-muted mb-0">
                         <i class="fas fa-trophy me-1"></i><?php echo htmlspecialchars($torneo['nombre']); ?>
-                        <span class="badge bg-info ms-2"><?php echo $jugadores_por_equipo; ?> jugadores por equipo</span>
+                        <span class="badge bg-info ms-2"><?php echo $jugadores_por_equipo; ?> jugadores por <?php echo strtolower($etiqueta_equipo); ?></span>
                     </p>
                 </div>
                 <div class="mt-2 mt-md-0">
@@ -390,7 +393,7 @@ $api_guardar_equipo = $base_url . ($use_standalone ? '?' : '&') . 'action=guarda
                                 <i class="fas fa-plus"></i> Añadir
                             </button>
                         </div>
-                        <small id="hintLazyCedula" class="text-muted d-block">1) Club y nombre de equipo. 2) Busque por cédula; el jugador aparece abajo para asignar a una posición.</small>
+                        <small id="hintLazyCedula" class="text-muted d-block">1) Club<?php echo $es_parejas ? '' : ' y nombre de ' . strtolower($etiqueta_equipo); ?>. 2) Busque por cédula; el jugador aparece abajo para asignar a una posición.</small>
                         <input type="text" id="searchJugadores" class="form-control form-control-sm mt-1 d-none" disabled aria-hidden="true">
                     <?php else: ?>
                     <input type="text"
@@ -398,7 +401,7 @@ $api_guardar_equipo = $base_url . ($use_standalone ? '?' : '&') . 'action=guarda
                            class="form-control"
                            placeholder="Buscar por ID, cédula o nombre..."
                            disabled>
-                    <small class="text-muted">Seleccione el Club y Nombre del Equipo para habilitar</small>
+                    <small class="text-muted">Seleccione el Club<?php echo $es_parejas ? '' : ' y Nombre del ' . $etiqueta_equipo; ?> para habilitar</small>
                     <?php endif; ?>
                 </div>
 
@@ -446,16 +449,16 @@ $api_guardar_equipo = $base_url . ($use_standalone ? '?' : '&') . 'action=guarda
             <div class="card border-0 shadow-sm">
                         <div class="card-header bg-warning text-dark py-2">
                     <h6 class="mb-0 small">
-                        <i class="fas fa-edit me-1"></i>Formulario de equipo
-                        <span class="d-block mt-1 fw-semibold">Inscripción equipos individuales de <?php echo (int)$jugadores_por_equipo; ?> jugadores</span>
-                        <span class="text-muted fw-normal" style="font-size:0.75rem;">Clic en «Editar» en equipos inscritos para cargar y editar</span>
+                        <i class="fas fa-edit me-1"></i>Formulario de <?php echo strtolower($etiqueta_equipo); ?>
+                        <span class="d-block mt-1 fw-semibold">Inscripción <?php echo strtolower($etiqueta_equipos); ?> de <?php echo (int)$jugadores_por_equipo; ?> jugadores</span>
+                        <span class="text-muted fw-normal" style="font-size:0.75rem;">Clic en «Editar» en <?php echo strtolower($etiqueta_equipos); ?> inscritos para cargar y editar</span>
                     </h6>
                 </div>
                 <div class="card-body">
                     <?php if ($torneo_iniciado): ?>
                         <div class="alert alert-warning">
                             <i class="fas fa-exclamation-triangle me-2"></i>
-                            El torneo ya inició (hay rondas generadas). No se permiten nuevas inscripciones de equipos. Solo información de control.
+                            El torneo ya inició (hay rondas generadas). No se permiten nuevas inscripciones de <?php echo strtolower($etiqueta_equipos); ?>. Solo información de control.
                         </div>
                     <?php endif; ?>
                     <form id="formEquipo">
@@ -481,13 +484,13 @@ $api_guardar_equipo = $base_url . ($use_standalone ? '?' : '&') . 'action=guarda
                                 </select>
                             </div>
                             <div class="campo-nombre-equipo">
-                                <label class="form-label small mb-0" for="nombre_equipo">Nombre del equipo *</label>
+                                <label class="form-label small mb-0" for="nombre_equipo">Nombre de la <?php echo strtolower($etiqueta_equipo); ?><?php echo $es_parejas ? ' (opcional)' : ' *'; ?></label>
                                 <input type="text"
                                        id="nombre_equipo"
                                        name="nombre_equipo"
                                        class="form-control form-control-sm w-100"
-                                       required
-                                       placeholder="Nombre del equipo *">
+                                       <?php echo $es_parejas ? '' : 'required '; ?>
+                                       placeholder="<?php echo $es_parejas ? 'Opcional (sin nombre)' : 'Nombre del ' . $etiqueta_equipo . ' *'; ?>">
                             </div>
                         </div>
                         <?php if (empty($clubes_disponibles) && !empty($is_admin_club ?? false)): ?>
@@ -507,10 +510,10 @@ $api_guardar_equipo = $base_url . ($use_standalone ? '?' : '&') . 'action=guarda
                                 </div>
                                 <div class="d-flex gap-2 ms-auto">
                                     <button type="submit" class="btn btn-success btn-sm py-1" id="btnGuardarEquipo" <?= $torneo_iniciado ? 'disabled' : '' ?>>
-                                        <i class="fas fa-save me-1"></i>Guardar Equipo
+                                        <i class="fas fa-save me-1"></i>Guardar <?php echo $etiqueta_equipo; ?>
                                     </button>
                                     <button type="button" class="btn btn-secondary btn-sm py-1" onclick="limpiarFormulario()" <?= $torneo_iniciado ? 'disabled' : '' ?>>
-                                        <i class="fas fa-redo me-1"></i>Nuevo Equipo
+                                        <i class="fas fa-redo me-1"></i>Nueva <?php echo $etiqueta_equipo; ?>
                                     </button>
                                 </div>
                             </div>
@@ -589,15 +592,15 @@ $api_guardar_equipo = $base_url . ($use_standalone ? '?' : '&') . 'action=guarda
             <div class="card border-0 shadow-sm equipo-sidebar-card h-100">
                 <div class="card-header bg-success text-white py-2">
                     <h6 class="mb-0">
-                        <i class="fas fa-users me-1"></i>Equipos inscritos (<?php echo count($equipos_registrados); ?>)
+                        <i class="fas fa-users me-1"></i><?php echo $etiqueta_equipos; ?> inscritos (<?php echo count($equipos_registrados); ?>)
                     </h6>
-                    <small class="opacity-75 fw-bold">Clic en la fila del equipo: mostrar / ocultar integrantes · «Editar» carga el formulario</small>
+                    <small class="opacity-75 fw-bold">Clic en la fila: mostrar / ocultar integrantes · «Editar» carga el formulario</small>
                 </div>
                 <div class="card-body p-2">
                     <?php if (empty($equipos_registrados)): ?>
                         <div class="text-center py-3 text-muted small">
                             <i class="fas fa-users-slash fa-2x mb-2 opacity-50"></i>
-                            <p class="mb-0">Aún no hay equipos</p>
+                            <p class="mb-0">Aún no hay <?php echo strtolower($etiqueta_equipos); ?></p>
                         </div>
                     <?php else: ?>
                         <div id="listaEquiposRegistrados">
@@ -659,6 +662,7 @@ $api_guardar_equipo = $base_url . ($use_standalone ? '?' : '&') . 'action=guarda
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11" defer></script>
 <script>
 const JUGADORES_POR_EQUIPO = <?php echo $jugadores_por_equipo; ?>;
+const ES_PAREJAS = <?php echo $es_parejas ? 'true' : 'false'; ?>;
 const TORNEO_ID = <?php echo $torneo['id']; ?>;
 const JUGADORES_LISTA_LAZY = <?php echo $jugadores_lista_lazy ? 'true' : 'false'; ?>;
 /** Datos para editar: todo viene del servidor al cargar la página — sin fetch a obtener_equipo */
@@ -773,7 +777,7 @@ function seleccionarJugador(element) {
         Swal.fire({
             icon: 'warning',
             title: 'Atención',
-            text: 'Primero seleccione el Club y el Nombre del Equipo.',
+            text: ES_PAREJAS ? 'Primero seleccione el Club.' : 'Primero seleccione el Club y el Nombre del Equipo.',
             confirmButtonColor: '#3b82f6'
         });
         return;
@@ -785,7 +789,7 @@ function seleccionarJugador(element) {
         Swal.fire({
             icon: 'warning',
             title: 'Jugador no disponible',
-            text: 'Este jugador ya está asignado a un equipo (código: ' + jugadorData.codigo_equipo + ')',
+            text: 'Este jugador ya está asignado a un ' + (ES_PAREJAS ? 'pareja' : 'equipo') + ' (código: ' + jugadorData.codigo_equipo + ')',
             confirmButtonColor: '#3b82f6'
         });
         return;
@@ -988,7 +992,7 @@ async function buscarJugadorPorCedula(input) {
         Swal.fire({
             icon: 'warning',
             title: 'Atención',
-            text: 'Primero seleccione el Club y el Nombre del Equipo.',
+            text: ES_PAREJAS ? 'Primero seleccione el Club.' : 'Primero seleccione el Club y el Nombre del Equipo.',
             confirmButtonColor: '#3b82f6'
         });
         input.value = '';
@@ -1084,10 +1088,11 @@ function validarFormulario() {
     
     const nombreEquipo = document.getElementById('nombre_equipo').value.trim();
     const clubId = document.getElementById('club_id').value;
+    const nombreOk = ES_PAREJAS ? true : nombreEquipo;
     
     const btnGuardar = document.getElementById('btnGuardarEquipo');
     
-    if (jugadoresCompletos === JUGADORES_POR_EQUIPO && nombreEquipo && clubId) {
+    if (jugadoresCompletos === JUGADORES_POR_EQUIPO && nombreOk && clubId) {
         btnGuardar.disabled = false;
         btnGuardar.classList.remove('btn-secondary');
         btnGuardar.classList.add('btn-success');
@@ -1102,7 +1107,7 @@ function validarFormulario() {
 function puedeSeleccionarJugadores() {
     const nombreEquipo = document.getElementById('nombre_equipo').value.trim();
     const clubId = document.getElementById('club_id').value;
-    return !!(nombreEquipo && clubId);
+    return !!(clubId && (ES_PAREJAS || nombreEquipo));
 }
 
 function actualizarBloqueoSeleccionJugadores() {
@@ -1197,11 +1202,11 @@ document.getElementById('formEquipo').addEventListener('submit', async function(
     console.log('=== INICIO GUARDAR EQUIPO (JavaScript) ===');
     
     if (!puedeSeleccionarJugadores()) {
-        console.log('ERROR: Validación falló - falta Club o Nombre del Equipo');
+        console.log('ERROR: Validación falló - falta Club' + (ES_PAREJAS ? '' : ' o Nombre del Equipo'));
         Swal.fire({
             icon: 'warning',
             title: 'Atención',
-            text: 'Primero seleccione el Club y el Nombre del Equipo.',
+            text: ES_PAREJAS ? 'Primero seleccione el Club.' : 'Primero seleccione el Club y el Nombre del Equipo.',
             confirmButtonColor: '#3b82f6'
         });
         return;
