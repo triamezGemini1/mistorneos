@@ -5344,6 +5344,13 @@ function ejecutarReasignacion($torneo_id, $ronda, $mesa, $user_id, $is_admin_gen
         }
         
         $pdo = DB::pdo();
+        $stmtTorneo = $pdo->prepare("SELECT modalidad FROM tournaments WHERE id = ? LIMIT 1");
+        $stmtTorneo->execute([$torneo_id]);
+        $modalidad = (int)($stmtTorneo->fetchColumn() ?: 0);
+        $esParejasFijas = ($modalidad === 4);
+        if ($esParejasFijas && !in_array($opcion, [5, 6], true)) {
+            throw new Exception('En Parejas Fijas solo se permiten movimientos en bloque de pareja (opciones 5 o 6).');
+        }
         
         // Obtener jugadores actuales de la mesa
         $stmt = $pdo->prepare("SELECT * FROM partiresul 

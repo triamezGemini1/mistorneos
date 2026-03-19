@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 /**
  * Reasignar Mesa (Desktop) — Intercambiar posiciones de jugadores en una mesa.
  * Misma lógica que la web: opciones 1-6 de intercambio de secuencias en partiresul.
@@ -39,6 +39,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
         $error_message = 'Opción de reasignación no válida.';
     } else {
         try {
+            $stModalidad = $pdo->prepare("SELECT modalidad FROM tournaments WHERE id = ?");
+            $stModalidad->execute([$torneo_id]);
+            $modalidad = (int)($stModalidad->fetchColumn() ?: 0);
+            if ($modalidad === 4 && !in_array($opcion, [5, 6], true)) {
+                throw new Exception('En Parejas Fijas solo se permiten movimientos en bloque de pareja (opciones 5 o 6).');
+            }
+
             $st = $pdo->prepare("SELECT * FROM partiresul WHERE id_torneo = ? AND partida = ? AND mesa = ?" . ($entidad_id > 0 ? ' AND entidad_id = ?' : '') . " ORDER BY secuencia ASC");
             $st->execute(array_merge([$torneo_id, $ronda, $mesa], $ent_bind));
             $jugadores = $st->fetchAll(PDO::FETCH_ASSOC);
@@ -95,7 +102,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
 }
 
 if ($torneo_id > 0) {
-    $st = $pdo->prepare("SELECT id, nombre FROM tournaments WHERE id = ?");
+    $st = $pdo->prepare("SELECT id, nombre, modalidad FROM tournaments WHERE id = ?");
     $st->execute([$torneo_id]);
     $torneo = $st->fetch(PDO::FETCH_ASSOC);
 }
@@ -144,6 +151,7 @@ if ($torneo_id > 0 && $ronda > 0 && $mesa > 0) {
 if (isset($_GET['msg']) && $_GET['msg'] === 'reasignado') {
     $success_message = 'Mesa reasignada correctamente.';
 }
+$esParejasFijas = ((int)($torneo['modalidad'] ?? 0) === 4);
 
 $pageTitle = 'Reasignar Mesa';
 $desktopActive = 'panel';
@@ -217,11 +225,18 @@ if ($torneo_id <= 0 || $ronda <= 0 || $mesa <= 0) {
                     </div>
                     <div class="col-lg-6">
                         <h6 class="mb-3"><i class="fas fa-list-check me-2"></i>Opciones de reasignación</h6>
+                        <?php if ($esParejasFijas): ?>
+                        <div class="alert alert-info py-2">
+                            Parejas Fijas: los jugadores con el mismo código de pareja se mueven en bloque.
+                        </div>
+                        <?php endif; ?>
                         <div class="mb-2">
+                            <?php if (!$esParejasFijas): ?>
                             <label class="opcion-reasignacion d-block"><input type="radio" name="opcion_reasignacion" value="1" required class="me-2"> Opción 1: Intercambiar posición 1 con 3</label>
                             <label class="opcion-reasignacion d-block"><input type="radio" name="opcion_reasignacion" value="2" class="me-2"> Opción 2: Intercambiar posición 1 con 4</label>
                             <label class="opcion-reasignacion d-block"><input type="radio" name="opcion_reasignacion" value="3" class="me-2"> Opción 3: Intercambiar posición 2 con 3</label>
                             <label class="opcion-reasignacion d-block"><input type="radio" name="opcion_reasignacion" value="4" class="me-2"> Opción 4: Intercambiar posición 2 con 4</label>
+                            <?php endif; ?>
                             <label class="opcion-reasignacion d-block"><input type="radio" name="opcion_reasignacion" value="5" class="me-2"> Opción 5: Intercambio completo de parejas (1↔3, 2↔4)</label>
                             <label class="opcion-reasignacion d-block"><input type="radio" name="opcion_reasignacion" value="6" class="me-2"> Opción 6: Intercambio cruzado (1↔4, 2↔3)</label>
                         </div>
