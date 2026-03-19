@@ -2418,19 +2418,30 @@ function obtenerDatosInscribirEquipoSitio(int $torneo_id): array
 
     $jugadores_disponibles = [];
     $jugadores_lista_lazy = false;
+    $modalidad = (int)($torneo['modalidad'] ?? 0);
+    $es_parejas = ($modalidad === 2);
 
-    if ($is_admin_general) {
+    if ($is_admin_general && !$es_parejas) {
         $jugadores_disponibles = [];
         $jugadores_lista_lazy = true;
-    } elseif ($user_club_id) {
-        // Admin club o usuario: jugadores del territorio que no están inscritos
-        if ($is_admin_club) {
-            $clubes_supervisados = ClubHelper::getClubesSupervised($user_club_id);
-            $clubes_ids = array_merge([$user_club_id], $clubes_supervisados);
-        } else {
-            $clubes_ids = [$user_club_id];
+    } else {
+        // Parejas: siempre listar disponibles de la entidad. Equipos: idem si tiene club.
+        $clubes_ids = [];
+        if ($es_parejas && $is_admin_general) {
+            $org_torneo_id = Auth::getTournamentOrganizacionId($torneo_id);
+            if ($org_torneo_id) {
+                $stmt = $pdo->prepare("SELECT id FROM clubes WHERE organizacion_id = ? AND (estatus = 1 OR estatus = '1' OR estatus = 'activo')");
+                $stmt->execute([$org_torneo_id]);
+                $clubes_ids = array_column($stmt->fetchAll(PDO::FETCH_ASSOC), 'id');
+            }
+        } elseif ($user_club_id) {
+            if ($is_admin_club) {
+                $clubes_supervisados = ClubHelper::getClubesSupervised($user_club_id);
+                $clubes_ids = array_merge([$user_club_id], $clubes_supervisados);
+            } else {
+                $clubes_ids = [$user_club_id];
+            }
         }
-        
         if (!empty($clubes_ids)) {
             $placeholders = str_repeat('?,', count($clubes_ids) - 1) . '?';
             $stmt = $pdo->prepare("
@@ -2439,8 +2450,8 @@ function obtenerDatosInscribirEquipoSitio(int $torneo_id): array
                        ins.id as id_inscrito
                 FROM usuarios u
                 LEFT JOIN clubes c ON u.club_id = c.id
-                LEFT JOIN inscritos ins ON ins.id_usuario = u.id AND ins.torneo_id = ? AND ins.estatus != 4
-                WHERE u.role = 'usuario' 
+                LEFT JOIN inscritos ins ON ins.id_usuario = u.id AND ins.torneo_id = ? AND (ins.estatus IS NULL OR ins.estatus != 4)
+                WHERE u.role = 'usuario'
                   AND (u.status IN ('approved', 'active', 'activo') OR u.status = 1)
                   AND u.club_id IN ({$placeholders})
                   AND (ins.id IS NULL OR ins.codigo_equipo IS NULL OR ins.codigo_equipo = '')
@@ -2448,6 +2459,9 @@ function obtenerDatosInscribirEquipoSitio(int $torneo_id): array
             ");
             $stmt->execute(array_merge([$torneo_id], $clubes_ids));
             $jugadores_disponibles = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        }
+        if ($es_parejas) {
+            $jugadores_lista_lazy = false;
         }
     }
     

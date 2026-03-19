@@ -331,9 +331,35 @@ $api_guardar_equipo = $base_url . ($use_standalone ? '?' : '&') . 'action=guarda
     .equipo-sidebar-integrantes li { padding: 0.15rem 0; font-weight: 700; }
     #wrap_codigo_equipo_barra { min-height: 1.5rem; }
     .btn-editar-equipo-form { font-size: 0.7rem; padding: 0.1rem 0.35rem; }
+    /* Formulario parejas: más amigable — borde delimitador y +50% tamaño de letra */
+    <?php if ($es_parejas): ?>
+    .page-inscripcion-sitio.form-parejas-amigable {
+        font-size: 1.5rem;
+    }
+    .page-inscripcion-sitio.form-parejas-amigable .col-disponibles,
+    .page-inscripcion-sitio.form-parejas-amigable .col-insc-form,
+    .page-inscripcion-sitio.form-parejas-amigable .col-insc-equipos {
+        border: 2px solid #0d6efd;
+        border-radius: 8px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    }
+    .page-inscripcion-sitio.form-parejas-amigable .col-insc-form .form-control,
+    .page-inscripcion-sitio.form-parejas-amigable .col-insc-form .form-select,
+    .page-inscripcion-sitio.form-parejas-amigable .col-insc-form .form-label,
+    .page-inscripcion-sitio.form-parejas-amigable .col-insc-form .btn,
+    .page-inscripcion-sitio.form-parejas-amigable .col-disponibles .jugador-item,
+    .page-inscripcion-sitio.form-parejas-amigable .col-disponibles .card-header,
+    .page-inscripcion-sitio.form-parejas-amigable .col-insc-equipos .equipo-sidebar-header {
+        font-size: inherit;
+    }
+    .page-inscripcion-sitio.form-parejas-amigable .fila-jugador-compacta .form-control-sm {
+        font-size: 0.95em;
+        min-height: 1.8rem;
+    }
+    <?php endif; ?>
 </style>
 
-<div class="container-fluid py-4 page-inscripcion-sitio">
+<div class="container-fluid py-4 page-inscripcion-sitio<?php echo $es_parejas ? ' form-parejas-amigable' : ''; ?>">
     <!-- Breadcrumb -->
     <nav aria-label="breadcrumb" class="mb-4">
         <ol class="breadcrumb">
@@ -373,13 +399,17 @@ $api_guardar_equipo = $base_url . ($use_standalone ? '?' : '&') . 'action=guarda
             <div class="card border-0 shadow-sm h-100 d-flex flex-column overflow-hidden">
                 <div class="card-header bg-primary text-white py-2">
                     <h6 class="mb-0 small">
-                        <i class="fas fa-user-friends me-1"></i>Disponibles
+                        <i class="fas fa-user-friends me-1"></i><?php echo $es_parejas ? 'Atletas de su entidad' : 'Disponibles'; ?>
                     </h6>
                 </div>
                 
-                <!-- Buscador lista (admin club) | cédula AJAX (admin general, lista lazy) -->
+                <!-- Buscador: parejas = solo lista + cédula en fila (blur); equipos = lista o lazy con botón -->
                 <div class="search-box">
-                    <?php if ($jugadores_lista_lazy): ?>
+                    <?php if ($es_parejas): ?>
+                        <small class="text-muted d-block">Atletas de su entidad. Seleccione club y escriba cédula en la fila del jugador; al salir del campo se busca automáticamente.</small>
+                        <input type="text" id="searchJugadores" class="form-control form-control-sm mt-1 d-none" disabled aria-hidden="true">
+                        <input type="hidden" id="buscarCedulaLazy" aria-hidden="true">
+                    <?php elseif ($jugadores_lista_lazy): ?>
                         <label class="form-label small mb-1 fw-semibold" for="buscarCedulaLazy">Buscar por cédula (añadir a disponibles)</label>
                         <div class="input-group input-group-sm mb-1">
                             <input type="text"
@@ -393,7 +423,7 @@ $api_guardar_equipo = $base_url . ($use_standalone ? '?' : '&') . 'action=guarda
                                 <i class="fas fa-plus"></i> Añadir
                             </button>
                         </div>
-                        <small id="hintLazyCedula" class="text-muted d-block">1) Club<?php echo $es_parejas ? '' : ' y nombre de ' . strtolower($etiqueta_equipo); ?>. 2) Busque por cédula; el jugador aparece abajo para asignar a una posición.</small>
+                        <small id="hintLazyCedula" class="text-muted d-block">1) Club y nombre del equipo. 2) Busque por cédula; el jugador aparece abajo para asignar.</small>
                         <input type="text" id="searchJugadores" class="form-control form-control-sm mt-1 d-none" disabled aria-hidden="true">
                     <?php else: ?>
                     <input type="text"
@@ -401,13 +431,13 @@ $api_guardar_equipo = $base_url . ($use_standalone ? '?' : '&') . 'action=guarda
                            class="form-control"
                            placeholder="Buscar por ID, cédula o nombre..."
                            disabled>
-                    <small class="text-muted">Seleccione el Club<?php echo $es_parejas ? '' : ' y Nombre del ' . $etiqueta_equipo; ?> para habilitar</small>
+                    <small class="text-muted">Seleccione el Club y Nombre del <?php echo $etiqueta_equipo; ?> para habilitar</small>
                     <?php endif; ?>
                 </div>
 
-                <!-- Lista de Jugadores (#listaJugadores siempre en DOM si lazy) -->
+                <!-- Lista de Jugadores: parejas = siempre lista de entidad; equipos = lista o lazy -->
                 <div class="card-body p-0" style="flex:1;min-height:0;overflow-y:auto;">
-                    <?php if ($jugadores_lista_lazy): ?>
+                    <?php if (!$es_parejas && $jugadores_lista_lazy): ?>
                         <div class="small text-muted px-2 py-1 border-bottom bg-white fw-bold" style="font-size:0.7rem;">Disponibles (búsqueda por cédula)</div>
                         <div id="listaJugadores"></div>
                     <?php elseif (empty($jugadores_disponibles)): ?>
@@ -545,12 +575,12 @@ $api_guardar_equipo = $base_url . ($use_standalone ? '?' : '&') . 'action=guarda
                                                    class="form-control form-control-sm jugador-cedula input-cedula" 
                                                    id="jugador_cedula_<?php echo $i; ?>" 
                                                    name="jugadores[<?php echo $i; ?>][cedula]" 
-                                                   placeholder="Céd."
+                                                   placeholder="<?php echo $es_parejas ? 'Cédula (salir del campo para buscar)' : 'Céd.'; ?>"
                                                    data-posicion="<?php echo $i; ?>"
                                                    onblur="buscarJugadorPorCedula(this)"
                                                    oninput="validarFormulario()"
-                                                   readonly
-                                                   style="background-color: #f1f1f1;">
+                                                   <?php echo $es_parejas ? '' : 'readonly '; ?>
+                                                   style="background-color: <?php echo $es_parejas ? '#fff' : '#f1f1f1'; ?>;">
                                             <input type="hidden" 
                                                    class="jugador-id-inscrito" 
                                                    id="jugador_id_inscrito_<?php echo $i; ?>" 
