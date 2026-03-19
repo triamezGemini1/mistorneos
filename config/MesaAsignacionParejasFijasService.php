@@ -476,7 +476,7 @@ class MesaAsignacionParejasFijasService
             // La unidad de trabajo es codigo_equipo; luego cada atleta hereda mesa/letra de su pareja.
             $sqlReset = "
                 UPDATE inscritos
-                SET mesa = 0, letra = NULL
+                SET mesa = 0, letra = ''
                 WHERE torneo_id = ?
                   AND codigo_equipo IS NOT NULL AND codigo_equipo != ''
                   AND " . self::SQL_ESTATUS_ACTIVO_SIN_ALIAS . "
@@ -487,7 +487,7 @@ class MesaAsignacionParejasFijasService
             $registrado_por = (class_exists('Auth') && method_exists('Auth', 'id')) ? ((int) Auth::id() ?: 1) : 1;
             $sqlMesaCodigo = "
                 UPDATE inscritos
-                SET mesa = ?, letra = NULL
+                SET mesa = ?, letra = ''
                 WHERE torneo_id = ?
                   AND codigo_equipo = ?
                   AND " . self::SQL_ESTATUS_ACTIVO_SIN_ALIAS . "
