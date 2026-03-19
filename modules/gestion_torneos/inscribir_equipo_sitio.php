@@ -331,57 +331,60 @@ $api_guardar_equipo = $base_url . ($use_standalone ? '?' : '&') . 'action=guarda
     .equipo-sidebar-integrantes li { padding: 0.15rem 0; font-weight: 700; }
     #wrap_codigo_equipo_barra { min-height: 1.5rem; }
     .btn-editar-equipo-form { font-size: 0.7rem; padding: 0.1rem 0.35rem; }
-    /* Formulario parejas: layout amigable y legible */
+    /* Parejas: formulario arriba ancho completo; abajo dos columnas 50% */
     <?php if ($es_parejas): ?>
-    .page-inscripcion-sitio.form-parejas-amigable .col-disponibles,
-    .page-inscripcion-sitio.form-parejas-amigable .col-insc-form,
-    .page-inscripcion-sitio.form-parejas-amigable .col-insc-equipos {
+    .page-inscripcion-sitio.form-parejas-amigable .form-parejas-top {
         border: 2px solid #0d6efd;
-        border-radius: 8px;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        border-radius: 10px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.08);
         background: #f4f8ff;
         color: #000;
-    }
-    .page-inscripcion-sitio.form-parejas-amigable .col-insc-form .card {
-        background: #fdfefe;
-        border: 2px solid #8ab4f8;
-        border-radius: 10px;
     }
     .page-inscripcion-sitio.form-parejas-amigable #formEquipo {
         border: 2px dashed #9ec5fe;
         border-radius: 8px;
-        padding: 0.55rem;
+        padding: 0.75rem;
         background: #f9fcff;
     }
-    /* Columna central: aumentar letra en textbox */
-    .page-inscripcion-sitio.form-parejas-amigable .col-insc-form input.form-control,
-    .page-inscripcion-sitio.form-parejas-amigable .col-insc-form select.form-select {
+    .page-inscripcion-sitio.form-parejas-amigable .form-parejas-top input.form-control,
+    .page-inscripcion-sitio.form-parejas-amigable .form-parejas-top select.form-select {
         font-size: 1.08rem !important;
         color: #000 !important;
     }
-    .page-inscripcion-sitio.form-parejas-amigable .col-insc-form .form-label {
+    .page-inscripcion-sitio.form-parejas-amigable .form-parejas-top .form-label {
         font-size: 0.95rem !important;
         color: #000 !important;
     }
-    .page-inscripcion-sitio.form-parejas-amigable .col-insc-form .btn {
+    .page-inscripcion-sitio.form-parejas-amigable .form-parejas-top .btn {
         font-size: 0.95rem !important;
     }
-    /* Columnas laterales: 50% menos letra y una sola línea por jugador */
-    .page-inscripcion-sitio.form-parejas-amigable .col-disponibles,
-    .page-inscripcion-sitio.form-parejas-amigable .col-insc-equipos {
-        font-size: 0.5rem;
+    .page-inscripcion-sitio.form-parejas-amigable .col-disponibles-parejas,
+    .page-inscripcion-sitio.form-parejas-amigable .col-insc-equipos-parejas {
+        flex: 0 0 50%;
+        max-width: 50%;
+        border: 2px solid #0d6efd;
+        border-radius: 8px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+        background: #f4f8ff;
         color: #000;
     }
-    .page-inscripcion-sitio.form-parejas-amigable .col-disponibles .jugador-item .small,
-    .page-inscripcion-sitio.form-parejas-amigable .col-disponibles .jugador-item span,
-    .page-inscripcion-sitio.form-parejas-amigable .col-insc-equipos .equipo-sidebar-header .badge,
-    .page-inscripcion-sitio.form-parejas-amigable .col-insc-equipos .equipo-sidebar-header .text-primary,
-    .page-inscripcion-sitio.form-parejas-amigable .col-insc-equipos .equipo-sidebar-header .text-muted {
+    .page-inscripcion-sitio.form-parejas-amigable .col-disponibles-parejas .jugador-item .small,
+    .page-inscripcion-sitio.form-parejas-amigable .col-disponibles-parejas .jugador-item span,
+    .page-inscripcion-sitio.form-parejas-amigable .col-insc-equipos-parejas .equipo-sidebar-header .badge,
+    .page-inscripcion-sitio.form-parejas-amigable .col-insc-equipos-parejas .equipo-sidebar-header .text-primary,
+    .page-inscripcion-sitio.form-parejas-amigable .col-insc-equipos-parejas .equipo-sidebar-header .text-muted {
         white-space: nowrap;
         overflow: hidden;
         text-overflow: ellipsis;
-        display: inline-block;
-        max-width: 100%;
+        font-size: 0.875rem;
+        color: #000;
+    }
+    @media (max-width: 767px) {
+        .page-inscripcion-sitio.form-parejas-amigable .col-disponibles-parejas,
+        .page-inscripcion-sitio.form-parejas-amigable .col-insc-equipos-parejas {
+            flex: 0 0 100%;
+            max-width: 100%;
+        }
     }
     <?php endif; ?>
 </style>
@@ -419,9 +422,144 @@ $api_guardar_equipo = $base_url . ($use_standalone ? '?' : '&') . 'action=guarda
         </div>
     </div>
 
-    <!-- Tres columnas: disponibles (~22%, −40% vs ~37%) | formulario | equipos inscritos -->
+    <?php if ($es_parejas): ?>
+    <!-- Parejas: formulario arriba ancho completo -->
+    <div class="row mb-3">
+        <div class="col-12">
+            <div class="card border-0 shadow-sm form-parejas-top">
+                <div class="card-header bg-warning text-dark py-2">
+                    <h6 class="mb-0">
+                        <i class="fas fa-edit me-1"></i>Inscripción por parejas
+                        <span class="d-block mt-1 fw-normal small text-muted">Club, nombre (opcional) y cédula en la fila del jugador; al salir del campo se busca automáticamente.</span>
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <?php if ($torneo_iniciado): ?>
+                        <div class="alert alert-warning mb-2"><i class="fas fa-exclamation-triangle me-2"></i>El torneo ya inició. No se permiten nuevas inscripciones.</div>
+                    <?php endif; ?>
+                    <form id="formEquipo">
+                        <?php require_once __DIR__ . '/../../config/csrf.php'; ?>
+                        <input type="hidden" name="csrf_token" value="<?php echo CSRF::token(); ?>">
+                        <input type="hidden" id="equipo_id" name="equipo_id" value="">
+                        <input type="hidden" id="torneo_id" name="torneo_id" value="<?php echo $torneo['id']; ?>">
+                        <input type="hidden" id="codigo_equipo" name="codigo_equipo" value="">
+                        <div class="fila-club-nombre-equipo mb-2">
+                            <div class="campo-club flex-grow-1">
+                                <label class="form-label small mb-0" for="club_id">Club *</label>
+                                <select id="club_id" name="club_id" class="form-select form-select-sm w-100" required>
+                                    <option value="">Club *</option>
+                                    <?php if (!empty($clubes_disponibles)): foreach ($clubes_disponibles as $club): ?>
+                                        <option value="<?php echo $club['id']; ?>"><?php echo htmlspecialchars($club['nombre']); ?></option>
+                                    <?php endforeach; else: ?>
+                                        <option value="" disabled>No hay clubes disponibles</option>
+                                    <?php endif; ?>
+                                </select>
+                            </div>
+                            <div class="campo-nombre-equipo flex-grow-1">
+                                <label class="form-label small mb-0" for="nombre_equipo">Nombre pareja/equipo (opcional)</label>
+                                <input type="text" id="nombre_equipo" name="nombre_equipo" class="form-control form-control-sm w-100" placeholder="Opcional">
+                            </div>
+                        </div>
+                        <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-2">
+                            <div id="wrap_codigo_equipo_barra" class="d-flex align-items-center gap-2" style="visibility:hidden;" aria-hidden="true">
+                                <span class="small text-muted fw-bold mb-0">Código</span>
+                                <span id="codigo_equipo_visible" class="badge bg-secondary px-2 py-1"></span>
+                            </div>
+                            <div class="d-flex gap-2">
+                                <button type="submit" class="btn btn-success btn-sm" id="btnGuardarEquipo" <?= $torneo_iniciado ? 'disabled' : '' ?>><i class="fas fa-save me-1"></i>Guardar</button>
+                                <button type="button" class="btn btn-secondary btn-sm" onclick="limpiarFormulario()" <?= $torneo_iniciado ? 'disabled' : '' ?>><i class="fas fa-redo me-1"></i>Nueva</button>
+                            </div>
+                        </div>
+                        <div id="jugadores-container">
+                            <?php for ($i = 1; $i <= $jugadores_por_equipo; $i++): ?>
+                                <div class="row g-1 align-items-center fila-jugador-compacta mb-1" data-posicion="<?php echo $i; ?>" data-jugador-asignado="">
+                                    <div class="col-auto text-center pe-0" style="width:2rem;">
+                                        <?php if ($i == 1): ?><span class="badge bg-warning text-dark">★</span><?php else: ?><span class="small"><?php echo $i; ?></span><?php endif; ?>
+                                        <input type="hidden" id="es_capitan_<?php echo $i; ?>" name="jugadores[<?php echo $i; ?>][es_capitan]" value="<?php echo $i == 1 ? '1' : '0'; ?>">
+                                    </div>
+                                    <div class="col d-flex align-items-center gap-1 wrap-inputs-jugador">
+                                        <input type="text" class="form-control form-control-sm jugador-id-usuario input-id-usuario" id="jugador_id_usuario_<?php echo $i; ?>" placeholder="ID" readonly style="width:3.5rem; background:#e9ecef;">
+                                        <input type="hidden" id="jugador_id_usuario_h_<?php echo $i; ?>" name="jugadores[<?php echo $i; ?>][id_usuario]">
+                                        <input type="text" class="form-control form-control-sm jugador-cedula input-cedula" id="jugador_cedula_<?php echo $i; ?>" name="jugadores[<?php echo $i; ?>][cedula]" placeholder="Cédula (blur para buscar)" data-posicion="<?php echo $i; ?>" onblur="buscarJugadorPorCedula(this)" oninput="validarFormulario()" style="min-width:6rem;">
+                                        <input type="hidden" class="jugador-id-inscrito" id="jugador_id_inscrito_<?php echo $i; ?>" name="jugadores[<?php echo $i; ?>][id_inscrito]">
+                                        <input type="text" class="form-control form-control-sm jugador-nombre input-nombre-jug flex-grow-1" id="jugador_nombre_<?php echo $i; ?>" name="jugadores[<?php echo $i; ?>][nombre]" placeholder="Nombre" readonly style="background:#e9ecef;" oninput="validarFormulario()">
+                                        <button type="button" class="btn btn-sm btn-outline-danger py-0 px-1" onclick="limpiarJugadorYDevolver(<?php echo $i; ?>)" title="Quitar" id="btn_limpiar_<?php echo $i; ?>" style="display:none;"><i class="fas fa-times"></i></button>
+                                    </div>
+                                </div>
+                            <?php endfor; ?>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- Dos columnas 50%: Disponibles | Inscritos -->
+    <div class="row g-2">
+        <div class="col-12 col-md-6 col-disponibles-parejas">
+            <div class="card border-0 shadow-sm h-100 d-flex flex-column overflow-hidden">
+                <div class="card-header bg-primary text-white py-2">
+                    <h6 class="mb-0"><i class="fas fa-user-friends me-1"></i>Atletas de su entidad</h6>
+                </div>
+                <div class="search-box">
+                    <small class="text-muted d-block">Clic en un atleta para asignarlo a una posición.</small>
+                    <input type="text" id="searchJugadores" class="d-none" disabled aria-hidden="true">
+                    <input type="hidden" id="buscarCedulaLazy" aria-hidden="true">
+                </div>
+                <div class="card-body p-0" style="flex:1;min-height:0;overflow-y:auto;">
+                    <?php if (empty($jugadores_disponibles)): ?>
+                        <div class="text-center py-3 text-muted small">Sin disponibles</div>
+                    <?php else: ?>
+                        <div class="small text-muted px-2 py-1 border-bottom bg-light fw-bold">ID | Céd. | Nombre</div>
+                        <div id="listaJugadores">
+                            <?php foreach ($jugadores_disponibles as $jugador): ?>
+                                <div class="jugador-item <?= $torneo_iniciado ? 'disabled' : '' ?>" data-nombre="<?php echo strtolower(htmlspecialchars($jugador['nombre'] ?? '')); ?>" data-cedula="<?php echo htmlspecialchars($jugador['cedula'] ?? ''); ?>" data-id-usuario="<?php echo $jugador['id_usuario'] ?? ''; ?>" data-id="<?php echo $jugador['id'] ?? ''; ?>" data-jugador='<?php echo htmlspecialchars(json_encode($jugador, JSON_UNESCAPED_UNICODE), ENT_QUOTES, 'UTF-8'); ?>' <?php if (!$torneo_iniciado): ?>onclick="seleccionarJugador(this)"<?php endif; ?> style="cursor:<?= $torneo_iniciado ? 'not-allowed' : 'pointer' ?>;">
+                                    <div class="small"><span class="text-muted fw-bold"><?php echo htmlspecialchars($jugador['id_usuario'] ?? '-'); ?></span> | <span class="text-muted"><?php echo htmlspecialchars($jugador['cedula'] ?? ''); ?></span> | <span class="text-dark"><?php echo htmlspecialchars($jugador['nombre'] ?? ''); ?></span></div>
+                                </div>
+                            <?php endforeach; ?>
+                        </div>
+                    <?php endif; ?>
+                </div>
+            </div>
+        </div>
+        <div class="col-12 col-md-6 col-insc-equipos-parejas">
+            <div class="card border-0 shadow-sm equipo-sidebar-card h-100">
+                <div class="card-header bg-success text-white py-2">
+                    <h6 class="mb-0"><i class="fas fa-users me-1"></i>Parejas inscritas (<?php echo count($equipos_registrados); ?>)</h6>
+                    <small class="opacity-75 d-block">Clic en la fila para ver integrantes · Editar para cargar en el formulario</small>
+                </div>
+                <div class="card-body p-2">
+                    <?php if (empty($equipos_registrados)): ?>
+                        <div class="text-center py-3 text-muted small">Aún no hay parejas</div>
+                    <?php else: ?>
+                        <div id="listaEquiposRegistrados">
+                            <?php foreach ($equipos_registrados as $equipo): $eid = (int)$equipo['id']; $collapseId = 'int-equipo-' . $eid; ?>
+                            <div class="equipo-sidebar-item equipo-registrado-item" data-equipo-id="<?php echo $eid; ?>">
+                                <div class="equipo-sidebar-header d-flex align-items-center justify-content-between gap-1 flex-wrap" role="button" tabindex="0" data-collapse-target="<?php echo htmlspecialchars($collapseId, ENT_QUOTES, 'UTF-8'); ?>">
+                                    <div class="flex-grow-1 min-w-0">
+                                        <span class="badge bg-secondary"><?php echo htmlspecialchars($equipo['codigo_equipo']); ?></span>
+                                        <span class="fw-semibold text-primary"><?php echo htmlspecialchars($equipo['nombre_equipo']); ?></span>
+                                        <div class="text-muted small"><?php echo htmlspecialchars($equipo['nombre_club'] ?? ''); ?></div>
+                                    </div>
+                                    <button type="button" class="btn btn-sm btn-outline-primary btn-editar-equipo-form" onclick="event.stopPropagation(); cargarEquipo(<?php echo $eid; ?>); document.getElementById('formEquipo').scrollIntoView({behavior:'smooth'});" title="Editar">Editar</button>
+                                    <span class="btn btn-sm btn-outline-secondary py-0 px-1 integrantes-chevron"><i class="fas fa-chevron-down small"></i></span>
+                                    <button type="button" class="btn btn-sm btn-outline-danger py-0 px-1" onclick="event.stopPropagation(); eliminarEquipo(<?php echo $eid; ?>, '<?php echo htmlspecialchars($equipo['nombre_equipo'], ENT_QUOTES); ?>')" title="Eliminar"><i class="fas fa-trash-alt"></i></button>
+                                </div>
+                                <ul class="list-unstyled mb-0 equipo-sidebar-integrantes collapse integrantes-collapse" id="<?php echo $collapseId; ?>">
+                                    <?php foreach ($equipo['jugadores'] ?? [] as $j): ?>
+                                        <li><?php echo htmlspecialchars($j['cedula'] ?? ''); ?> — <?php echo htmlspecialchars($j['nombre'] ?? ''); ?></li>
+                                    <?php endforeach; ?>
+                                </ul>
+                            </div>
+                            <?php endforeach; ?>
+                        </div>
+                    <?php endif; ?>
+                </div>
+            </div>
+        </div>
+    </div>
+    <?php else: ?>
+    <!-- Tres columnas: disponibles | formulario | equipos inscritos -->
     <div class="row g-2 g-lg-3">
-        <!-- COLUMNA 1: Disponibles (ancho reducido) -->
         <div class="col-12 col-disponibles">
             <div class="card border-0 shadow-sm h-100 d-flex flex-column overflow-hidden">
                 <div class="card-header bg-primary text-white py-2">
@@ -712,6 +850,7 @@ $api_guardar_equipo = $base_url . ($use_standalone ? '?' : '&') . 'action=guarda
             </div>
         </div>
     </div>
+    <?php endif; ?>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js" defer></script>
