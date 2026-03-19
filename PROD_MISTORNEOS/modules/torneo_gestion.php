@@ -4169,6 +4169,27 @@ function guardarResultados($user_id, $is_admin_general) {
                 break;
             }
         }
+
+        // Empate en tranque: Mano Nula (0 puntos a ambos, 0 efectividad).
+        // Solo aplica cuando no hay forfait ni tarjeta grave.
+        $esEmpateManoNula = false;
+        if (!$hayForfaitEnMesa && !$hayTarjetaGraveEnMesa) {
+            $puntosParejaA = null;
+            $puntosParejaB = null;
+            foreach ($datosJugadores as $jugador) {
+                $sec = (int)($jugador['secuencia'] ?? 0);
+                $r1 = (int)($jugador['resultado1'] ?? 0);
+                if (($sec === 1 || $sec === 2) && $puntosParejaA === null) {
+                    $puntosParejaA = $r1;
+                }
+                if (($sec === 3 || $sec === 4) && $puntosParejaB === null) {
+                    $puntosParejaB = $r1;
+                }
+            }
+            if ($puntosParejaA !== null && $puntosParejaB !== null && $puntosParejaA > 0 && $puntosParejaA === $puntosParejaB) {
+                $esEmpateManoNula = true;
+            }
+        }
         
         // Segunda pasada: calcular efectividad considerando sanciones
         foreach ($datosJugadores as $jugador) {
@@ -4186,8 +4207,14 @@ function guardarResultados($user_id, $is_admin_general) {
             $esParejaA = $jugador['esParejaA'];
             
             // Calcular efectividad según el caso
+            // PRIORIDAD 0: Mano Nula (empate en tranque)
+            if ($esEmpateManoNula) {
+                $efectividad = 0;
+                $resultado1 = 0;
+                $resultado2 = 0;
+            }
             // PRIORIDAD 1: Si hay forfait en la mesa, usar lógica especial de forfait
-            if ($hayForfaitEnMesa) {
+            elseif ($hayForfaitEnMesa) {
                 $calculoForfait = calcularEfectividadForfait($ff == 1, $puntosTorneo);
                 $efectividad = $calculoForfait['efectividad'];
                 // También actualizar resultado1 y resultado2 según el cálculo de forfait
@@ -4284,6 +4311,9 @@ function guardarResultados($user_id, $is_admin_general) {
         if (!empty($observaciones)) {
             $stmt = $pdo->prepare("UPDATE partiresul SET observaciones = ? WHERE id_torneo = ? AND partida = ? AND mesa = ?");
             $stmt->execute([$observaciones, $torneo_id, $ronda, $mesa]);
+        }
+        if ($esEmpateManoNula) {
+            $_SESSION['info'] = 'Empate en tranque registrado como Mano Nula: 0 puntos para ambas parejas.';
         }
         
         $pdo->commit();

@@ -16,6 +16,9 @@ require_once __DIR__ . '/../lib/ParejasFijasHelper.php';
 class MesaAsignacionParejasFijasService
 {
     private PDO $pdo;
+    private const TIPO_INTERCLUBES = 1;
+    private const TIPO_SUIZO_PURO = 2;
+    private const TIPO_SUIZO_SIN_REPETIR = 3;
     private const JUGADORES_POR_PAREJA = 2;
     private const JUGADORES_POR_MESA = 4;
     /** Máximo jugadores en BYE por ronda (hasta 2 parejas = 4 jugadores). */
@@ -44,7 +47,7 @@ class MesaAsignacionParejasFijasService
         if ($numRonda === 1) {
             return $this->generarRonda1($torneoId);
         }
-        return $this->generarRonda2Plus($torneoId, $numRonda);
+        return $this->generarRonda2Plus($torneoId, $numRonda, $estrategia);
     }
 
     /**
@@ -124,7 +127,7 @@ class MesaAsignacionParejasFijasService
      * Rondas 2+: emparejar por rendimiento (puntos de pareja). Siempre mejores en primeros lugares.
      * Tipo interclubes/suizo/suizo_puro se puede leer del torneo más adelante.
      */
-    private function generarRonda2Plus(int $torneoId, int $numRonda): array
+    private function generarRonda2Plus(int $torneoId, int $numRonda, string $estrategia = ''): array
     {
         $parejas = $this->obtenerParejasConJugadoresYClasificacion($torneoId);
         if (empty($parejas)) {
@@ -134,13 +137,23 @@ class MesaAsignacionParejasFijasService
             ];
         }
 
+        $tipoEmparejamiento = $this->resolverTipoEmparejamiento($torneoId, $estrategia);
+        $historialEnfrentamientos = $this->obtenerHistorialEnfrentamientosParejas($torneoId, $numRonda - 1);
+
+        $evitarRepeticion = ($tipoEmparejamiento === self::TIPO_INTERCLUBES || $tipoEmparejamiento === self::TIPO_SUIZO_SIN_REPETIR);
+        $preferirOtroClub = ($tipoEmparejamiento === self::TIPO_INTERCLUBES);
+
+        $parejasEmparejadas = $this->emparejarParejasPorRanking(
+            $parejas,
+            $historialEnfrentamientos,
+            $evitarRepeticion,
+            $preferirOtroClub
+        );
+
         $mesasArray = [];
-        $jugadoresBye = [];
-        $lista = $parejas;
-        $i = 0;
-        while ($i + 1 < count($lista)) {
-            $parejaA = $lista[$i];
-            $parejaB = $lista[$i + 1];
+        foreach ($parejasEmparejadas['matches'] as $match) {
+            $parejaA = $match['a'];
+            $parejaB = $match['b'];
             $mesa = [
                 $parejaA['jugadores'][0],
                 $parejaA['jugadores'][1],
@@ -148,11 +161,12 @@ class MesaAsignacionParejasFijasService
                 $parejaB['jugadores'][1],
             ];
             $mesasArray[] = $mesa;
-            $i += 2;
         }
-        if ($i < count($lista)) {
-            $jugadoresBye[] = $lista[$i]['jugadores'][0];
-            $jugadoresBye[] = $lista[$i]['jugadores'][1];
+
+        $jugadoresBye = [];
+        foreach ($parejasEmparejadas['byes'] as $parejaBye) {
+            $jugadoresBye[] = $parejaBye['jugadores'][0];
+            $jugadoresBye[] = $parejaBye['jugadores'][1];
         }
         $jugadoresBye = array_slice($jugadoresBye, 0, self::MAX_JUGADORES_BYE);
 
@@ -161,13 +175,216 @@ class MesaAsignacionParejasFijasService
             $this->aplicarBye($torneoId, $numRonda, $jugadoresBye);
         }
 
+        $modoTxt = 'suizo por rendimiento';
+        if ($tipoEmparejamiento === self::TIPO_INTERCLUBES) {
+            $modoTxt = 'interclubes';
+        } elseif ($tipoEmparejamiento === self::TIPO_SUIZO_PURO) {
+            $modoTxt = 'suizo puro';
+        } elseif ($tipoEmparejamiento === self::TIPO_SUIZO_SIN_REPETIR) {
+            $modoTxt = 'suizo sin repetir';
+        }
+
         return [
             'success' => true,
-            'message' => "Ronda {$numRonda} generada por rendimiento.",
+            'message' => "Ronda {$numRonda} generada ({$modoTxt}).",
             'total_mesas' => count($mesasArray),
             'jugadores_bye' => count($jugadoresBye),
             'mesas' => $mesasArray,
         ];
+    }
+
+    /**
+     * Define el tipo de emparejamiento para rondas 2+.
+     * Prioridad: parámetro de estrategia -> tournaments.tipo_torneo -> default suizo sin repetir.
+     */
+    private function resolverTipoEmparejamiento(int $torneoId, string $estrategia): int
+    {
+        $estrategia = strtolower(trim($estrategia));
+        if ($estrategia === 'interclubes') {
+            return self::TIPO_INTERCLUBES;
+        }
+        if ($estrategia === 'suizo_puro') {
+            return self::TIPO_SUIZO_PURO;
+        }
+        if ($estrategia === 'suizo_sin_repetir' || $estrategia === 'suizo') {
+            return self::TIPO_SUIZO_SIN_REPETIR;
+        }
+
+        try {
+            $stmt = $this->pdo->prepare("SELECT COALESCE(tipo_torneo, 0) AS tipo_torneo FROM tournaments WHERE id = ? LIMIT 1");
+            $stmt->execute([$torneoId]);
+            $row = $stmt->fetch(PDO::FETCH_ASSOC);
+            $tipo = (int)($row['tipo_torneo'] ?? 0);
+            if (in_array($tipo, [self::TIPO_INTERCLUBES, self::TIPO_SUIZO_PURO, self::TIPO_SUIZO_SIN_REPETIR], true)) {
+                return $tipo;
+            }
+        } catch (Throwable $e) {
+            // Compatibilidad: si no existe la columna, usar default.
+        }
+
+        return self::TIPO_SUIZO_SIN_REPETIR;
+    }
+
+    /**
+     * Historial de enfrentamientos entre parejas por codigo_equipo usando partiresul + inscritos.
+     * No crea tablas nuevas y reutiliza la data existente de rondas anteriores.
+     *
+     * @return array<string,bool> mapa de llave ordenada "codigoA|codigoB" => true
+     */
+    private function obtenerHistorialEnfrentamientosParejas(int $torneoId, int $hastaRonda): array
+    {
+        if ($hastaRonda <= 0) {
+            return [];
+        }
+
+        $sql = "
+            SELECT DISTINCT
+                ia.codigo_equipo AS codigo_a,
+                ib.codigo_equipo AS codigo_b
+            FROM partiresul p1
+            INNER JOIN partiresul p2
+                ON p2.id_torneo = p1.id_torneo
+                AND p2.partida = p1.partida
+                AND p2.mesa = p1.mesa
+                AND p2.secuencia = CASE
+                    WHEN p1.secuencia IN (1,2) THEN 3
+                    ELSE 1
+                END
+            INNER JOIN inscritos ia
+                ON ia.torneo_id = p1.id_torneo AND ia.id_usuario = p1.id_usuario
+            INNER JOIN inscritos ib
+                ON ib.torneo_id = p2.id_torneo AND ib.id_usuario = p2.id_usuario
+            WHERE p1.id_torneo = ?
+              AND p1.partida <= ?
+              AND p1.mesa > 0
+              AND p1.secuencia IN (1,3)
+              AND ia.codigo_equipo IS NOT NULL AND ia.codigo_equipo != ''
+              AND ib.codigo_equipo IS NOT NULL AND ib.codigo_equipo != ''
+        ";
+        $stmt = $this->pdo->prepare($sql);
+        $stmt->execute([$torneoId, $hastaRonda]);
+
+        $historial = [];
+        while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
+            $a = (string)($row['codigo_a'] ?? '');
+            $b = (string)($row['codigo_b'] ?? '');
+            if ($a === '' || $b === '' || $a === $b) {
+                continue;
+            }
+            $historial[$this->llaveMatchParejas($a, $b)] = true;
+        }
+        return $historial;
+    }
+
+    /**
+     * Empareja parejas por ranking con estrategia modular:
+     * - Interclubes: salto al siguiente mejor de otro club (prioridad), evitando repetición cuando sea posible.
+     * - Suizo sin repetir: evita repetir enfrentamientos usando historial actual.
+     * - Suizo puro: estrictamente por ranking (fallback natural).
+     *
+     * @return array{matches: array<int, array{a: array, b: array}>, byes: array<int, array>}
+     */
+    private function emparejarParejasPorRanking(
+        array $parejasOrdenadas,
+        array $historialEnfrentamientos,
+        bool $evitarRepeticion,
+        bool $preferirOtroClub
+    ): array {
+        $disponibles = array_values($parejasOrdenadas);
+        $matches = [];
+        $byes = [];
+
+        while (count($disponibles) >= 2) {
+            $parejaBase = array_shift($disponibles);
+            $indiceRival = $this->seleccionarRival(
+                $parejaBase,
+                $disponibles,
+                $historialEnfrentamientos,
+                $evitarRepeticion,
+                $preferirOtroClub
+            );
+            if ($indiceRival < 0) {
+                $indiceRival = 0;
+            }
+
+            $rival = $disponibles[$indiceRival];
+            array_splice($disponibles, $indiceRival, 1);
+
+            $matches[] = ['a' => $parejaBase, 'b' => $rival];
+            $historialEnfrentamientos[$this->llaveMatchParejas(
+                (string)$parejaBase['codigo_equipo'],
+                (string)$rival['codigo_equipo']
+            )] = true;
+        }
+
+        if (!empty($disponibles)) {
+            $byes[] = $disponibles[0];
+        }
+
+        return ['matches' => $matches, 'byes' => $byes];
+    }
+
+    private function seleccionarRival(
+        array $parejaBase,
+        array $candidatas,
+        array $historialEnfrentamientos,
+        bool $evitarRepeticion,
+        bool $preferirOtroClub
+    ): int {
+        $clubBase = (int)($parejaBase['id_club'] ?? 0);
+        $codigoBase = (string)($parejaBase['codigo_equipo'] ?? '');
+
+        $reglas = [];
+        if ($preferirOtroClub && $evitarRepeticion) {
+            $reglas = [
+                ['otro_club' => true,  'sin_repetir' => true],
+                ['otro_club' => true,  'sin_repetir' => false],
+                ['otro_club' => false, 'sin_repetir' => true],
+                ['otro_club' => false, 'sin_repetir' => false],
+            ];
+        } elseif ($preferirOtroClub) {
+            $reglas = [
+                ['otro_club' => true,  'sin_repetir' => false],
+                ['otro_club' => false, 'sin_repetir' => false],
+            ];
+        } elseif ($evitarRepeticion) {
+            $reglas = [
+                ['otro_club' => false, 'sin_repetir' => true],
+                ['otro_club' => false, 'sin_repetir' => false],
+            ];
+        } else {
+            $reglas = [['otro_club' => false, 'sin_repetir' => false]];
+        }
+
+        foreach ($reglas as $regla) {
+            foreach ($candidatas as $idx => $cand) {
+                $clubCand = (int)($cand['id_club'] ?? 0);
+                $codigoCand = (string)($cand['codigo_equipo'] ?? '');
+
+                if ($regla['otro_club'] && $clubBase > 0 && $clubCand > 0 && $clubBase === $clubCand) {
+                    continue;
+                }
+
+                if ($regla['sin_repetir']) {
+                    if (isset($historialEnfrentamientos[$this->llaveMatchParejas($codigoBase, $codigoCand)])) {
+                        continue;
+                    }
+                }
+                return $idx;
+            }
+        }
+
+        return -1;
+    }
+
+    private function llaveMatchParejas(string $codigoA, string $codigoB): string
+    {
+        $a = trim($codigoA);
+        $b = trim($codigoB);
+        if ($a <= $b) {
+            return $a . '|' . $b;
+        }
+        return $b . '|' . $a;
     }
 
     /**
