@@ -446,12 +446,19 @@ class MesaAsignacionParejasFijasService
     {
         $this->pdo->beginTransaction();
         try {
+            // 1) Limpiar staging de asignación en inscritos para este torneo.
+            // La unidad de trabajo es codigo_equipo; luego cada atleta hereda mesa/letra de su pareja.
+            $sqlReset = "
+                UPDATE inscritos
+                SET mesa = 0, letra = NULL
+                WHERE torneo_id = ?
+                  AND codigo_equipo IS NOT NULL AND codigo_equipo != ''
+                  AND " . InscritosHelper::SQL_WHERE_SOLO_CONFIRMADO . "
+            ";
+            $stmtReset = $this->pdo->prepare($sqlReset);
+            $stmtReset->execute([$torneoId]);
+
             $registrado_por = (class_exists('Auth') && method_exists('Auth', 'id')) ? ((int) Auth::id() ?: 1) : 1;
-            $sql = "INSERT INTO partiresul
-                    (id_torneo, id_usuario, partida, mesa, secuencia, fecha_partida, registrado, registrado_por)
-                    VALUES (?, ?, ?, ?, ?, NOW(), 0, ?)
-                    ON DUPLICATE KEY UPDATE mesa = VALUES(mesa), secuencia = VALUES(secuencia)";
-            $stmt = $this->pdo->prepare($sql);
 
             $numeroMesa = 1;
             foreach ($mesas as $mesaCodigos) {
@@ -463,20 +470,97 @@ class MesaAsignacionParejasFijasService
                 $jugAC = $this->obtenerJugadoresDeCodigo($codigoAC, $jugadoresPorCodigo);
                 $jugBD = $this->obtenerJugadoresDeCodigo($codigoBD, $jugadoresPorCodigo);
 
-                // AC
-                $stmt->execute([$torneoId, (int)$jugAC[0]['id_usuario'], $ronda, $numeroMesa, 1, $registrado_por]);
-                $stmt->execute([$torneoId, (int)$jugAC[1]['id_usuario'], $ronda, $numeroMesa, 2, $registrado_por]);
-                // BD
-                $stmt->execute([$torneoId, (int)$jugBD[0]['id_usuario'], $ronda, $numeroMesa, 3, $registrado_por]);
-                $stmt->execute([$torneoId, (int)$jugBD[1]['id_usuario'], $ronda, $numeroMesa, 4, $registrado_por]);
+                // 2) Actualizar inscritos por bloque de pareja (codigo_equipo):
+                // primera pareja de mesa = A-C, segunda = B-D.
+                $this->actualizarInscritosParejaConMesaYLetras($torneoId, $codigoAC, $jugAC, $numeroMesa, 'A', 'C');
+                $this->actualizarInscritosParejaConMesaYLetras($torneoId, $codigoBD, $jugBD, $numeroMesa, 'B', 'D');
 
                 $numeroMesa++;
+            }
+
+            // 3) Regenerar partiresul de la ronda desde staging inscritos (mesa/letra), no desde cálculo individual.
+            $stmtDel = $this->pdo->prepare("DELETE FROM partiresul WHERE id_torneo = ? AND partida = ? AND mesa > 0");
+            $stmtDel->execute([$torneoId, $ronda]);
+
+            $sqlIns = "INSERT INTO partiresul
+                (id_torneo, id_usuario, partida, mesa, secuencia, fecha_partida, registrado, registrado_por)
+                VALUES (?, ?, ?, ?, ?, NOW(), 0, ?)";
+            $stmtIns = $this->pdo->prepare($sqlIns);
+
+            $sqlSel = "
+                SELECT id_usuario, mesa, letra
+                FROM inscritos
+                WHERE torneo_id = ?
+                  AND mesa > 0
+                  AND codigo_equipo IS NOT NULL AND codigo_equipo != ''
+                  AND " . InscritosHelper::SQL_WHERE_SOLO_CONFIRMADO . "
+                ORDER BY mesa ASC,
+                    CASE UPPER(COALESCE(letra, ''))
+                        WHEN 'A' THEN 1
+                        WHEN 'C' THEN 2
+                        WHEN 'B' THEN 3
+                        WHEN 'D' THEN 4
+                        ELSE 99
+                    END ASC,
+                    id_usuario ASC
+            ";
+            $stmtSel = $this->pdo->prepare($sqlSel);
+            $stmtSel->execute([$torneoId]);
+            while ($row = $stmtSel->fetch(PDO::FETCH_ASSOC)) {
+                $mesa = (int)($row['mesa'] ?? 0);
+                $idUsuario = (int)($row['id_usuario'] ?? 0);
+                $letra = strtoupper((string)($row['letra'] ?? ''));
+                if ($mesa <= 0 || $idUsuario <= 0) {
+                    continue;
+                }
+                $secuencia = $this->secuenciaDesdeLetra($letra);
+                if ($secuencia <= 0) {
+                    throw new RuntimeException("Letra inválida en inscritos para id_usuario {$idUsuario}.");
+                }
+                $stmtIns->execute([$torneoId, $idUsuario, $ronda, $mesa, $secuencia, $registrado_por]);
             }
 
             $this->pdo->commit();
         } catch (Throwable $e) {
             $this->pdo->rollBack();
             throw $e;
+        }
+    }
+
+    /**
+     * Actualiza en bloque la pareja (codigo_equipo) con mesa y letras correspondientes.
+     */
+    private function actualizarInscritosParejaConMesaYLetras(
+        int $torneoId,
+        string $codigoEquipo,
+        array $jugadoresPareja,
+        int $mesa,
+        string $letra1,
+        string $letra2
+    ): void {
+        if (count($jugadoresPareja) !== 2) {
+            throw new RuntimeException("Pareja {$codigoEquipo} inválida para actualizar inscritos.");
+        }
+        $id1 = (int)$jugadoresPareja[0]['id_usuario'];
+        $id2 = (int)$jugadoresPareja[1]['id_usuario'];
+        if ($id1 <= 0 || $id2 <= 0 || $id1 === $id2) {
+            throw new RuntimeException("Pareja {$codigoEquipo} contiene ids inválidos.");
+        }
+
+        $sql = "UPDATE inscritos SET mesa = ?, letra = ? WHERE torneo_id = ? AND id_usuario = ? AND codigo_equipo = ?";
+        $stmt = $this->pdo->prepare($sql);
+        $stmt->execute([$mesa, $letra1, $torneoId, $id1, $codigoEquipo]);
+        $stmt->execute([$mesa, $letra2, $torneoId, $id2, $codigoEquipo]);
+    }
+
+    private function secuenciaDesdeLetra(string $letra): int
+    {
+        switch (strtoupper($letra)) {
+            case 'A': return 1;
+            case 'C': return 2;
+            case 'B': return 3;
+            case 'D': return 4;
+            default: return 0;
         }
     }
 
