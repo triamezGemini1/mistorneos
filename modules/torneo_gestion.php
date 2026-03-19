@@ -1722,7 +1722,7 @@ function obtenerDatosNotificacionesTorneo($torneo_id) {
         if ($modalidad === 3) {
             require_once __DIR__ . '/../config/MesaAsignacionEquiposService.php';
             $mesaService = new MesaAsignacionEquiposService();
-        } elseif ($modalidad === 4) {
+        } elseif (in_array($modalidad, [2, 4], true)) {
             require_once __DIR__ . '/../config/MesaAsignacionParejasFijasService.php';
             $mesaService = new MesaAsignacionParejasFijasService();
         } else {
@@ -3913,15 +3913,15 @@ function generarRonda($torneo_id, $user_id, $is_admin_general) {
         $torneo = $stmt->fetch(PDO::FETCH_ASSOC);
         $total_rondas = (int)($torneo['rondas'] ?? 0);
         $modalidad = (int)($torneo['modalidad'] ?? 0);
-        
-        // Determinar qué servicio usar según modalidad (3 = Equipos, 4 = Parejas fijas)
+
+        // Determinar qué servicio usar según modalidad (3 = Equipos, 2/4 = Parejas)
         $es_torneo_equipos = ($modalidad === 3);
-        $es_torneo_parejas_fijas = ($modalidad === 4);
+        $es_torneo_parejas = in_array($modalidad, [2, 4], true);
         
         if ($es_torneo_equipos) {
             require_once __DIR__ . '/../config/MesaAsignacionEquiposService.php';
             $mesaService = new MesaAsignacionEquiposService();
-        } elseif ($es_torneo_parejas_fijas) {
+        } elseif ($es_torneo_parejas) {
             require_once __DIR__ . '/../config/MesaAsignacionParejasFijasService.php';
             $mesaService = new MesaAsignacionParejasFijasService();
         } else {
@@ -3953,10 +3953,10 @@ function generarRonda($torneo_id, $user_id, $is_admin_general) {
         
         $proxima_ronda = $ultima_ronda + 1;
         
-        // Obtener estrategia de asignación (equipos: secuencial, etc.; parejas fijas: numero_aleatorio; resto: separar)
+        // Obtener estrategia de asignación (equipos: secuencial, parejas: por tipo_torneo; resto: separar)
         if ($es_torneo_equipos) {
             $estrategia = $_POST['estrategia_asignacion'] ?? 'secuencial';
-        } elseif ($es_torneo_parejas_fijas) {
+        } elseif ($es_torneo_parejas) {
             $estrategia = $_POST['estrategia_asignacion'] ?? 'numero_aleatorio';
         } else {
             $estrategia = $_POST['estrategia_ronda2'] ?? 'separar';
@@ -4071,7 +4071,7 @@ function eliminarUltimaRonda($torneo_id, $user_id, $is_admin_general) {
         if ($modalidad === 3) {
             require_once __DIR__ . '/../config/MesaAsignacionEquiposService.php';
             $mesaService = new MesaAsignacionEquiposService();
-        } elseif ($modalidad === 4) {
+        } elseif (in_array($modalidad, [2, 4], true)) {
             require_once __DIR__ . '/../config/MesaAsignacionParejasFijasService.php';
             $mesaService = new MesaAsignacionParejasFijasService();
         } else {
@@ -4087,7 +4087,7 @@ function eliminarUltimaRonda($torneo_id, $user_id, $is_admin_general) {
         }
         
         // Eliminar ronda (partiresul e historial_parejas): usar servicio que tenga eliminarRonda
-        if ($modalidad === 4 && $mesaService instanceof MesaAsignacionParejasFijasService) {
+        if (in_array($modalidad, [2, 4], true) && $mesaService instanceof MesaAsignacionParejasFijasService) {
             $eliminada = $mesaService->eliminarRonda($torneo_id, $ultima_ronda);
         } else {
             require_once __DIR__ . '/../config/MesaAsignacionService.php';

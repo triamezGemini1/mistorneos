@@ -3,7 +3,7 @@
 declare(strict_types=1);
 
 /**
- * Servicio de asignación de mesas para torneos de Parejas Fijas (modalidad 4).
+ * Servicio de asignación de mesas para torneos de Parejas (modalidad 2 y 4).
  *
  * - Ronda 1: Parejas clasificadas por numero (consecutivo por club); emparejar al azar 1 con 1, 2 con 2, etc.
  *   Sin bloques por club (aleatorio en código).
@@ -25,6 +25,12 @@ class MesaAsignacionParejasFijasService
     private const MAX_JUGADORES_BYE = 4;
     /** Máximo de parejas BYE por ronda. */
     private const MAX_PAREJAS_BYE = 2;
+    /**
+     * Filtro seguro de estatus activo (compatible con columna INT, VARCHAR o ENUM).
+     * Evita comparar numéricos con textos en la misma expresión (error 1292).
+     */
+    private const SQL_ESTATUS_ACTIVO_ALIAS_I = "CAST(i.estatus AS CHAR) IN ('0','1','2','3','pendiente','confirmado','solvente','no_solvente')";
+    private const SQL_ESTATUS_ACTIVO_SIN_ALIAS = "CAST(estatus AS CHAR) IN ('0','1','2','3','pendiente','confirmado','solvente','no_solvente')";
 
     public function __construct()
     {
@@ -367,7 +373,7 @@ class MesaAsignacionParejasFijasService
                 LEFT JOIN equipos e ON e.id_torneo = i.torneo_id AND e.codigo_equipo = i.codigo_equipo
                 WHERE i.torneo_id = ?
                   AND i.codigo_equipo IS NOT NULL AND i.codigo_equipo != ''
-                  AND " . InscritosHelper::sqlWhereActivoConAlias('i') . "
+                  AND " . self::SQL_ESTATUS_ACTIVO_ALIAS_I . "
                 GROUP BY i.codigo_equipo
                 HAVING jugadores_activos = 2
             ) t
@@ -390,7 +396,7 @@ class MesaAsignacionParejasFijasService
             INNER JOIN usuarios u ON u.id = i.id_usuario
             WHERE i.torneo_id = ?
               AND i.codigo_equipo IS NOT NULL AND i.codigo_equipo != ''
-              AND " . InscritosHelper::sqlWhereActivoConAlias('i') . "
+              AND " . self::SQL_ESTATUS_ACTIVO_ALIAS_I . "
             ORDER BY i.codigo_equipo ASC, i.id ASC
         ";
         $stmt = $this->pdo->prepare($sql);
@@ -473,7 +479,7 @@ class MesaAsignacionParejasFijasService
                 SET mesa = 0, letra = NULL
                 WHERE torneo_id = ?
                   AND codigo_equipo IS NOT NULL AND codigo_equipo != ''
-                  AND " . InscritosHelper::SQL_WHERE_ACTIVO . "
+                  AND " . self::SQL_ESTATUS_ACTIVO_SIN_ALIAS . "
             ";
             $stmtReset = $this->pdo->prepare($sqlReset);
             $stmtReset->execute([$torneoId]);
@@ -484,7 +490,7 @@ class MesaAsignacionParejasFijasService
                 SET mesa = ?, letra = NULL
                 WHERE torneo_id = ?
                   AND codigo_equipo = ?
-                  AND " . InscritosHelper::SQL_WHERE_ACTIVO . "
+                  AND " . self::SQL_ESTATUS_ACTIVO_SIN_ALIAS . "
             ";
             $stmtMesaCodigo = $this->pdo->prepare($sqlMesaCodigo);
             $sqlLetraJugador = "
