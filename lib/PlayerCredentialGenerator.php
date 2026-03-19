@@ -109,7 +109,7 @@ class PlayerCredentialGenerator {
         $stmt = $pdo->prepare("
             SELECT 
                 i.id, i.id_usuario, i.torneo_id, i.id_club, i.codigo_equipo, i.cedula, i.numero, i.estatus,
-                u.nombre,
+                u.nombre, u.photo_path,
                 t.nombre as tournament_name,
                 t.fechator as tournament_date,
                 t.club_responsable as organizer_club_id,
@@ -143,9 +143,7 @@ class PlayerCredentialGenerator {
      * Genera el HTML para la credencial en formato tarjeta
      */
     private static function generateCredentialHTML(array $player_data): string {
-        // Formatear datos - convertir a string antes de htmlspecialchars
         $player_name = htmlspecialchars((string)$player_data['nombre']);
-        $player_id = htmlspecialchars((string)$player_data['cedula']);
         $tournament_name = htmlspecialchars((string)$player_data['tournament_name']);
         $club_name = htmlspecialchars((string)$player_data['club_name']);
         
@@ -161,6 +159,19 @@ class PlayerCredentialGenerator {
         $qr_url = $base_url . '/entrar_credencial.php?id=' . $id_usuario;
         $qr_img_src = 'https://api.qrserver.com/v1/create-qr-code/?size=80x80&margin=1&data=' . rawurlencode($qr_url);
         $player_cedula = htmlspecialchars((string)($player_data['cedula'] ?? ''));
+        $photo_path = trim((string)($player_data['photo_path'] ?? ''));
+        $photo_src = '';
+        if ($photo_path !== '') {
+            $rel = (strpos($photo_path, 'upload/') === 0) ? $photo_path : 'upload/' . ltrim($photo_path, '/');
+            $abs = realpath(__DIR__ . '/../' . $rel);
+            $chroot = realpath(__DIR__ . '/..');
+            if ($abs !== false && $chroot !== false && strpos($abs, $chroot) === 0 && is_file($abs)) {
+                $photo_src = $rel;
+            }
+        }
+        $photo_html = $photo_src !== ''
+            ? '<img src="' . htmlspecialchars($photo_src) . '" alt="" class="cred-photo-img" />'
+            : '<div class="cred-photo-placeholder">Sin foto</div>';
         $html = '<!DOCTYPE html>
 <html>
 <head>
@@ -168,105 +179,58 @@ class PlayerCredentialGenerator {
     <style>
         @page { size: 8cm 5cm; margin: 0; }
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        body {
-            width: 8cm;
-            height: 5cm;
-            font-family: "Arial", "Helvetica", sans-serif;
-            background: linear-gradient(135deg, #1565c0 0%, #0d47a1 100%);
-            position: relative;
-            overflow: hidden;
-        }
-        
+        body { width: 8cm; height: 5cm; font-family: Arial, Helvetica, sans-serif; background: #fff; overflow: hidden; }
         .card-border {
             position: relative;
-            top: 0; left: 0; right: 0; bottom: 0;
+            width: 100%; height: 100%;
             border: 2px solid #1565c0;
             border-radius: 4px;
             background: #fff;
+            padding: 2mm;
+            display: grid;
+            grid-template-columns: 22mm 1fr 20mm;
+            grid-template-rows: auto 1fr;
+            gap: 1mm 2mm;
         }
-        
-        .content {
-            position: relative;
-            z-index: 1;
-            padding: 5mm 10mm 10mm 10mm;
-            height: 100%;
+        .cred-photo {
+            grid-column: 1;
+            grid-row: 1 / -1;
+            background: #f0f0f0;
+            border-radius: 2px;
+            overflow: hidden;
             display: flex;
-            flex-direction: column;
-            justify-content: space-between;
+            align-items: center;
+            justify-content: center;
         }
-        
-        .tournament-title { font-size: 7pt; font-weight: bold; color: #0d47a1; text-transform: uppercase; padding: 1mm; margin-bottom: 1mm; line-height: 1.2; }
-        .player-line { margin-bottom: 1mm; padding: 1mm; }
-        .player-cedula { font-size: 6pt; color: #555; }
-        .player-name { font-size: 8pt; font-weight: bold; color: #212121; }
-        .club-line { font-size: 6pt; color: #1565c0; font-weight: bold; text-transform: uppercase; padding: 0.5mm; }
-        .identifier-line { margin: 1mm 0; padding: 1mm; }
-        .identifier-label { font-size: 5pt; color: #666; }
-        .identifier-number { font-size: 9pt; font-weight: bold; color: #0d47a1; }
-        
-        .footer-website { text-align: center; font-size: 6pt; color: #1565c0; padding: 1mm; }
-        .qr-block { position: absolute; top: 2mm; right: 2mm; }
-        .qr-block .qr-img { width: 16mm; height: 16mm; display: block; }
-        .corner {
-            position: absolute;
-            width: 14mm;
-            height: 14mm;
-            border: 3px solid rgba(255, 255, 255, 0.4);
-        }
-        
-        .corner-tl {
-            top: 0;
-            left: 0;
-            border-right: none;
-            border-bottom: none;
-            border-radius: 12px 0 0 0;
-        }
-        
-        .corner-tr {
-            top: 0;
-            right: 0;
-            border-left: none;
-            border-bottom: none;
-            border-radius: 0 12px 0 0;
-        }
-        
-        .corner-bl {
-            bottom: 0;
-            left: 0;
-            border-right: none;
-            border-top: none;
-            border-radius: 0 0 0 12px;
-        }
-        
-        .corner-br {
-            bottom: 0;
-            right: 0;
-            border-left: none;
-            border-top: none;
-            border-radius: 0 0 12px 0;
-        }
+        .cred-photo-img { width: 100%; height: 100%; object-fit: cover; display: block; }
+        .cred-photo-placeholder { font-size: 6pt; color: #999; text-align: center; padding: 2mm; }
+        .cred-top-right { grid-column: 2; grid-row: 1; display: flex; flex-direction: column; justify-content: center; padding-left: 1mm; }
+        .cred-tournament { font-size: 6pt; font-weight: bold; color: #0d47a1; text-transform: uppercase; line-height: 1.2; }
+        .cred-name { font-size: 8pt; font-weight: bold; color: #212121; line-height: 1.2; margin-top: 0.5mm; }
+        .cred-cedula-id { grid-column: 2; grid-row: 2; align-self: end; padding-left: 1mm; }
+        .cred-cedula-id .c { font-size: 6pt; color: #555; display: block; }
+        .cred-cedula-id .id { font-size: 8pt; font-weight: bold; color: #0d47a1; }
+        .cred-cedula-id .cred-club { font-size: 5pt; color: #1565c0; display: block; margin-top: 0.5mm; }
+        .cred-qr { grid-column: 3; grid-row: 1 / -1; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+        .cred-qr img { width: 16mm; height: 16mm; display: block; }
+        .cred-qr-label { font-size: 5pt; color: #666; text-align: center; margin-top: 0.5mm; }
     </style>
 </head>
 <body>
-    <div class="corner corner-tl"></div>
-    <div class="corner corner-tr"></div>
-    <div class="corner corner-bl"></div>
-    <div class="corner corner-br"></div>
-    
     <div class="card-border">
-        <div class="content">
-            <div class="tournament-title">' . $tournament_name . '</div>
-            <div class="player-line">
-                <div class="player-cedula">C.I. ' . $player_cedula . '</div>
-                <div class="player-name">' . $player_name . '</div>
-            </div>
-            <div class="club-line">' . $club_name . '</div>
-            <div class="identifier-line">
-                <div class="identifier-label">Identificador</div>
-                <div class="identifier-number">' . $identificador . '</div>
-            </div>
-            <div class="qr-block"><img src="' . htmlspecialchars($qr_img_src) . '" alt="QR" class="qr-img" /></div>
-            <div class="footer-website">Escanear QR para ingresar</div>
+        <div class="cred-photo">' . $photo_html . '</div>
+        <div class="cred-top-right">
+            <div class="cred-tournament">' . $tournament_name . '</div>
+            <div class="cred-name">' . $player_name . '</div>
+        </div>
+        <div class="cred-cedula-id">
+            <span class="c">C.I. ' . $player_cedula . '</span>
+            <span class="id">#' . $id_usuario . ' &ndash; ' . $identificador . '</span>
+            <span class="cred-club">' . $club_name . '</span>
+        </div>
+        <div class="cred-qr">
+            <img src="' . htmlspecialchars($qr_img_src) . '" alt="QR" />
+            <span class="cred-qr-label">Escanear para ingresar</span>
         </div>
     </div>
 </body>

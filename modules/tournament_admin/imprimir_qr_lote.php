@@ -8,7 +8,7 @@ $pdo = DB::pdo();
 $torneo_nombre = isset($torneo['nombre']) ? $torneo['nombre'] : 'Torneo';
 
 $stmt = $pdo->prepare("
-    SELECT i.id_usuario, u.nombre, u.cedula, u.username AS user_login
+    SELECT i.id_usuario, u.nombre, u.cedula, u.username AS user_login, u.photo_path
     FROM inscritos i
     INNER JOIN usuarios u ON u.id = i.id_usuario
     WHERE i.torneo_id = ?
@@ -61,26 +61,63 @@ $url_panel = $base_public . '/' . basename($script) . '?page=torneo_gestion&acti
     height: 5cm;
     box-sizing: border-box;
     border: 0.5mm solid #333;
-    display: flex;
-    flex-direction: row;
-    align-items: stretch;
+    display: grid;
+    grid-template-columns: 22mm 1fr 20mm;
+    grid-template-rows: 1fr 1fr;
+    gap: 1mm 2mm;
     font-family: Calibri, 'Lato', Arial, sans-serif;
     page-break-inside: avoid;
     background: #fff;
     padding: 2mm;
 }
-.tarjeta-id .tarjeta-info {
-    flex: 1;
+.tarjeta-id .tarjeta-foto {
+    grid-column: 1;
+    grid-row: 1 / -1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #f0f0f0;
+    border-radius: 2px;
+    overflow: hidden;
+}
+.tarjeta-id .tarjeta-foto img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+}
+.tarjeta-id .tarjeta-foto-placeholder {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #999;
+    font-size: 10pt;
+}
+.tarjeta-id .tarjeta-nombre {
+    grid-column: 2;
+    grid-row: 1;
+    font-size: 14pt;
+    font-weight: bold;
+    color: #212121;
+    line-height: 1.2;
+    align-self: center;
+    padding-left: 1mm;
+}
+.tarjeta-id .tarjeta-cedula-id {
+    grid-column: 2;
+    grid-row: 2;
+    align-self: end;
+    padding-left: 1mm;
+}
+.tarjeta-id .tarjeta-cedula-id .cedula { font-size: 11pt; color: #424242; display: block; }
+.tarjeta-id .tarjeta-cedula-id .id-jugador { font-size: 13pt; font-weight: bold; color: #0d47a1; }
+.tarjeta-id .tarjeta-qr-wrap {
+    grid-column: 3;
+    grid-row: 1 / -1;
     display: flex;
     flex-direction: column;
-    justify-content: center;
-    text-align: left;
-    padding-right: 2mm;
-    min-width: 0;
-}
-.tarjeta-id .tarjeta-qr-wrap {
-    flex-shrink: 0;
-    display: flex;
     align-items: center;
     justify-content: center;
 }
@@ -89,9 +126,6 @@ $url_panel = $base_public . '/' . basename($script) . '?page=torneo_gestion&acti
     height: 18mm;
     display: block;
 }
-.tarjeta-id .nombre { font-size: 16pt; font-weight: bold; color: #212121; margin-bottom: 0.5mm; line-height: 1.15; }
-.tarjeta-id .cedula { font-size: 14pt; color: #424242; margin-bottom: 0.5mm; }
-.tarjeta-id .id-jugador { font-size: 18pt; font-weight: bold; color: #0d47a1; }
 .tarjeta-id .qr-label { font-size: 5pt; color: #666; text-align: center; margin-top: 0.5mm; }
 
 @media print {
@@ -130,20 +164,34 @@ $url_panel = $base_public . '/' . basename($script) . '?page=torneo_gestion&acti
                             $nombre = htmlspecialchars($j['nombre'] ?? '—');
                             $cedula = htmlspecialchars(formatear_cedula_tarjeta($j['cedula'] ?? ''));
                             $id_jugador = (int)($j['id_usuario'] ?? 0);
+                            $photo_path = trim((string)($j['photo_path'] ?? ''));
+                            $foto_src = '';
+                            if ($photo_path !== '') {
+                                if (strpos($photo_path, 'upload/') === 0) {
+                                    $foto_src = $base_public . '/view_image.php?path=' . rawurlencode($photo_path);
+                                } else {
+                                    $foto_src = $base_public . '/view_image.php?path=' . rawurlencode('upload/' . ltrim($photo_path, '/'));
+                                }
+                            }
                             $url_entrar = $base_public . '/entrar_credencial.php?id=' . $id_jugador;
                             $qr_src = 'https://api.qrserver.com/v1/create-qr-code/?size=80x80&margin=1&data=' . rawurlencode($url_entrar);
                         ?>
                         <div class="tarjeta-id">
-                            <div class="tarjeta-info">
-                                <div class="nombre"><?= $nombre ?></div>
-                                <div class="cedula">C.I. <?= $cedula ?></div>
-                                <div class="id-jugador">#<?= $id_jugador ?></div>
+                            <div class="tarjeta-foto">
+                                <?php if ($foto_src !== ''): ?>
+                                    <img src="<?= htmlspecialchars($foto_src) ?>" alt="" />
+                                <?php else: ?>
+                                    <div class="tarjeta-foto-placeholder">Sin foto</div>
+                                <?php endif; ?>
+                            </div>
+                            <div class="tarjeta-nombre"><?= $nombre ?></div>
+                            <div class="tarjeta-cedula-id">
+                                <span class="cedula">C.I. <?= $cedula ?></span>
+                                <span class="id-jugador">#<?= $id_jugador ?></span>
                             </div>
                             <div class="tarjeta-qr-wrap">
-                                <div>
-                                    <img src="<?= htmlspecialchars($qr_src) ?>" alt="QR" />
-                                    <div class="qr-label">Escanear para ingresar</div>
-                                </div>
+                                <img src="<?= htmlspecialchars($qr_src) ?>" alt="QR" />
+                                <div class="qr-label">Escanear para ingresar</div>
                             </div>
                         </div>
                         <?php endforeach; ?>
