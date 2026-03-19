@@ -49,8 +49,9 @@ $url_panel = $base_public . '/' . basename($script) . '?page=torneo_gestion&acti
     display: grid;
     grid-template-columns: repeat(2, 8cm);
     grid-template-rows: repeat(5, 5cm);
-    gap: 0;
-    width: 16cm;
+    gap: 2px;
+    width: calc(16cm + 2px);
+    min-height: calc(25cm + 8px);
     margin: 0 auto;
     page-break-after: always;
 }
