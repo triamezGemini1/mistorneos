@@ -334,8 +334,8 @@ $api_guardar_equipo = $base_url . ($use_standalone ? '?' : '&') . 'action=guarda
     /* Parejas: sin scroll vertical, margen vertical, Volver siempre visible */
     <?php if ($es_parejas): ?>
     .page-inscripcion-sitio.form-parejas-amigable {
-        max-height: calc(100vh - 2rem);
-        height: calc(100vh - 2rem);
+        max-height: 75vh;
+        height: 75vh;
         margin: 1rem 0;
         overflow: hidden;
         padding-top: 0.5rem !important;
@@ -410,15 +410,26 @@ $api_guardar_equipo = $base_url . ($use_standalone ? '?' : '&') . 'action=guarda
         font-size: 0.84rem !important;
         padding: 0.25rem 0.5rem !important;
     }
-    /* Fila superior: Club y Nombre equipo ancho +100%; Cédula a buscar ancho +50% */
-    .page-inscripcion-sitio.form-parejas-amigable .form-parejas-top .fila-parejas-compacta .campo-club-parejas,
-    .page-inscripcion-sitio.form-parejas-amigable .form-parejas-top .fila-parejas-compacta .campo-nombre-parejas {
-        flex: 2 1 0;
+    /* Fila superior: Club, Nombre pareja y Cédula a buscar reducidos 35% (65% total); botón Limpiar al final */
+    .page-inscripcion-sitio.form-parejas-amigable .form-parejas-top .fila-parejas-compacta .campo-club-parejas {
+        flex: 0 1 22%;
         min-width: 0;
+        max-width: 22%;
+    }
+    .page-inscripcion-sitio.form-parejas-amigable .form-parejas-top .fila-parejas-compacta .campo-nombre-parejas {
+        flex: 0 1 22%;
+        min-width: 0;
+        max-width: 22%;
     }
     .page-inscripcion-sitio.form-parejas-amigable .form-parejas-top .fila-parejas-compacta .campo-cedula-buscar-parejas {
-        flex: 1.5 1 0;
+        flex: 0 1 21%;
         min-width: 0;
+        max-width: 21%;
+    }
+    .page-inscripcion-sitio.form-parejas-amigable .form-parejas-top .fila-parejas-compacta .campo-btn-limpiar-parejas {
+        flex: 0 0 auto;
+        margin-left: auto;
+        align-self: flex-end;
     }
     .page-inscripcion-sitio.form-parejas-amigable .form-parejas-top .fila-parejas-compacta .campo-club-parejas input,
     .page-inscripcion-sitio.form-parejas-amigable .form-parejas-top .fila-parejas-compacta .campo-club-parejas select,
@@ -603,6 +614,10 @@ $api_guardar_equipo = $base_url . ($use_standalone ? '?' : '&') . 'action=guarda
                             <div class="campo-cedula-buscar-parejas">
                                 <label class="form-label small mb-0" for="cedula_buscar_parejas">Cédula a buscar</label>
                                 <input type="text" id="cedula_buscar_parejas" class="form-control form-control-sm w-100" placeholder="Salir del campo para buscar" inputmode="numeric" autocomplete="off">
+                            </div>
+                            <div class="campo-btn-limpiar-parejas">
+                                <label class="form-label small mb-0 d-block">&nbsp;</label>
+                                <button type="button" class="btn btn-outline-secondary btn-sm" onclick="limpiarFormulario()" title="Limpiar formulario" <?= $torneo_iniciado ? 'disabled' : '' ?>><i class="fas fa-eraser me-1"></i>Limpiar formulario</button>
                             </div>
                         </div>
                         <!-- Grid 2 filas iguales: Código (2 filas) | id | cedula | nombre | quitar | botones (Nueva sobre Guardar) -->
