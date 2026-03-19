@@ -383,6 +383,31 @@ $api_guardar_equipo = $base_url . ($use_standalone ? '?' : '&') . 'action=guarda
         gap: 0.2rem;
         flex-shrink: 0;
     }
+    /* Modelo: filas alineadas — codigo | id | cedula | nombre | botón */
+    .page-inscripcion-sitio.form-parejas-amigable .fila-parejas-modelo {
+        display: flex;
+        align-items: flex-end;
+        gap: 0.35rem;
+        margin-bottom: 0.25rem;
+    }
+    .page-inscripcion-sitio.form-parejas-amigable .celda-codigo-parejas {
+        width: 4.5rem;
+        min-width: 4.5rem;
+        flex-shrink: 0;
+    }
+    .page-inscripcion-sitio.form-parejas-amigable .celda-id-parejas { width: 2.75rem; min-width: 2.75rem; flex-shrink: 0; }
+    .page-inscripcion-sitio.form-parejas-amigable .celda-cedula-parejas { width: 4.5rem; min-width: 4.5rem; flex-shrink: 0; }
+    .page-inscripcion-sitio.form-parejas-amigable .celda-nombre-parejas { flex: 1; min-width: 4rem; }
+    .page-inscripcion-sitio.form-parejas-amigable .celda-codigo-parejas input,
+    .page-inscripcion-sitio.form-parejas-amigable .celda-id-parejas input,
+    .page-inscripcion-sitio.form-parejas-amigable .celda-cedula-parejas input,
+    .page-inscripcion-sitio.form-parejas-amigable .celda-nombre-parejas input {
+        width: 100%;
+        max-width: 100%;
+    }
+    .page-inscripcion-sitio.form-parejas-amigable .btn-parejas-fila {
+        flex-shrink: 0;
+    }
     .page-inscripcion-sitio.form-parejas-amigable .col-disponibles-parejas,
     .page-inscripcion-sitio.form-parejas-amigable .col-insc-equipos-parejas {
         flex: 0 0 50%;
@@ -490,31 +515,50 @@ $api_guardar_equipo = $base_url . ($use_standalone ? '?' : '&') . 'action=guarda
                                 <input type="text" id="cedula_buscar_parejas" class="form-control form-control-sm form-parejas-input-medio" placeholder="Salir del campo para buscar" inputmode="numeric" autocomplete="off">
                             </div>
                         </div>
-                        <!-- Fila 2: Código (oculto hasta editar pareja) -->
-                        <div id="wrap_codigo_equipo_barra" class="fila-parejas-compacta" style="visibility:hidden;" aria-hidden="true">
-                            <span class="small text-muted fw-bold">Código</span>
-                            <span id="codigo_equipo_visible" class="badge bg-secondary px-2 py-0"></span>
+                        <!-- Fila jugador 1: Código (oculto) | id | cedula | nombre | Nueva -->
+                        <div class="fila-parejas-compacta fila-parejas-modelo fila-jugador-compacta" data-posicion="1" data-jugador-asignado="">
+                            <div id="wrap_codigo_equipo_barra" class="celda-codigo-parejas" style="visibility:hidden;" aria-hidden="true">
+                                <span class="small text-muted fw-bold">Código</span>
+                                <span id="codigo_equipo_visible" class="badge bg-secondary px-2 py-0"></span>
+                            </div>
+                            <div class="celda-id-parejas">
+                                <label class="form-label small mb-0 d-block">id</label>
+                                <input type="text" class="form-control form-control-sm jugador-id-usuario input-id-usuario" id="jugador_id_usuario_1" placeholder="ID" readonly style="background:#e9ecef;">
+                                <input type="hidden" id="jugador_id_usuario_h_1" name="jugadores[1][id_usuario]">
+                            </div>
+                            <div class="celda-cedula-parejas">
+                                <label class="form-label small mb-0 d-block">cedula</label>
+                                <input type="text" class="form-control form-control-sm jugador-cedula input-cedula" id="jugador_cedula_1" name="jugadores[1][cedula]" placeholder="Céd." data-posicion="1" onblur="buscarJugadorPorCedula(this)" oninput="validarFormulario()">
+                                <input type="hidden" class="jugador-id-inscrito" id="jugador_id_inscrito_1" name="jugadores[1][id_inscrito]">
+                            </div>
+                            <div class="celda-nombre-parejas">
+                                <label class="form-label small mb-0 d-block">nombre</label>
+                                <input type="text" class="form-control form-control-sm jugador-nombre input-nombre-jug" id="jugador_nombre_1" name="jugadores[1][nombre]" placeholder="Nombre" readonly style="background:#e9ecef;" oninput="validarFormulario()">
+                            </div>
+                            <input type="hidden" id="es_capitan_1" name="jugadores[1][es_capitan]" value="1">
+                            <button type="button" class="btn btn-sm btn-outline-danger py-0 px-1 align-self-end" onclick="limpiarJugadorYDevolver(1)" title="Quitar" id="btn_limpiar_1" style="display:none;"><i class="fas fa-times"></i></button>
+                            <button type="button" class="btn btn-secondary btn-sm align-self-end btn-parejas-fila" onclick="limpiarFormulario()" <?= $torneo_iniciado ? 'disabled' : '' ?>><i class="fas fa-redo me-1"></i>Nueva</button>
                         </div>
-                        <!-- Filas jugadores + botones al final -->
-                        <div class="jugadores-y-botones">
-                            <div id="jugadores-container" class="flex-grow-1">
-                                <?php for ($i = 1; $i <= $jugadores_por_equipo; $i++): ?>
-                                    <div class="fila-parejas-compacta fila-jugador-compacta" data-posicion="<?php echo $i; ?>" data-jugador-asignado="">
-                                        <span class="small text-nowrap"><?php if ($i == 1): ?>★<?php else: ?><?php echo $i; ?><?php endif; ?></span>
-                                        <input type="hidden" id="es_capitan_<?php echo $i; ?>" name="jugadores[<?php echo $i; ?>][es_capitan]" value="<?php echo $i == 1 ? '1' : '0'; ?>">
-                                        <input type="text" class="form-control form-control-sm jugador-id-usuario input-id-usuario" id="jugador_id_usuario_<?php echo $i; ?>" placeholder="ID" readonly style="width:2.5rem; background:#e9ecef;">
-                                        <input type="hidden" id="jugador_id_usuario_h_<?php echo $i; ?>" name="jugadores[<?php echo $i; ?>][id_usuario]">
-                                        <input type="text" class="form-control form-control-sm jugador-cedula input-cedula" id="jugador_cedula_<?php echo $i; ?>" name="jugadores[<?php echo $i; ?>][cedula]" placeholder="Céd." data-posicion="<?php echo $i; ?>" onblur="buscarJugadorPorCedula(this)" oninput="validarFormulario()" style="width:4.5rem;">
-                                        <input type="hidden" class="jugador-id-inscrito" id="jugador_id_inscrito_<?php echo $i; ?>" name="jugadores[<?php echo $i; ?>][id_inscrito]">
-                                        <input type="text" class="form-control form-control-sm jugador-nombre input-nombre-jug" id="jugador_nombre_<?php echo $i; ?>" name="jugadores[<?php echo $i; ?>][nombre]" placeholder="Nombre" readonly style="min-width:5rem; background:#e9ecef;" oninput="validarFormulario()">
-                                        <button type="button" class="btn btn-sm btn-outline-danger py-0 px-1" onclick="limpiarJugadorYDevolver(<?php echo $i; ?>)" title="Quitar" id="btn_limpiar_<?php echo $i; ?>" style="display:none;"><i class="fas fa-times"></i></button>
-                                    </div>
-                                <?php endfor; ?>
+                        <!-- Fila jugador 2: (mismo ancho código) | id | cedula | nombre | Guardar -->
+                        <div class="fila-parejas-compacta fila-parejas-modelo fila-jugador-compacta" data-posicion="2" data-jugador-asignado="">
+                            <div class="celda-codigo-parejas"></div>
+                            <div class="celda-id-parejas">
+                                <label class="form-label small mb-0 d-block">id</label>
+                                <input type="text" class="form-control form-control-sm jugador-id-usuario input-id-usuario" id="jugador_id_usuario_2" placeholder="ID" readonly style="background:#e9ecef;">
+                                <input type="hidden" id="jugador_id_usuario_h_2" name="jugadores[2][id_usuario]">
                             </div>
-                            <div class="botones-parejas">
-                                <button type="button" class="btn btn-secondary btn-sm w-100" onclick="limpiarFormulario()" <?= $torneo_iniciado ? 'disabled' : '' ?>><i class="fas fa-redo me-1"></i>Nueva pareja</button>
-                                <button type="submit" class="btn btn-success btn-sm w-100" id="btnGuardarEquipo" <?= $torneo_iniciado ? 'disabled' : '' ?>><i class="fas fa-save me-1"></i>Guardar</button>
+                            <div class="celda-cedula-parejas">
+                                <label class="form-label small mb-0 d-block">cedula</label>
+                                <input type="text" class="form-control form-control-sm jugador-cedula input-cedula" id="jugador_cedula_2" name="jugadores[2][cedula]" placeholder="Céd." data-posicion="2" onblur="buscarJugadorPorCedula(this)" oninput="validarFormulario()">
+                                <input type="hidden" class="jugador-id-inscrito" id="jugador_id_inscrito_2" name="jugadores[2][id_inscrito]">
                             </div>
+                            <div class="celda-nombre-parejas">
+                                <label class="form-label small mb-0 d-block">nombre</label>
+                                <input type="text" class="form-control form-control-sm jugador-nombre input-nombre-jug" id="jugador_nombre_2" name="jugadores[2][nombre]" placeholder="Nombre" readonly style="background:#e9ecef;" oninput="validarFormulario()">
+                            </div>
+                            <input type="hidden" id="es_capitan_2" name="jugadores[2][es_capitan]" value="0">
+                            <button type="button" class="btn btn-sm btn-outline-danger py-0 px-1 align-self-end" onclick="limpiarJugadorYDevolver(2)" title="Quitar" id="btn_limpiar_2" style="display:none;"><i class="fas fa-times"></i></button>
+                            <button type="submit" class="btn btn-success btn-sm align-self-end btn-parejas-fila" id="btnGuardarEquipo" <?= $torneo_iniciado ? 'disabled' : '' ?>><i class="fas fa-save me-1"></i>Guardar</button>
                         </div>
                     </form>
                 </div>
