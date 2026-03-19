@@ -73,48 +73,24 @@ class MesaAsignacionParejasFijasService
 
         $jugadoresPorCodigo = $this->obtenerMapaJugadoresPorCodigo($torneoId);
 
-        // Agrupar por numero (consecutivo por club)
-        $porNumero = [];
-        foreach ($representantes as $pareja) {
-            $n = (int)($pareja['numero'] ?? 0);
-            if ($n <= 0) {
-                $n = 999999;
-            }
-            $porNumero[$n][] = $pareja;
-        }
-        ksort($porNumero, SORT_NUMERIC);
-
         $mesasArray = [];
         $mesasRespuesta = [];
         $codigosBye = [];
-        $pendientes = [];
-
-        foreach ($porNumero as $numero => $lista) {
-            // Mezclar al azar (no en bloque por club)
-            shuffle($lista);
-            $i = 0;
-            while ($i + 1 < count($lista)) {
-                $parejaA = $lista[$i];
-                $parejaB = $lista[$i + 1];
-                $codigoA = (string)($parejaA['codigo_equipo'] ?? '');
-                $codigoB = (string)($parejaB['codigo_equipo'] ?? '');
-                $mesasArray[] = ['codigo_ac' => $codigoA, 'codigo_bd' => $codigoB];
-                $mesasRespuesta[] = $this->crearMesaDesdeCodigos($codigoA, $codigoB, $jugadoresPorCodigo);
-                $i += 2;
-            }
-            if ($i < count($lista)) {
-                // Si queda una pareja suelta en el bloque, se arrastra para emparejarla
-                // con la siguiente pareja suelta de otro bloque y evitar BYE innecesario.
-                $pendiente = $lista[$i];
-                $codigoPendiente = (string)($pendiente['codigo_equipo'] ?? '');
-                if ($codigoPendiente !== '') {
-                    $pendientes[] = $pendiente;
-                }
+        $parejasTrabajo = array_values($representantes);
+        if ((count($parejasTrabajo) % 2) === 1) {
+            $idxBye = random_int(0, count($parejasTrabajo) - 1);
+            $parejaBye = $parejasTrabajo[$idxBye];
+            array_splice($parejasTrabajo, $idxBye, 1);
+            $codigoBye = (string)($parejaBye['codigo_equipo'] ?? '');
+            if ($codigoBye !== '') {
+                $codigosBye[] = $codigoBye;
             }
         }
-        while (count($pendientes) >= 2) {
-            $parejaA = array_shift($pendientes);
-            $parejaB = array_shift($pendientes);
+
+        $totalMesas = intdiv(count($parejasTrabajo), 2);
+        for ($i = 0; $i < $totalMesas; $i++) {
+            $parejaA = $parejasTrabajo[$i];
+            $parejaB = $parejasTrabajo[$i + $totalMesas];
             $codigoA = (string)($parejaA['codigo_equipo'] ?? '');
             $codigoB = (string)($parejaB['codigo_equipo'] ?? '');
             if ($codigoA === '' || $codigoB === '') {
@@ -122,12 +98,6 @@ class MesaAsignacionParejasFijasService
             }
             $mesasArray[] = ['codigo_ac' => $codigoA, 'codigo_bd' => $codigoB];
             $mesasRespuesta[] = $this->crearMesaDesdeCodigos($codigoA, $codigoB, $jugadoresPorCodigo);
-        }
-        if (!empty($pendientes)) {
-            $codigoBye = (string)($pendientes[0]['codigo_equipo'] ?? '');
-            if ($codigoBye !== '') {
-                $codigosBye[] = $codigoBye;
-            }
         }
         $jugadoresBye = $this->expandirByesPorCodigo($codigosBye, $jugadoresPorCodigo);
 
@@ -138,7 +108,7 @@ class MesaAsignacionParejasFijasService
 
         return [
             'success' => true,
-            'message' => 'Ronda 1 generada (parejas por número, emparejamiento al azar).',
+            'message' => 'Ronda 1 generada (parejas por club y número, asignación secuencial por mitades).',
             'total_inscritos' => count($representantes) * self::JUGADORES_POR_PAREJA,
             'total_mesas' => count($mesasArray),
             'jugadores_bye' => count($jugadoresBye),
@@ -167,8 +137,22 @@ class MesaAsignacionParejasFijasService
         $evitarRepeticion = ($tipoEmparejamiento === self::TIPO_INTERCLUBES || $tipoEmparejamiento === self::TIPO_SUIZO_SIN_REPETIR);
         $preferirOtroClub = ($tipoEmparejamiento === self::TIPO_INTERCLUBES);
 
+        $parejasTrabajo = array_values($representantes);
+        $codigosBye = [];
+        if ((count($parejasTrabajo) % 2) === 1) {
+            $idxBye = $this->seleccionarIndiceByeRonda2Plus($torneoId, $parejasTrabajo, $numRonda);
+            if ($idxBye >= 0) {
+                $parejaBye = $parejasTrabajo[$idxBye];
+                array_splice($parejasTrabajo, $idxBye, 1);
+                $codigoBye = (string)($parejaBye['codigo_equipo'] ?? '');
+                if ($codigoBye !== '') {
+                    $codigosBye[] = $codigoBye;
+                }
+            }
+        }
+
         $parejasEmparejadas = $this->emparejarParejasPorRanking(
-            $representantes,
+            $parejasTrabajo,
             $historialEnfrentamientos,
             $evitarRepeticion,
             $preferirOtroClub
@@ -183,7 +167,6 @@ class MesaAsignacionParejasFijasService
             $mesasRespuesta[] = $this->crearMesaDesdeCodigos($codigoA, $codigoB, $jugadoresPorCodigo);
         }
 
-        $codigosBye = [];
         foreach ($parejasEmparejadas['byes'] as $parejaBye) {
             $codigoBye = (string)($parejaBye['codigo_equipo'] ?? '');
             if ($codigoBye !== '') {
@@ -315,6 +298,21 @@ class MesaAsignacionParejasFijasService
         $disponibles = array_values($parejasOrdenadas);
         $matches = [];
         $byes = [];
+        if ((count($disponibles) % 2) === 1) {
+            $byes[] = array_pop($disponibles);
+        }
+        if (empty($disponibles)) {
+            return ['matches' => [], 'byes' => $byes];
+        }
+
+        // Suizo puro: emparejamiento secuencial por mitades (mejor mitad vs segunda mitad).
+        if (!$evitarRepeticion && !$preferirOtroClub) {
+            $totalMesas = intdiv(count($disponibles), 2);
+            for ($i = 0; $i < $totalMesas; $i++) {
+                $matches[] = ['a' => $disponibles[$i], 'b' => $disponibles[$i + $totalMesas]];
+            }
+            return ['matches' => $matches, 'byes' => $byes];
+        }
 
         while (count($disponibles) >= 2) {
             $parejaBase = array_shift($disponibles);
@@ -331,16 +329,16 @@ class MesaAsignacionParejasFijasService
 
             $rival = $disponibles[$indiceRival];
             array_splice($disponibles, $indiceRival, 1);
-
             $matches[] = ['a' => $parejaBase, 'b' => $rival];
+
             $historialEnfrentamientos[$this->llaveMatchParejas(
                 (string)$parejaBase['codigo_equipo'],
                 (string)$rival['codigo_equipo']
             )] = true;
         }
 
-        if (!empty($disponibles)) {
-            $byes[] = $disponibles[0];
+        if ($preferirOtroClub) {
+            $matches = $this->reubicarInterclubesSiCierreMismoClub($matches);
         }
 
         return ['matches' => $matches, 'byes' => $byes];
@@ -352,9 +350,9 @@ class MesaAsignacionParejasFijasService
      */
     private function obtenerRepresentantesPareja(int $torneoId, string $modo = 'ranking'): array
     {
-        $orden = "ORDER BY puntos_equipo DESC, ganados_equipo DESC, efectividad_equipo DESC, t.codigo_equipo ASC";
+        $orden = "ORDER BY ganados_equipo DESC, efectividad_equipo DESC, puntos_equipo DESC, t.codigo_equipo ASC";
         if ($modo === 'ronda1') {
-            $orden = "ORDER BY t.numero ASC, t.id_club ASC, t.codigo_equipo ASC";
+            $orden = "ORDER BY t.id_club ASC, t.numero ASC, t.codigo_equipo ASC";
         }
         $sql = "
             SELECT t.*
@@ -628,6 +626,82 @@ class MesaAsignacionParejasFijasService
             return $a . '|' . $b;
         }
         return $b . '|' . $a;
+    }
+
+    /**
+     * En interclubes, si la última mesa queda con ambos del mismo club,
+     * intenta intercambiar el rival con una mesa anterior para minimizar ese caso.
+     */
+    private function reubicarInterclubesSiCierreMismoClub(array $matches): array
+    {
+        $n = count($matches);
+        if ($n < 2) {
+            return $matches;
+        }
+        $lastIdx = $n - 1;
+        $a = (int)($matches[$lastIdx]['a']['id_club'] ?? 0);
+        $b = (int)($matches[$lastIdx]['b']['id_club'] ?? 0);
+        if ($a <= 0 || $b <= 0 || $a !== $b) {
+            return $matches;
+        }
+        for ($i = 0; $i < $lastIdx; $i++) {
+            $candA = (int)($matches[$i]['a']['id_club'] ?? 0);
+            $candB = (int)($matches[$i]['b']['id_club'] ?? 0);
+            if ($candB > 0 && $a !== $candB && $candA > 0 && $candA !== $b) {
+                $tmp = $matches[$lastIdx]['b'];
+                $matches[$lastIdx]['b'] = $matches[$i]['b'];
+                $matches[$i]['b'] = $tmp;
+                return $matches;
+            }
+        }
+        return $matches;
+    }
+
+    /**
+     * Ronda 2+: BYE para la última pareja del ranking que no haya recibido BYE antes.
+     * Si todas ya recibieron BYE, usa la última de la clasificación igualmente.
+     */
+    private function seleccionarIndiceByeRonda2Plus(int $torneoId, array $parejasOrdenadas, int $numRonda): int
+    {
+        if (empty($parejasOrdenadas)) {
+            return -1;
+        }
+        $hastaRonda = max(0, $numRonda - 1);
+        for ($i = count($parejasOrdenadas) - 1; $i >= 0; $i--) {
+            $codigo = (string)($parejasOrdenadas[$i]['codigo_equipo'] ?? '');
+            if ($codigo === '') {
+                continue;
+            }
+            if (!$this->parejaYaTuvoBye($torneoId, $codigo, $hastaRonda)) {
+                return $i;
+            }
+        }
+        return count($parejasOrdenadas) - 1;
+    }
+
+    /**
+     * Verifica si una pareja (codigo_equipo) ya recibió BYE en rondas anteriores.
+     */
+    private function parejaYaTuvoBye(int $torneoId, string $codigoEquipo, int $hastaRonda): bool
+    {
+        if ($hastaRonda <= 0) {
+            return false;
+        }
+        $sql = "
+            SELECT COUNT(*) AS total
+            FROM partiresul pr
+            INNER JOIN inscritos i
+                ON i.torneo_id = pr.id_torneo
+               AND i.id_usuario = pr.id_usuario
+            WHERE pr.id_torneo = ?
+              AND pr.partida <= ?
+              AND pr.mesa = 0
+              AND i.codigo_equipo = ?
+            LIMIT 1
+        ";
+        $stmt = $this->pdo->prepare($sql);
+        $stmt->execute([$torneoId, $hastaRonda, $codigoEquipo]);
+        return ((int)$stmt->fetchColumn()) > 0;
     }
 
     /**
