@@ -57,8 +57,8 @@ class MesaAsignacionParejasFijasService
      */
     private function generarRonda1(int $torneoId): array
     {
-        $parejasEntidad = $this->obtenerParejasEntidadPorNumero($torneoId);
-        if (empty($parejasEntidad)) {
+        $representantes = $this->obtenerRepresentantesPareja($torneoId, 'ronda1');
+        if (empty($representantes)) {
             return [
                 'success' => false,
                 'message' => 'No hay parejas inscritas completas en el torneo.',
@@ -69,7 +69,7 @@ class MesaAsignacionParejasFijasService
 
         // Agrupar por numero (consecutivo por club)
         $porNumero = [];
-        foreach ($parejasEntidad as $pareja) {
+        foreach ($representantes as $pareja) {
             $n = (int)($pareja['numero'] ?? 0);
             if ($n <= 0) {
                 $n = 999999;
@@ -79,6 +79,7 @@ class MesaAsignacionParejasFijasService
         ksort($porNumero, SORT_NUMERIC);
 
         $mesasArray = [];
+        $mesasRespuesta = [];
         $codigosBye = [];
 
         foreach ($porNumero as $numero => $lista) {
@@ -88,8 +89,10 @@ class MesaAsignacionParejasFijasService
             while ($i + 1 < count($lista)) {
                 $parejaA = $lista[$i];
                 $parejaB = $lista[$i + 1];
-                $mesa = $this->crearMesaDesdeCodigos($parejaA['codigo_equipo'], $parejaB['codigo_equipo'], $jugadoresPorCodigo);
-                $mesasArray[] = $mesa;
+                $codigoA = (string)($parejaA['codigo_equipo'] ?? '');
+                $codigoB = (string)($parejaB['codigo_equipo'] ?? '');
+                $mesasArray[] = ['codigo_ac' => $codigoA, 'codigo_bd' => $codigoB];
+                $mesasRespuesta[] = $this->crearMesaDesdeCodigos($codigoA, $codigoB, $jugadoresPorCodigo);
                 $i += 2;
             }
             if ($i < count($lista)) {
@@ -102,7 +105,7 @@ class MesaAsignacionParejasFijasService
         }
         $jugadoresBye = $this->expandirByesPorCodigo($codigosBye, $jugadoresPorCodigo);
 
-        $this->guardarAsignacionRonda($torneoId, 1, $mesasArray);
+        $this->guardarAsignacionRondaPorCodigos($torneoId, 1, $mesasArray, $jugadoresPorCodigo);
         if (!empty($jugadoresBye)) {
             $this->aplicarBye($torneoId, 1, $jugadoresBye);
         }
@@ -110,10 +113,10 @@ class MesaAsignacionParejasFijasService
         return [
             'success' => true,
             'message' => 'Ronda 1 generada (parejas por número, emparejamiento al azar).',
-            'total_inscritos' => count($parejasEntidad) * self::JUGADORES_POR_PAREJA,
+            'total_inscritos' => count($representantes) * self::JUGADORES_POR_PAREJA,
             'total_mesas' => count($mesasArray),
             'jugadores_bye' => count($jugadoresBye),
-            'mesas' => $mesasArray,
+            'mesas' => $mesasRespuesta,
         ];
     }
 
@@ -123,8 +126,8 @@ class MesaAsignacionParejasFijasService
      */
     private function generarRonda2Plus(int $torneoId, int $numRonda, string $estrategia = ''): array
     {
-        $parejasEntidad = $this->obtenerParejasConRankingPorCodigo($torneoId);
-        if (empty($parejasEntidad)) {
+        $representantes = $this->obtenerRepresentantesPareja($torneoId, 'ranking');
+        if (empty($representantes)) {
             return [
                 'success' => false,
                 'message' => 'No hay parejas con clasificación para esta ronda.',
@@ -139,18 +142,19 @@ class MesaAsignacionParejasFijasService
         $preferirOtroClub = ($tipoEmparejamiento === self::TIPO_INTERCLUBES);
 
         $parejasEmparejadas = $this->emparejarParejasPorRanking(
-            $parejasEntidad,
+            $representantes,
             $historialEnfrentamientos,
             $evitarRepeticion,
             $preferirOtroClub
         );
 
         $mesasArray = [];
+        $mesasRespuesta = [];
         foreach ($parejasEmparejadas['matches'] as $match) {
             $codigoA = (string)($match['a']['codigo_equipo'] ?? '');
             $codigoB = (string)($match['b']['codigo_equipo'] ?? '');
-            $mesa = $this->crearMesaDesdeCodigos($codigoA, $codigoB, $jugadoresPorCodigo);
-            $mesasArray[] = $mesa;
+            $mesasArray[] = ['codigo_ac' => $codigoA, 'codigo_bd' => $codigoB];
+            $mesasRespuesta[] = $this->crearMesaDesdeCodigos($codigoA, $codigoB, $jugadoresPorCodigo);
         }
 
         $codigosBye = [];
@@ -162,7 +166,7 @@ class MesaAsignacionParejasFijasService
         }
         $jugadoresBye = $this->expandirByesPorCodigo($codigosBye, $jugadoresPorCodigo);
 
-        $this->guardarAsignacionRonda($torneoId, $numRonda, $mesasArray);
+        $this->guardarAsignacionRondaPorCodigos($torneoId, $numRonda, $mesasArray, $jugadoresPorCodigo);
         if (!empty($jugadoresBye)) {
             $this->aplicarBye($torneoId, $numRonda, $jugadoresBye);
         }
@@ -181,7 +185,7 @@ class MesaAsignacionParejasFijasService
             'message' => "Ronda {$numRonda} generada ({$modoTxt}).",
             'total_mesas' => count($mesasArray),
             'jugadores_bye' => count($jugadoresBye),
-            'mesas' => $mesasArray,
+            'mesas' => $mesasRespuesta,
         ];
     }
 
@@ -317,56 +321,37 @@ class MesaAsignacionParejasFijasService
     }
 
     /**
-     * Devuelve entidades de pareja usando codigo_equipo como llave única.
-     * Se usa para ronda 1 (orden por numero/consecutivo de club).
+     * Devuelve una sola fila (representante) por codigo_equipo.
+     * No se usa id_usuario como entidad de decisión; solo codigo_equipo.
      */
-    private function obtenerParejasEntidadPorNumero(int $torneoId): array
+    private function obtenerRepresentantesPareja(int $torneoId, string $modo = 'ranking'): array
     {
+        $orden = "ORDER BY puntos_equipo DESC, ganados_equipo DESC, efectividad_equipo DESC, t.codigo_equipo ASC";
+        if ($modo === 'ronda1') {
+            $orden = "ORDER BY t.numero ASC, t.id_club ASC, t.codigo_equipo ASC";
+        }
         $sql = "
-            SELECT
-                i.codigo_equipo,
-                COALESCE(MAX(i.numero), MAX(e.consecutivo_club), 0) AS numero,
-                COALESCE(MAX(i.id_club), MAX(e.id_club), 0) AS id_club,
-                MAX(e.nombre_equipo) AS nombre_equipo,
-                COUNT(*) AS jugadores_activos
-            FROM inscritos i
-            LEFT JOIN equipos e ON e.id_torneo = i.torneo_id AND e.codigo_equipo = i.codigo_equipo
-            WHERE i.torneo_id = ?
-              AND i.codigo_equipo IS NOT NULL AND i.codigo_equipo != ''
-              AND (i.estatus IN (0,1,2,3) OR i.estatus IN ('pendiente','confirmado','solvente','no_solvente'))
-            GROUP BY i.codigo_equipo
-            HAVING jugadores_activos = 2
-            ORDER BY numero ASC, id_club ASC, i.codigo_equipo ASC
-        ";
-        $stmt = $this->pdo->prepare($sql);
-        $stmt->execute([$torneoId]);
-        return $stmt->fetchAll(PDO::FETCH_ASSOC);
-    }
-
-    /**
-     * Devuelve ranking de parejas por codigo_equipo (entidad pareja).
-     * Toma 1 sola entidad por pareja y suma estadísticas de sus 2 atletas.
-     */
-    private function obtenerParejasConRankingPorCodigo(int $torneoId): array
-    {
-        $sql = "
-            SELECT
-                i.codigo_equipo,
-                COALESCE(MAX(i.numero), MAX(e.consecutivo_club), 0) AS numero,
-                COALESCE(MAX(i.id_club), MAX(e.id_club), 0) AS id_club,
-                MAX(e.nombre_equipo) AS nombre_equipo,
-                COALESCE(SUM(i.puntos), 0) AS puntos_equipo,
-                COALESCE(SUM(i.ganados), 0) AS ganados_equipo,
-                COALESCE(AVG(i.efectividad), 0) AS efectividad_equipo,
-                COUNT(*) AS jugadores_activos
-            FROM inscritos i
-            LEFT JOIN equipos e ON e.id_torneo = i.torneo_id AND e.codigo_equipo = i.codigo_equipo
-            WHERE i.torneo_id = ?
-              AND i.codigo_equipo IS NOT NULL AND i.codigo_equipo != ''
-              AND (i.estatus IN (0,1,2,3) OR i.estatus IN ('pendiente','confirmado','solvente','no_solvente'))
-            GROUP BY i.codigo_equipo
-            HAVING jugadores_activos = 2
-            ORDER BY puntos_equipo DESC, ganados_equipo DESC, efectividad_equipo DESC, i.codigo_equipo ASC
+            SELECT t.*
+            FROM (
+                SELECT
+                    i.codigo_equipo,
+                    MIN(i.id_usuario) AS id_usuario_representante,
+                    COALESCE(MAX(i.numero), 999999) AS numero,
+                    COALESCE(MAX(i.id_club), 0) AS id_club,
+                    COALESCE(MAX(e.nombre_equipo), MAX(i.codigo_equipo)) AS nombre_equipo,
+                    COALESCE(SUM(i.puntos), 0) AS puntos_equipo,
+                    COALESCE(SUM(i.ganados), 0) AS ganados_equipo,
+                    COALESCE(AVG(i.efectividad), 0) AS efectividad_equipo,
+                    COUNT(*) AS jugadores_activos
+                FROM inscritos i
+                LEFT JOIN equipos e ON e.id_torneo = i.torneo_id AND e.codigo_equipo = i.codigo_equipo
+                WHERE i.torneo_id = ?
+                  AND i.codigo_equipo IS NOT NULL AND i.codigo_equipo != ''
+                  AND " . InscritosHelper::sqlWhereSoloConfirmadoConAlias('i') . "
+                GROUP BY i.codigo_equipo
+                HAVING jugadores_activos = 2
+            ) t
+            {$orden}
         ";
         $stmt = $this->pdo->prepare($sql);
         $stmt->execute([$torneoId]);
@@ -385,7 +370,7 @@ class MesaAsignacionParejasFijasService
             INNER JOIN usuarios u ON u.id = i.id_usuario
             WHERE i.torneo_id = ?
               AND i.codigo_equipo IS NOT NULL AND i.codigo_equipo != ''
-              AND (i.estatus IN (0,1,2,3) OR i.estatus IN ('pendiente','confirmado','solvente','no_solvente'))
+              AND " . InscritosHelper::sqlWhereSoloConfirmadoConAlias('i') . "
             ORDER BY i.codigo_equipo ASC, i.id ASC
         ";
         $stmt = $this->pdo->prepare($sql);
@@ -406,7 +391,7 @@ class MesaAsignacionParejasFijasService
                 unset($map[$codigo]);
                 continue;
             }
-            $map[$codigo] = array_slice($jugadores, 0, self::JUGADORES_POR_PAREJA);
+            $map[$codigo] = array_values(array_slice($jugadores, 0, self::JUGADORES_POR_PAREJA));
         }
         return $map;
     }
@@ -451,6 +436,48 @@ class MesaAsignacionParejasFijasService
         }
         // Respaldo de seguridad por límite legado.
         return array_slice($out, 0, self::MAX_JUGADORES_BYE);
+    }
+
+    /**
+     * Guarda asignación por unidad pareja (codigo_equipo): cada mesa define AC y BD por código,
+     * y luego actualiza ambos atletas de cada código con la misma mesa y secuencias 1-2 / 3-4.
+     */
+    private function guardarAsignacionRondaPorCodigos(int $torneoId, int $ronda, array $mesas, array $jugadoresPorCodigo): void
+    {
+        $this->pdo->beginTransaction();
+        try {
+            $registrado_por = (class_exists('Auth') && method_exists('Auth', 'id')) ? ((int) Auth::id() ?: 1) : 1;
+            $sql = "INSERT INTO partiresul
+                    (id_torneo, id_usuario, partida, mesa, secuencia, fecha_partida, registrado, registrado_por)
+                    VALUES (?, ?, ?, ?, ?, NOW(), 0, ?)
+                    ON DUPLICATE KEY UPDATE mesa = VALUES(mesa), secuencia = VALUES(secuencia)";
+            $stmt = $this->pdo->prepare($sql);
+
+            $numeroMesa = 1;
+            foreach ($mesas as $mesaCodigos) {
+                if (!is_array($mesaCodigos) || count($mesaCodigos) < 2) {
+                    throw new RuntimeException('Estructura de mesa inválida para asignación por pareja.');
+                }
+                $codigoAC = (string)($mesaCodigos['codigo_ac'] ?? $mesaCodigos[0] ?? '');
+                $codigoBD = (string)($mesaCodigos['codigo_bd'] ?? $mesaCodigos[1] ?? '');
+                $jugAC = $this->obtenerJugadoresDeCodigo($codigoAC, $jugadoresPorCodigo);
+                $jugBD = $this->obtenerJugadoresDeCodigo($codigoBD, $jugadoresPorCodigo);
+
+                // AC
+                $stmt->execute([$torneoId, (int)$jugAC[0]['id_usuario'], $ronda, $numeroMesa, 1, $registrado_por]);
+                $stmt->execute([$torneoId, (int)$jugAC[1]['id_usuario'], $ronda, $numeroMesa, 2, $registrado_por]);
+                // BD
+                $stmt->execute([$torneoId, (int)$jugBD[0]['id_usuario'], $ronda, $numeroMesa, 3, $registrado_por]);
+                $stmt->execute([$torneoId, (int)$jugBD[1]['id_usuario'], $ronda, $numeroMesa, 4, $registrado_por]);
+
+                $numeroMesa++;
+            }
+
+            $this->pdo->commit();
+        } catch (Throwable $e) {
+            $this->pdo->rollBack();
+            throw $e;
+        }
     }
 
     private function seleccionarRival(
