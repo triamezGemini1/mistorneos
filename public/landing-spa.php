@@ -399,8 +399,8 @@ try {
                                 <div class="flex items-center justify-center w-14 h-14 bg-primary-100 rounded-xl mb-4"><i class="fas fa-file-pdf text-2xl text-primary-600"></i></div>
                                 <h3 class="text-xl font-bold text-gray-900 mb-3">{{ doc.titulo }}</h3>
                                 <div class="flex flex-wrap gap-2">
-                                    <a :href="baseUrl + 'view_documento.php?path=' + encodeURIComponent(doc.path)" target="_blank" rel="noopener noreferrer" class="inline-flex items-center px-4 py-2 bg-primary-500 text-white font-semibold rounded-lg hover:bg-primary-600 transition-all text-sm"><i class="fas fa-external-link-alt mr-2"></i>Ver en línea</a>
-                                    <a :href="baseUrl + 'view_documento.php?path=' + encodeURIComponent(doc.path) + '&download=1'" class="inline-flex items-center px-4 py-2 bg-gray-600 text-white font-semibold rounded-lg hover:bg-gray-700 transition-all text-sm" download><i class="fas fa-download mr-2"></i>Descargar</a>
+                                    <a :href="'view_documento.php?path=' + encodeURIComponent(doc.path)" target="_blank" rel="noopener noreferrer" class="inline-flex items-center px-4 py-2 bg-primary-500 text-white font-semibold rounded-lg hover:bg-primary-600 transition-all text-sm"><i class="fas fa-external-link-alt mr-2"></i>Ver en línea</a>
+                                    <a :href="'view_documento.php?path=' + encodeURIComponent(doc.path) + '&download=1'" class="inline-flex items-center px-4 py-2 bg-gray-600 text-white font-semibold rounded-lg hover:bg-gray-700 transition-all text-sm" download><i class="fas fa-download mr-2"></i>Descargar</a>
                                 </div>
                             </div>
                         </div>
@@ -417,8 +417,8 @@ try {
                                     <div class="flex items-center justify-center w-14 h-14 bg-green-100 rounded-xl mb-4"><i class="fas fa-file-pdf text-2xl text-green-600"></i></div>
                                     <h4 class="text-lg font-bold text-gray-900 mb-3">{{ doc.titulo }}</h4>
                                     <div class="flex flex-wrap gap-2">
-                                        <a :href="baseUrl + 'view_documento.php?path=' + encodeURIComponent(doc.path)" target="_blank" rel="noopener noreferrer" class="inline-flex items-center px-4 py-2 bg-primary-500 text-white font-semibold rounded-lg hover:bg-primary-600 transition-all text-sm"><i class="fas fa-external-link-alt mr-2"></i>Ver en línea</a>
-                                        <a :href="baseUrl + 'view_documento.php?path=' + encodeURIComponent(doc.path) + '&download=1'" class="inline-flex items-center px-4 py-2 bg-gray-600 text-white font-semibold rounded-lg hover:bg-gray-700 transition-all text-sm" download><i class="fas fa-download mr-2"></i>Descargar</a>
+                                        <a :href="'view_documento.php?path=' + encodeURIComponent(doc.path)" target="_blank" rel="noopener noreferrer" class="inline-flex items-center px-4 py-2 bg-primary-500 text-white font-semibold rounded-lg hover:bg-primary-600 transition-all text-sm"><i class="fas fa-external-link-alt mr-2"></i>Ver en línea</a>
+                                        <a :href="'view_documento.php?path=' + encodeURIComponent(doc.path) + '&download=1'" class="inline-flex items-center px-4 py-2 bg-gray-600 text-white font-semibold rounded-lg hover:bg-gray-700 transition-all text-sm" download><i class="fas fa-download mr-2"></i>Descargar</a>
                                     </div>
                                 </div>
                             </div>
