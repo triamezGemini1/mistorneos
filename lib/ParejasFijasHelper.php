@@ -63,7 +63,8 @@ class ParejasFijasHelper
         int $clubId,
         $nombreEquipo,
         array $idUsuarios,
-        ?int $creadoPor = null
+        ?int $creadoPor = null,
+        array $datosJugadores = []
     ): array {
         if (count($idUsuarios) !== self::JUGADORES_POR_PAREJA) {
             return [
@@ -173,8 +174,13 @@ class ParejasFijasHelper
                 $stmtU = $pdo->prepare('SELECT nacionalidad, cedula FROM usuarios WHERE id = ?');
                 $stmtU->execute([$idUsuario]);
                 $u = $stmtU->fetch(PDO::FETCH_ASSOC);
-                $nacionalidad = in_array($u['nacionalidad'] ?? 'V', ['V', 'E', 'J', 'P'], true) ? ($u['nacionalidad'] ?? 'V') : 'V';
-                $cedula = preg_replace('/\D/', '', (string) ($u['cedula'] ?? ''));
+                $nacionalidadDb = in_array($u['nacionalidad'] ?? 'V', ['V', 'E', 'J', 'P'], true) ? ($u['nacionalidad'] ?? 'V') : 'V';
+                $cedulaDb = preg_replace('/\D/', '', (string) ($u['cedula'] ?? ''));
+                $datoJugador = $datosJugadores[$idUsuario] ?? [];
+                $nacionalidadPost = strtoupper(trim((string)($datoJugador['nacionalidad'] ?? '')));
+                $cedulaPost = preg_replace('/\D/', '', (string)($datoJugador['cedula'] ?? ''));
+                $nacionalidad = in_array($nacionalidadPost, ['V', 'E', 'J', 'P'], true) ? $nacionalidadPost : $nacionalidadDb;
+                $cedula = $cedulaPost !== '' ? $cedulaPost : $cedulaDb;
                 InscritosHelper::insertarInscrito($pdo, [
                     'id_usuario' => $idUsuario,
                     'torneo_id' => $torneoId,

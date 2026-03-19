@@ -543,12 +543,28 @@ try {
             $nombre_equipo = trim((string)($_POST['nombre_equipo'] ?? ''));
             $id_usuario1 = (int)($_POST['id_usuario_1'] ?? 0);
             $id_usuario2 = (int)($_POST['id_usuario_2'] ?? 0);
+            $nac1 = strtoupper(trim((string)($_POST['nacionalidad_1'] ?? 'V')));
+            $nac2 = strtoupper(trim((string)($_POST['nacionalidad_2'] ?? 'V')));
+            $ced1 = preg_replace('/\D/', '', (string)($_POST['cedula_1'] ?? ''));
+            $ced2 = preg_replace('/\D/', '', (string)($_POST['cedula_2'] ?? ''));
             if ($club_id <= 0 || $id_usuario1 <= 0 || $id_usuario2 <= 0) {
                 $_SESSION['error'] = 'Complete club y los dos jugadores. El nombre de la pareja es opcional.';
                 header('Location: ' . $url_retorno);
                 exit;
             }
-            $resultado = ParejasFijasHelper::crearPareja($pdo, $torneo_id, $club_id, $nombre_equipo !== '' ? $nombre_equipo : null, [$id_usuario1, $id_usuario2], $user_id);
+            $datosJugadores = [
+                $id_usuario1 => ['nacionalidad' => $nac1, 'cedula' => $ced1],
+                $id_usuario2 => ['nacionalidad' => $nac2, 'cedula' => $ced2],
+            ];
+            $resultado = ParejasFijasHelper::crearPareja(
+                $pdo,
+                $torneo_id,
+                $club_id,
+                $nombre_equipo !== '' ? $nombre_equipo : null,
+                [$id_usuario1, $id_usuario2],
+                $user_id,
+                $datosJugadores
+            );
             if ($resultado['success']) {
                 $_SESSION['success'] = $resultado['message'];
             } else {

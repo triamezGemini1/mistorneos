@@ -81,6 +81,7 @@ class MesaAsignacionParejasFijasService
         $mesasArray = [];
         $mesasRespuesta = [];
         $codigosBye = [];
+        $pendientes = [];
 
         foreach ($porNumero as $numero => $lista) {
             // Mezclar al azar (no en bloque por club)
@@ -96,11 +97,30 @@ class MesaAsignacionParejasFijasService
                 $i += 2;
             }
             if ($i < count($lista)) {
-                // Pareja sin rival → BYE (ambos jugadores)
-                $codigoBye = (string)($lista[$i]['codigo_equipo'] ?? '');
-                if ($codigoBye !== '') {
-                    $codigosBye[] = $codigoBye;
+                // Si queda una pareja suelta en el bloque, se arrastra para emparejarla
+                // con la siguiente pareja suelta de otro bloque y evitar BYE innecesario.
+                $pendiente = $lista[$i];
+                $codigoPendiente = (string)($pendiente['codigo_equipo'] ?? '');
+                if ($codigoPendiente !== '') {
+                    $pendientes[] = $pendiente;
                 }
+            }
+        }
+        while (count($pendientes) >= 2) {
+            $parejaA = array_shift($pendientes);
+            $parejaB = array_shift($pendientes);
+            $codigoA = (string)($parejaA['codigo_equipo'] ?? '');
+            $codigoB = (string)($parejaB['codigo_equipo'] ?? '');
+            if ($codigoA === '' || $codigoB === '') {
+                continue;
+            }
+            $mesasArray[] = ['codigo_ac' => $codigoA, 'codigo_bd' => $codigoB];
+            $mesasRespuesta[] = $this->crearMesaDesdeCodigos($codigoA, $codigoB, $jugadoresPorCodigo);
+        }
+        if (!empty($pendientes)) {
+            $codigoBye = (string)($pendientes[0]['codigo_equipo'] ?? '');
+            if ($codigoBye !== '') {
+                $codigosBye[] = $codigoBye;
             }
         }
         $jugadoresBye = $this->expandirByesPorCodigo($codigosBye, $jugadoresPorCodigo);
@@ -347,7 +367,7 @@ class MesaAsignacionParejasFijasService
                 LEFT JOIN equipos e ON e.id_torneo = i.torneo_id AND e.codigo_equipo = i.codigo_equipo
                 WHERE i.torneo_id = ?
                   AND i.codigo_equipo IS NOT NULL AND i.codigo_equipo != ''
-                  AND " . InscritosHelper::sqlWhereSoloConfirmadoConAlias('i') . "
+                  AND " . InscritosHelper::sqlWhereActivoConAlias('i') . "
                 GROUP BY i.codigo_equipo
                 HAVING jugadores_activos = 2
             ) t
@@ -370,7 +390,7 @@ class MesaAsignacionParejasFijasService
             INNER JOIN usuarios u ON u.id = i.id_usuario
             WHERE i.torneo_id = ?
               AND i.codigo_equipo IS NOT NULL AND i.codigo_equipo != ''
-              AND " . InscritosHelper::sqlWhereSoloConfirmadoConAlias('i') . "
+              AND " . InscritosHelper::sqlWhereActivoConAlias('i') . "
             ORDER BY i.codigo_equipo ASC, i.id ASC
         ";
         $stmt = $this->pdo->prepare($sql);
@@ -453,7 +473,7 @@ class MesaAsignacionParejasFijasService
                 SET mesa = 0, letra = NULL
                 WHERE torneo_id = ?
                   AND codigo_equipo IS NOT NULL AND codigo_equipo != ''
-                  AND " . InscritosHelper::SQL_WHERE_SOLO_CONFIRMADO . "
+                  AND " . InscritosHelper::SQL_WHERE_ACTIVO . "
             ";
             $stmtReset = $this->pdo->prepare($sqlReset);
             $stmtReset->execute([$torneoId]);
@@ -464,7 +484,7 @@ class MesaAsignacionParejasFijasService
                 SET mesa = ?, letra = NULL
                 WHERE torneo_id = ?
                   AND codigo_equipo = ?
-                  AND " . InscritosHelper::SQL_WHERE_SOLO_CONFIRMADO . "
+                  AND " . InscritosHelper::SQL_WHERE_ACTIVO . "
             ";
             $stmtMesaCodigo = $this->pdo->prepare($sqlMesaCodigo);
             $sqlLetraJugador = "
@@ -493,10 +513,12 @@ class MesaAsignacionParejasFijasService
                 if ($stmtMesaCodigo->rowCount() < 2) {
                     throw new RuntimeException("No se pudo asignar mesa {$numeroMesa} a la pareja {$codigoAC} en inscritos.");
                 }
+                error_log("[parejas_fijas][torneo={$torneoId}][ronda={$ronda}][mesa={$numeroMesa}][codigo={$codigoAC}] filas_actualizadas=" . $stmtMesaCodigo->rowCount());
                 $stmtMesaCodigo->execute([$numeroMesa, $torneoId, $codigoBD]);
                 if ($stmtMesaCodigo->rowCount() < 2) {
                     throw new RuntimeException("No se pudo asignar mesa {$numeroMesa} a la pareja {$codigoBD} en inscritos.");
                 }
+                error_log("[parejas_fijas][torneo={$torneoId}][ronda={$ronda}][mesa={$numeroMesa}][codigo={$codigoBD}] filas_actualizadas=" . $stmtMesaCodigo->rowCount());
 
                 $numeroMesa++;
             }
