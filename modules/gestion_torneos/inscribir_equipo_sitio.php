@@ -343,20 +343,45 @@ $api_guardar_equipo = $base_url . ($use_standalone ? '?' : '&') . 'action=guarda
     .page-inscripcion-sitio.form-parejas-amigable #formEquipo {
         border: 2px dashed #9ec5fe;
         border-radius: 8px;
-        padding: 0.75rem;
+        padding: 0.4rem 0.5rem;
         background: #f9fcff;
     }
+    /* Textbox ~50% más pequeños (ancho y alto), compacto */
     .page-inscripcion-sitio.form-parejas-amigable .form-parejas-top input.form-control,
     .page-inscripcion-sitio.form-parejas-amigable .form-parejas-top select.form-select {
-        font-size: 1.08rem !important;
+        font-size: 0.65rem !important;
+        line-height: 1.2 !important;
+        height: 1.4rem !important;
+        min-height: 1.4rem !important;
+        padding: 0.12rem 0.3rem !important;
         color: #000 !important;
     }
+    .page-inscripcion-sitio.form-parejas-amigable .form-parejas-top .form-parejas-input-medio { max-width: 50%; }
     .page-inscripcion-sitio.form-parejas-amigable .form-parejas-top .form-label {
-        font-size: 0.95rem !important;
+        font-size: 0.6rem !important;
         color: #000 !important;
+        margin-bottom: 0.05rem !important;
     }
     .page-inscripcion-sitio.form-parejas-amigable .form-parejas-top .btn {
-        font-size: 0.95rem !important;
+        font-size: 0.6rem !important;
+        padding: 0.2rem 0.4rem !important;
+    }
+    .page-inscripcion-sitio.form-parejas-amigable .form-parejas-top .fila-parejas-compacta {
+        display: flex;
+        align-items: center;
+        gap: 0.35rem;
+        margin-bottom: 0.2rem;
+    }
+    .page-inscripcion-sitio.form-parejas-amigable .form-parejas-top .jugadores-y-botones {
+        display: flex;
+        align-items: flex-start;
+        gap: 0.5rem;
+    }
+    .page-inscripcion-sitio.form-parejas-amigable .form-parejas-top .jugadores-y-botones .botones-parejas {
+        display: flex;
+        flex-direction: column;
+        gap: 0.2rem;
+        flex-shrink: 0;
     }
     .page-inscripcion-sitio.form-parejas-amigable .col-disponibles-parejas,
     .page-inscripcion-sitio.form-parejas-amigable .col-insc-equipos-parejas {
@@ -433,9 +458,9 @@ $api_guardar_equipo = $base_url . ($use_standalone ? '?' : '&') . 'action=guarda
                         <span class="d-block mt-1 fw-normal small text-muted">Club, nombre (opcional) y cédula en la fila del jugador; al salir del campo se busca automáticamente.</span>
                     </h6>
                 </div>
-                <div class="card-body">
+                <div class="card-body py-2">
                     <?php if ($torneo_iniciado): ?>
-                        <div class="alert alert-warning mb-2"><i class="fas fa-exclamation-triangle me-2"></i>El torneo ya inició. No se permiten nuevas inscripciones.</div>
+                        <div class="alert alert-warning mb-1 py-1"><i class="fas fa-exclamation-triangle me-1"></i>El torneo ya inició. No se permiten nuevas inscripciones.</div>
                     <?php endif; ?>
                     <form id="formEquipo">
                         <?php require_once __DIR__ . '/../../config/csrf.php'; ?>
@@ -443,50 +468,53 @@ $api_guardar_equipo = $base_url . ($use_standalone ? '?' : '&') . 'action=guarda
                         <input type="hidden" id="equipo_id" name="equipo_id" value="">
                         <input type="hidden" id="torneo_id" name="torneo_id" value="<?php echo $torneo['id']; ?>">
                         <input type="hidden" id="codigo_equipo" name="codigo_equipo" value="">
-                        <div class="fila-club-nombre-equipo mb-2">
-                            <div class="campo-club flex-grow-1">
+                        <!-- Fila 1: Club | Nombre pareja | Cédula a buscar (blur = búsqueda automática) -->
+                        <div class="fila-parejas-compacta">
+                            <div>
                                 <label class="form-label small mb-0" for="club_id">Club *</label>
-                                <select id="club_id" name="club_id" class="form-select form-select-sm w-100" required>
+                                <select id="club_id" name="club_id" class="form-select form-select-sm form-parejas-input-medio" required>
                                     <option value="">Club *</option>
                                     <?php if (!empty($clubes_disponibles)): foreach ($clubes_disponibles as $club): ?>
                                         <option value="<?php echo $club['id']; ?>"><?php echo htmlspecialchars($club['nombre']); ?></option>
                                     <?php endforeach; else: ?>
-                                        <option value="" disabled>No hay clubes disponibles</option>
+                                        <option value="" disabled>No hay clubes</option>
                                     <?php endif; ?>
                                 </select>
                             </div>
-                            <div class="campo-nombre-equipo flex-grow-1">
-                                <label class="form-label small mb-0" for="nombre_equipo">Nombre pareja/equipo (opcional)</label>
-                                <input type="text" id="nombre_equipo" name="nombre_equipo" class="form-control form-control-sm w-100" placeholder="Opcional">
+                            <div>
+                                <label class="form-label small mb-0" for="nombre_equipo">Nombre pareja (opc.)</label>
+                                <input type="text" id="nombre_equipo" name="nombre_equipo" class="form-control form-control-sm form-parejas-input-medio" placeholder="Opcional">
+                            </div>
+                            <div>
+                                <label class="form-label small mb-0" for="cedula_buscar_parejas">Cédula a buscar</label>
+                                <input type="text" id="cedula_buscar_parejas" class="form-control form-control-sm form-parejas-input-medio" placeholder="Salir del campo para buscar" inputmode="numeric" autocomplete="off">
                             </div>
                         </div>
-                        <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-2">
-                            <div id="wrap_codigo_equipo_barra" class="d-flex align-items-center gap-2" style="visibility:hidden;" aria-hidden="true">
-                                <span class="small text-muted fw-bold mb-0">Código</span>
-                                <span id="codigo_equipo_visible" class="badge bg-secondary px-2 py-1"></span>
-                            </div>
-                            <div class="d-flex gap-2">
-                                <button type="submit" class="btn btn-success btn-sm" id="btnGuardarEquipo" <?= $torneo_iniciado ? 'disabled' : '' ?>><i class="fas fa-save me-1"></i>Guardar</button>
-                                <button type="button" class="btn btn-secondary btn-sm" onclick="limpiarFormulario()" <?= $torneo_iniciado ? 'disabled' : '' ?>><i class="fas fa-redo me-1"></i>Nueva</button>
-                            </div>
+                        <!-- Fila 2: Código (oculto hasta editar pareja) -->
+                        <div id="wrap_codigo_equipo_barra" class="fila-parejas-compacta" style="visibility:hidden;" aria-hidden="true">
+                            <span class="small text-muted fw-bold">Código</span>
+                            <span id="codigo_equipo_visible" class="badge bg-secondary px-2 py-0"></span>
                         </div>
-                        <div id="jugadores-container">
-                            <?php for ($i = 1; $i <= $jugadores_por_equipo; $i++): ?>
-                                <div class="row g-1 align-items-center fila-jugador-compacta mb-1" data-posicion="<?php echo $i; ?>" data-jugador-asignado="">
-                                    <div class="col-auto text-center pe-0" style="width:2rem;">
-                                        <?php if ($i == 1): ?><span class="badge bg-warning text-dark">★</span><?php else: ?><span class="small"><?php echo $i; ?></span><?php endif; ?>
+                        <!-- Filas jugadores + botones al final -->
+                        <div class="jugadores-y-botones">
+                            <div id="jugadores-container" class="flex-grow-1">
+                                <?php for ($i = 1; $i <= $jugadores_por_equipo; $i++): ?>
+                                    <div class="fila-parejas-compacta fila-jugador-compacta" data-posicion="<?php echo $i; ?>" data-jugador-asignado="">
+                                        <span class="small text-nowrap"><?php if ($i == 1): ?>★<?php else: ?><?php echo $i; ?><?php endif; ?></span>
                                         <input type="hidden" id="es_capitan_<?php echo $i; ?>" name="jugadores[<?php echo $i; ?>][es_capitan]" value="<?php echo $i == 1 ? '1' : '0'; ?>">
-                                    </div>
-                                    <div class="col d-flex align-items-center gap-1 wrap-inputs-jugador">
-                                        <input type="text" class="form-control form-control-sm jugador-id-usuario input-id-usuario" id="jugador_id_usuario_<?php echo $i; ?>" placeholder="ID" readonly style="width:3.5rem; background:#e9ecef;">
+                                        <input type="text" class="form-control form-control-sm jugador-id-usuario input-id-usuario" id="jugador_id_usuario_<?php echo $i; ?>" placeholder="ID" readonly style="width:2.5rem; background:#e9ecef;">
                                         <input type="hidden" id="jugador_id_usuario_h_<?php echo $i; ?>" name="jugadores[<?php echo $i; ?>][id_usuario]">
-                                        <input type="text" class="form-control form-control-sm jugador-cedula input-cedula" id="jugador_cedula_<?php echo $i; ?>" name="jugadores[<?php echo $i; ?>][cedula]" placeholder="Cédula (blur para buscar)" data-posicion="<?php echo $i; ?>" onblur="buscarJugadorPorCedula(this)" oninput="validarFormulario()" style="min-width:6rem;">
+                                        <input type="text" class="form-control form-control-sm jugador-cedula input-cedula" id="jugador_cedula_<?php echo $i; ?>" name="jugadores[<?php echo $i; ?>][cedula]" placeholder="Céd." data-posicion="<?php echo $i; ?>" onblur="buscarJugadorPorCedula(this)" oninput="validarFormulario()" style="width:4.5rem;">
                                         <input type="hidden" class="jugador-id-inscrito" id="jugador_id_inscrito_<?php echo $i; ?>" name="jugadores[<?php echo $i; ?>][id_inscrito]">
-                                        <input type="text" class="form-control form-control-sm jugador-nombre input-nombre-jug flex-grow-1" id="jugador_nombre_<?php echo $i; ?>" name="jugadores[<?php echo $i; ?>][nombre]" placeholder="Nombre" readonly style="background:#e9ecef;" oninput="validarFormulario()">
+                                        <input type="text" class="form-control form-control-sm jugador-nombre input-nombre-jug" id="jugador_nombre_<?php echo $i; ?>" name="jugadores[<?php echo $i; ?>][nombre]" placeholder="Nombre" readonly style="min-width:5rem; background:#e9ecef;" oninput="validarFormulario()">
                                         <button type="button" class="btn btn-sm btn-outline-danger py-0 px-1" onclick="limpiarJugadorYDevolver(<?php echo $i; ?>)" title="Quitar" id="btn_limpiar_<?php echo $i; ?>" style="display:none;"><i class="fas fa-times"></i></button>
                                     </div>
-                                </div>
-                            <?php endfor; ?>
+                                <?php endfor; ?>
+                            </div>
+                            <div class="botones-parejas">
+                                <button type="button" class="btn btn-secondary btn-sm w-100" onclick="limpiarFormulario()" <?= $torneo_iniciado ? 'disabled' : '' ?>><i class="fas fa-redo me-1"></i>Nueva pareja</button>
+                                <button type="submit" class="btn btn-success btn-sm w-100" id="btnGuardarEquipo" <?= $torneo_iniciado ? 'disabled' : '' ?>><i class="fas fa-save me-1"></i>Guardar</button>
+                            </div>
                         </div>
                     </form>
                 </div>
@@ -892,6 +920,10 @@ echo json_encode($map, JSON_UNESCAPED_UNICODE);
 document.addEventListener('DOMContentLoaded', function() {
     validarFormulario();
     actualizarBloqueoSeleccionJugadores();
+    var cedulaBuscarParejas = document.getElementById('cedula_buscar_parejas');
+    if (cedulaBuscarParejas) {
+        cedulaBuscarParejas.addEventListener('blur', buscarCedulaParejasGlobal);
+    }
     /* Integrantes: despliegue/repliegue manual (evita fallos del toggle en cabecera con botones) */
     (function initToggleIntegrantes() {
         var lista = document.getElementById('listaEquiposRegistrados');
@@ -1243,6 +1275,46 @@ async function buscarJugadorPorCedula(input) {
             confirmButtonColor: '#3b82f6'
         });
         limpiarJugador(posicion);
+    }
+}
+
+// Cédula a buscar (campo global parejas): blur = buscar y asignar a primera posición vacía
+async function buscarCedulaParejasGlobal() {
+    const input = document.getElementById('cedula_buscar_parejas');
+    if (!input) return;
+    const cedula = input.value.trim();
+    if (!cedula) return;
+    if (!puedeSeleccionarJugadores()) {
+        Swal.fire({ icon: 'warning', title: 'Atención', text: 'Primero seleccione el Club.', confirmButtonColor: '#3b82f6' });
+        return;
+    }
+    try {
+        const response = await fetch(`<?php echo $api_base_path; ?>buscar_jugador_inscripcion.php?cedula=${encodeURIComponent(cedula)}&torneo_id=${TORNEO_ID}`);
+        const data = await response.json();
+        if (data.success && data.jugador) {
+            if (data.jugador.codigo_equipo) {
+                Swal.fire({ icon: 'warning', title: 'No disponible', text: 'Ya está asignado (código: ' + data.jugador.codigo_equipo + ')', confirmButtonColor: '#3b82f6' });
+                input.value = '';
+                return;
+            }
+            for (let i = 1; i <= JUGADORES_POR_EQUIPO; i++) {
+                const cedulaEl = document.getElementById('jugador_cedula_' + i);
+                if (cedulaEl && !cedulaEl.value.trim()) {
+                    asignarJugadorAPosicion(String(i), data.jugador);
+                    input.value = '';
+                    validarFormulario();
+                    return;
+                }
+            }
+            Swal.fire({ icon: 'info', title: 'Completo', text: 'Las dos posiciones ya tienen jugador.', confirmButtonColor: '#3b82f6' });
+        } else {
+            Swal.fire({ icon: 'error', title: 'No encontrado', text: data.message || 'Verifique la cédula.', confirmButtonColor: '#3b82f6' });
+        }
+        input.value = '';
+    } catch (e) {
+        console.error(e);
+        Swal.fire({ icon: 'error', title: 'Error', text: 'No se pudo buscar.', confirmButtonColor: '#3b82f6' });
+        input.value = '';
     }
 }
 
