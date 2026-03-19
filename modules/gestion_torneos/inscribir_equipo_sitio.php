@@ -346,25 +346,41 @@ $api_guardar_equipo = $base_url . ($use_standalone ? '?' : '&') . 'action=guarda
         padding: 0.4rem 0.5rem;
         background: #f9fcff;
     }
-    /* Textbox ~50% más pequeños (ancho y alto), compacto */
+    /* Formulario: letras ampliadas 40% */
     .page-inscripcion-sitio.form-parejas-amigable .form-parejas-top input.form-control,
     .page-inscripcion-sitio.form-parejas-amigable .form-parejas-top select.form-select {
-        font-size: 0.65rem !important;
-        line-height: 1.2 !important;
-        height: 1.4rem !important;
-        min-height: 1.4rem !important;
-        padding: 0.12rem 0.3rem !important;
+        font-size: 0.91rem !important;
+        line-height: 1.25 !important;
+        height: 1.75rem !important;
+        min-height: 1.75rem !important;
+        padding: 0.15rem 0.35rem !important;
         color: #000 !important;
     }
-    .page-inscripcion-sitio.form-parejas-amigable .form-parejas-top .form-parejas-input-medio { max-width: 50%; }
     .page-inscripcion-sitio.form-parejas-amigable .form-parejas-top .form-label {
-        font-size: 0.6rem !important;
+        font-size: 0.84rem !important;
         color: #000 !important;
-        margin-bottom: 0.05rem !important;
+        margin-bottom: 0.08rem !important;
     }
     .page-inscripcion-sitio.form-parejas-amigable .form-parejas-top .btn {
-        font-size: 0.6rem !important;
-        padding: 0.2rem 0.4rem !important;
+        font-size: 0.84rem !important;
+        padding: 0.25rem 0.5rem !important;
+    }
+    /* Fila superior: Club y Nombre equipo ancho +100%; Cédula a buscar ancho +50% */
+    .page-inscripcion-sitio.form-parejas-amigable .form-parejas-top .fila-parejas-compacta .campo-club-parejas,
+    .page-inscripcion-sitio.form-parejas-amigable .form-parejas-top .fila-parejas-compacta .campo-nombre-parejas {
+        flex: 2 1 0;
+        min-width: 0;
+    }
+    .page-inscripcion-sitio.form-parejas-amigable .form-parejas-top .fila-parejas-compacta .campo-cedula-buscar-parejas {
+        flex: 1.5 1 0;
+        min-width: 0;
+    }
+    .page-inscripcion-sitio.form-parejas-amigable .form-parejas-top .fila-parejas-compacta .campo-club-parejas input,
+    .page-inscripcion-sitio.form-parejas-amigable .form-parejas-top .fila-parejas-compacta .campo-club-parejas select,
+    .page-inscripcion-sitio.form-parejas-amigable .form-parejas-top .fila-parejas-compacta .campo-nombre-parejas input,
+    .page-inscripcion-sitio.form-parejas-amigable .form-parejas-top .fila-parejas-compacta .campo-cedula-buscar-parejas input {
+        width: 100%;
+        max-width: 100%;
     }
     .page-inscripcion-sitio.form-parejas-amigable .form-parejas-top .fila-parejas-compacta {
         display: flex;
@@ -495,9 +511,9 @@ $api_guardar_equipo = $base_url . ($use_standalone ? '?' : '&') . 'action=guarda
                         <input type="hidden" id="codigo_equipo" name="codigo_equipo" value="">
                         <!-- Fila 1: Club | Nombre pareja | Cédula a buscar (blur = búsqueda automática) -->
                         <div class="fila-parejas-compacta">
-                            <div>
+                            <div class="campo-club-parejas">
                                 <label class="form-label small mb-0" for="club_id">Club *</label>
-                                <select id="club_id" name="club_id" class="form-select form-select-sm form-parejas-input-medio" required>
+                                <select id="club_id" name="club_id" class="form-select form-select-sm w-100" required>
                                     <option value="">Club *</option>
                                     <?php if (!empty($clubes_disponibles)): foreach ($clubes_disponibles as $club): ?>
                                         <option value="<?php echo $club['id']; ?>"><?php echo htmlspecialchars($club['nombre']); ?></option>
@@ -506,13 +522,13 @@ $api_guardar_equipo = $base_url . ($use_standalone ? '?' : '&') . 'action=guarda
                                     <?php endif; ?>
                                 </select>
                             </div>
-                            <div>
+                            <div class="campo-nombre-parejas">
                                 <label class="form-label small mb-0" for="nombre_equipo">Nombre pareja (opc.)</label>
-                                <input type="text" id="nombre_equipo" name="nombre_equipo" class="form-control form-control-sm form-parejas-input-medio" placeholder="Opcional">
+                                <input type="text" id="nombre_equipo" name="nombre_equipo" class="form-control form-control-sm w-100" placeholder="Opcional">
                             </div>
-                            <div>
+                            <div class="campo-cedula-buscar-parejas">
                                 <label class="form-label small mb-0" for="cedula_buscar_parejas">Cédula a buscar</label>
-                                <input type="text" id="cedula_buscar_parejas" class="form-control form-control-sm form-parejas-input-medio" placeholder="Salir del campo para buscar" inputmode="numeric" autocomplete="off">
+                                <input type="text" id="cedula_buscar_parejas" class="form-control form-control-sm w-100" placeholder="Salir del campo para buscar" inputmode="numeric" autocomplete="off">
                             </div>
                         </div>
                         <!-- Fila jugador 1: Código (oculto) | id | cedula | nombre | Nueva -->
