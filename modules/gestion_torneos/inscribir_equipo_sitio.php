@@ -334,8 +334,8 @@ $api_guardar_equipo = $base_url . ($use_standalone ? '?' : '&') . 'action=guarda
     /* Parejas: sin scroll vertical, margen vertical, Volver siempre visible */
     <?php if ($es_parejas): ?>
     .page-inscripcion-sitio.form-parejas-amigable {
-        max-height: 75vh;
-        height: 75vh;
+        max-height: 90vh;
+        height: 90vh;
         margin: 1rem 0;
         overflow: hidden;
         padding-top: 0.5rem !important;
@@ -365,18 +365,28 @@ $api_guardar_equipo = $base_url . ($use_standalone ? '?' : '&') . 'action=guarda
         overflow: hidden;
         margin-bottom: 0 !important;
     }
+    .page-inscripcion-sitio.form-parejas-amigable .row-columnas-parejas .col-disponibles-parejas,
+    .page-inscripcion-sitio.form-parejas-amigable .row-columnas-parejas .col-insc-equipos-parejas {
+        display: flex;
+        flex-direction: column;
+        min-height: 0;
+        overflow: hidden;
+    }
     .page-inscripcion-sitio.form-parejas-amigable .col-disponibles-parejas .card,
     .page-inscripcion-sitio.form-parejas-amigable .col-insc-equipos-parejas .card {
         min-height: 0;
         display: flex;
         flex-direction: column;
         overflow: hidden;
+        flex: 1 1 0;
     }
     .page-inscripcion-sitio.form-parejas-amigable .col-disponibles-parejas .card-body,
     .page-inscripcion-sitio.form-parejas-amigable .col-insc-equipos-parejas .card-body {
         flex: 1 1 0;
         min-height: 0;
         overflow-y: auto;
+        overflow-x: hidden;
+        -webkit-overflow-scrolling: touch;
     }
     .page-inscripcion-sitio.form-parejas-amigable .form-parejas-top {
         border: 2px solid #0d6efd;
