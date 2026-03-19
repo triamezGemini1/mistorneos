@@ -395,6 +395,13 @@ $api_guardar_equipo = $base_url . ($use_standalone ? '?' : '&') . 'action=guarda
         background: #f4f8ff;
         color: #000;
     }
+    .page-inscripcion-sitio.form-parejas-amigable .form-parejas-top .badge-parejas-inscritas {
+        background-color: #b6d4fe;
+        color: #0d6efd;
+        border: 1px dashed #0d6efd;
+        font-size: 0.85rem;
+        padding: 0.35rem 0.6rem;
+    }
     .page-inscripcion-sitio.form-parejas-amigable #formEquipo {
         border: 2px dashed #9ec5fe;
         border-radius: 8px;
@@ -588,11 +595,12 @@ $api_guardar_equipo = $base_url . ($use_standalone ? '?' : '&') . 'action=guarda
     <div class="row mb-2 form-parejas-row">
         <div class="col-12">
             <div class="card border-0 shadow-sm form-parejas-top">
-                <div class="card-header bg-warning text-dark py-1 px-2">
+                <div class="card-header bg-warning text-dark py-1 px-2 d-flex justify-content-between align-items-center flex-wrap">
                     <h6 class="mb-0 small">
                         <i class="fas fa-edit me-1"></i>Inscripción por parejas
                         <span class="d-block mt-0 fw-normal small text-muted">Club, nombre (opcional) y cédula; al salir del campo se busca automáticamente.</span>
                     </h6>
+                    <span class="badge badge-parejas-inscritas fw-bold ms-2" id="badge-parejas-inscritas-titulo"><?php echo count($equipos_registrados); ?> inscritas</span>
                 </div>
                 <div class="card-body py-1 px-2">
                     <?php if ($torneo_iniciado): ?>
