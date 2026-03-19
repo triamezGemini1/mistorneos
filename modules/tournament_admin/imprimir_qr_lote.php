@@ -57,14 +57,15 @@ $url_panel = $base_public . '/' . basename($script) . '?page=torneo_gestion&acti
 }
 .cuadricula-tarjetas-grid:last-child { page-break-after: auto; }
 
+/* Diseño carnet: fila superior = Foto (izq) | Nombres (der); fila inferior izq = CI + ID bajo la foto; der = QR */
 .tarjeta-id {
     width: 8cm;
     height: 5cm;
     box-sizing: border-box;
     border: 0.5mm solid #333;
     display: grid;
-    grid-template-columns: 22mm 1fr 20mm;
-    grid-template-rows: 1fr 1fr;
+    grid-template-columns: 22mm 1fr;
+    grid-template-rows: 1.4fr 0.6fr 0.6fr;
     gap: 1mm 2mm;
     font-family: Calibri, 'Lato', Arial, sans-serif;
     page-break-inside: avoid;
@@ -73,7 +74,7 @@ $url_panel = $base_public . '/' . basename($script) . '?page=torneo_gestion&acti
 }
 .tarjeta-id .tarjeta-foto {
     grid-column: 1;
-    grid-row: 1 / -1;
+    grid-row: 1;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -104,19 +105,27 @@ $url_panel = $base_public . '/' . basename($script) . '?page=torneo_gestion&acti
     color: #212121;
     line-height: 1.2;
     align-self: center;
-    padding-left: 1mm;
+    padding-left: 2mm;
 }
-.tarjeta-id .tarjeta-cedula-id {
-    grid-column: 2;
+.tarjeta-id .tarjeta-cedula {
+    grid-column: 1;
     grid-row: 2;
+    font-size: 11pt;
+    color: #424242;
     align-self: end;
-    padding-left: 1mm;
+    padding-left: 0;
 }
-.tarjeta-id .tarjeta-cedula-id .cedula { font-size: 11pt; color: #424242; display: block; }
-.tarjeta-id .tarjeta-cedula-id .id-jugador { font-size: 13pt; font-weight: bold; color: #0d47a1; }
+.tarjeta-id .tarjeta-id-jugador {
+    grid-column: 1;
+    grid-row: 3;
+    font-size: 13pt;
+    font-weight: bold;
+    color: #0d47a1;
+    align-self: start;
+}
 .tarjeta-id .tarjeta-qr-wrap {
-    grid-column: 3;
-    grid-row: 1 / -1;
+    grid-column: 2;
+    grid-row: 2 / 4;
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -186,10 +195,8 @@ $url_panel = $base_public . '/' . basename($script) . '?page=torneo_gestion&acti
                                 <?php endif; ?>
                             </div>
                             <div class="tarjeta-nombre"><?= $nombre ?></div>
-                            <div class="tarjeta-cedula-id">
-                                <span class="cedula">C.I. <?= $cedula ?></span>
-                                <span class="id-jugador">#<?= $id_jugador ?></span>
-                            </div>
+                            <div class="tarjeta-cedula">C.I. <?= $cedula ?></div>
+                            <div class="tarjeta-id-jugador">#<?= $id_jugador ?></div>
                             <div class="tarjeta-qr-wrap">
                                 <img src="<?= htmlspecialchars($qr_src) ?>" alt="QR" />
                                 <div class="qr-label">Escanear para ingresar</div>

@@ -180,6 +180,7 @@ class PlayerCredentialGenerator {
         @page { size: 8cm 5cm; margin: 0; }
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { width: 8cm; height: 5cm; font-family: Arial, Helvetica, sans-serif; background: #fff; overflow: hidden; }
+        /* Diseño carnet: fila superior = Foto (izq) | Nombres (der); bajo foto = CI, luego ID; derecha = QR */
         .card-border {
             position: relative;
             width: 100%; height: 100%;
@@ -188,13 +189,13 @@ class PlayerCredentialGenerator {
             background: #fff;
             padding: 2mm;
             display: grid;
-            grid-template-columns: 22mm 1fr 20mm;
-            grid-template-rows: auto 1fr;
+            grid-template-columns: 22mm 1fr;
+            grid-template-rows: 1.4fr 0.6fr 0.6fr;
             gap: 1mm 2mm;
         }
         .cred-photo {
             grid-column: 1;
-            grid-row: 1 / -1;
+            grid-row: 1;
             background: #f0f0f0;
             border-radius: 2px;
             overflow: hidden;
@@ -204,14 +205,14 @@ class PlayerCredentialGenerator {
         }
         .cred-photo-img { width: 100%; height: 100%; object-fit: cover; display: block; }
         .cred-photo-placeholder { font-size: 6pt; color: #999; text-align: center; padding: 2mm; }
-        .cred-top-right { grid-column: 2; grid-row: 1; display: flex; flex-direction: column; justify-content: center; padding-left: 1mm; }
+        .cred-top-right { grid-column: 2; grid-row: 1; display: flex; flex-direction: column; justify-content: center; padding-left: 2mm; }
         .cred-tournament { font-size: 6pt; font-weight: bold; color: #0d47a1; text-transform: uppercase; line-height: 1.2; }
         .cred-name { font-size: 8pt; font-weight: bold; color: #212121; line-height: 1.2; margin-top: 0.5mm; }
-        .cred-cedula-id { grid-column: 2; grid-row: 2; align-self: end; padding-left: 1mm; }
-        .cred-cedula-id .c { font-size: 6pt; color: #555; display: block; }
-        .cred-cedula-id .id { font-size: 8pt; font-weight: bold; color: #0d47a1; }
-        .cred-cedula-id .cred-club { font-size: 5pt; color: #1565c0; display: block; margin-top: 0.5mm; }
-        .cred-qr { grid-column: 3; grid-row: 1 / -1; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+        .cred-cedula { grid-column: 1; grid-row: 2; font-size: 6pt; color: #555; align-self: end; }
+        .cred-id-block { grid-column: 1; grid-row: 3; }
+        .cred-id { font-size: 8pt; font-weight: bold; color: #0d47a1; display: block; }
+        .cred-club { font-size: 5pt; color: #1565c0; display: block; margin-top: 0.5mm; }
+        .cred-qr { grid-column: 2; grid-row: 2 / 4; display: flex; flex-direction: column; align-items: center; justify-content: center; }
         .cred-qr img { width: 16mm; height: 16mm; display: block; }
         .cred-qr-label { font-size: 5pt; color: #666; text-align: center; margin-top: 0.5mm; }
     </style>
@@ -223,9 +224,9 @@ class PlayerCredentialGenerator {
             <div class="cred-tournament">' . $tournament_name . '</div>
             <div class="cred-name">' . $player_name . '</div>
         </div>
-        <div class="cred-cedula-id">
-            <span class="c">C.I. ' . $player_cedula . '</span>
-            <span class="id">#' . $id_usuario . ' &ndash; ' . $identificador . '</span>
+        <div class="cred-cedula">C.I. ' . $player_cedula . '</div>
+        <div class="cred-id-block">
+            <span class="cred-id">#' . $id_usuario . ' &ndash; ' . $identificador . '</span>
             <span class="cred-club">' . $club_name . '</span>
         </div>
         <div class="cred-qr">
