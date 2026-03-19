@@ -10,8 +10,13 @@ declare(strict_types=1);
 require_once __DIR__ . '/../config/auth.php';
 require_once __DIR__ . '/../config/db.php';
 require_once __DIR__ . '/../config/csrf.php';
+require_once __DIR__ . '/../lib/ImageOptimizer.php';
 
 Auth::requireRole(['admin_general']);
+
+// Umbrales (bytes) para comprimir: por encima de esto se optimiza
+const UMBRAL_COMPRIMIR_IMAGEN = 1024 * 1024;   // 1 MB
+const UMBRAL_COMPRIMIR_PDF     = 3 * 1024 * 1024; // 3 MB
 
 $base_dir = dirname(__DIR__);
 $folders = [
@@ -120,15 +125,80 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 
     if ($action === 'upload' && !empty($_FILES['archivo']['name']) && $_FILES['archivo']['error'] === UPLOAD_ERR_OK) {
-        $name = $_FILES['archivo']['name'];
-        $name = preg_replace('/[^a-zA-Z0-9._-]/', '_', $name);
-        $ext = strtolower(pathinfo($name, PATHINFO_EXTENSION));
+        $original_name = $_FILES['archivo']['name'];
+        $ext = strtolower(pathinfo($original_name, PATHINFO_EXTENSION));
         if (!in_array($ext, $cfg['extensions'], true)) {
             header('Location: index.php?page=archivos_web&error=' . rawurlencode('Tipo de archivo no permitido. Use: ' . implode(', ', $cfg['extensions'])));
             exit;
         }
+        $nombre_custom = trim((string)($_POST['nombre_guardar'] ?? ''));
+        if ($nombre_custom !== '') {
+            $nombre_custom = basename(preg_replace('/[^a-zA-Z0-9._\-]/', '_', $nombre_custom));
+            $nombre_custom = pathinfo($nombre_custom, PATHINFO_FILENAME);
+            if ($nombre_custom === '') {
+                $nombre_custom = pathinfo($original_name, PATHINFO_FILENAME);
+            }
+            $name = $nombre_custom . '.' . $ext;
+        } else {
+            $name = preg_replace('/[^a-zA-Z0-9._-]/', '_', $original_name);
+        }
+        $tmp = $_FILES['archivo']['tmp_name'];
         $dest = $dir_full . DIRECTORY_SEPARATOR . $name;
-        if (move_uploaded_file($_FILES['archivo']['tmp_name'], $dest)) {
+        $size = filesize($tmp);
+
+        $comprimir_imagen = in_array($ext, ['jpg', 'jpeg', 'png', 'gif', 'webp'], true) && $size > UMBRAL_COMPRIMIR_IMAGEN;
+        $comprimir_pdf = ($ext === 'pdf' && $size > UMBRAL_COMPRIMIR_PDF);
+
+        if ($comprimir_imagen && class_exists('ImageOptimizer')) {
+            if (!move_uploaded_file($tmp, $dest)) {
+                header('Location: index.php?page=archivos_web&error=' . rawurlencode('Error al guardar el archivo'));
+                exit;
+            }
+            $res = ImageOptimizer::optimize($dest, $dest, [
+                'quality' => 82,
+                'max_width' => 1920,
+                'max_height' => 1920,
+                'create_webp' => false,
+            ]);
+            $msg = $res['success'] && isset($res['savings_percent']) && $res['savings_percent'] > 0
+                ? 'Archivo subido y comprimido correctamente (' . (int)$res['savings_percent'] . '% menos).'
+                : 'Archivo subido correctamente.';
+            header('Location: index.php?page=archivos_web&success=' . rawurlencode($msg));
+            exit;
+        }
+
+        if ($comprimir_pdf) {
+            if (!move_uploaded_file($tmp, $dest)) {
+                header('Location: index.php?page=archivos_web&error=' . rawurlencode('Error al guardar el archivo'));
+                exit;
+            }
+            $dest_compr = $dir_full . DIRECTORY_SEPARATOR . '.tmp_compress_' . $name;
+            $compressed = false;
+            if (function_exists('exec') && !in_array('exec', array_map('trim', explode(',', ini_get('disable_functions'))), true)) {
+                $gs = trim((string)exec('which gs 2>/dev/null') ?: (string)exec('where gs 2>nul'));
+                if ($gs === '') {
+                    $gs = 'gs';
+                }
+                $arg_dest = str_replace(['\\', '"'], ['/', '\\"'], $dest);
+                $arg_out = str_replace(['\\', '"'], ['/', '\\"'], $dest_compr);
+                $cmd = sprintf('%s -sDEVICE=pdfwrite -dPDFSETTINGS=/ebook -dNOPAUSE -dQUIET -dBATCH -sOutputFile="%s" "%s" 2>/dev/null', $gs, $arg_out, $arg_dest);
+                @exec($cmd);
+                if (is_file($dest_compr) && filesize($dest_compr) < $size) {
+                    @unlink($dest);
+                    @rename($dest_compr, $dest);
+                    $compressed = true;
+                } else {
+                    if (is_file($dest_compr)) {
+                        @unlink($dest_compr);
+                    }
+                }
+            }
+            $msg = $compressed ? 'Archivo subido y comprimido correctamente.' : 'Archivo subido correctamente (compresión PDF no disponible en este servidor).';
+            header('Location: index.php?page=archivos_web&success=' . rawurlencode($msg));
+            exit;
+        }
+
+        if (move_uploaded_file($tmp, $dest)) {
             header('Location: index.php?page=archivos_web&success=' . rawurlencode('Archivo subido correctamente'));
         } else {
             header('Location: index.php?page=archivos_web&error=' . rawurlencode('Error al guardar el archivo'));
@@ -196,11 +266,16 @@ $current_user = Auth::user();
                 <input type="hidden" name="action" value="upload">
                 <input type="hidden" name="seccion" value="<?= htmlspecialchars($key) ?>">
                 <div class="row g-2 align-items-end">
-                    <div class="col-md-6">
+                    <div class="col-md-5">
                         <label class="form-label">Subir archivo</label>
                         <input type="file" name="archivo" class="form-control" accept="<?= htmlspecialchars(implode(',', array_map(fn($e) => '.' . $e, $cfg['extensions']))) ?>" required>
                     </div>
                     <div class="col-md-4">
+                        <label class="form-label">Nombre al guardar <span class="text-muted fw-normal">(opcional)</span></label>
+                        <input type="text" name="nombre_guardar" class="form-control" placeholder="Ej: invitacion_abril_2026 (sin extensión)">
+                        <small class="text-muted">Si se deja vacío se usa el nombre del archivo. Archivos pesados se comprimen automáticamente.</small>
+                    </div>
+                    <div class="col-md-3">
                         <button type="submit" class="btn btn-primary"><i class="fas fa-upload me-2"></i>Subir</button>
                     </div>
                 </div>
