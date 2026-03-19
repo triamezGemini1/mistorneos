@@ -331,30 +331,57 @@ $api_guardar_equipo = $base_url . ($use_standalone ? '?' : '&') . 'action=guarda
     .equipo-sidebar-integrantes li { padding: 0.15rem 0; font-weight: 700; }
     #wrap_codigo_equipo_barra { min-height: 1.5rem; }
     .btn-editar-equipo-form { font-size: 0.7rem; padding: 0.1rem 0.35rem; }
-    /* Formulario parejas: más amigable — borde delimitador y +50% tamaño de letra */
+    /* Formulario parejas: layout amigable y legible */
     <?php if ($es_parejas): ?>
-    .page-inscripcion-sitio.form-parejas-amigable {
-        font-size: 1.5rem;
-    }
     .page-inscripcion-sitio.form-parejas-amigable .col-disponibles,
     .page-inscripcion-sitio.form-parejas-amigable .col-insc-form,
     .page-inscripcion-sitio.form-parejas-amigable .col-insc-equipos {
         border: 2px solid #0d6efd;
         border-radius: 8px;
         box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        background: #f4f8ff;
+        color: #000;
     }
-    .page-inscripcion-sitio.form-parejas-amigable .col-insc-form .form-control,
-    .page-inscripcion-sitio.form-parejas-amigable .col-insc-form .form-select,
-    .page-inscripcion-sitio.form-parejas-amigable .col-insc-form .form-label,
-    .page-inscripcion-sitio.form-parejas-amigable .col-insc-form .btn,
-    .page-inscripcion-sitio.form-parejas-amigable .col-disponibles .jugador-item,
-    .page-inscripcion-sitio.form-parejas-amigable .col-disponibles .card-header,
-    .page-inscripcion-sitio.form-parejas-amigable .col-insc-equipos .equipo-sidebar-header {
-        font-size: inherit;
+    .page-inscripcion-sitio.form-parejas-amigable .col-insc-form .card {
+        background: #fdfefe;
+        border: 2px solid #8ab4f8;
+        border-radius: 10px;
     }
-    .page-inscripcion-sitio.form-parejas-amigable .fila-jugador-compacta .form-control-sm {
-        font-size: 0.95em;
-        min-height: 1.8rem;
+    .page-inscripcion-sitio.form-parejas-amigable #formEquipo {
+        border: 2px dashed #9ec5fe;
+        border-radius: 8px;
+        padding: 0.55rem;
+        background: #f9fcff;
+    }
+    /* Columna central: aumentar letra en textbox */
+    .page-inscripcion-sitio.form-parejas-amigable .col-insc-form input.form-control,
+    .page-inscripcion-sitio.form-parejas-amigable .col-insc-form select.form-select {
+        font-size: 1.08rem !important;
+        color: #000 !important;
+    }
+    .page-inscripcion-sitio.form-parejas-amigable .col-insc-form .form-label {
+        font-size: 0.95rem !important;
+        color: #000 !important;
+    }
+    .page-inscripcion-sitio.form-parejas-amigable .col-insc-form .btn {
+        font-size: 0.95rem !important;
+    }
+    /* Columnas laterales: 50% menos letra y una sola línea por jugador */
+    .page-inscripcion-sitio.form-parejas-amigable .col-disponibles,
+    .page-inscripcion-sitio.form-parejas-amigable .col-insc-equipos {
+        font-size: 0.5rem;
+        color: #000;
+    }
+    .page-inscripcion-sitio.form-parejas-amigable .col-disponibles .jugador-item .small,
+    .page-inscripcion-sitio.form-parejas-amigable .col-disponibles .jugador-item span,
+    .page-inscripcion-sitio.form-parejas-amigable .col-insc-equipos .equipo-sidebar-header .badge,
+    .page-inscripcion-sitio.form-parejas-amigable .col-insc-equipos .equipo-sidebar-header .text-primary,
+    .page-inscripcion-sitio.form-parejas-amigable .col-insc-equipos .equipo-sidebar-header .text-muted {
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        display: inline-block;
+        max-width: 100%;
     }
     <?php endif; ?>
 </style>
