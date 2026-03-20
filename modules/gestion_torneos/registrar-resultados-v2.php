@@ -833,8 +833,9 @@ $esTorneoParejas = (int)($torneo['modalidad'] ?? 0) === 2;
                                                 </td>
                                                 <?php endif; ?>
                                                 
-                                                <!-- Sanción: 40=resta pts sin tarjeta; 80=resta pts y tarjeta (amarilla o siguiente si ya tenía) -->
-                                                <td class="text-center columna-sancion" data-tarjeta-inscritos="<?php echo (int)($jugador['inscrito']['tarjeta_previa'] ?? $jugador['inscrito']['tarjeta'] ?? 0); ?>">
+                                                <?php if ($index == 0): ?>
+                                                <!-- Sancion/FF/Tarjeta: un solo control por pareja -->
+                                                <td rowspan="2" class="text-center align-middle columna-sancion" data-tarjeta-inscritos="<?php echo (int)($jugador['inscrito']['tarjeta_previa'] ?? $jugador['inscrito']['tarjeta'] ?? 0); ?>">
                                                     <input type="number" 
                                                            name="jugadores[<?php echo $indiceArray; ?>][sancion]"
                                                            data-codigo-equipo="<?php echo htmlspecialchars($jugador['codigo_equipo'] ?? ''); ?>"
@@ -847,9 +848,7 @@ $esTorneoParejas = (int)($torneo['modalidad'] ?? 0) === 2;
                                                            onchange="validarSancionYTarjeta(<?php echo $indiceArray; ?>); validarPuntosEnTiempoReal();">
                                                     <small id="indicador_tarjeta_80_<?php echo $indiceArray; ?>" class="d-block text-muted mt-1" style="display:none !important;"></small>
                                                 </td>
-                                                
-                                                <!-- Forfait (FF): marca checkbox y aplica procedimiento establecido -->
-                                                <td class="text-center columna-forfait">
+                                                <td rowspan="2" class="text-center align-middle columna-forfait">
                                                     <input type="checkbox" 
                                                            name="jugadores[<?php echo $indiceArray; ?>][ff]"
                                                            id="ff_<?php echo $indiceArray; ?>"
@@ -859,9 +858,7 @@ $esTorneoParejas = (int)($torneo['modalidad'] ?? 0) === 2;
                                                            <?php echo (isset($jugador['ff']) && $jugador['ff']) ? 'checked' : ''; ?>
                                                            onchange="sincronizarControlesPorCodigoEquipo(this.dataset.codigoEquipo || '', 'ff', this.checked, <?php echo $indiceArray; ?>); validarPuntosEnTiempoReal();">
                                                 </td>
-                                                
-                                                <!-- Tarjeta directa: marca checkbox correspondiente y procedimiento establecido -->
-                                                <td class="text-center columna-tarjeta">
+                                                <td rowspan="2" class="text-center align-middle columna-tarjeta">
                                                     <?php if ($esTorneoParejas): ?>
                                                         <div class="d-flex justify-content-center gap-2 flex-wrap">
                                                             <label class="mb-0">
@@ -876,28 +873,18 @@ $esTorneoParejas = (int)($torneo['modalidad'] ?? 0) === 2;
                                                         </div>
                                                     <?php else: ?>
                                                         <div class="d-flex justify-content-center gap-1">
-                                                            <button type="button" class="tarjeta-btn" 
-                                                                    data-tarjeta="1"
-                                                                    data-index="<?php echo $indiceArray; ?>"
-                                                                    onclick="seleccionarTarjeta(<?php echo $indiceArray; ?>, 1)"
-                                                                    title="Tarjeta Amarilla">🟨</button>
-                                                            <button type="button" class="tarjeta-btn" 
-                                                                    data-tarjeta="3"
-                                                                    data-index="<?php echo $indiceArray; ?>"
-                                                                    onclick="seleccionarTarjeta(<?php echo $indiceArray; ?>, 3)"
-                                                                    title="Tarjeta Roja">🟥</button>
-                                                            <button type="button" class="tarjeta-btn" 
-                                                                    data-tarjeta="4"
-                                                                    data-index="<?php echo $indiceArray; ?>"
-                                                                    onclick="seleccionarTarjeta(<?php echo $indiceArray; ?>, 4)"
-                                                                    title="Tarjeta Negra">⬛</button>
+                                                            <button type="button" class="tarjeta-btn" data-tarjeta="1" data-index="<?php echo $indiceArray; ?>" onclick="seleccionarTarjeta(<?php echo $indiceArray; ?>, 1)" title="Tarjeta Amarilla">🟨</button>
+                                                            <button type="button" class="tarjeta-btn" data-tarjeta="3" data-index="<?php echo $indiceArray; ?>" onclick="seleccionarTarjeta(<?php echo $indiceArray; ?>, 3)" title="Tarjeta Roja">🟥</button>
+                                                            <button type="button" class="tarjeta-btn" data-tarjeta="4" data-index="<?php echo $indiceArray; ?>" onclick="seleccionarTarjeta(<?php echo $indiceArray; ?>, 4)" title="Tarjeta Negra">⬛</button>
                                                         </div>
                                                     <?php endif; ?>
-                                                    <input type="hidden" name="jugadores[<?php echo $indiceArray; ?>][tarjeta]" 
-                                                           id="tarjeta_<?php echo $indiceArray; ?>" 
-                                                           data-codigo-equipo="<?php echo htmlspecialchars($jugador['codigo_equipo'] ?? ''); ?>"
-                                                           value="<?php echo $jugador['tarjeta'] ?? 0; ?>">
+                                                    <input type="hidden" name="jugadores[<?php echo $indiceArray; ?>][tarjeta]" id="tarjeta_<?php echo $indiceArray; ?>" data-codigo-equipo="<?php echo htmlspecialchars($jugador['codigo_equipo'] ?? ''); ?>" value="<?php echo $jugador['tarjeta'] ?? 0; ?>">
                                                 </td>
+                                                <?php else: ?>
+                                                    <input type="hidden" name="jugadores[<?php echo $indiceArray; ?>][sancion]" value="<?php echo min((int)($jugador['sancion'] ?? 0), 80); ?>">
+                                                    <input type="hidden" name="jugadores[<?php echo $indiceArray; ?>][ff]" id="ff_<?php echo $indiceArray; ?>" value="<?php echo (isset($jugador['ff']) && $jugador['ff']) ? 1 : 0; ?>">
+                                                    <input type="hidden" name="jugadores[<?php echo $indiceArray; ?>][tarjeta]" id="tarjeta_<?php echo $indiceArray; ?>" value="<?php echo (int)($jugador['tarjeta'] ?? 0); ?>">
+                                                <?php endif; ?>
                                                 
                                                 <!-- Estadísticas: pos - gan - per - efect (≤10% ancho) -->
                                                 <?php 
@@ -972,8 +959,8 @@ $esTorneoParejas = (int)($torneo['modalidad'] ?? 0) === 2;
                                                 </td>
                                                 <?php endif; ?>
                                                 
-                                                <!-- Sanción: 40=resta pts sin tarjeta; 80=resta pts y tarjeta (amarilla o siguiente si ya tenía) -->
-                                                <td class="text-center columna-sancion" data-tarjeta-inscritos="<?php echo (int)($jugador['inscrito']['tarjeta_previa'] ?? $jugador['inscrito']['tarjeta'] ?? 0); ?>">
+                                                <?php if ($index == 0): ?>
+                                                <td rowspan="2" class="text-center align-middle columna-sancion" data-tarjeta-inscritos="<?php echo (int)($jugador['inscrito']['tarjeta_previa'] ?? $jugador['inscrito']['tarjeta'] ?? 0); ?>">
                                                     <input type="number" 
                                                            name="jugadores[<?php echo $indiceArray; ?>][sancion]"
                                                            data-codigo-equipo="<?php echo htmlspecialchars($jugador['codigo_equipo'] ?? ''); ?>"
@@ -986,9 +973,7 @@ $esTorneoParejas = (int)($torneo['modalidad'] ?? 0) === 2;
                                                            onchange="validarSancionYTarjeta(<?php echo $indiceArray; ?>); validarPuntosEnTiempoReal();">
                                                     <small id="indicador_tarjeta_80_<?php echo $indiceArray; ?>" class="d-block text-muted mt-1" style="display:none !important;"></small>
                                                 </td>
-                                                
-                                                <!-- Forfait (FF) -->
-                                                <td class="text-center columna-forfait">
+                                                <td rowspan="2" class="text-center align-middle columna-forfait">
                                                     <input type="checkbox" 
                                                            name="jugadores[<?php echo $indiceArray; ?>][ff]"
                                                            id="ff_<?php echo $indiceArray; ?>"
@@ -998,9 +983,7 @@ $esTorneoParejas = (int)($torneo['modalidad'] ?? 0) === 2;
                                                            <?php echo (isset($jugador['ff']) && $jugador['ff']) ? 'checked' : ''; ?>
                                                            onchange="sincronizarControlesPorCodigoEquipo(this.dataset.codigoEquipo || '', 'ff', this.checked, <?php echo $indiceArray; ?>); validarPuntosEnTiempoReal();">
                                                 </td>
-                                                
-                                                <!-- Tarjeta -->
-                                                <td class="text-center columna-tarjeta">
+                                                <td rowspan="2" class="text-center align-middle columna-tarjeta">
                                                     <?php if ($esTorneoParejas): ?>
                                                         <div class="d-flex justify-content-center gap-2 flex-wrap">
                                                             <label class="mb-0">
@@ -1015,28 +998,18 @@ $esTorneoParejas = (int)($torneo['modalidad'] ?? 0) === 2;
                                                         </div>
                                                     <?php else: ?>
                                                         <div class="d-flex justify-content-center gap-1">
-                                                            <button type="button" class="tarjeta-btn" 
-                                                                    data-tarjeta="1"
-                                                                    data-index="<?php echo $indiceArray; ?>"
-                                                                    onclick="seleccionarTarjeta(<?php echo $indiceArray; ?>, 1)"
-                                                                    title="Tarjeta Amarilla">🟨</button>
-                                                            <button type="button" class="tarjeta-btn" 
-                                                                    data-tarjeta="3"
-                                                                    data-index="<?php echo $indiceArray; ?>"
-                                                                    onclick="seleccionarTarjeta(<?php echo $indiceArray; ?>, 3)"
-                                                                    title="Tarjeta Roja">🟥</button>
-                                                            <button type="button" class="tarjeta-btn" 
-                                                                    data-tarjeta="4"
-                                                                    data-index="<?php echo $indiceArray; ?>"
-                                                                    onclick="seleccionarTarjeta(<?php echo $indiceArray; ?>, 4)"
-                                                                    title="Tarjeta Negra">⬛</button>
+                                                            <button type="button" class="tarjeta-btn" data-tarjeta="1" data-index="<?php echo $indiceArray; ?>" onclick="seleccionarTarjeta(<?php echo $indiceArray; ?>, 1)" title="Tarjeta Amarilla">🟨</button>
+                                                            <button type="button" class="tarjeta-btn" data-tarjeta="3" data-index="<?php echo $indiceArray; ?>" onclick="seleccionarTarjeta(<?php echo $indiceArray; ?>, 3)" title="Tarjeta Roja">🟥</button>
+                                                            <button type="button" class="tarjeta-btn" data-tarjeta="4" data-index="<?php echo $indiceArray; ?>" onclick="seleccionarTarjeta(<?php echo $indiceArray; ?>, 4)" title="Tarjeta Negra">⬛</button>
                                                         </div>
                                                     <?php endif; ?>
-                                                    <input type="hidden" name="jugadores[<?php echo $indiceArray; ?>][tarjeta]" 
-                                                           id="tarjeta_<?php echo $indiceArray; ?>" 
-                                                           data-codigo-equipo="<?php echo htmlspecialchars($jugador['codigo_equipo'] ?? ''); ?>"
-                                                           value="<?php echo $jugador['tarjeta'] ?? 0; ?>">
+                                                    <input type="hidden" name="jugadores[<?php echo $indiceArray; ?>][tarjeta]" id="tarjeta_<?php echo $indiceArray; ?>" data-codigo-equipo="<?php echo htmlspecialchars($jugador['codigo_equipo'] ?? ''); ?>" value="<?php echo $jugador['tarjeta'] ?? 0; ?>">
                                                 </td>
+                                                <?php else: ?>
+                                                    <input type="hidden" name="jugadores[<?php echo $indiceArray; ?>][sancion]" value="<?php echo min((int)($jugador['sancion'] ?? 0), 80); ?>">
+                                                    <input type="hidden" name="jugadores[<?php echo $indiceArray; ?>][ff]" id="ff_<?php echo $indiceArray; ?>" value="<?php echo (isset($jugador['ff']) && $jugador['ff']) ? 1 : 0; ?>">
+                                                    <input type="hidden" name="jugadores[<?php echo $indiceArray; ?>][tarjeta]" id="tarjeta_<?php echo $indiceArray; ?>" value="<?php echo (int)($jugador['tarjeta'] ?? 0); ?>">
+                                                <?php endif; ?>
                                                 
                                                 <!-- Estadísticas: pos - gan - per - efect (≤10% ancho) -->
                                                 <?php 
