@@ -1,10 +1,8 @@
 <?php
 /**
  * Vista: Cuadrícula de Asignaciones
- * Estructura: 22 filas x 9 segmentos (3 columnas cada uno)
- * - Columna 1 (verde): ID Usuario ordenado ASC
- * - Columna 2 (azul): Mesa y Letra asignada
- * - Columna 3 (naranja): Separador 2px mínimo
+ * Estructura técnica: 22 filas x 18 columnas (9 pares IDEN | MESA)
+ * Mantiene la lógica de carga de asignaciones existente.
  */
 if (!isset($base_url) || !isset($use_standalone)) {
     $script_actual = basename($_SERVER['PHP_SELF'] ?? '');
@@ -24,258 +22,117 @@ $letras = [1 => 'A', 2 => 'C', 3 => 'B', 4 => 'D'];
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.6.2/dist/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
+        :root {
+            --color-bg: #f4f6f8;
+            --color-surface: #ffffff;
+            --color-iden-bg: #003366;
+            --color-iden-text: #ffffff;
+            --color-mesa-bg: #ffcc00;
+            --color-mesa-text: #111111;
+            --color-border: #0f172a;
+            --color-separator: #1e293b;
+            --color-row-hover: #e2e8f0;
+            --cell-height: 38px;
+            --cell-font-size: 0.85rem;
+            --grid-min-col: 75px;
         }
-        
-        html {
-            font-size: 16px; /* Base para rem */
-        }
-        
-        body {
-            font-family: Verdana, sans-serif;
-            background: #f5f5f5;
-            font-size: 1rem;
-        }
-        
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        html { font-size: 16px; }
+        body { font-family: "Segoe UI", Inter, sans-serif; background: var(--color-bg); color: #0f172a; }
+
         @media print {
-            .no-print {
-                display: none;
-            }
-            body {
-                margin: 0;
-                padding: 5mm;
-                background: white;
-            }
-            .cuadricula-container {
-                page-break-inside: avoid;
-            }
+            .no-print { display: none !important; }
+            body { margin: 0; padding: 4mm; background: #fff; }
+            .cuadricula-shell { box-shadow: none; border: 1px solid #000; }
         }
-        
+
         .no-print {
-            padding: 1.25rem;
-            background: white;
-            box-shadow: 0 0.125rem 0.25rem rgba(0,0,0,0.1);
-            margin-bottom: 1.25rem;
+            padding: 1rem;
+            background: var(--color-surface);
+            box-shadow: 0 2px 8px rgba(15, 23, 42, 0.08);
+            margin-bottom: 0.85rem;
         }
-        
-        .cuadricula-container {
-            background: white;
-            padding: 1.25rem 0;
+
+        .cuadricula-shell {
+            background: var(--color-surface);
+            padding: 0.8rem;
             margin: 0 auto;
-            max-width: 95%;
-            width: 95%;
-            text-align: left;
+            width: min(98vw, 1440px);
+            border-radius: 10px;
+            box-shadow: 0 8px 20px rgba(15, 23, 42, 0.08);
         }
-        
+
         .cuadricula-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            padding: 0.4rem 1%;
-            background: white;
-            margin-bottom: 0.35rem;
-            font-size: clamp(0.875rem, 2.5vw, 1rem);
-            font-weight: 300;
-            color: #1a365d;
+            padding: 0.4rem 0.2rem 0.65rem;
+            margin-bottom: 0.2rem;
+            font-size: 0.95rem;
+            color: #0f172a;
             flex-wrap: wrap;
             gap: 0.5rem;
         }
-        
-        .cuadricula-header-left {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            flex: 1;
-            flex-wrap: wrap;
-        }
-        
-        .cuadricula-header-right {
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-            flex-wrap: wrap;
-        }
-        
-        .cuadricula-header-torneo {
-            color: #1a365d;
-            text-align: center;
-            text-transform: uppercase;
-        }
-        
-        @media print {
-            .cuadricula-header-right {
-                display: none;
-            }
-        }
-        
-        .cuadricula-table-wrapper {
-            width: 95%;
-            max-width: 95vw;
-            margin: 0 auto;
+
+        .cuadricula-header-left { display: flex; align-items: center; justify-content: center; flex: 1; }
+        .cuadricula-header-right { display: flex; align-items: center; gap: 0.5rem; }
+        .cuadricula-header-torneo { font-weight: 700; letter-spacing: 0.01em; text-transform: uppercase; }
+
+        .matrix-scroll {
             overflow-x: auto;
-            padding: 0;
+            width: 100%;
             -webkit-overflow-scrolling: touch;
         }
-        
-        .cuadricula-table {
-            border-collapse: collapse;
+
+        .matrix-grid {
+            display: grid;
+            grid-template-columns: repeat(18, minmax(var(--grid-min-col), 1fr));
             width: 100%;
-            margin: 0;
-            font-size: 0.75rem;
-            table-layout: fixed;
-            font-family: Calibri, 'Lato', sans-serif !important;
-            font-weight: 700 !important;
+            min-width: 1350px;
+            border: 1px solid var(--color-border);
+            border-right: 0;
+            border-bottom: 0;
+            user-select: none;
         }
-        
-        .cuadricula-table th,
-        .cuadricula-table td {
-            border: 1px solid #000;
-            padding: 0.222rem 0.171rem;
+
+        .matrix-cell {
+            min-height: var(--cell-height);
+            height: var(--cell-height);
+            line-height: var(--cell-height);
+            border-right: 1px solid var(--color-border);
+            border-bottom: 1px solid var(--color-border);
+            padding: 0 0.35rem;
             text-align: center;
-            vertical-align: middle;
-            height: auto;
-            min-height: 1.458vh;
-            white-space: nowrap !important;
-            overflow: hidden !important;
-            text-overflow: ellipsis !important;
-            font-family: Calibri, 'Lato', sans-serif !important;
-            font-weight: 700 !important;
-            font-size: 0.75rem !important;
+            font-size: var(--cell-font-size);
+            font-weight: 700;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
         }
-        
-        .cuadricula-table thead th {
-            font-weight: 700 !important;
-            font-size: 0.85em;
+
+        .matrix-iden { background: var(--color-iden-bg); color: var(--color-iden-text); }
+        .matrix-mesa { background: var(--color-mesa-bg); color: var(--color-mesa-text); }
+        .matrix-head { text-transform: uppercase; letter-spacing: 0.02em; }
+        .matrix-bye { font-style: italic; }
+        .matrix-cell:nth-child(2n) { border-right: 2px solid var(--color-separator); }
+        .matrix-cell.is-row-hover { filter: brightness(0.94); box-shadow: inset 0 0 0 9999px color-mix(in srgb, var(--color-row-hover) 22%, transparent); }
+
+        @media screen and (max-width: 1440px) {
+            .cuadricula-shell { width: 100%; border-radius: 0; }
         }
-        
-        /* Columna 1: ID Usuario (Verde) - 5 dígitos 99999 */
-        .col-id-usuario {
-            background-color: #4ade80 !important; /* Verde */
-            font-weight: 700 !important;
-            color: #000;
-            width: 10%;
-            min-width: 2.8rem;
-        }
-        
-        /* Columna 2: Mesa y Letra (Azul) - 5 dígitos + letra "99999 A" */
-        .col-mesa-letra {
-            background-color: #60a5fa !important; /* Azul */
-            font-weight: 700 !important;
-            color: #000;
-            width: 10%;
-            min-width: 3.5rem;
-        }
-        
-        /* Columna 3: Separador (Naranja) */
-        .col-separador {
-            background-color: #fb923c !important; /* Naranja */
-            width: 1%;
-            min-width: 0.25rem;
-            padding: 0;
-            border: none;
-        }
-        
-        /* Celda vacía */
-        .celda-vacia {
-            background-color: #f0f0f0;
-            color: #999;
-        }
-        
-        /* Jugador BYE (mesa 0) */
-        .celda-bye {
-            background-color: #fef08a !important;
-            font-style: italic;
-            font-weight: 700 !important;
-        }
-        
-        /* Responsive para tablets */
-        @media screen and (max-width: 1024px) and (min-width: 769px) {
-            .cuadricula-table {
-                font-size: clamp(0.7rem, 1.8vw, 1.1rem);
-            }
-            .cuadricula-table th,
-            .cuadricula-table td {
-                padding: 0.176rem 0.133rem;
-                min-height: 1.395vh;
-            }
-        }
-        
-        /* Responsive para móviles */
-        @media screen and (max-width: 768px) {
-            .cuadricula-table {
-                font-size: clamp(0.65rem, 1.5vw, 0.9rem);
-            }
-            .cuadricula-table th,
-            .cuadricula-table td {
-                padding: 0.147rem 0.097rem;
-                min-height: 1.17vh;
-            }
-            .col-id-usuario {
-                width: 10%;
-                min-width: 2rem;
-            }
-            .col-mesa-letra {
-                width: 10%;
-                min-width: 2rem;
-            }
+        @media screen and (max-width: 980px) {
             .cuadricula-header {
-                font-size: clamp(0.75rem, 2vw, 0.9rem);
-                padding: 0.4rem 2%;
-                margin-bottom: 0.3rem;
+                font-size: 0.88rem;
                 flex-direction: column;
                 align-items: center;
             }
-            
-            .cuadricula-header-left {
-                width: 100%;
-                justify-content: center;
-                order: 1;
-            }
-            
-            .cuadricula-header-right {
-                width: 100%;
-                justify-content: flex-start;
-                order: 2;
-            }
-        }
-        
-        /* Responsive para móviles pequeños */
-        @media screen and (max-width: 480px) {
-            .cuadricula-table {
-                font-size: clamp(0.6rem, 1.2vw, 0.8rem);
-            }
-            .cuadricula-table th,
-            .cuadricula-table td {
-                padding: 0.122rem 0.071rem;
-                min-height: 1.089vh;
-            }
-            .col-id-usuario {
-                width: 10%;
-                min-width: 1.5rem;
-            }
-            .col-mesa-letra {
-                width: 10%;
-                min-width: 1.5rem;
-            }
-        }
-        
-        /* Orientación horizontal en móviles */
-        @media screen and (max-width: 768px) and (orientation: landscape) {
-            .cuadricula-table {
-                font-size: clamp(0.7rem, 1.4vw, 0.95rem);
-            }
-            .cuadricula-table th,
-            .cuadricula-table td {
-                min-height: 0.909vh;
-            }
+            .cuadricula-header-right { width: 100%; justify-content: flex-start; }
         }
     </style>
 </head>
 <body>
-    <div class="cuadricula-container">
+    <div class="cuadricula-shell">
         <div class="cuadricula-header">
             <div class="cuadricula-header-left">
                 <span class="cuadricula-header-torneo">
@@ -291,20 +148,7 @@ $letras = [1 => 'A', 2 => 'C', 3 => 'B', 4 => 'D'];
                 </a>
             </div>
         </div>
-        <div class="cuadricula-table-wrapper">
-        <table class="cuadricula-table">
-            <thead>
-                <tr>
-                    <?php $totalSegmentos = 9; for ($segmento = 0; $segmento < $totalSegmentos; $segmento++): ?>
-                        <th class="col-id-usuario">ID</th>
-                        <th class="col-mesa-letra">MESA</th>
-                        <?php if ($segmento < $totalSegmentos - 1): ?>
-                            <td class="col-separador"></td>
-                        <?php endif; ?>
-                    <?php endfor; ?>
-                </tr>
-            </thead>
-            <tbody>
+        <div class="matrix-scroll">
             <?php
             $totalFilas = 22;
             $totalSegmentos = 9;
@@ -330,52 +174,58 @@ $letras = [1 => 'A', 2 => 'C', 3 => 'B', 4 => 'D'];
                     $indice++;
                 }
             }
-            
-            // Llenar filas
-            for ($fila = 0; $fila < $totalFilas; $fila++):
             ?>
-                <tr>
+            <div id="matrixGrid" class="matrix-grid" aria-label="Matriz de competencia">
+                <?php for ($segmento = 0; $segmento < $totalSegmentos; $segmento++): ?>
+                    <div class="matrix-cell matrix-iden matrix-head">IDEN</div>
+                    <div class="matrix-cell matrix-mesa matrix-head">MESA</div>
+                <?php endfor; ?>
+
+                <?php for ($fila = 0; $fila < $totalFilas; $fila++): ?>
                     <?php for ($segmento = 0; $segmento < $totalSegmentos; $segmento++): ?>
                         <?php
-                        // Obtener asignación para esta fila y segmento
                         $asignacion = isset($segmentos[$segmento][$fila]) ? $segmentos[$segmento][$fila] : null;
-                        
-                        if ($asignacion):
-                            $idUsuario = $asignacion['id_usuario'] ?? '';
+                        $idUsuario = '';
+                        $mesaDisplay = '';
+                        $esBye = false;
+                        if ($asignacion) {
+                            $idUsuario = (string)($asignacion['id_usuario'] ?? '');
                             $mesaRaw = $asignacion['mesa'] ?? 0;
                             $mesa = (int)$mesaRaw;
                             $secuencia = (int)($asignacion['secuencia'] ?? 0);
                             $letra = $letras[$secuencia] ?? '';
-                            // BYE: mesa 0 (puede venir como int 0 o string "0" según driver)
                             $esBye = ($mesa === 0 || $mesaRaw === '0' || $mesaRaw === 0);
+                            $mesaDisplay = $esBye ? 'BYE' : ($mesa . $letra);
+                        }
                         ?>
-                            <!-- Columna 1: ID Usuario (Verde) -->
-                            <td class="col-id-usuario<?php echo $esBye ? ' celda-bye' : ''; ?>">
-                                <?php echo htmlspecialchars($idUsuario); ?>
-                            </td>
-                            
-                            <!-- Columna 2: Mesa y Letra (Azul); BYE si mesa 0 -->
-                            <td class="col-mesa-letra<?php echo $esBye ? ' celda-bye' : ''; ?>">
-                                <?php if ($esBye): ?>BYE<?php else: ?><?php echo $mesa; ?><?php echo htmlspecialchars($letra); ?><?php endif; ?>
-                            </td>
-                        <?php else: ?>
-                            <!-- Celda vacía para ID -->
-                            <td class="celda-vacia col-id-usuario"></td>
-                            <!-- Celda vacía para Mesa-Letra -->
-                            <td class="celda-vacia col-mesa-letra"></td>
-                        <?php endif; ?>
-                        
-                        <!-- Columna 3: Separador (Naranja) - Solo entre segmentos -->
-                        <?php if ($segmento < $totalSegmentos - 1): ?>
-                            <td class="col-separador"></td>
-                        <?php endif; ?>
-                        
+                        <div class="matrix-cell matrix-iden<?php echo $esBye ? ' matrix-bye' : ''; ?>" data-row="<?php echo $fila; ?>"><?php echo htmlspecialchars($idUsuario); ?></div>
+                        <div class="matrix-cell matrix-mesa<?php echo $esBye ? ' matrix-bye' : ''; ?>" data-row="<?php echo $fila; ?>"><?php echo htmlspecialchars($mesaDisplay); ?></div>
                     <?php endfor; ?>
-                </tr>
-            <?php endfor; ?>
-            </tbody>
-        </table>
+                <?php endfor; ?>
+            </div>
         </div>
     </div>
+    <script>
+        (function () {
+            var grid = document.getElementById('matrixGrid');
+            if (!grid) return;
+
+            function clearHover() {
+                var active = grid.querySelectorAll('.matrix-cell.is-row-hover');
+                for (var i = 0; i < active.length; i++) active[i].classList.remove('is-row-hover');
+            }
+
+            grid.addEventListener('mouseover', function (ev) {
+                var cell = ev.target.closest('.matrix-cell[data-row]');
+                if (!cell || !grid.contains(cell)) return;
+                clearHover();
+                var row = cell.getAttribute('data-row');
+                var rowCells = grid.querySelectorAll('.matrix-cell[data-row="' + row + '"]');
+                for (var i = 0; i < rowCells.length; i++) rowCells[i].classList.add('is-row-hover');
+            });
+
+            grid.addEventListener('mouseleave', clearHover);
+        })();
+    </script>
 </body>
 </html>
