@@ -885,8 +885,9 @@ try {
             if (!$torneo) {
                 throw new Exception('Torneo no encontrado o sin permisos');
             }
-            if ((int)($torneo['modalidad'] ?? 0) !== 3) {
-                throw new Exception('Este reporte solo está disponible para torneos por equipos');
+            $modalidad_resultados = (int)($torneo['modalidad'] ?? 0);
+            if (!in_array($modalidad_resultados, [2, 3, 4], true)) {
+                throw new Exception('Este reporte solo está disponible para torneos de parejas o equipos');
             }
             $view_file = __DIR__ . '/tournament_admin/resultados_general.php';
             $view_data = ['torneo' => $torneo, 'torneo_id' => $torneo_id, 'pdo' => DB::pdo()];

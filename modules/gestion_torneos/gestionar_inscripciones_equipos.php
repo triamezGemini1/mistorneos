@@ -243,11 +243,15 @@ $csrf_token = class_exists('CSRF') ? CSRF::token() : '';
                     $nombre_equipo = htmlspecialchars($equipo['nombre_equipo'] ?? '');
                     $jugadores = $equipo['jugadores'] ?? [];
                     $pareja_display = '';
+                    $pareja_nombre_1 = '';
+                    $pareja_nombre_2 = '';
                     if ($es_parejas && !empty($jugadores)) {
                         $nombresPareja = array_values(array_filter(array_map(static function ($j) {
                             return trim((string)($j['nombre'] ?? ''));
                         }, $jugadores)));
                         if (!empty($nombresPareja)) {
+                            $pareja_nombre_1 = $nombresPareja[0] ?? '';
+                            $pareja_nombre_2 = $nombresPareja[1] ?? '';
                             $pareja_display = implode(' / ', array_slice($nombresPareja, 0, 2));
                         }
                     }
@@ -267,7 +271,10 @@ $csrf_token = class_exists('CSRF') ? CSRF::token() : '';
                                     </div>
                                     <?php if ($es_parejas && $pareja_display !== ''): ?>
                                         <div class="text-muted small mt-1">
-                                            <i class="fas fa-user-friends me-1"></i><?php echo htmlspecialchars($pareja_display); ?>
+                                            <div><i class="fas fa-user-friends me-1"></i><?php echo htmlspecialchars($pareja_nombre_1); ?></div>
+                                            <?php if ($pareja_nombre_2 !== ''): ?>
+                                                <div class="ms-3"><?php echo htmlspecialchars($pareja_nombre_2); ?></div>
+                                            <?php endif; ?>
                                         </div>
                                     <?php endif; ?>
                                 </div>
