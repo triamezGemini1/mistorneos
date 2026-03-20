@@ -147,27 +147,69 @@ final class ParejasResultadosService
             ];
         }
 
-        $idsTarjetaNegra = [];
-        $stmtUpd = $pdo->prepare("
-            UPDATE partiresul
-            SET resultado1 = ?, resultado2 = ?, efectividad = ?, ff = ?, tarjeta = ?, sancion = ?, chancleta = ?, zapato = ?,
-                fecha_partida = NOW(), registrado_por = ?, registrado = 1
-            WHERE id = ?
+        // ACTUALIZACION POR CODIGO_EQUIPO:
+        // en parejas NO se persiste por usuario, sino por codigo_equipo para forzar simetria total.
+        $stmtUpdCodigo = $pdo->prepare("
+            UPDATE partiresul pr
+            INNER JOIN inscritos i
+                ON i.torneo_id = pr.id_torneo
+               AND i.id_usuario = pr.id_usuario
+            SET pr.resultado1 = ?,
+                pr.resultado2 = ?,
+                pr.efectividad = ?,
+                pr.ff = ?,
+                pr.tarjeta = ?,
+                pr.sancion = ?,
+                pr.chancleta = ?,
+                pr.zapato = ?,
+                pr.fecha_partida = NOW(),
+                pr.registrado_por = ?,
+                pr.registrado = 1
+            WHERE pr.id_torneo = ?
+              AND pr.partida = ?
+              AND pr.mesa = ?
+              AND i.codigo_equipo = ?
         ");
-        foreach ($jugadoresPost as $jug) {
-            $id = (int)($jug['id'] ?? 0);
-            $idUsuario = (int)($jug['id_usuario'] ?? 0);
-            $codigo = trim((string)($codigoPorUsuario[$idUsuario] ?? ''));
-            if ($id <= 0 || $codigo === '' || !isset($resultadoEquipo[$codigo])) {
-                throw new Exception('No se pudo actualizar partiresul para uno de los jugadores de la mesa.');
+        $stmtCountCodigo = $pdo->prepare("
+            SELECT COUNT(*) 
+            FROM partiresul pr
+            INNER JOIN inscritos i
+                ON i.torneo_id = pr.id_torneo
+               AND i.id_usuario = pr.id_usuario
+            WHERE pr.id_torneo = ?
+              AND pr.partida = ?
+              AND pr.mesa = ?
+              AND i.codigo_equipo = ?
+        ");
+        $stmtIdsCodigo = $pdo->prepare("
+            SELECT DISTINCT pr.id_usuario
+            FROM partiresul pr
+            INNER JOIN inscritos i
+                ON i.torneo_id = pr.id_torneo
+               AND i.id_usuario = pr.id_usuario
+            WHERE pr.id_torneo = ?
+              AND pr.partida = ?
+              AND pr.mesa = ?
+              AND i.codigo_equipo = ?
+        ");
+
+        $idsTarjetaNegra = [];
+        foreach ($resultadoEquipo as $codigo => $res) {
+            $stmtCountCodigo->execute([$torneoId, $ronda, $mesa, $codigo]);
+            $totalFilasCodigo = (int)$stmtCountCodigo->fetchColumn();
+            if ($totalFilasCodigo !== 2) {
+                throw new Exception("La mesa no tiene exactamente 2 jugadores para el codigo_equipo {$codigo}.");
             }
-            $res = $resultadoEquipo[$codigo];
-            $stmtUpd->execute([
+
+            $stmtUpdCodigo->execute([
                 $res['resultado1'], $res['resultado2'], $res['efectividad'], $res['ff'], $res['tarjeta'],
-                $res['sancion'], $res['chancleta'], $res['zapato'], $userId, $id
+                $res['sancion'], $res['chancleta'], $res['zapato'], $userId,
+                $torneoId, $ronda, $mesa, $codigo
             ]);
+
             if ((int)$res['tarjeta'] === SancionesHelper::TARJETA_NEGRA) {
-                $idsTarjetaNegra[] = $idUsuario;
+                $stmtIdsCodigo->execute([$torneoId, $ronda, $mesa, $codigo]);
+                $idsTarjetaNegra = array_merge($idsTarjetaNegra, array_map('intval', array_column($stmtIdsCodigo->fetchAll(PDO::FETCH_ASSOC), 'id_usuario')));
             }
         }
 
