@@ -4187,6 +4187,54 @@ function guardarResultados($user_id, $is_admin_general) {
         $stmt->execute([$torneo_id]);
         $torneo = $stmt->fetch(PDO::FETCH_ASSOC);
         $puntosTorneo = (int)($torneo['puntos'] ?? 100);
+
+        // Flujo independiente exclusivo para torneos de parejas (unidad de cálculo: codigo_equipo).
+        if ($modalidadTorneo === 2) {
+            require_once __DIR__ . '/../lib/ParejasResultadosService.php';
+            require_once __DIR__ . '/../lib/InscritosHelper.php';
+
+            $resultadoParejas = ParejasResultadosService::guardarResultadosMesa(
+                $pdo,
+                $torneo_id,
+                $ronda,
+                $mesa,
+                $jugadores,
+                $user_id,
+                $puntosTorneo
+            );
+
+            if (!empty($observaciones)) {
+                $stmtObs = $pdo->prepare("UPDATE partiresul SET observaciones = ? WHERE id_torneo = ? AND partida = ? AND mesa = ?");
+                $stmtObs->execute([$observaciones, $torneo_id, $ronda, $mesa]);
+            }
+
+            $idsTarjetaNegra = array_values(array_unique(array_map('intval', (array)($resultadoParejas['ids_tarjeta_negra'] ?? []))));
+            if (!empty($idsTarjetaNegra)) {
+                $placeholders = implode(',', array_fill(0, count($idsTarjetaNegra), '?'));
+                $stmtRetiro = $pdo->prepare("UPDATE inscritos SET estatus = ? WHERE torneo_id = ? AND id_usuario IN ($placeholders)");
+                $stmtRetiro->execute(array_merge([InscritosHelper::ESTATUS_RETIRADO_NUM, $torneo_id], $idsTarjetaNegra));
+                $n = count($idsTarjetaNegra);
+                $_SESSION['info'] = $n === 1
+                    ? 'Jugador marcado como retirado del torneo por tarjeta negra. No participará en rondas futuras (asumido como BYE).'
+                    : "{$n} jugadores marcados como retirados del torneo por tarjeta negra. No participarán en rondas futuras (asumidos como BYE).";
+            } elseif (!empty($resultadoParejas['es_empate_mano_nula'])) {
+                $_SESSION['info'] = 'Empate en tranque registrado como Mano Nula: 0 puntos para ambas parejas.';
+            }
+
+            $pdo->commit();
+
+            try {
+                actualizarEstadisticasInscritos($torneo_id);
+            } catch (Exception $e) {
+                error_log("Error al actualizar estadísticas después de guardar resultados (parejas): " . $e->getMessage());
+            }
+
+            $_SESSION['limpiar_formulario'] = true;
+            $_SESSION['resultados_guardados'] = true;
+            $redirectUrl = buildRedirectUrl('registrar_resultados', ['torneo_id' => $torneo_id, 'ronda' => $ronda, 'mesa' => $mesa]) . '#formResultados';
+            header('Location: ' . $redirectUrl);
+            exit;
+        }
         
         // Procesar cada jugador
         // Asegurar que el array está indexado numéricamente
@@ -5088,6 +5136,9 @@ function actualizarEstadisticasInscritos($torneo_id) {
  */
 function actualizarEstadisticasInscritosParejasPorCodigoEquipo($torneo_id) {
     $pdo = DB::pdo();
+    require_once __DIR__ . '/../lib/ParejasResultadosService.php';
+    ParejasResultadosService::recalcularInscritosPorCodigoEquipo($pdo, (int)$torneo_id);
+    return;
 
     $stmt = $pdo->prepare("
         SELECT codigo_equipo, id_usuario
