@@ -4180,10 +4180,106 @@ function guardarResultados($user_id, $is_admin_general) {
         $stmt->execute([$torneo_id]);
         $torneo = $stmt->fetch(PDO::FETCH_ASSOC);
         $puntosTorneo = (int)($torneo['puntos'] ?? 100);
+
+        // Flujo independiente exclusivo para torneos de parejas (unidad de cálculo: codigo_equipo).
+        if (in_array($modalidadTorneo, [2, 4], true)) {
+            require_once __DIR__ . '/../lib/ParejasResultadosService.php';
+            require_once __DIR__ . '/../lib/InscritosHelper.php';
+
+            $resultadoParejas = ParejasResultadosService::guardarResultadosMesa(
+                $pdo,
+                $torneo_id,
+                $ronda,
+                $mesa,
+                $jugadores,
+                $user_id,
+                $puntosTorneo
+            );
+
+            if (!empty($observaciones)) {
+                $stmtObs = $pdo->prepare("UPDATE partiresul SET observaciones = ? WHERE id_torneo = ? AND partida = ? AND mesa = ?");
+                $stmtObs->execute([$observaciones, $torneo_id, $ronda, $mesa]);
+            }
+
+            $idsTarjetaNegra = array_values(array_unique(array_map('intval', (array)($resultadoParejas['ids_tarjeta_negra'] ?? []))));
+            if (!empty($idsTarjetaNegra)) {
+                $placeholders = implode(',', array_fill(0, count($idsTarjetaNegra), '?'));
+                $stmtRetiro = $pdo->prepare("UPDATE inscritos SET estatus = ? WHERE torneo_id = ? AND id_usuario IN ($placeholders)");
+                $stmtRetiro->execute(array_merge([InscritosHelper::ESTATUS_RETIRADO_NUM, $torneo_id], $idsTarjetaNegra));
+                $n = count($idsTarjetaNegra);
+                $_SESSION['info'] = $n === 1
+                    ? 'Jugador marcado como retirado del torneo por tarjeta negra. No participará en rondas futuras (asumido como BYE).'
+                    : "{$n} jugadores marcados como retirados del torneo por tarjeta negra. No participarán en rondas futuras (asumidos como BYE).";
+            } elseif (!empty($resultadoParejas['es_empate_mano_nula'])) {
+                $_SESSION['info'] = 'Empate en tranque registrado como Mano Nula: 0 puntos para ambas parejas.';
+            }
+
+            $pdo->commit();
+
+            try {
+                actualizarEstadisticasInscritos($torneo_id);
+            } catch (Exception $e) {
+                error_log("Error al actualizar estadísticas después de guardar resultados (parejas): " . $e->getMessage());
+            }
+
+            $_SESSION['limpiar_formulario'] = true;
+            $_SESSION['resultados_guardados'] = true;
+            $redirectUrl = buildRedirectUrl('registrar_resultados', ['torneo_id' => $torneo_id, 'ronda' => $ronda, 'mesa' => $mesa]) . '#formResultados';
+            header('Location: ' . $redirectUrl);
+            exit;
+        }
         
         // Procesar cada jugador
         // Asegurar que el array está indexado numéricamente
         $jugadores = array_values($jugadores);
+
+        $codigoPorUsuario = [];
+        if (in_array($modalidadTorneo, [2, 4], true)) {
+            $idsUsuariosPost = array_map(static function ($j) {
+                return (int)($j['id_usuario'] ?? 0);
+            }, $jugadores);
+            $idsUsuariosPost = array_values(array_filter($idsUsuariosPost));
+
+            if (!empty($idsUsuariosPost)) {
+                $placeholdersUsuarios = implode(',', array_fill(0, count($idsUsuariosPost), '?'));
+                $stmtCodigos = $pdo->prepare("
+                    SELECT id_usuario, codigo_equipo
+                    FROM inscritos
+                    WHERE torneo_id = ? AND id_usuario IN ($placeholdersUsuarios)
+                ");
+                $stmtCodigos->execute(array_merge([$torneo_id], $idsUsuariosPost));
+                foreach ($stmtCodigos->fetchAll(PDO::FETCH_ASSOC) as $filaCodigo) {
+                    $codigoPorUsuario[(int)$filaCodigo['id_usuario']] = trim((string)($filaCodigo['codigo_equipo'] ?? ''));
+                }
+
+                $controlPorCodigo = [];
+                foreach ($jugadores as $jugadorPost) {
+                    $idUsuarioPost = (int)($jugadorPost['id_usuario'] ?? 0);
+                    $codigoEquipo = trim((string)($codigoPorUsuario[$idUsuarioPost] ?? ''));
+                    if ($codigoEquipo === '') {
+                        continue;
+                    }
+                    if (!isset($controlPorCodigo[$codigoEquipo])) {
+                        $controlPorCodigo[$codigoEquipo] = [
+                            'sancion' => (int)($jugadorPost['sancion'] ?? 0),
+                            'ff' => (isset($jugadorPost['ff']) && ($jugadorPost['ff'] == '1' || $jugadorPost['ff'] === true || $jugadorPost['ff'] === 'on')) ? 1 : 0,
+                            'tarjeta' => (int)($jugadorPost['tarjeta'] ?? 0),
+                        ];
+                    }
+                }
+
+                foreach ($jugadores as &$jugadorPost) {
+                    $idUsuarioPost = (int)($jugadorPost['id_usuario'] ?? 0);
+                    $codigoEquipo = trim((string)($codigoPorUsuario[$idUsuarioPost] ?? ''));
+                    if ($codigoEquipo !== '' && isset($controlPorCodigo[$codigoEquipo])) {
+                        $jugadorPost['sancion'] = (int)$controlPorCodigo[$codigoEquipo]['sancion'];
+                        $jugadorPost['ff'] = (int)$controlPorCodigo[$codigoEquipo]['ff'];
+                        $jugadorPost['tarjeta'] = (int)$controlPorCodigo[$codigoEquipo]['tarjeta'];
+                    }
+                }
+                unset($jugadorPost);
+            }
+        }
         
         // Tarjeta previa por jugador (partidas anteriores) para SancionesHelper
         require_once __DIR__ . '/../lib/SancionesHelper.php';
@@ -4192,6 +4288,17 @@ function guardarResultados($user_id, $is_admin_general) {
         }, $jugadores);
         $ids_usuarios_mesa = array_filter($ids_usuarios_mesa);
         $tarjetaPreviaPorUsuario = SancionesHelper::getTarjetaPreviaDesdePartidasAnteriores($pdo, $torneo_id, $ronda, array_values($ids_usuarios_mesa));
+        $tarjetaPreviaPorEquipo = [];
+        if (in_array($modalidadTorneo, [2, 4], true) && !empty($codigoPorUsuario)) {
+            foreach ($tarjetaPreviaPorUsuario as $idUsuarioPrevio => $tarjetaPrevia) {
+                $codigoEquipoPrevio = trim((string)($codigoPorUsuario[(int)$idUsuarioPrevio] ?? ''));
+                if ($codigoEquipoPrevio === '') {
+                    continue;
+                }
+                $valorPrevio = (int)$tarjetaPrevia;
+                $tarjetaPreviaPorEquipo[$codigoEquipoPrevio] = max((int)($tarjetaPreviaPorEquipo[$codigoEquipoPrevio] ?? 0), $valorPrevio);
+            }
+        }
         
         // Primero, detectar si hay algún forfait en la mesa
         $hayForfaitEnMesa = false;
@@ -4266,7 +4373,12 @@ function guardarResultados($user_id, $is_admin_general) {
             $esParejaA = ($secuencia == 1 || $secuencia == 2);
             
             // Sanción y tarjeta: pasar por SancionesHelper (40=resta pts sin tarjeta; 80=resta y tarjeta según acumulación; tarjeta directa)
-            $tarjetaInscritos = (int)($tarjetaPreviaPorUsuario[$id_usuario] ?? 0);
+            if (in_array($modalidadTorneo, [2, 4], true)) {
+                $codigoEquipoJugador = trim((string)($codigoPorUsuario[$id_usuario] ?? ''));
+                $tarjetaInscritos = (int)($tarjetaPreviaPorEquipo[$codigoEquipoJugador] ?? ($tarjetaPreviaPorUsuario[$id_usuario] ?? 0));
+            } else {
+                $tarjetaInscritos = (int)($tarjetaPreviaPorUsuario[$id_usuario] ?? 0);
+            }
             if ($sancion > 0 || $tarjeta > 0) {
                 $procesado = SancionesHelper::procesar($sancion, $tarjeta, $tarjetaInscritos);
                 $sancionParaCalculo = $procesado['sancion_para_calculo'];
@@ -4816,7 +4928,17 @@ function actualizarEstadisticasManual($torneo_id, $user_id, $is_admin_general) {
  */
 function actualizarEstadisticasInscritos($torneo_id) {
     $pdo = DB::pdo();
-    
+
+    // Modalidad parejas: estadísticas por código de equipo (idénticas para ambos jugadores).
+    $stmtModalidad = $pdo->prepare("SELECT modalidad FROM tournaments WHERE id = ?");
+    $stmtModalidad->execute([$torneo_id]);
+    $modalidadTorneo = (int)($stmtModalidad->fetchColumn() ?? 0);
+    if (in_array($modalidadTorneo, [2, 4], true)) {
+        actualizarEstadisticasInscritosParejasPorCodigoEquipo($torneo_id);
+        recalcularClasificacionEquiposYJugadores($torneo_id);
+        return;
+    }
+
     // Obtener puntos del torneo
     $stmt = $pdo->prepare("SELECT puntos FROM tournaments WHERE id = ?");
     $stmt->execute([$torneo_id]);
