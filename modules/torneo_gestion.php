@@ -4888,6 +4888,16 @@ function actualizarEstadisticasManual($torneo_id, $user_id, $is_admin_general) {
 function actualizarEstadisticasInscritos($torneo_id) {
     $pdo = DB::pdo();
     
+    // Modalidad parejas: estadísticas por código de equipo (idénticas para ambos jugadores).
+    $stmtModalidad = $pdo->prepare("SELECT modalidad FROM tournaments WHERE id = ?");
+    $stmtModalidad->execute([$torneo_id]);
+    $modalidadTorneo = (int)($stmtModalidad->fetchColumn() ?? 0);
+    if ($modalidadTorneo === 2) {
+        actualizarEstadisticasInscritosParejasPorCodigoEquipo($torneo_id);
+        recalcularClasificacionEquiposYJugadores($torneo_id);
+        return;
+    }
+    
     // Obtener puntos del torneo
     $stmt = $pdo->prepare("SELECT puntos FROM tournaments WHERE id = ?");
     $stmt->execute([$torneo_id]);
@@ -5070,6 +5080,196 @@ function actualizarEstadisticasInscritos($torneo_id) {
     
     // Recalcular posiciones y clasificación completas (inscritos + equipos + numeración interna)
     recalcularClasificacionEquiposYJugadores($torneo_id);
+}
+
+/**
+ * Recalcula estadísticas en torneos de parejas por código de equipo.
+ * El resultado se replica idéntico a ambos jugadores de la pareja.
+ */
+function actualizarEstadisticasInscritosParejasPorCodigoEquipo($torneo_id) {
+    $pdo = DB::pdo();
+
+    $stmt = $pdo->prepare("
+        SELECT codigo_equipo, id_usuario
+        FROM inscritos
+        WHERE torneo_id = ?
+          AND estatus != 4
+          AND codigo_equipo IS NOT NULL
+          AND codigo_equipo != ''
+          AND codigo_equipo != '000-000'
+        ORDER BY codigo_equipo ASC, id_usuario ASC
+    ");
+    $stmt->execute([$torneo_id]);
+    $filasInscritos = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    if (empty($filasInscritos)) {
+        return;
+    }
+
+    $usuariosPorCodigo = [];
+    foreach ($filasInscritos as $filaInscrito) {
+        $codigo = trim((string)($filaInscrito['codigo_equipo'] ?? ''));
+        $idUsuario = (int)($filaInscrito['id_usuario'] ?? 0);
+        if ($codigo === '' || $idUsuario <= 0) {
+            continue;
+        }
+        if (!isset($usuariosPorCodigo[$codigo])) {
+            $usuariosPorCodigo[$codigo] = [];
+        }
+        $usuariosPorCodigo[$codigo][] = $idUsuario;
+    }
+
+    $stmtPartidasEquipo = $pdo->prepare("
+        SELECT DISTINCT pr.partida, pr.mesa
+        FROM partiresul pr
+        INNER JOIN inscritos i ON i.torneo_id = pr.id_torneo AND i.id_usuario = pr.id_usuario
+        WHERE pr.id_torneo = ?
+          AND i.codigo_equipo = ?
+          AND pr.registrado = 1
+        ORDER BY pr.partida ASC, pr.mesa ASC
+    ");
+
+    $stmtMesaDetalle = $pdo->prepare("
+        SELECT pr.id_usuario, pr.resultado1, pr.resultado2, pr.efectividad, pr.ff, pr.tarjeta, pr.sancion, pr.chancleta, pr.zapato, pr.fecha_partida,
+               i.codigo_equipo
+        FROM partiresul pr
+        LEFT JOIN inscritos i ON i.torneo_id = pr.id_torneo AND i.id_usuario = pr.id_usuario
+        WHERE pr.id_torneo = ? AND pr.partida = ? AND pr.mesa = ? AND pr.registrado = 1
+        ORDER BY pr.secuencia ASC
+    ");
+
+    $stmtUpdateCodigo = $pdo->prepare("
+        UPDATE inscritos SET
+            ganados = ?,
+            perdidos = ?,
+            efectividad = ?,
+            puntos = ?,
+            sancion = ?,
+            chancletas = ?,
+            zapatos = ?,
+            tarjeta = ?
+        WHERE torneo_id = ? AND codigo_equipo = ? AND estatus != 4
+    ");
+
+    foreach ($usuariosPorCodigo as $codigoEquipo => $usuariosEquipo) {
+        $totalGanados = 0;
+        $totalPerdidos = 0;
+        $totalEfectividad = 0;
+        $totalPuntos = 0;
+        $totalSancion = 0;
+        $totalChancletas = 0;
+        $totalZapatos = 0;
+        $ultimaTarjeta = 0;
+        $fechaUltimaTarjeta = null;
+
+        $stmtPartidasEquipo->execute([$torneo_id, $codigoEquipo]);
+        $partidasEquipo = $stmtPartidasEquipo->fetchAll(PDO::FETCH_ASSOC);
+
+        foreach ($partidasEquipo as $partidaInfo) {
+            $partida = (int)($partidaInfo['partida'] ?? 0);
+            $mesa = (int)($partidaInfo['mesa'] ?? 0);
+
+            $stmtMesaDetalle->execute([$torneo_id, $partida, $mesa]);
+            $filasMesa = $stmtMesaDetalle->fetchAll(PDO::FETCH_ASSOC);
+            if (empty($filasMesa)) {
+                continue;
+            }
+
+            $filasEquipo = [];
+            $filasOponente = [];
+            foreach ($filasMesa as $filaMesa) {
+                $codigoFila = trim((string)($filaMesa['codigo_equipo'] ?? ''));
+                if ($codigoFila === $codigoEquipo) {
+                    $filasEquipo[] = $filaMesa;
+                } else {
+                    $filasOponente[] = $filaMesa;
+                }
+            }
+            if (empty($filasEquipo)) {
+                continue;
+            }
+
+            $refEquipo = $filasEquipo[0];
+            $resultado1 = (int)($refEquipo['resultado1'] ?? 0);
+            $resultado2 = (int)($refEquipo['resultado2'] ?? 0);
+            $efectividad = (int)($refEquipo['efectividad'] ?? 0);
+            $sancion = (int)($refEquipo['sancion'] ?? 0);
+
+            $hayForfaitEquipo = false;
+            $hayForfaitOponente = false;
+            $hayTarjetaGraveEquipo = false;
+            $hayTarjetaGraveOponente = false;
+            $chancletaEquipo = 0;
+            $zapatoEquipo = 0;
+
+            foreach ($filasEquipo as $filaEquipo) {
+                if ((int)($filaEquipo['ff'] ?? 0) === 1) {
+                    $hayForfaitEquipo = true;
+                }
+                $tarjetaFila = (int)($filaEquipo['tarjeta'] ?? 0);
+                if ($tarjetaFila === 3 || $tarjetaFila === 4) {
+                    $hayTarjetaGraveEquipo = true;
+                }
+                $chancletaEquipo = max($chancletaEquipo, (int)($filaEquipo['chancleta'] ?? 0));
+                $zapatoEquipo = max($zapatoEquipo, (int)($filaEquipo['zapato'] ?? 0));
+                if ($tarjetaFila > 0) {
+                    $fechaFila = (string)($filaEquipo['fecha_partida'] ?? '');
+                    if ($fechaUltimaTarjeta === null || ($fechaFila !== '' && $fechaFila > $fechaUltimaTarjeta)) {
+                        $ultimaTarjeta = $tarjetaFila;
+                        $fechaUltimaTarjeta = $fechaFila;
+                    }
+                }
+            }
+            foreach ($filasOponente as $filaOponente) {
+                if ((int)($filaOponente['ff'] ?? 0) === 1) {
+                    $hayForfaitOponente = true;
+                }
+                $tarjetaFila = (int)($filaOponente['tarjeta'] ?? 0);
+                if ($tarjetaFila === 3 || $tarjetaFila === 4) {
+                    $hayTarjetaGraveOponente = true;
+                }
+            }
+
+            $gano = false;
+            if ($mesa === 0) {
+                $gano = true; // BYE
+            } elseif ($hayForfaitEquipo || $hayForfaitOponente) {
+                $gano = (!$hayForfaitEquipo && $hayForfaitOponente);
+            } elseif ($hayTarjetaGraveEquipo || $hayTarjetaGraveOponente) {
+                $gano = (!$hayTarjetaGraveEquipo && $hayTarjetaGraveOponente);
+            } else {
+                if ($sancion > 0) {
+                    $resultadoAjustado = max(0, $resultado1 - $sancion);
+                    $gano = ($resultadoAjustado > $resultado2);
+                } else {
+                    $gano = ($resultado1 > $resultado2);
+                }
+            }
+
+            if ($gano) {
+                $totalGanados++;
+                $totalChancletas += $chancletaEquipo;
+                $totalZapatos += $zapatoEquipo;
+            } else {
+                $totalPerdidos++;
+            }
+            $totalEfectividad += $efectividad;
+            $totalPuntos += $resultado1;
+            $totalSancion += $sancion;
+        }
+
+        $stmtUpdateCodigo->execute([
+            $totalGanados,
+            $totalPerdidos,
+            $totalEfectividad,
+            $totalPuntos,
+            $totalSancion,
+            $totalChancletas,
+            $totalZapatos,
+            $ultimaTarjeta,
+            $torneo_id,
+            $codigoEquipo
+        ]);
+    }
 }
 
 /**
