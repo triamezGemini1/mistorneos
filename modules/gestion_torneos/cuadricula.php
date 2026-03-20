@@ -34,7 +34,7 @@ $letras = [1 => 'A', 2 => 'C', 3 => 'B', 4 => 'D'];
             --color-row-hover: #e2e8f0;
             --color-bye-bg: #fef08a;
             --cell-height: 38px;
-            --cell-font-size: 0.85rem;
+            --cell-font-size: 0.98rem;
             --grid-min-col: 75px;
         }
 
