@@ -41,9 +41,12 @@ final class ParejasResultadosService
             if ($codigo === '' || $codigo === '000-000') {
                 throw new Exception('Todos los jugadores de parejas deben tener codigo_equipo válido.');
             }
+            $secuencia = (int)($j['secuencia'] ?? 0);
+            $slotPareja = in_array($secuencia, [1, 2], true) ? 'A' : 'B';
             if (!isset($equipos[$codigo])) {
                 $equipos[$codigo] = [
                     'codigo' => $codigo,
+                    'slot' => $slotPareja,
                     'jugadores' => [],
                     'puntos' => 0,
                     'sancion' => (int)($j['sancion'] ?? 0),
@@ -53,8 +56,11 @@ final class ParejasResultadosService
                     'zapato' => (int)($j['zapato'] ?? 0),
                 ];
             }
+            if (($equipos[$codigo]['slot'] ?? $slotPareja) !== $slotPareja) {
+                throw new Exception("Inconsistencia detectada: el codigo_equipo {$codigo} aparece en ambas parejas de la mesa.");
+            }
             $equipos[$codigo]['jugadores'][] = $j;
-            if ((int)($j['secuencia'] ?? 0) === 1 || (int)($j['secuencia'] ?? 0) === 3) {
+            if ($secuencia === 1 || $secuencia === 3) {
                 $equipos[$codigo]['puntos'] = (int)($j['resultado1'] ?? 0);
             }
         }
@@ -147,13 +153,11 @@ final class ParejasResultadosService
             ];
         }
 
-        // ACTUALIZACION POR CODIGO_EQUIPO:
-        // en parejas NO se persiste por usuario, sino por codigo_equipo para forzar simetria total.
-        $stmtUpdCodigo = $pdo->prepare("
+        // ACTUALIZACION POR PAREJA EN LA MESA:
+        // pareja A = secuencias 1 y 2, pareja B = secuencias 3 y 4.
+        // Se aplica el mismo bloque de valores a los dos jugadores de la pareja.
+        $stmtUpdPareja = $pdo->prepare("
             UPDATE partiresul pr
-            INNER JOIN inscritos i
-                ON i.torneo_id = pr.id_torneo
-               AND i.id_usuario = pr.id_usuario
             SET pr.resultado1 = ?,
                 pr.resultado2 = ?,
                 pr.efectividad = ?,
@@ -168,48 +172,52 @@ final class ParejasResultadosService
             WHERE pr.id_torneo = ?
               AND pr.partida = ?
               AND pr.mesa = ?
-              AND i.codigo_equipo = ?
+              AND pr.secuencia IN (?, ?)
         ");
-        $stmtCountCodigo = $pdo->prepare("
+        $stmtCountPareja = $pdo->prepare("
             SELECT COUNT(*) 
             FROM partiresul pr
-            INNER JOIN inscritos i
-                ON i.torneo_id = pr.id_torneo
-               AND i.id_usuario = pr.id_usuario
             WHERE pr.id_torneo = ?
               AND pr.partida = ?
               AND pr.mesa = ?
-              AND i.codigo_equipo = ?
+              AND pr.secuencia IN (?, ?)
         ");
-        $stmtIdsCodigo = $pdo->prepare("
+        $stmtIdsPareja = $pdo->prepare("
             SELECT DISTINCT pr.id_usuario
             FROM partiresul pr
-            INNER JOIN inscritos i
-                ON i.torneo_id = pr.id_torneo
-               AND i.id_usuario = pr.id_usuario
             WHERE pr.id_torneo = ?
               AND pr.partida = ?
               AND pr.mesa = ?
-              AND i.codigo_equipo = ?
+              AND pr.secuencia IN (?, ?)
         ");
 
         $idsTarjetaNegra = [];
         foreach ($resultadoEquipo as $codigo => $res) {
-            $stmtCountCodigo->execute([$torneoId, $ronda, $mesa, $codigo]);
-            $totalFilasCodigo = (int)$stmtCountCodigo->fetchColumn();
-            if ($totalFilasCodigo !== 2) {
-                throw new Exception("La mesa no tiene exactamente 2 jugadores para el codigo_equipo {$codigo}.");
+            $slotPareja = (string)($equipos[$codigo]['slot'] ?? '');
+            if (!in_array($slotPareja, ['A', 'B'], true)) {
+                throw new Exception("No se pudo determinar la pareja (A/B) para el codigo_equipo {$codigo}.");
+            }
+            $secuencia1 = $slotPareja === 'A' ? 1 : 3;
+            $secuencia2 = $slotPareja === 'A' ? 2 : 4;
+
+            $stmtCountPareja->execute([$torneoId, $ronda, $mesa, $secuencia1, $secuencia2]);
+            $totalFilasPareja = (int)$stmtCountPareja->fetchColumn();
+            if ($totalFilasPareja !== 2) {
+                throw new Exception("La mesa no tiene exactamente 2 jugadores para la pareja {$slotPareja} (secuencias {$secuencia1}-{$secuencia2}).");
             }
 
-            $stmtUpdCodigo->execute([
+            $stmtUpdPareja->execute([
                 $res['resultado1'], $res['resultado2'], $res['efectividad'], $res['ff'], $res['tarjeta'],
                 $res['sancion'], $res['chancleta'], $res['zapato'], $userId,
-                $torneoId, $ronda, $mesa, $codigo
+                $torneoId, $ronda, $mesa, $secuencia1, $secuencia2
             ]);
 
             if ((int)$res['tarjeta'] === SancionesHelper::TARJETA_NEGRA) {
-                $stmtIdsCodigo->execute([$torneoId, $ronda, $mesa, $codigo]);
-                $idsTarjetaNegra = array_merge($idsTarjetaNegra, array_map('intval', array_column($stmtIdsCodigo->fetchAll(PDO::FETCH_ASSOC), 'id_usuario')));
+                $stmtIdsPareja->execute([$torneoId, $ronda, $mesa, $secuencia1, $secuencia2]);
+                $idsTarjetaNegra = array_merge(
+                    $idsTarjetaNegra,
+                    array_map('intval', array_column($stmtIdsPareja->fetchAll(PDO::FETCH_ASSOC), 'id_usuario'))
+                );
             }
         }
 
