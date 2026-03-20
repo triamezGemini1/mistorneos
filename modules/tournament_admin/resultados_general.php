@@ -413,7 +413,6 @@ $base_url_return = $use_standalone ? $script_actual : 'index.php?page=torneo_ges
                                     <div class="font-semibold leading-tight">
                                         <div><i class="fas fa-user-friends mr-1"></i><?php echo htmlspecialchars($pareja1 !== '' ? $pareja1 : 'N/A'); ?></div>
                                         <?php if ($pareja2 !== ''): ?>
-                                            <div class="text-gray-500">/</div>
                                             <div><?php echo htmlspecialchars($pareja2); ?></div>
                                         <?php endif; ?>
                                     </div>

@@ -123,7 +123,10 @@ $csrf_token = class_exists('CSRF') ? CSRF::token() : '';
                         <span class="badge bg-secondary me-2"><?php echo htmlspecialchars($pa['codigo_equipo']); ?></span>
                         <span class="fw-bold"><?php echo htmlspecialchars($pa['nombre_equipo']); ?></span>
                         (número <?php echo (int)$pa['numero']; ?>)
-                        — <?php echo htmlspecialchars($pa['jugadores'][0]['nombre'] ?? ''); ?> / <?php echo htmlspecialchars($pa['jugadores'][1]['nombre'] ?? ''); ?>
+                        <div class="ms-4 small text-muted">
+                            <div><?php echo htmlspecialchars($pa['jugadores'][0]['nombre'] ?? ''); ?></div>
+                            <div><?php echo htmlspecialchars($pa['jugadores'][1]['nombre'] ?? ''); ?></div>
+                        </div>
                     </li>
                     <?php endforeach; ?>
                 </ul>
