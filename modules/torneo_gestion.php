@@ -4189,7 +4189,7 @@ function guardarResultados($user_id, $is_admin_general) {
         $puntosTorneo = (int)($torneo['puntos'] ?? 100);
 
         // Flujo independiente exclusivo para torneos de parejas (unidad de cálculo: codigo_equipo).
-        if ($modalidadTorneo === 2) {
+        if (in_array($modalidadTorneo, [2, 4], true)) {
             require_once __DIR__ . '/../lib/ParejasResultadosService.php';
             require_once __DIR__ . '/../lib/InscritosHelper.php';
 
@@ -4241,7 +4241,7 @@ function guardarResultados($user_id, $is_admin_general) {
         $jugadores = array_values($jugadores);
 
         $codigoPorUsuario = [];
-        if ($modalidadTorneo === 2) {
+        if (in_array($modalidadTorneo, [2, 4], true)) {
             $idsUsuariosPost = array_map(static function ($j) {
                 return (int)($j['id_usuario'] ?? 0);
             }, $jugadores);
@@ -4296,7 +4296,7 @@ function guardarResultados($user_id, $is_admin_general) {
         $ids_usuarios_mesa = array_filter($ids_usuarios_mesa);
         $tarjetaPreviaPorUsuario = SancionesHelper::getTarjetaPreviaDesdePartidasAnteriores($pdo, $torneo_id, $ronda, array_values($ids_usuarios_mesa));
         $tarjetaPreviaPorEquipo = [];
-        if ($modalidadTorneo === 2 && !empty($codigoPorUsuario)) {
+        if (in_array($modalidadTorneo, [2, 4], true) && !empty($codigoPorUsuario)) {
             foreach ($tarjetaPreviaPorUsuario as $idUsuarioPrevio => $tarjetaPrevia) {
                 $codigoEquipoPrevio = trim((string)($codigoPorUsuario[(int)$idUsuarioPrevio] ?? ''));
                 if ($codigoEquipoPrevio === '') {
@@ -4380,7 +4380,7 @@ function guardarResultados($user_id, $is_admin_general) {
             $esParejaA = ($secuencia == 1 || $secuencia == 2);
             
             // Sanción y tarjeta: pasar por SancionesHelper (40=resta pts sin tarjeta; 80=resta y tarjeta según acumulación; tarjeta directa)
-            if ($modalidadTorneo === 2) {
+            if (in_array($modalidadTorneo, [2, 4], true)) {
                 $codigoEquipoJugador = trim((string)($codigoPorUsuario[$id_usuario] ?? ''));
                 $tarjetaInscritos = (int)($tarjetaPreviaPorEquipo[$codigoEquipoJugador] ?? ($tarjetaPreviaPorUsuario[$id_usuario] ?? 0));
             } else {
@@ -4940,7 +4940,7 @@ function actualizarEstadisticasInscritos($torneo_id) {
     $stmtModalidad = $pdo->prepare("SELECT modalidad FROM tournaments WHERE id = ?");
     $stmtModalidad->execute([$torneo_id]);
     $modalidadTorneo = (int)($stmtModalidad->fetchColumn() ?? 0);
-    if ($modalidadTorneo === 2) {
+    if (in_array($modalidadTorneo, [2, 4], true)) {
         actualizarEstadisticasInscritosParejasPorCodigoEquipo($torneo_id);
         recalcularClasificacionEquiposYJugadores($torneo_id);
         return;

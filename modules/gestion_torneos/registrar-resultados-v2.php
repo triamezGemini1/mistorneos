@@ -6,7 +6,7 @@ $script_actual = basename($_SERVER['PHP_SELF'] ?? '');
 $use_standalone = in_array($script_actual, ['admin_torneo.php', 'panel_torneo.php']);
 $base_url = $use_standalone ? $script_actual : 'index.php?page=torneo_gestion';
 $action_param = $use_standalone ? '?' : '&';
-$esTorneoParejas = (int)($torneo['modalidad'] ?? 0) === 2;
+$esTorneoParejas = in_array((int)($torneo['modalidad'] ?? 0), [2, 4], true);
 ?>
 
 <style>
