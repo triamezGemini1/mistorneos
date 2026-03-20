@@ -5210,7 +5210,7 @@ function recalcularPosiciones($torneo_id) {
         }
         
         // Mapear modalidad a tipo de torneo
-        // modalidad puede ser INT (1=Individual, 2=Parejas, 3=Equipos) o texto
+        // modalidad puede ser INT (1=Individual, 2=Parejas, 3=Equipos, 4=Parejas fijas) o texto
         $modalidad = $torneo['modalidad'] ?? 1;
         $tipoTorneo = 1; // Por defecto Individual
         
@@ -5227,9 +5227,15 @@ function recalcularPosiciones($torneo_id) {
             }
         }
         
-        // Asegurar que el tipo esté en el rango válido (1-3)
-        if ($tipoTorneo < 1 || $tipoTorneo > 3) {
+        // Asegurar que el tipo esté en el rango válido (1-4)
+        if ($tipoTorneo < 1 || $tipoTorneo > 4) {
             $tipoTorneo = 1;
+        }
+
+        // Parejas (2 y 4): clasificación por codigo_equipo (misma posición para ambos integrantes).
+        if (in_array($tipoTorneo, [2, 4], true)) {
+            recalcularPosicionesParejasPorEquipo($torneo_id, 2);
+            return;
         }
         
         // Definir límite de posiciones según tipo de torneo
@@ -5396,6 +5402,90 @@ function recalcularPosiciones($torneo_id) {
         error_log("ERROR en recalcularPosiciones: " . $e->getMessage());
         error_log("ERROR stack trace: " . $e->getTraceAsString());
         throw $e;
+    }
+}
+
+/**
+ * Recalcula posiciones para torneos de parejas por unidad de equipo (codigo_equipo).
+ * Ambos integrantes reciben la misma posición y puntos de ranking.
+ */
+function recalcularPosicionesParejasPorEquipo($torneo_id, $tipoRanking = 2) {
+    $pdo = DB::pdo();
+
+    // Reset posiciones y ranking para inscritos activos del torneo.
+    $stmt = $pdo->prepare("UPDATE inscritos SET posicion = 0, ptosrnk = 0 WHERE torneo_id = ? AND estatus != 4");
+    $stmt->execute([$torneo_id]);
+
+    // Clasificación por pareja (codigo_equipo), NO por jugador.
+    $stmt = $pdo->prepare("
+        SELECT
+            codigo_equipo,
+            MAX(CAST(ganados AS SIGNED)) AS ganados,
+            MAX(CAST(efectividad AS SIGNED)) AS efectividad,
+            MAX(CAST(puntos AS SIGNED)) AS puntos
+        FROM inscritos
+        WHERE torneo_id = ?
+          AND estatus != 4
+          AND codigo_equipo IS NOT NULL
+          AND codigo_equipo != ''
+          AND codigo_equipo != '000-000'
+        GROUP BY codigo_equipo
+        ORDER BY
+            MAX(CAST(ganados AS SIGNED)) DESC,
+            MAX(CAST(efectividad AS SIGNED)) DESC,
+            MAX(CAST(puntos AS SIGNED)) DESC,
+            codigo_equipo ASC
+    ");
+    $stmt->execute([$torneo_id]);
+    $parejas = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+    if (empty($parejas)) {
+        return;
+    }
+
+    $existeClasiRanking = false;
+    try {
+        $stmt = $pdo->query("SELECT 1 FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA = DATABASE() AND LOWER(TABLE_NAME) = 'clasiranking' LIMIT 1");
+        $existeClasiRanking = ($stmt && $stmt->fetch() !== false);
+    } catch (Exception $e) {
+    }
+
+    $stmtRanking = $pdo->prepare("
+        SELECT puntos_posicion, puntos_por_partida_ganada, COALESCE(puntos_asistencia, 1) AS puntos_asistencia
+        FROM clasiranking
+        WHERE tipo_torneo = ? AND clasificacion = ?
+        LIMIT 1
+    ");
+    $stmtUpdatePareja = $pdo->prepare("
+        UPDATE inscritos
+        SET posicion = ?, ptosrnk = ?
+        WHERE torneo_id = ?
+          AND codigo_equipo = ?
+          AND estatus != 4
+    ");
+
+    $posicion = 1;
+    foreach ($parejas as $par) {
+        $codigo = (string)$par['codigo_equipo'];
+        $ganados = (int)($par['ganados'] ?? 0);
+        $ptosrnk = 1;
+
+        if ($existeClasiRanking) {
+            try {
+                $stmtRanking->execute([(int)$tipoRanking, $posicion]);
+                $ranking = $stmtRanking->fetch(PDO::FETCH_ASSOC);
+                if ($ranking) {
+                    $ptosPosicion = (int)($ranking['puntos_posicion'] ?? 0);
+                    $ptosGanada = (int)($ranking['puntos_por_partida_ganada'] ?? 0);
+                    $ptosAsistencia = (int)($ranking['puntos_asistencia'] ?? 1);
+                    $ptosrnk = $ptosPosicion + ($ganados * $ptosGanada) + $ptosAsistencia;
+                }
+            } catch (Exception $e) {
+            }
+        }
+
+        $stmtUpdatePareja->execute([$posicion, $ptosrnk, $torneo_id, $codigo]);
+        $posicion++;
     }
 }
 

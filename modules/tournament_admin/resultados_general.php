@@ -14,6 +14,7 @@ if (function_exists('recalcularPosiciones')) {
 }
 
 $pdo = DB::pdo();
+$es_parejas = in_array((int)($torneo['modalidad'] ?? 0), [2, 4], true);
 
 // Configuración de paginación
 $items_por_pagina = 30; // Jugadores por página
@@ -176,6 +177,56 @@ try {
     $stmt = $pdo->prepare($sql);
     $stmt->execute([$torneo_id]);
     $participantes = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+    if ($es_parejas) {
+        $stmtParejas = $pdo->prepare("
+            SELECT i.codigo_equipo, u.nombre AS nombre_completo
+            FROM inscritos i
+            INNER JOIN usuarios u ON i.id_usuario = u.id
+            WHERE i.torneo_id = ?
+              AND i.codigo_equipo IS NOT NULL
+              AND i.codigo_equipo != ''
+              AND i.codigo_equipo != '000-000'
+              AND i.estatus != 'retirado'
+            ORDER BY i.codigo_equipo ASC, u.nombre ASC
+        ");
+        $stmtParejas->execute([$torneo_id]);
+        $nombresPorCodigo = [];
+        foreach ($stmtParejas->fetchAll(PDO::FETCH_ASSOC) as $filaPareja) {
+            $codigo = trim((string)($filaPareja['codigo_equipo'] ?? ''));
+            $nombre = trim((string)($filaPareja['nombre_completo'] ?? ''));
+            if ($codigo === '' || $nombre === '') {
+                continue;
+            }
+            if (!isset($nombresPorCodigo[$codigo])) {
+                $nombresPorCodigo[$codigo] = [];
+            }
+            $nombresPorCodigo[$codigo][] = $nombre;
+        }
+        foreach ($participantes as &$participante) {
+            $codigo = trim((string)($participante['codigo_equipo'] ?? ''));
+            if ($codigo === '' || !isset($nombresPorCodigo[$codigo])) {
+                continue;
+            }
+            $nombres = array_values(array_unique($nombresPorCodigo[$codigo]));
+            $participante['pareja_display'] = implode(' / ', array_slice($nombres, 0, 2));
+            $participante['nombre_equipo'] = $participante['pareja_display'];
+        }
+        unset($participante);
+
+        // En parejas el reporte muestra una fila por pareja (codigo_equipo), no por jugador.
+        $parejasUnicas = [];
+        foreach ($participantes as $p) {
+            $codigo = trim((string)($p['codigo_equipo'] ?? ''));
+            if ($codigo === '' || isset($parejasUnicas[$codigo])) {
+                continue;
+            }
+            $p['id_usuario'] = $codigo;
+            $p['nombre_completo'] = $p['pareja_display'] ?? ($p['nombre_equipo'] ?? 'Pareja ' . $codigo);
+            $parejasUnicas[$codigo] = $p;
+        }
+        $participantes = array_values($parejasUnicas);
+    }
     
     // Asegurar que todos los jugadores tengan el nombre del equipo si tienen codigo_equipo
     foreach ($participantes as &$participante) {
@@ -254,7 +305,7 @@ $base_url_return = $use_standalone ? $script_actual : 'index.php?page=torneo_ges
                 <div>
                     <h1 class="text-3xl font-bold text-gray-800 mb-2">
                         <i class="fas fa-list-ol text-purple-600 mr-2"></i>
-                        Resultados General - Clasificación Individual
+                        <?php echo $es_parejas ? 'Resultados Parejas - Clasificación por Pareja' : 'Resultados General - Clasificación Individual'; ?>
                     </h1>
                     <h2 class="text-xl text-gray-600"><?php echo htmlspecialchars($torneo['nombre'] ?? 'Torneo'); ?></h2>
                     <div class="flex items-center gap-4 mt-2 text-sm text-gray-500">
@@ -284,7 +335,7 @@ $base_url_return = $use_standalone ? $script_actual : 'index.php?page=torneo_ges
     <div class="bg-white rounded-xl shadow-2xl overflow-hidden">
         <div class="bg-gradient-to-r from-purple-600 to-indigo-600 px-6 py-4">
             <h3 class="text-xl font-bold text-white">
-                <i class="fas fa-trophy mr-2"></i> Clasificación General de Participantes
+                        <i class="fas fa-trophy mr-2"></i> <?php echo $es_parejas ? 'Clasificación General de Parejas' : 'Clasificación General de Participantes'; ?>
             </h3>
         </div>
         
@@ -293,8 +344,8 @@ $base_url_return = $use_standalone ? $script_actual : 'index.php?page=torneo_ges
                 <thead>
                     <tr class="bg-gray-100">
                         <th class="border border-gray-300 px-4 py-3 text-center font-bold text-gray-700">Pos.</th>
-                        <th class="border border-gray-300 px-4 py-3 text-center font-bold text-gray-700">ID Usuario</th>
-                        <th class="border border-gray-300 px-4 py-3 text-left font-bold text-gray-700">Jugador</th>
+                        <th class="border border-gray-300 px-4 py-3 text-center font-bold text-gray-700"><?php echo $es_parejas ? 'Código Pareja' : 'ID Usuario'; ?></th>
+                        <th class="border border-gray-300 px-4 py-3 text-left font-bold text-gray-700"><?php echo $es_parejas ? 'Participantes' : 'Jugador'; ?></th>
                         <th class="border border-gray-300 px-4 py-3 text-left font-bold text-gray-700">Club</th>
                         <th class="border border-gray-300 px-4 py-3 text-left font-bold text-gray-700">Equipo</th>
                         <th class="border border-gray-300 px-4 py-3 text-center font-bold text-gray-700">G</th>
@@ -346,11 +397,18 @@ $base_url_return = $use_standalone ? $script_actual : 'index.php?page=torneo_ges
                                 <code><?php echo htmlspecialchars($participante['id_usuario'] ?? 'N/A'); ?></code>
                             </td>
                             <td class="border border-gray-300 px-4 py-3 text-gray-800">
-                                <a href="<?php echo htmlspecialchars($url_resumen); ?>" 
-                                   class="text-purple-600 hover:text-purple-800 hover:underline font-semibold">
-                                    <i class="fas fa-user mr-1"></i>
-                                    <?php echo htmlspecialchars($participante['nombre_completo'] ?? $participante['username'] ?? 'N/A'); ?>
-                                </a>
+                                <?php if ($es_parejas): ?>
+                                    <span class="font-semibold">
+                                        <i class="fas fa-user-friends mr-1"></i>
+                                        <?php echo htmlspecialchars($participante['nombre_completo'] ?? 'N/A'); ?>
+                                    </span>
+                                <?php else: ?>
+                                    <a href="<?php echo htmlspecialchars($url_resumen); ?>" 
+                                       class="text-purple-600 hover:text-purple-800 hover:underline font-semibold">
+                                        <i class="fas fa-user mr-1"></i>
+                                        <?php echo htmlspecialchars($participante['nombre_completo'] ?? $participante['username'] ?? 'N/A'); ?>
+                                    </a>
+                                <?php endif; ?>
                                 <?php if (!empty($participante['sexo'])): ?>
                                     <small class="text-gray-500 ml-1">
                                         <?php echo $participante['sexo'] == 'M' || $participante['sexo'] == 1 ? '♂' : '♀'; ?>

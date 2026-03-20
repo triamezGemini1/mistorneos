@@ -242,6 +242,15 @@ $csrf_token = class_exists('CSRF') ? CSRF::token() : '';
                     $codigo_equipo = htmlspecialchars($equipo['codigo_equipo'] ?? '');
                     $nombre_equipo = htmlspecialchars($equipo['nombre_equipo'] ?? '');
                     $jugadores = $equipo['jugadores'] ?? [];
+                    $pareja_display = '';
+                    if ($es_parejas && !empty($jugadores)) {
+                        $nombresPareja = array_values(array_filter(array_map(static function ($j) {
+                            return trim((string)($j['nombre'] ?? ''));
+                        }, $jugadores)));
+                        if (!empty($nombresPareja)) {
+                            $pareja_display = implode(' / ', array_slice($nombresPareja, 0, 2));
+                        }
+                    }
                     $total_jugadores = count($jugadores);
                     $jugadores_requeridos = $jugadores_por_equipo;
                     $es_completo = $total_jugadores >= $jugadores_requeridos;
@@ -256,6 +265,11 @@ $csrf_token = class_exists('CSRF') ? CSRF::token() : '';
                                         <span class="equipo-codigo"><?php echo $codigo_equipo; ?></span>
                                         <span class="equipo-nombre"><?php echo $nombre_equipo; ?></span>
                                     </div>
+                                    <?php if ($es_parejas && $pareja_display !== ''): ?>
+                                        <div class="text-muted small mt-1">
+                                            <i class="fas fa-user-friends me-1"></i><?php echo htmlspecialchars($pareja_display); ?>
+                                        </div>
+                                    <?php endif; ?>
                                 </div>
                             </div>
                             <div class="equipo-actions">
