@@ -60,9 +60,50 @@ final class ResultadosReporteData
         $stmt = $pdo->prepare($sqlParticipantes);
         $stmt->execute([$torneoId]);
         $participantes = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        $esParejas = (int)($torneo['modalidad'] ?? 0) === 2;
+
+        $parejaDisplayPorCodigo = [];
+        if ($esParejas) {
+            $sqlParejas = "
+                SELECT i.codigo_equipo, u.nombre AS nombre_completo
+                FROM inscritos i
+                INNER JOIN usuarios u ON i.id_usuario = u.id
+                WHERE i.torneo_id = ?
+                  AND i.codigo_equipo IS NOT NULL
+                  AND i.codigo_equipo != ''
+                  AND i.codigo_equipo != '000-000'
+                  AND i.estatus != 'retirado'
+                ORDER BY i.codigo_equipo ASC, u.nombre ASC
+            ";
+            $stmtParejas = $pdo->prepare($sqlParejas);
+            $stmtParejas->execute([$torneoId]);
+            $nombresPorCodigo = [];
+            foreach ($stmtParejas->fetchAll(PDO::FETCH_ASSOC) as $filaPareja) {
+                $codigo = trim((string)($filaPareja['codigo_equipo'] ?? ''));
+                $nombre = trim((string)($filaPareja['nombre_completo'] ?? ''));
+                if ($codigo === '' || $nombre === '') {
+                    continue;
+                }
+                if (!isset($nombresPorCodigo[$codigo])) {
+                    $nombresPorCodigo[$codigo] = [];
+                }
+                $nombresPorCodigo[$codigo][] = $nombre;
+            }
+            foreach ($nombresPorCodigo as $codigo => $nombres) {
+                $nombres = array_values(array_unique($nombres));
+                $parejaDisplayPorCodigo[$codigo] = implode(' / ', array_slice($nombres, 0, 2));
+            }
+        }
+
         foreach ($participantes as &$p) {
-            if (empty($p['nombre_equipo']) && !empty($p['codigo_equipo'])) {
-                $p['nombre_equipo'] = 'Equipo ' . $p['codigo_equipo'];
+            $codigoEquipo = trim((string)($p['codigo_equipo'] ?? ''));
+            if ($esParejas && $codigoEquipo !== '') {
+                $parejaDisplay = $parejaDisplayPorCodigo[$codigoEquipo] ?? '';
+                $p['pareja_display'] = $parejaDisplay !== '' ? $parejaDisplay : ('Pareja ' . $codigoEquipo);
+                // Para reportes, en modalidad parejas priorizar mostrar pareja sobre nombre de equipo.
+                $p['nombre_equipo'] = $p['pareja_display'];
+            } elseif (empty($p['nombre_equipo']) && $codigoEquipo !== '') {
+                $p['nombre_equipo'] = 'Equipo ' . $codigoEquipo;
             }
         }
         unset($p);

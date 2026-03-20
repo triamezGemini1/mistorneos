@@ -4192,6 +4192,7 @@ function guardarResultados($user_id, $is_admin_general) {
         // Asegurar que el array está indexado numéricamente
         $jugadores = array_values($jugadores);
 
+        $codigoPorUsuario = [];
         if ($modalidadTorneo === 2) {
             $idsUsuariosPost = array_map(static function ($j) {
                 return (int)($j['id_usuario'] ?? 0);
@@ -4206,7 +4207,6 @@ function guardarResultados($user_id, $is_admin_general) {
                     WHERE torneo_id = ? AND id_usuario IN ($placeholdersUsuarios)
                 ");
                 $stmtCodigos->execute(array_merge([$torneo_id], $idsUsuariosPost));
-                $codigoPorUsuario = [];
                 foreach ($stmtCodigos->fetchAll(PDO::FETCH_ASSOC) as $filaCodigo) {
                     $codigoPorUsuario[(int)$filaCodigo['id_usuario']] = trim((string)($filaCodigo['codigo_equipo'] ?? ''));
                 }
@@ -4247,6 +4247,17 @@ function guardarResultados($user_id, $is_admin_general) {
         }, $jugadores);
         $ids_usuarios_mesa = array_filter($ids_usuarios_mesa);
         $tarjetaPreviaPorUsuario = SancionesHelper::getTarjetaPreviaDesdePartidasAnteriores($pdo, $torneo_id, $ronda, array_values($ids_usuarios_mesa));
+        $tarjetaPreviaPorEquipo = [];
+        if ($modalidadTorneo === 2 && !empty($codigoPorUsuario)) {
+            foreach ($tarjetaPreviaPorUsuario as $idUsuarioPrevio => $tarjetaPrevia) {
+                $codigoEquipoPrevio = trim((string)($codigoPorUsuario[(int)$idUsuarioPrevio] ?? ''));
+                if ($codigoEquipoPrevio === '') {
+                    continue;
+                }
+                $valorPrevio = (int)$tarjetaPrevia;
+                $tarjetaPreviaPorEquipo[$codigoEquipoPrevio] = max((int)($tarjetaPreviaPorEquipo[$codigoEquipoPrevio] ?? 0), $valorPrevio);
+            }
+        }
         
         // Primero, detectar si hay algún forfait en la mesa
         $hayForfaitEnMesa = false;
@@ -4321,7 +4332,12 @@ function guardarResultados($user_id, $is_admin_general) {
             $esParejaA = ($secuencia == 1 || $secuencia == 2);
             
             // Sanción y tarjeta: pasar por SancionesHelper (40=resta pts sin tarjeta; 80=resta y tarjeta según acumulación; tarjeta directa)
-            $tarjetaInscritos = (int)($tarjetaPreviaPorUsuario[$id_usuario] ?? 0);
+            if ($modalidadTorneo === 2) {
+                $codigoEquipoJugador = trim((string)($codigoPorUsuario[$id_usuario] ?? ''));
+                $tarjetaInscritos = (int)($tarjetaPreviaPorEquipo[$codigoEquipoJugador] ?? ($tarjetaPreviaPorUsuario[$id_usuario] ?? 0));
+            } else {
+                $tarjetaInscritos = (int)($tarjetaPreviaPorUsuario[$id_usuario] ?? 0);
+            }
             if ($sancion > 0 || $tarjeta > 0) {
                 $procesado = SancionesHelper::procesar($sancion, $tarjeta, $tarjetaInscritos);
                 $sancionParaCalculo = $procesado['sancion_para_calculo'];
