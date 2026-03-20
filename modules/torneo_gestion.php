@@ -3222,6 +3222,7 @@ function obtenerDatosRegistroResultados($torneo_id, $ronda, $mesa, $user_id = 0,
                 i.efectividad,
                 i.puntos as puntos_acumulados,
                 i.sancion as sancion_acumulada,
+                i.codigo_equipo,
                 COALESCE(i.tarjeta, 0) AS tarjeta_inscritos
             FROM partiresul pr
             INNER JOIN usuarios u ON pr.id_usuario = u.id
@@ -4141,6 +4142,12 @@ function guardarResultados($user_id, $is_admin_general) {
         if (empty($jugadores) || !is_array($jugadores) || count($jugadores) != 4) {
             throw new Exception('Debe haber exactamente 4 jugadores por mesa');
         }
+
+        // En modalidad parejas (2), las incidencias se capturan por código de equipo
+        // y se replican automáticamente a ambos jugadores del mismo equipo.
+        $stmtModalidad = DB::pdo()->prepare("SELECT modalidad FROM tournaments WHERE id = ?");
+        $stmtModalidad->execute([$torneo_id]);
+        $modalidadTorneo = (int)($stmtModalidad->fetchColumn() ?? 0);
         
         $pdo = DB::pdo();
         
@@ -4184,6 +4191,54 @@ function guardarResultados($user_id, $is_admin_general) {
         // Procesar cada jugador
         // Asegurar que el array está indexado numéricamente
         $jugadores = array_values($jugadores);
+
+        if ($modalidadTorneo === 2) {
+            $idsUsuariosPost = array_map(static function ($j) {
+                return (int)($j['id_usuario'] ?? 0);
+            }, $jugadores);
+            $idsUsuariosPost = array_values(array_filter($idsUsuariosPost));
+
+            if (!empty($idsUsuariosPost)) {
+                $placeholdersUsuarios = implode(',', array_fill(0, count($idsUsuariosPost), '?'));
+                $stmtCodigos = $pdo->prepare("
+                    SELECT id_usuario, codigo_equipo
+                    FROM inscritos
+                    WHERE torneo_id = ? AND id_usuario IN ($placeholdersUsuarios)
+                ");
+                $stmtCodigos->execute(array_merge([$torneo_id], $idsUsuariosPost));
+                $codigoPorUsuario = [];
+                foreach ($stmtCodigos->fetchAll(PDO::FETCH_ASSOC) as $filaCodigo) {
+                    $codigoPorUsuario[(int)$filaCodigo['id_usuario']] = trim((string)($filaCodigo['codigo_equipo'] ?? ''));
+                }
+
+                $controlPorCodigo = [];
+                foreach ($jugadores as $jugadorPost) {
+                    $idUsuarioPost = (int)($jugadorPost['id_usuario'] ?? 0);
+                    $codigoEquipo = trim((string)($codigoPorUsuario[$idUsuarioPost] ?? ''));
+                    if ($codigoEquipo === '') {
+                        continue;
+                    }
+                    if (!isset($controlPorCodigo[$codigoEquipo])) {
+                        $controlPorCodigo[$codigoEquipo] = [
+                            'sancion' => (int)($jugadorPost['sancion'] ?? 0),
+                            'ff' => (isset($jugadorPost['ff']) && ($jugadorPost['ff'] == '1' || $jugadorPost['ff'] === true || $jugadorPost['ff'] === 'on')) ? 1 : 0,
+                            'tarjeta' => (int)($jugadorPost['tarjeta'] ?? 0),
+                        ];
+                    }
+                }
+
+                foreach ($jugadores as &$jugadorPost) {
+                    $idUsuarioPost = (int)($jugadorPost['id_usuario'] ?? 0);
+                    $codigoEquipo = trim((string)($codigoPorUsuario[$idUsuarioPost] ?? ''));
+                    if ($codigoEquipo !== '' && isset($controlPorCodigo[$codigoEquipo])) {
+                        $jugadorPost['sancion'] = (int)$controlPorCodigo[$codigoEquipo]['sancion'];
+                        $jugadorPost['ff'] = (int)$controlPorCodigo[$codigoEquipo]['ff'];
+                        $jugadorPost['tarjeta'] = (int)$controlPorCodigo[$codigoEquipo]['tarjeta'];
+                    }
+                }
+                unset($jugadorPost);
+            }
+        }
         
         // Tarjeta previa por jugador (partidas anteriores) para SancionesHelper
         require_once __DIR__ . '/../lib/SancionesHelper.php';

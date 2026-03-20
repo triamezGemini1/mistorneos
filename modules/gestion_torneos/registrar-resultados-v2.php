@@ -6,6 +6,7 @@ $script_actual = basename($_SERVER['PHP_SELF'] ?? '');
 $use_standalone = in_array($script_actual, ['admin_torneo.php', 'panel_torneo.php']);
 $base_url = $use_standalone ? $script_actual : 'index.php?page=torneo_gestion';
 $action_param = $use_standalone ? '?' : '&';
+$esTorneoParejas = (int)($torneo['modalidad'] ?? 0) === 2;
 ?>
 
 <style>
@@ -755,6 +756,13 @@ $action_param = $use_standalone ? '?' : '&';
                             <input type="hidden" name="ronda" value="<?php echo $ronda; ?>">
                             <input type="hidden" name="mesa" value="<?php echo (int)$mesaActual; ?>">
 
+                            <?php if ($esTorneoParejas): ?>
+                                <div class="alert alert-info py-2">
+                                    <i class="fas fa-link mr-1"></i>
+                                    Modo parejas: sancion, forfait y tarjetas se aplican por <strong>codigo de equipo</strong> y se reflejan en ambos jugadores.
+                                </div>
+                            <?php endif; ?>
+
                             <!-- Tabla de Jugadores -->
                             <div class="table-responsive mb-4">
                                 <table class="table table-bordered table-sm">
@@ -800,6 +808,9 @@ $action_param = $use_standalone ? '?' : '&';
                                                 ?>
                                                 <td class="columna-nombre">
                                                     <span class="nombre-jugador-linea <?php echo $tieneTarjetaPrevia ? 'jugador-tarjeta-previa' : ''; ?>" <?php echo $tituloTarjeta ? 'title="' . htmlspecialchars($tituloTarjeta) . '"' : ''; ?>><?php echo htmlspecialchars($jugador['nombre_completo'] ?? $jugador['nombre'] ?? 'N/A'); ?></span>
+                                                    <?php if ($esTorneoParejas && !empty($jugador['codigo_equipo'])): ?>
+                                                        <small class="d-block text-muted">Equipo: <?php echo htmlspecialchars($jugador['codigo_equipo']); ?></small>
+                                                    <?php endif; ?>
                                                 </td>
                                                 
                                                 <!-- Puntos -->
@@ -826,6 +837,7 @@ $action_param = $use_standalone ? '?' : '&';
                                                 <td class="text-center columna-sancion" data-tarjeta-inscritos="<?php echo (int)($jugador['inscrito']['tarjeta_previa'] ?? $jugador['inscrito']['tarjeta'] ?? 0); ?>">
                                                     <input type="number" 
                                                            name="jugadores[<?php echo $indiceArray; ?>][sancion]"
+                                                           data-codigo-equipo="<?php echo htmlspecialchars($jugador['codigo_equipo'] ?? ''); ?>"
                                                            class="form-control form-control-sm text-center"
                                                            value="<?php echo min((int)($jugador['sancion'] ?? 0), 80); ?>"
                                                            min="0" 
@@ -841,34 +853,50 @@ $action_param = $use_standalone ? '?' : '&';
                                                     <input type="checkbox" 
                                                            name="jugadores[<?php echo $indiceArray; ?>][ff]"
                                                            id="ff_<?php echo $indiceArray; ?>"
+                                                           data-codigo-equipo="<?php echo htmlspecialchars($jugador['codigo_equipo'] ?? ''); ?>"
                                                            class="form-check-input"
                                                            value="1"
                                                            <?php echo (isset($jugador['ff']) && $jugador['ff']) ? 'checked' : ''; ?>
-                                                           onchange="validarPuntosEnTiempoReal();">
+                                                           onchange="sincronizarControlesPorCodigoEquipo(this.dataset.codigoEquipo || '', 'ff', this.checked, <?php echo $indiceArray; ?>); validarPuntosEnTiempoReal();">
                                                 </td>
                                                 
                                                 <!-- Tarjeta directa: marca checkbox correspondiente y procedimiento establecido -->
                                                 <td class="text-center columna-tarjeta">
-                                                    <div class="d-flex justify-content-center gap-1">
-                                                        <button type="button" class="tarjeta-btn" 
-                                                                data-tarjeta="1"
-                                                                data-index="<?php echo $indiceArray; ?>"
-                                                                onclick="seleccionarTarjeta(<?php echo $indiceArray; ?>, 1)"
-                                                                title="Tarjeta Amarilla">🟨</button>
-                                                        <button type="button" class="tarjeta-btn" 
-                                                                data-tarjeta="3"
-                                                                data-index="<?php echo $indiceArray; ?>"
-                                                                onclick="seleccionarTarjeta(<?php echo $indiceArray; ?>, 3)"
-                                                                title="Tarjeta Roja">🟥</button>
-                                                        <button type="button" class="tarjeta-btn" 
-                                                                data-tarjeta="4"
-                                                                data-index="<?php echo $indiceArray; ?>"
-                                                                onclick="seleccionarTarjeta(<?php echo $indiceArray; ?>, 4)"
-                                                                title="Tarjeta Negra">⬛</button>
-                                                        <input type="hidden" name="jugadores[<?php echo $indiceArray; ?>][tarjeta]" 
-                                                               id="tarjeta_<?php echo $indiceArray; ?>" 
-                                                               value="<?php echo $jugador['tarjeta'] ?? 0; ?>">
-                                                    </div>
+                                                    <?php if ($esTorneoParejas): ?>
+                                                        <div class="d-flex justify-content-center gap-2 flex-wrap">
+                                                            <label class="mb-0">
+                                                                <input type="checkbox" class="tarjeta-check" data-index="<?php echo $indiceArray; ?>" data-tarjeta="1" onchange="seleccionarTarjeta(<?php echo $indiceArray; ?>, this.checked ? 1 : 0)" <?php echo ((int)($jugador['tarjeta'] ?? 0) === 1) ? 'checked' : ''; ?>> 🟨
+                                                            </label>
+                                                            <label class="mb-0">
+                                                                <input type="checkbox" class="tarjeta-check" data-index="<?php echo $indiceArray; ?>" data-tarjeta="3" onchange="seleccionarTarjeta(<?php echo $indiceArray; ?>, this.checked ? 3 : 0)" <?php echo ((int)($jugador['tarjeta'] ?? 0) === 3) ? 'checked' : ''; ?>> 🟥
+                                                            </label>
+                                                            <label class="mb-0">
+                                                                <input type="checkbox" class="tarjeta-check" data-index="<?php echo $indiceArray; ?>" data-tarjeta="4" onchange="seleccionarTarjeta(<?php echo $indiceArray; ?>, this.checked ? 4 : 0)" <?php echo ((int)($jugador['tarjeta'] ?? 0) === 4) ? 'checked' : ''; ?>> ⬛
+                                                            </label>
+                                                        </div>
+                                                    <?php else: ?>
+                                                        <div class="d-flex justify-content-center gap-1">
+                                                            <button type="button" class="tarjeta-btn" 
+                                                                    data-tarjeta="1"
+                                                                    data-index="<?php echo $indiceArray; ?>"
+                                                                    onclick="seleccionarTarjeta(<?php echo $indiceArray; ?>, 1)"
+                                                                    title="Tarjeta Amarilla">🟨</button>
+                                                            <button type="button" class="tarjeta-btn" 
+                                                                    data-tarjeta="3"
+                                                                    data-index="<?php echo $indiceArray; ?>"
+                                                                    onclick="seleccionarTarjeta(<?php echo $indiceArray; ?>, 3)"
+                                                                    title="Tarjeta Roja">🟥</button>
+                                                            <button type="button" class="tarjeta-btn" 
+                                                                    data-tarjeta="4"
+                                                                    data-index="<?php echo $indiceArray; ?>"
+                                                                    onclick="seleccionarTarjeta(<?php echo $indiceArray; ?>, 4)"
+                                                                    title="Tarjeta Negra">⬛</button>
+                                                        </div>
+                                                    <?php endif; ?>
+                                                    <input type="hidden" name="jugadores[<?php echo $indiceArray; ?>][tarjeta]" 
+                                                           id="tarjeta_<?php echo $indiceArray; ?>" 
+                                                           data-codigo-equipo="<?php echo htmlspecialchars($jugador['codigo_equipo'] ?? ''); ?>"
+                                                           value="<?php echo $jugador['tarjeta'] ?? 0; ?>">
                                                 </td>
                                                 
                                                 <!-- Estadísticas: pos - gan - per - efect (≤10% ancho) -->
@@ -886,6 +914,8 @@ $action_param = $use_standalone ? '?' : '&';
                                                        value="<?php echo $jugador['id']; ?>">
                                                 <input type="hidden" name="jugadores[<?php echo $indiceArray; ?>][id_usuario]" 
                                                        value="<?php echo $jugador['id_usuario']; ?>">
+                                                <input type="hidden" name="jugadores[<?php echo $indiceArray; ?>][codigo_equipo]"
+                                                       value="<?php echo htmlspecialchars($jugador['codigo_equipo'] ?? ''); ?>">
                                                 <input type="hidden" name="jugadores[<?php echo $indiceArray; ?>][secuencia]" 
                                                        value="<?php echo $jugador['secuencia']; ?>">
                                                 <input type="hidden" name="jugadores[<?php echo $indiceArray; ?>][resultado1]" 
@@ -917,6 +947,9 @@ $action_param = $use_standalone ? '?' : '&';
                                                 ?>
                                                 <td class="columna-nombre">
                                                     <span class="nombre-jugador-linea <?php echo $tieneTarjetaPrevia ? 'jugador-tarjeta-previa' : ''; ?>" <?php echo $tituloTarjeta ? 'title="' . htmlspecialchars($tituloTarjeta) . '"' : ''; ?>><?php echo htmlspecialchars($jugador['nombre_completo'] ?? $jugador['nombre'] ?? 'N/A'); ?></span>
+                                                    <?php if ($esTorneoParejas && !empty($jugador['codigo_equipo'])): ?>
+                                                        <small class="d-block text-muted">Equipo: <?php echo htmlspecialchars($jugador['codigo_equipo']); ?></small>
+                                                    <?php endif; ?>
                                                 </td>
                                                 
                                                 <!-- Puntos -->
@@ -943,6 +976,7 @@ $action_param = $use_standalone ? '?' : '&';
                                                 <td class="text-center columna-sancion" data-tarjeta-inscritos="<?php echo (int)($jugador['inscrito']['tarjeta_previa'] ?? $jugador['inscrito']['tarjeta'] ?? 0); ?>">
                                                     <input type="number" 
                                                            name="jugadores[<?php echo $indiceArray; ?>][sancion]"
+                                                           data-codigo-equipo="<?php echo htmlspecialchars($jugador['codigo_equipo'] ?? ''); ?>"
                                                            class="form-control form-control-sm text-center"
                                                            value="<?php echo min((int)($jugador['sancion'] ?? 0), 80); ?>"
                                                            min="0" 
@@ -958,34 +992,50 @@ $action_param = $use_standalone ? '?' : '&';
                                                     <input type="checkbox" 
                                                            name="jugadores[<?php echo $indiceArray; ?>][ff]"
                                                            id="ff_<?php echo $indiceArray; ?>"
+                                                           data-codigo-equipo="<?php echo htmlspecialchars($jugador['codigo_equipo'] ?? ''); ?>"
                                                            class="form-check-input"
                                                            value="1"
                                                            <?php echo (isset($jugador['ff']) && $jugador['ff']) ? 'checked' : ''; ?>
-                                                           onchange="validarPuntosEnTiempoReal();">
+                                                           onchange="sincronizarControlesPorCodigoEquipo(this.dataset.codigoEquipo || '', 'ff', this.checked, <?php echo $indiceArray; ?>); validarPuntosEnTiempoReal();">
                                                 </td>
                                                 
                                                 <!-- Tarjeta -->
                                                 <td class="text-center columna-tarjeta">
-                                                    <div class="d-flex justify-content-center gap-1">
-                                                        <button type="button" class="tarjeta-btn" 
-                                                                data-tarjeta="1"
-                                                                data-index="<?php echo $indiceArray; ?>"
-                                                                onclick="seleccionarTarjeta(<?php echo $indiceArray; ?>, 1)"
-                                                                title="Tarjeta Amarilla">🟨</button>
-                                                        <button type="button" class="tarjeta-btn" 
-                                                                data-tarjeta="3"
-                                                                data-index="<?php echo $indiceArray; ?>"
-                                                                onclick="seleccionarTarjeta(<?php echo $indiceArray; ?>, 3)"
-                                                                title="Tarjeta Roja">🟥</button>
-                                                        <button type="button" class="tarjeta-btn" 
-                                                                data-tarjeta="4"
-                                                                data-index="<?php echo $indiceArray; ?>"
-                                                                onclick="seleccionarTarjeta(<?php echo $indiceArray; ?>, 4)"
-                                                                title="Tarjeta Negra">⬛</button>
-                                                        <input type="hidden" name="jugadores[<?php echo $indiceArray; ?>][tarjeta]" 
-                                                               id="tarjeta_<?php echo $indiceArray; ?>" 
-                                                               value="<?php echo $jugador['tarjeta'] ?? 0; ?>">
-                                                    </div>
+                                                    <?php if ($esTorneoParejas): ?>
+                                                        <div class="d-flex justify-content-center gap-2 flex-wrap">
+                                                            <label class="mb-0">
+                                                                <input type="checkbox" class="tarjeta-check" data-index="<?php echo $indiceArray; ?>" data-tarjeta="1" onchange="seleccionarTarjeta(<?php echo $indiceArray; ?>, this.checked ? 1 : 0)" <?php echo ((int)($jugador['tarjeta'] ?? 0) === 1) ? 'checked' : ''; ?>> 🟨
+                                                            </label>
+                                                            <label class="mb-0">
+                                                                <input type="checkbox" class="tarjeta-check" data-index="<?php echo $indiceArray; ?>" data-tarjeta="3" onchange="seleccionarTarjeta(<?php echo $indiceArray; ?>, this.checked ? 3 : 0)" <?php echo ((int)($jugador['tarjeta'] ?? 0) === 3) ? 'checked' : ''; ?>> 🟥
+                                                            </label>
+                                                            <label class="mb-0">
+                                                                <input type="checkbox" class="tarjeta-check" data-index="<?php echo $indiceArray; ?>" data-tarjeta="4" onchange="seleccionarTarjeta(<?php echo $indiceArray; ?>, this.checked ? 4 : 0)" <?php echo ((int)($jugador['tarjeta'] ?? 0) === 4) ? 'checked' : ''; ?>> ⬛
+                                                            </label>
+                                                        </div>
+                                                    <?php else: ?>
+                                                        <div class="d-flex justify-content-center gap-1">
+                                                            <button type="button" class="tarjeta-btn" 
+                                                                    data-tarjeta="1"
+                                                                    data-index="<?php echo $indiceArray; ?>"
+                                                                    onclick="seleccionarTarjeta(<?php echo $indiceArray; ?>, 1)"
+                                                                    title="Tarjeta Amarilla">🟨</button>
+                                                            <button type="button" class="tarjeta-btn" 
+                                                                    data-tarjeta="3"
+                                                                    data-index="<?php echo $indiceArray; ?>"
+                                                                    onclick="seleccionarTarjeta(<?php echo $indiceArray; ?>, 3)"
+                                                                    title="Tarjeta Roja">🟥</button>
+                                                            <button type="button" class="tarjeta-btn" 
+                                                                    data-tarjeta="4"
+                                                                    data-index="<?php echo $indiceArray; ?>"
+                                                                    onclick="seleccionarTarjeta(<?php echo $indiceArray; ?>, 4)"
+                                                                    title="Tarjeta Negra">⬛</button>
+                                                        </div>
+                                                    <?php endif; ?>
+                                                    <input type="hidden" name="jugadores[<?php echo $indiceArray; ?>][tarjeta]" 
+                                                           id="tarjeta_<?php echo $indiceArray; ?>" 
+                                                           data-codigo-equipo="<?php echo htmlspecialchars($jugador['codigo_equipo'] ?? ''); ?>"
+                                                           value="<?php echo $jugador['tarjeta'] ?? 0; ?>">
                                                 </td>
                                                 
                                                 <!-- Estadísticas: pos - gan - per - efect (≤10% ancho) -->
@@ -1003,6 +1053,8 @@ $action_param = $use_standalone ? '?' : '&';
                                                        value="<?php echo $jugador['id']; ?>">
                                                 <input type="hidden" name="jugadores[<?php echo $indiceArray; ?>][id_usuario]" 
                                                        value="<?php echo $jugador['id_usuario']; ?>">
+                                                <input type="hidden" name="jugadores[<?php echo $indiceArray; ?>][codigo_equipo]"
+                                                       value="<?php echo htmlspecialchars($jugador['codigo_equipo'] ?? ''); ?>">
                                                 <input type="hidden" name="jugadores[<?php echo $indiceArray; ?>][secuencia]" 
                                                        value="<?php echo $jugador['secuencia']; ?>">
                                                 <input type="hidden" name="jugadores[<?php echo $indiceArray; ?>][resultado1]" 
@@ -1413,6 +1465,8 @@ function actualizarEstadoPorMesa() {
         if (ff) ff.disabled = !habilitado;
         const tarjetas = document.querySelectorAll('[data-index="' + i + '"].tarjeta-btn');
         tarjetas.forEach(btn => { btn.disabled = !habilitado; });
+        const tarjetasCheck = document.querySelectorAll('.tarjeta-check[data-index="' + i + '"]');
+        tarjetasCheck.forEach(chk => { chk.disabled = !habilitado; });
     }
     const penaMesaC = document.getElementById('pena_mesa_chancleta');
     const penaMesaZ = document.getElementById('pena_mesa_zapato');
@@ -1469,6 +1523,33 @@ function actualizarEstadoBotonGuardar() {
 // Sanción 40: Amarilla (adv. adm., no resta pts). Sanción 80: 0 prev→Amarilla, ya amarilla→Roja
 const SANCION_AMARILLA = 40;
 const SANCION_MAXIMA = 80;
+const ES_TORNEO_PAREJAS = <?php echo $esTorneoParejas ? 'true' : 'false'; ?>;
+let sincronizandoPorEquipo = false;
+
+function sincronizarControlesPorCodigoEquipo(codigoEquipo, campo, valor, indiceOrigen) {
+    if (!ES_TORNEO_PAREJAS || !codigoEquipo || sincronizandoPorEquipo) return;
+    sincronizandoPorEquipo = true;
+    for (let i = 0; i < 4; i++) {
+        if (i === indiceOrigen) continue;
+        const inputCodigo = document.querySelector('input[name="jugadores[' + i + '][codigo_equipo]"]');
+        if (!inputCodigo || (inputCodigo.value || '').trim() !== codigoEquipo) continue;
+
+        if (campo === 'sancion') {
+            const inputSancion = document.querySelector('input[name="jugadores[' + i + '][sancion]"]');
+            if (inputSancion) {
+                inputSancion.value = String(parseInt(valor, 10) || 0);
+                validarSancionYTarjeta(i);
+            }
+        } else if (campo === 'ff') {
+            const inputFf = document.getElementById('ff_' + i);
+            if (inputFf) inputFf.checked = !!valor;
+        } else if (campo === 'tarjeta') {
+            const tarjetaValor = parseInt(valor, 10) || 0;
+            seleccionarTarjeta(i, tarjetaValor, true);
+        }
+    }
+    sincronizandoPorEquipo = false;
+}
 
 function validarSancionYTarjeta(index) {
     const input = document.querySelector('input[name="jugadores[' + index + '][sancion]"]');
@@ -1517,17 +1598,21 @@ function validarSancionYTarjeta(index) {
         const nuevaTarjeta = tarjetaInscritos >= 1 ? 3 : 1;
         if (nuevaTarjeta !== tarjetaForm) seleccionarTarjeta(index, nuevaTarjeta);
     }
+
+    const codigoEquipoInput = document.querySelector('input[name="jugadores[' + index + '][codigo_equipo]"]');
+    const codigoEquipo = codigoEquipoInput ? (codigoEquipoInput.value || '').trim() : '';
+    sincronizarControlesPorCodigoEquipo(codigoEquipo, 'sancion', val, index);
 }
 
 // Función para seleccionar tarjeta
-function seleccionarTarjeta(index, tarjeta) {
+function seleccionarTarjeta(index, tarjeta, forzarValor = false) {
     const campoHidden = document.getElementById('tarjeta_' + index);
     if (!campoHidden) return;
     
     const tarjetaActual = parseInt(campoHidden.value) || 0;
     
     // Si se hace clic en el mismo botón, deseleccionar
-    if (tarjetaActual === tarjeta) {
+    if (!forzarValor && tarjetaActual === tarjeta) {
         tarjeta = 0;
     }
     
@@ -1545,6 +1630,15 @@ function seleccionarTarjeta(index, tarjeta) {
     
     // Actualizar campo hidden
     campoHidden.value = tarjeta;
+
+    // En modalidad parejas con checkboxes, mantener seleccion unica visual.
+    if (ES_TORNEO_PAREJAS) {
+        const checks = document.querySelectorAll('.tarjeta-check[data-index="' + index + '"]');
+        checks.forEach(function (chk) {
+            const valorChk = parseInt(chk.getAttribute('data-tarjeta'), 10) || 0;
+            chk.checked = (tarjeta > 0 && valorChk === tarjeta);
+        });
+    }
     
     // Actualizar indicador de amarilla/roja por acumulación (cuando se selecciona amarilla directa)
     validarSancionYTarjeta(index);
@@ -1554,6 +1648,10 @@ function seleccionarTarjeta(index, tarjeta) {
     
     // Actualizar estado del botón guardar (importante para tarjetas rojas y negras)
     actualizarEstadoBotonGuardar();
+
+    const codigoEquipoInput = document.querySelector('input[name="jugadores[' + index + '][codigo_equipo]"]');
+    const codigoEquipo = codigoEquipoInput ? (codigoEquipoInput.value || '').trim() : '';
+    sincronizarControlesPorCodigoEquipo(codigoEquipo, 'tarjeta', tarjeta, index);
 }
 
 // Un solo indicador por mesa: sincroniza pena_mesa con los 4 hidden chancleta/zapato
