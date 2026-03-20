@@ -14,7 +14,9 @@ if (!in_array($tipo, $allowed, true)) {
 if ($tipo === 'por_club') {
     $tipo = 'clubes_detallado';
 }
-$esEquipos = (int)($torneo['modalidad'] ?? 0) === 3;
+$modalidadTorneo = (int)($torneo['modalidad'] ?? 0);
+$esEquipos = $modalidadTorneo === 3;
+$esParejas = in_array($modalidadTorneo, [2, 4], true);
 if ($tipo === 'general' && !$esEquipos) {
     $tipo = 'consolidado';
 }
@@ -114,13 +116,37 @@ if ($tipo === 'clubes_resumido') {
     $data = ResultadosReporteData::cargar($pdo, $torneo_id, $torneo);
     $h1p = $tipo === 'posiciones' ? 'Tabla de posiciones — ' : 'Resultados general — ';
     echo '<h1>' . $h1p . $nombreTorneo . '</h1><div class="meta">' . $fechaTor . ' · ' . $fechaGen . '</div>';
-    echo '<table><tr><th>Pos</th><th>Jugador</th><th>Club</th><th>Equipo</th><th>G</th><th>P</th><th>Ef.</th><th>Pts</th><th>Rnk</th><th>GFF</th><th>Sanc.</th><th>Tarj.</th></tr>';
+    echo '<table><tr><th>Pos</th><th>' . ($esParejas ? 'Participantes' : 'Jugador') . '</th><th>Club</th><th>Equipo</th><th>G</th><th>P</th><th>Ef.</th><th>Pts</th><th>Rnk</th><th>GFF</th><th>Sanc.</th><th>Tarj.</th></tr>';
     $n = 0;
-    foreach ($data['participantes'] as $p) {
+    $filas = $data['participantes'];
+    if ($esParejas) {
+        $porCodigo = [];
+        foreach ($filas as $p0) {
+            $codigo = trim((string)($p0['codigo_equipo'] ?? ''));
+            if ($codigo === '' || isset($porCodigo[$codigo])) {
+                continue;
+            }
+            $porCodigo[$codigo] = $p0;
+        }
+        $filas = array_values($porCodigo);
+    }
+    foreach ($filas as $p) {
         $n++;
         $pos = (int)($p['posicion'] ?? 0) ?: $n;
         $eq = trim(($p['codigo_equipo'] ?? '') . ' ' . ($p['nombre_equipo'] ?? ''));
-        echo '<tr><td class="num">' . $pos . '</td><td>' . $esc($p['nombre_completo'] ?? '') . '</td><td>' . $esc($p['club_nombre'] ?? '') . '</td><td>' . $esc($eq) . '</td><td class="num">' . (int)$p['ganados'] . '</td><td class="num">' . (int)$p['perdidos'] . '</td><td class="num">' . (int)$p['efectividad'] . '</td><td class="num">' . (int)$p['puntos'] . '</td><td class="num">' . (int)$p['ptosrnk'] . '</td><td class="num">' . (int)$p['gff'] . '</td><td class="num">' . (int)$p['sancion'] . '</td><td class="num">' . $esc(ResultadosReporteData::tarjetaTexto($p['tarjeta'] ?? 0)) . '</td></tr>';
+        $jugadorHtml = $esc($p['nombre_completo'] ?? '');
+        if ($esParejas) {
+            $parejaRaw = trim((string)($p['pareja_display'] ?? $p['nombre_equipo'] ?? ''));
+            if ($parejaRaw === '') {
+                $parejaRaw = (string)($p['nombre_completo'] ?? '');
+            }
+            $partes = array_values(array_filter(array_map('trim', explode(' / ', $parejaRaw, 2))));
+            $jugadorHtml = $esc($partes[0] ?? $parejaRaw);
+            if (!empty($partes[1])) {
+                $jugadorHtml .= '<br>' . $esc($partes[1]);
+            }
+        }
+        echo '<tr><td class="num">' . $pos . '</td><td>' . $jugadorHtml . '</td><td>' . $esc($p['club_nombre'] ?? '') . '</td><td>' . $esc($eq) . '</td><td class="num">' . (int)$p['ganados'] . '</td><td class="num">' . (int)$p['perdidos'] . '</td><td class="num">' . (int)$p['efectividad'] . '</td><td class="num">' . (int)$p['puntos'] . '</td><td class="num">' . (int)$p['ptosrnk'] . '</td><td class="num">' . (int)$p['gff'] . '</td><td class="num">' . (int)$p['sancion'] . '</td><td class="num">' . $esc(ResultadosReporteData::tarjetaTexto($p['tarjeta'] ?? 0)) . '</td></tr>';
     }
     echo '</table>';
 } elseif ($tipo === 'equipos_resumido') {
@@ -161,12 +187,33 @@ if ($tipo === 'clubes_resumido') {
         }
         echo '</table>';
     }
-    echo '<h2>Clasificación</h2><table><tr><th>Pos</th><th>Jugador</th><th>Club</th><th>G</th><th>P</th><th>Pts</th></tr>';
+    echo '<h2>Clasificación</h2><table><tr><th>Pos</th><th>' . ($esParejas ? 'Participantes' : 'Jugador') . '</th><th>Club</th><th>G</th><th>P</th><th>Pts</th></tr>';
     $n = 0;
-    foreach ($data['participantes'] as $p) {
+    $filas = $data['participantes'];
+    if ($esParejas) {
+        $porCodigo = [];
+        foreach ($filas as $p0) {
+            $codigo = trim((string)($p0['codigo_equipo'] ?? ''));
+            if ($codigo === '' || isset($porCodigo[$codigo])) {
+                continue;
+            }
+            $porCodigo[$codigo] = $p0;
+        }
+        $filas = array_values($porCodigo);
+    }
+    foreach ($filas as $p) {
         $n++;
         $pos = (int)($p['posicion'] ?? 0) ?: $n;
-        echo '<tr><td class="num">' . $pos . '</td><td>' . $esc($p['nombre_completo'] ?? '') . '</td><td>' . $esc($p['club_nombre'] ?? '') . '</td><td class="num">' . (int)$p['ganados'] . '</td><td class="num">' . (int)$p['perdidos'] . '</td><td class="num">' . (int)$p['puntos'] . '</td></tr>';
+        $jugadorHtml = $esc($p['nombre_completo'] ?? '');
+        if ($esParejas) {
+            $parejaRaw = trim((string)($p['pareja_display'] ?? $p['nombre_equipo'] ?? ''));
+            $partes = array_values(array_filter(array_map('trim', explode(' / ', $parejaRaw, 2))));
+            $jugadorHtml = $esc($partes[0] ?? $parejaRaw);
+            if (!empty($partes[1])) {
+                $jugadorHtml .= '<br>' . $esc($partes[1]);
+            }
+        }
+        echo '<tr><td class="num">' . $pos . '</td><td>' . $jugadorHtml . '</td><td>' . $esc($p['club_nombre'] ?? '') . '</td><td class="num">' . (int)$p['ganados'] . '</td><td class="num">' . (int)$p['perdidos'] . '</td><td class="num">' . (int)$p['puntos'] . '</td></tr>';
     }
     echo '</table>';
 }

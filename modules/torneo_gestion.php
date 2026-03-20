@@ -2299,7 +2299,7 @@ function obtenerDatosGestionarInscripcionesEquipos($torneo_id) {
     $equipos_por_club = $equipos_por_club_ordenado;
     
     $modalidad = (int)($torneo['modalidad'] ?? 0);
-    $es_parejas = ($modalidad === 2);
+    $es_parejas = in_array($modalidad, [2, 4], true);
     $jugadores_por_equipo = $es_parejas ? 2 : max(2, (int)($torneo['pareclub'] ?? 4));
     
     return [

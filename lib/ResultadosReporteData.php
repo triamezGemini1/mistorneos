@@ -60,7 +60,7 @@ final class ResultadosReporteData
         $stmt = $pdo->prepare($sqlParticipantes);
         $stmt->execute([$torneoId]);
         $participantes = $stmt->fetchAll(PDO::FETCH_ASSOC);
-        $esParejas = (int)($torneo['modalidad'] ?? 0) === 2;
+        $esParejas = in_array((int)($torneo['modalidad'] ?? 0), [2, 4], true);
 
         $parejaDisplayPorCodigo = [];
         if ($esParejas) {
