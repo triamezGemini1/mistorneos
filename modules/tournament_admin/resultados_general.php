@@ -209,6 +209,8 @@ try {
                 continue;
             }
             $nombres = array_values(array_unique($nombresPorCodigo[$codigo]));
+            $participante['pareja_nombre_1'] = $nombres[0] ?? '';
+            $participante['pareja_nombre_2'] = $nombres[1] ?? '';
             $participante['pareja_display'] = implode(' / ', array_slice($nombres, 0, 2));
             $participante['nombre_equipo'] = $participante['pareja_display'];
         }
@@ -398,10 +400,23 @@ $base_url_return = $use_standalone ? $script_actual : 'index.php?page=torneo_ges
                             </td>
                             <td class="border border-gray-300 px-4 py-3 text-gray-800">
                                 <?php if ($es_parejas): ?>
-                                    <span class="font-semibold">
-                                        <i class="fas fa-user-friends mr-1"></i>
-                                        <?php echo htmlspecialchars($participante['nombre_completo'] ?? 'N/A'); ?>
-                                    </span>
+                                    <?php
+                                        $pareja1 = trim((string)($participante['pareja_nombre_1'] ?? ''));
+                                        $pareja2 = trim((string)($participante['pareja_nombre_2'] ?? ''));
+                                        if ($pareja1 === '' && $pareja2 === '') {
+                                            $parejaRaw = trim((string)($participante['nombre_completo'] ?? 'N/A'));
+                                            $partesPareja = array_map('trim', explode(' / ', $parejaRaw, 2));
+                                            $pareja1 = $partesPareja[0] ?? '';
+                                            $pareja2 = $partesPareja[1] ?? '';
+                                        }
+                                    ?>
+                                    <div class="font-semibold leading-tight">
+                                        <div><i class="fas fa-user-friends mr-1"></i><?php echo htmlspecialchars($pareja1 !== '' ? $pareja1 : 'N/A'); ?></div>
+                                        <?php if ($pareja2 !== ''): ?>
+                                            <div class="text-gray-500">/</div>
+                                            <div><?php echo htmlspecialchars($pareja2); ?></div>
+                                        <?php endif; ?>
+                                    </div>
                                 <?php else: ?>
                                     <a href="<?php echo htmlspecialchars($url_resumen); ?>" 
                                        class="text-purple-600 hover:text-purple-800 hover:underline font-semibold">
