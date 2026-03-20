@@ -25,13 +25,14 @@ $letras = [1 => 'A', 2 => 'C', 3 => 'B', 4 => 'D'];
         :root {
             --color-bg: #f4f6f8;
             --color-surface: #ffffff;
-            --color-iden-bg: #003366;
-            --color-iden-text: #ffffff;
-            --color-mesa-bg: #ffcc00;
-            --color-mesa-text: #111111;
+            --color-iden-bg: #4ade80;
+            --color-iden-text: #000000;
+            --color-mesa-bg: #60a5fa;
+            --color-mesa-text: #000000;
             --color-border: #0f172a;
-            --color-separator: #1e293b;
+            --color-separator: #fb923c;
             --color-row-hover: #e2e8f0;
+            --color-bye-bg: #fef08a;
             --cell-height: 38px;
             --cell-font-size: 0.85rem;
             --grid-min-col: 75px;
@@ -114,7 +115,7 @@ $letras = [1 => 'A', 2 => 'C', 3 => 'B', 4 => 'D'];
         .matrix-iden { background: var(--color-iden-bg); color: var(--color-iden-text); }
         .matrix-mesa { background: var(--color-mesa-bg); color: var(--color-mesa-text); }
         .matrix-head { text-transform: uppercase; letter-spacing: 0.02em; }
-        .matrix-bye { font-style: italic; }
+        .matrix-bye { font-style: italic; background: var(--color-bye-bg) !important; color: #000000; }
         .matrix-cell:nth-child(2n) { border-right: 2px solid var(--color-separator); }
         .matrix-cell.is-row-hover { filter: brightness(0.94); box-shadow: inset 0 0 0 9999px color-mix(in srgb, var(--color-row-hover) 22%, transparent); }
 
