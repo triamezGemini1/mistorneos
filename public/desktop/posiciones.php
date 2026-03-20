@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 /**
  * Publicación de Resultados - Tabla de clasificación (Desktop).
  * Replica la lógica de recalcularPosiciones() para mostrar la tabla con los mismos criterios de desempate que la web.
@@ -24,7 +24,7 @@ if ($torneo_id > 0) {
             recalcularPosiciones($torneo_id);
             $ent = logica_torneo_where_entidad('i');
             $st = $pdo->prepare("
-                SELECT i.id, i.id_usuario, i.posicion, i.ganados, i.perdidos, i.efectividad, i.puntos, i.ptosrnk, i.sancion, i.tarjeta,
+                SELECT i.id, i.id_usuario, i.codigo_equipo, i.posicion, i.ganados, i.perdidos, i.efectividad, i.puntos, i.ptosrnk, i.sancion, i.tarjeta,
                        u.nombre AS jugador_nombre, u.username, u.cedula,
                        c.nombre AS club_nombre
                 FROM inscritos i
@@ -35,6 +35,54 @@ if ($torneo_id > 0) {
             ");
             $st->execute(array_merge([$torneo_id], $ent['bind']));
             $posiciones = $st->fetchAll(PDO::FETCH_ASSOC);
+
+            $modalidadT = (int)($torneo['modalidad'] ?? 0);
+            $esParejasDesktop = in_array($modalidadT, [2, 4], true);
+            if ($esParejasDesktop && $posiciones !== []) {
+                $stN = $pdo->prepare("
+                    SELECT i.codigo_equipo, u.nombre AS nombre_completo
+                    FROM inscritos i
+                    INNER JOIN usuarios u ON i.id_usuario = u.id
+                    WHERE i.torneo_id = ?
+                      AND i.codigo_equipo IS NOT NULL AND TRIM(i.codigo_equipo) != ''
+                      AND i.codigo_equipo != '000-000'
+                      AND i.estatus != 4" . $ent['sql'] . "
+                    ORDER BY i.codigo_equipo ASC, u.nombre ASC
+                ");
+                $stN->execute(array_merge([$torneo_id], $ent['bind']));
+                $nombresPorCodigo = [];
+                foreach ($stN->fetchAll(PDO::FETCH_ASSOC) as $fila) {
+                    $cod = trim((string)($fila['codigo_equipo'] ?? ''));
+                    $nom = trim((string)($fila['nombre_completo'] ?? ''));
+                    if ($cod === '' || $nom === '') {
+                        continue;
+                    }
+                    if (!isset($nombresPorCodigo[$cod])) {
+                        $nombresPorCodigo[$cod] = [];
+                    }
+                    $nombresPorCodigo[$cod][] = $nom;
+                }
+                $dedup = [];
+                $vistos = [];
+                foreach ($posiciones as $p) {
+                    $cod = trim((string)($p['codigo_equipo'] ?? ''));
+                    $clave = ($cod !== '' && $cod !== '000-000')
+                        ? 'c:' . $cod
+                        : 'u:' . (int)($p['id_usuario'] ?? 0);
+                    if (isset($vistos[$clave])) {
+                        continue;
+                    }
+                    $vistos[$clave] = true;
+                    $nombres = [];
+                    if ($cod !== '' && isset($nombresPorCodigo[$cod])) {
+                        $nombres = array_values(array_unique($nombresPorCodigo[$cod]));
+                    }
+                    $p['pareja_nombre_1'] = $nombres[0] ?? '';
+                    $p['pareja_nombre_2'] = $nombres[1] ?? '';
+                    $dedup[] = $p;
+                }
+                $posiciones = $dedup;
+            }
         }
     } catch (Throwable $e) {
     }
@@ -75,9 +123,12 @@ require_once __DIR__ . '/desktop_layout.php';
     </div>
 
     <?php if ($torneo && $torneo_id > 0): ?>
+    <?php
+    $esParejasVista = in_array((int)($torneo['modalidad'] ?? 0), [2, 4], true);
+    ?>
     <div class="card border-0 shadow-sm">
         <div class="card-header bg-light">
-            <h5 class="mb-0"><?= htmlspecialchars($torneo['nombre'] ?? 'Torneo') ?> — Clasificación General</h5>
+            <h5 class="mb-0"><?= htmlspecialchars($torneo['nombre'] ?? 'Torneo') ?> — <?= $esParejasVista ? 'Clasificación de Parejas' : 'Clasificación General' ?></h5>
         </div>
         <div class="card-body p-0">
             <?php if (empty($posiciones)): ?>
@@ -88,8 +139,8 @@ require_once __DIR__ . '/desktop_layout.php';
                     <thead class="table-light">
                         <tr>
                             <th>Pos</th>
-                            <th>ID</th>
-                            <th>Jugador</th>
+                            <th><?= $esParejasVista ? 'Cód. pareja' : 'ID' ?></th>
+                            <th><?= $esParejasVista ? 'Participantes' : 'Jugador' ?></th>
                             <th>Club</th>
                             <th>G</th>
                             <th>P</th>
@@ -115,8 +166,23 @@ require_once __DIR__ . '/desktop_layout.php';
                         ?>
                         <tr class="<?= $medalla ?>">
                             <td><strong><?= $posicion_mostrar ?></strong></td>
-                            <td><?= (int)($pos['id_usuario'] ?? 0) ?></td>
-                            <td><?= htmlspecialchars($pos['jugador_nombre'] ?? $pos['username'] ?? '') ?></td>
+                            <td><?= $esParejasVista && !empty($pos['codigo_equipo']) ? htmlspecialchars((string)$pos['codigo_equipo']) : (int)($pos['id_usuario'] ?? 0) ?></td>
+                            <td>
+                                <?php if ($esParejasVista): ?>
+                                    <?php
+                                    $p1 = trim((string)($pos['pareja_nombre_1'] ?? ''));
+                                    $p2 = trim((string)($pos['pareja_nombre_2'] ?? ''));
+                                    ?>
+                                    <div class="fw-bold">
+                                        <div><?= htmlspecialchars($p1 !== '' ? $p1 : ($pos['jugador_nombre'] ?? '')) ?></div>
+                                        <?php if ($p2 !== ''): ?>
+                                            <div><?= htmlspecialchars($p2) ?></div>
+                                        <?php endif; ?>
+                                    </div>
+                                <?php else: ?>
+                                    <?= htmlspecialchars($pos['jugador_nombre'] ?? $pos['username'] ?? '') ?>
+                                <?php endif; ?>
+                            </td>
                             <td><?= htmlspecialchars($pos['club_nombre'] ?? '—') ?></td>
                             <td><?= (int)($pos['ganados'] ?? 0) ?></td>
                             <td><?= (int)($pos['perdidos'] ?? 0) ?></td>

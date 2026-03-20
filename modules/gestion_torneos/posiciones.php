@@ -5,6 +5,11 @@
 $script_actual = basename($_SERVER['PHP_SELF'] ?? '');
 $use_standalone = in_array($script_actual, ['admin_torneo.php', 'panel_torneo.php']);
 $base_url = $use_standalone ? $script_actual : 'index.php?page=torneo_gestion';
+// Torneos parejas (2) y parejas fijas (4): reporte en pantalla con una fila por pareja.
+if (!isset($es_parejas)) {
+    $es_parejas = false;
+}
+$es_parejas = $es_parejas || in_array((int)($torneo['modalidad'] ?? 0), [2, 4], true);
 ?>
 
 <?php if (!$use_standalone): ?>
@@ -103,8 +108,8 @@ $base_url = $use_standalone ? $script_actual : 'index.php?page=torneo_gestion';
                                 <thead class="thead-dark">
                                     <tr>
                                         <th>Pos</th>
-                                        <th>ID Usuario</th>
-                                        <th>Jugador</th>
+                                        <th><?php echo $es_parejas ? 'Código Pareja' : 'ID Usuario'; ?></th>
+                                        <th><?php echo $es_parejas ? 'Participantes' : 'Jugador'; ?></th>
                                         <th>Equipo</th>
                                         <th>Club</th>
                                         <th>G</th>
@@ -150,13 +155,26 @@ $base_url = $use_standalone ? $script_actual : 'index.php?page=torneo_gestion';
                                                     <i class="fas fa-medal text-warning"></i>
                                                 <?php endif; ?>
                                             </td>
-                                            <td><code><?php echo htmlspecialchars($pos['id_usuario'] ?? 'N/A'); ?></code></td>
+                                            <td><code><?php echo htmlspecialchars($es_parejas && !empty($pos['codigo_equipo']) ? $pos['codigo_equipo'] : ($pos['id_usuario'] ?? 'N/A')); ?></code></td>
                                             <td>
+                                                <?php if ($es_parejas): ?>
+                                                    <?php
+                                                        $p1 = trim((string)($pos['pareja_nombre_1'] ?? ''));
+                                                        $p2 = trim((string)($pos['pareja_nombre_2'] ?? ''));
+                                                    ?>
+                                                    <div class="font-weight-bold">
+                                                        <div><i class="fas fa-user-friends mr-1"></i><?php echo htmlspecialchars($p1 !== '' ? $p1 : ($pos['nombre_completo'] ?? 'N/A')); ?></div>
+                                                        <?php if ($p2 !== ''): ?>
+                                                            <div><?php echo htmlspecialchars($p2); ?></div>
+                                                        <?php endif; ?>
+                                                    </div>
+                                                <?php else: ?>
                                                 <a href="<?php echo $base_url . ($use_standalone ? '?' : '&'); ?>action=resumen_individual&torneo_id=<?php echo $torneo['id']; ?>&inscrito_id=<?php echo $pos['id_usuario']; ?>&from=posiciones" 
                                                    class="text-primary">
                                                     <i class="fas fa-user mr-1"></i>
                                                     <?php echo htmlspecialchars($pos['nombre_completo'] ?? $pos['nombre'] ?? 'N/A'); ?>
                                                 </a>
+                                                <?php endif; ?>
                                                 <?php 
                                                 $es_retirado = (isset($pos['estatus']) && ((int)$pos['estatus'] === 4 || $pos['estatus'] === 'retirado'));
                                                 if ($es_retirado): ?>

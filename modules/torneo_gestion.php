@@ -1516,6 +1516,8 @@ function obtenerDatosPosiciones($torneo_id) {
     $torneo = $stmt->fetch(PDO::FETCH_ASSOC);
     
     $es_modalidad_equipos = (int)($torneo['modalidad'] ?? 0) === 3;
+    $modalidadTorneoPos = (int)($torneo['modalidad'] ?? 0);
+    $es_parejas = in_array($modalidadTorneoPos, [2, 4], true);
     
     // SIEMPRE obtener TODOS los jugadores individuales con sus estadísticas, incluyendo el nombre del equipo
     // Asegurar que las posiciones estén actualizadas
@@ -1598,11 +1600,60 @@ function obtenerDatosPosiciones($torneo_id) {
         }
     }
     unset($pos);
+
+    // Parejas (2 y 4): una fila por codigo_equipo; nombres en dos líneas en la vista.
+    if ($es_parejas) {
+        $stmtParejas = $pdo->prepare("
+            SELECT i.codigo_equipo, u.nombre AS nombre_completo
+            FROM inscritos i
+            INNER JOIN usuarios u ON i.id_usuario = u.id
+            WHERE i.torneo_id = ?
+              AND i.codigo_equipo IS NOT NULL
+              AND i.codigo_equipo != ''
+              AND i.codigo_equipo != '000-000'
+              AND i.estatus != 'retirado'
+            ORDER BY i.codigo_equipo ASC, u.nombre ASC
+        ");
+        $stmtParejas->execute([$torneo_id]);
+        $nombresPorCodigo = [];
+        foreach ($stmtParejas->fetchAll(PDO::FETCH_ASSOC) as $filaPareja) {
+            $codigo = trim((string)($filaPareja['codigo_equipo'] ?? ''));
+            $nombre = trim((string)($filaPareja['nombre_completo'] ?? ''));
+            if ($codigo === '' || $nombre === '') {
+                continue;
+            }
+            if (!isset($nombresPorCodigo[$codigo])) {
+                $nombresPorCodigo[$codigo] = [];
+            }
+            $nombresPorCodigo[$codigo][] = $nombre;
+        }
+        $dedup = [];
+        $vistos = [];
+        foreach ($posiciones as $pos) {
+            $codigo = trim((string)($pos['codigo_equipo'] ?? ''));
+            $clave = ($codigo !== '' && $codigo !== '000-000')
+                ? 'c:' . $codigo
+                : 'u:' . (int)($pos['id_usuario'] ?? 0);
+            if (isset($vistos[$clave])) {
+                continue;
+            }
+            $vistos[$clave] = true;
+            $nombres = [];
+            if ($codigo !== '' && isset($nombresPorCodigo[$codigo])) {
+                $nombres = array_values(array_unique($nombresPorCodigo[$codigo]));
+            }
+            $pos['pareja_nombre_1'] = $nombres[0] ?? '';
+            $pos['pareja_nombre_2'] = $nombres[1] ?? '';
+            $dedup[] = $pos;
+        }
+        $posiciones = $dedup;
+    }
     
     return [
         'torneo' => $torneo,
         'posiciones' => $posiciones,
-        'es_modalidad_equipos' => $es_modalidad_equipos
+        'es_modalidad_equipos' => $es_modalidad_equipos,
+        'es_parejas' => $es_parejas,
     ];
 }
 
