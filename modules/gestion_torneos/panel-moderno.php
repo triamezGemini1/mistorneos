@@ -685,7 +685,7 @@ tailwind.config = {
                             <!-- Mostrar Resultados / Posiciones -->
                             <a href="<?php echo $base_url . ($use_standalone ? '?' : '&'); ?>action=posiciones&torneo_id=<?php echo $torneo['id']; ?>" 
                                class="tw-btn bg-purple-500 hover:bg-purple-600 text-white">
-                                <i class="fas fa-list-ol"></i> Resultados
+                                <i class="fas fa-list-ol"></i> <?php echo ($es_modalidad_parejas || $es_modalidad_parejas_fijas) ? 'Resultados Parejas' : 'Resultados'; ?>
                             </a>
                             
                             <!-- Resultados por Club -->
