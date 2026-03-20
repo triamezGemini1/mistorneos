@@ -34,43 +34,57 @@ final class ParejasResultadosService
             $codigoPorUsuario[(int)$row['id_usuario']] = trim((string)($row['codigo_equipo'] ?? ''));
         }
 
-        $equipos = [];
+        // Parejas por slot de mesa: A = secuencias 1-2, B = secuencias 3-4.
+        // La captura se toma por pareja (fila líder: secuencia 1 y 3), nunca por jugador individual.
+        $parejas = [
+            'A' => ['slot' => 'A', 'codigo' => '', 'puntos' => 0, 'sancion' => 0, 'ff' => 0, 'tarjeta' => 0, 'chancleta' => 0, 'zapato' => 0],
+            'B' => ['slot' => 'B', 'codigo' => '', 'puntos' => 0, 'sancion' => 0, 'ff' => 0, 'tarjeta' => 0, 'chancleta' => 0, 'zapato' => 0],
+        ];
         foreach ($jugadoresPost as $j) {
-            $idUsuario = (int)($j['id_usuario'] ?? 0);
-            $codigo = trim((string)($codigoPorUsuario[$idUsuario] ?? ''));
-            if ($codigo === '' || $codigo === '000-000') {
-                throw new Exception('Todos los jugadores de parejas deben tener codigo_equipo válido.');
-            }
             $secuencia = (int)($j['secuencia'] ?? 0);
             $slotPareja = in_array($secuencia, [1, 2], true) ? 'A' : 'B';
-            if (!isset($equipos[$codigo])) {
-                $equipos[$codigo] = [
-                    'codigo' => $codigo,
-                    'slot' => $slotPareja,
-                    'jugadores' => [],
-                    'puntos' => 0,
-                    'sancion' => (int)($j['sancion'] ?? 0),
-                    'ff' => (isset($j['ff']) && ($j['ff'] == '1' || $j['ff'] === true || $j['ff'] === 'on')) ? 1 : 0,
-                    'tarjeta' => (int)($j['tarjeta'] ?? 0),
-                    'chancleta' => (int)($j['chancleta'] ?? 0),
-                    'zapato' => (int)($j['zapato'] ?? 0),
-                ];
-            }
-            if (($equipos[$codigo]['slot'] ?? $slotPareja) !== $slotPareja) {
-                throw new Exception("Inconsistencia detectada: el codigo_equipo {$codigo} aparece en ambas parejas de la mesa.");
-            }
-            $equipos[$codigo]['jugadores'][] = $j;
             if ($secuencia === 1 || $secuencia === 3) {
-                $equipos[$codigo]['puntos'] = (int)($j['resultado1'] ?? 0);
+                $parejas[$slotPareja]['puntos'] = (int)($j['resultado1'] ?? 0);
+                $parejas[$slotPareja]['sancion'] = (int)($j['sancion'] ?? 0);
+                $parejas[$slotPareja]['ff'] = (isset($j['ff']) && ($j['ff'] == '1' || $j['ff'] === true || $j['ff'] === 'on')) ? 1 : 0;
+                $parejas[$slotPareja]['tarjeta'] = (int)($j['tarjeta'] ?? 0);
+                $parejas[$slotPareja]['chancleta'] = (int)($j['chancleta'] ?? 0);
+                $parejas[$slotPareja]['zapato'] = (int)($j['zapato'] ?? 0);
             }
         }
 
-        if (count($equipos) !== 2) {
-            throw new Exception('La mesa de parejas debe tener exactamente 2 codigos de equipo.');
+        $stmtCodPareja = $pdo->prepare("
+            SELECT
+                CASE WHEN pr.secuencia IN (1,2) THEN 'A' ELSE 'B' END AS slot_pareja,
+                i.codigo_equipo
+            FROM partiresul pr
+            INNER JOIN inscritos i ON i.torneo_id = pr.id_torneo AND i.id_usuario = pr.id_usuario
+            WHERE pr.id_torneo = ? AND pr.partida = ? AND pr.mesa = ?
+            GROUP BY slot_pareja, i.codigo_equipo
+            ORDER BY slot_pareja ASC
+        ");
+        $stmtCodPareja->execute([$torneoId, $ronda, $mesa]);
+        $codigosMesa = $stmtCodPareja->fetchAll(PDO::FETCH_ASSOC);
+        foreach ($codigosMesa as $filaCodigo) {
+            $slot = (string)($filaCodigo['slot_pareja'] ?? '');
+            $codigo = trim((string)($filaCodigo['codigo_equipo'] ?? ''));
+            if (!isset($parejas[$slot])) {
+                continue;
+            }
+            if ($codigo === '' || $codigo === '000-000') {
+                throw new Exception("La pareja {$slot} no tiene codigo_equipo válido.");
+            }
+            if ($parejas[$slot]['codigo'] !== '' && $parejas[$slot]['codigo'] !== $codigo) {
+                throw new Exception("Se detectaron múltiples codigos en la pareja {$slot}.");
+            }
+            $parejas[$slot]['codigo'] = $codigo;
         }
-        $codigos = array_keys($equipos);
-        $codigoA = $codigos[0];
-        $codigoB = $codigos[1];
+        if ($parejas['A']['codigo'] === '' || $parejas['B']['codigo'] === '') {
+            throw new Exception('No se pudo determinar el codigo_equipo de ambas parejas en la mesa.');
+        }
+        if ($parejas['A']['codigo'] === $parejas['B']['codigo']) {
+            throw new Exception('Ambas parejas comparten el mismo codigo_equipo; la mesa está inconsistente.');
+        }
 
         $tarjetaPreviaPorUsuario = SancionesHelper::getTarjetaPreviaDesdePartidasAnteriores($pdo, $torneoId, $ronda, $idsUsuarios);
         $tarjetaPreviaPorEquipo = [];
@@ -82,7 +96,8 @@ final class ParejasResultadosService
             $tarjetaPreviaPorEquipo[$codigo] = max((int)($tarjetaPreviaPorEquipo[$codigo] ?? 0), (int)$tarjetaPrev);
         }
 
-        foreach ($equipos as $codigo => &$eq) {
+        foreach ($parejas as $slot => &$eq) {
+            $codigo = (string)$eq['codigo'];
             if ($eq['sancion'] > 0 || $eq['tarjeta'] > 0) {
                 $procesado = SancionesHelper::procesar(
                     (int)$eq['sancion'],
@@ -100,14 +115,15 @@ final class ParejasResultadosService
         }
         unset($eq);
 
-        $hayForfait = ((int)$equipos[$codigoA]['ff'] === 1 || (int)$equipos[$codigoB]['ff'] === 1);
-        $hayTarjetaGrave = (in_array((int)$equipos[$codigoA]['tarjeta'], [3, 4], true) || in_array((int)$equipos[$codigoB]['tarjeta'], [3, 4], true));
-        $esEmpateManoNula = (!$hayForfait && !$hayTarjetaGrave && $equipos[$codigoA]['puntos'] > 0 && $equipos[$codigoA]['puntos'] === $equipos[$codigoB]['puntos']);
+        $hayForfait = ((int)$parejas['A']['ff'] === 1 || (int)$parejas['B']['ff'] === 1);
+        $hayTarjetaGrave = (in_array((int)$parejas['A']['tarjeta'], [3, 4], true) || in_array((int)$parejas['B']['tarjeta'], [3, 4], true));
+        $esEmpateManoNula = (!$hayForfait && !$hayTarjetaGrave && $parejas['A']['puntos'] > 0 && $parejas['A']['puntos'] === $parejas['B']['puntos']);
 
-        $resultadoEquipo = [];
-        foreach ($equipos as $codigo => $eq) {
-            $codigoOponente = $codigo === $codigoA ? $codigoB : $codigoA;
-            $op = $equipos[$codigoOponente];
+        $resultadoPareja = [];
+        foreach (['A', 'B'] as $slot) {
+            $opSlot = $slot === 'A' ? 'B' : 'A';
+            $eq = $parejas[$slot];
+            $op = $parejas[$opSlot];
             $r1 = (int)$eq['puntos'];
             $r2 = (int)$op['puntos'];
             $ef = 0;
@@ -141,7 +157,7 @@ final class ParejasResultadosService
                 $ef = self::calcularEfectividadNormal($r1Ajust, $r2, $puntosTorneo);
             }
 
-            $resultadoEquipo[$codigo] = [
+            $resultadoPareja[$slot] = [
                 'resultado1' => $r1,
                 'resultado2' => $r2,
                 'efectividad' => $ef,
@@ -192,11 +208,7 @@ final class ParejasResultadosService
         ");
 
         $idsTarjetaNegra = [];
-        foreach ($resultadoEquipo as $codigo => $res) {
-            $slotPareja = (string)($equipos[$codigo]['slot'] ?? '');
-            if (!in_array($slotPareja, ['A', 'B'], true)) {
-                throw new Exception("No se pudo determinar la pareja (A/B) para el codigo_equipo {$codigo}.");
-            }
+        foreach ($resultadoPareja as $slotPareja => $res) {
             $secuencia1 = $slotPareja === 'A' ? 1 : 3;
             $secuencia2 = $slotPareja === 'A' ? 2 : 4;
 
