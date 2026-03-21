@@ -4,103 +4,24 @@
  * Panel común para todos los tipos de torneo (individual/parejas/equipos)
  * Se adapta dinámicamente según la modalidad del torneo
  * Diseño con Tailwind CSS - 3 columnas organizadas
+ *
+ * Datos: extract($view_data) en torneo_gestion.php → PanelTorneoViewData::build() + contexto (base_url, use_standalone, user_id, is_admin_general).
+ * Fallback mínimo si la vista se incluye sin el flujo normal (p. ej. rutas legacy).
  */
-require_once __DIR__ . '/../../config/db.php';
-
-$script_actual = basename($_SERVER['PHP_SELF'] ?? '');
-$use_standalone = in_array($script_actual, ['admin_torneo.php', 'panel_torneo.php']);
-$base_url = $use_standalone ? $script_actual : 'index.php?page=torneo_gestion';
-
-// Asegurar que $torneo esté disponible (viene de extract($view_data) en torneo_gestion.php)
-// Si no está disponible después del extract, intentar obtenerlo
-if (!isset($torneo) || empty($torneo)) {
-    // Intentar obtenerlo del torneo_id que debería estar disponible
-    $torneo_id_local = isset($torneo_id) ? (int)$torneo_id : (int)($_GET['torneo_id'] ?? 0);
-    if ($torneo_id_local > 0) {
-        try {
-            $pdo = DB::pdo();
-            $stmt = $pdo->prepare("SELECT t.*, o.nombre as organizacion_nombre FROM tournaments t LEFT JOIN organizaciones o ON t.club_responsable = o.id WHERE t.id = ?");
-            $stmt->execute([$torneo_id_local]);
-            $torneo = $stmt->fetch(PDO::FETCH_ASSOC);
-        } catch (Exception $e) {
-            error_log("Error obteniendo torneo en panel-moderno.php: " . $e->getMessage());
-            $torneo = null;
-        }
+if (!isset($base_url) || !isset($use_standalone)) {
+    $script_actual = basename($_SERVER['PHP_SELF'] ?? '');
+    if (!isset($use_standalone)) {
+        $use_standalone = in_array($script_actual, ['admin_torneo.php', 'panel_torneo.php'], true);
+    }
+    if (!isset($base_url)) {
+        $base_url = $use_standalone ? $script_actual : 'index.php?page=torneo_gestion';
     }
 }
-
-// Asegurar valores por defecto si aún no está disponible
-if (!isset($torneo) || empty($torneo) || !is_array($torneo)) {
-    $torneo = ['id' => $torneo_id_local ?? 0, 'nombre' => 'Torneo', 'modalidad' => 0];
+if (!isset($user_id)) {
+    $user_id = 0;
 }
-
-$page_title = 'Panel de Control - ' . htmlspecialchars($torneo['nombre'] ?? 'Torneo');
-
-// Detectar modalidad del torneo (2 = Parejas, 3 = Equipos, 4 = Parejas fijas)
-$modalidad_num_panel = (int)($torneo['modalidad'] ?? 0);
-$es_modalidad_equipos = ($modalidad_num_panel === 3);
-$es_modalidad_parejas = ($modalidad_num_panel === 2); // Parejas por equipos (mismo flujo que equipos de 4)
-$es_modalidad_parejas_fijas = ($modalidad_num_panel === 4);
-$es_modalidad_equipos_o_parejas = ($es_modalidad_equipos || $es_modalidad_parejas);
-
-// Lógica de bloqueo de inscripciones: equipos, parejas y parejas fijas bloquean desde ronda >=1; otros desde ronda >=2
-$torneo_bloqueado_inscripciones = false;
-if ($ultima_ronda > 0) {
-    $torneo_bloqueado_inscripciones = ($es_modalidad_equipos || $es_modalidad_parejas || $es_modalidad_parejas_fijas) ? ($ultima_ronda >= 1) : ($ultima_ronda >= 2);
-}
-
-// Variables de estado (asegurar que estén disponibles desde view_data después del extract)
-// Nota: Estas variables vienen de obtenerDatosPanel() a través de extract($view_data)
-// Usar variables con diferentes nombres para evitar conflictos con extract()
-$ultima_ronda_val = isset($ultima_ronda) && $ultima_ronda !== null ? (int)$ultima_ronda : (isset($ultimaRonda) && $ultimaRonda !== null ? (int)$ultimaRonda : 0);
-$proxima_ronda_val = isset($proxima_ronda) && $proxima_ronda !== null ? (int)$proxima_ronda : (isset($proximaRonda) && $proximaRonda !== null ? (int)$proximaRonda : ($ultima_ronda_val + 1));
-$ultima_ronda = $ultima_ronda_val;
-$proxima_ronda = $proxima_ronda_val;
-$proximaRonda = $proxima_ronda_val;
-$ultima_ronda_tiene_resultados = isset($ultima_ronda_tiene_resultados) ? (bool)$ultima_ronda_tiene_resultados : false;
-$totalRondas = isset($torneo['rondas']) ? (int)$torneo['rondas'] : 0;
-$puede_generar_ronda = isset($puede_generar_ronda) ? (bool)$puede_generar_ronda : (isset($puedeGenerarRonda) ? (bool)$puedeGenerarRonda : true);
-$puedeGenerar = $puede_generar_ronda;
-$mesas_incompletas = isset($mesas_incompletas) && $mesas_incompletas !== null ? (int)$mesas_incompletas : (isset($mesasIncompletas) && $mesasIncompletas !== null ? (int)$mesasIncompletas : 0);
-$mesasInc = $mesas_incompletas;
-$isLocked = isset($torneo['locked']) ? ((int)$torneo['locked'] === 1) : false;
-// Finalizar torneo: habilitado cuando torneo completado (todas rondas, 0 mesas pendientes); no se exige esperar 20 min
-$correcciones_cierre_at = isset($correcciones_cierre_at) ? $correcciones_cierre_at : null;
-$torneo_completado = $totalRondas > 0 && $ultima_ronda >= $totalRondas && $mesasInc == 0;
-$puedeCerrar = !$isLocked && $ultima_ronda > 0 && $mesasInc == 0 && $torneo_completado;
-// Countdown "correcciones se cierran" desde correcciones_cierre_at (fijado al guardar última mesa; no se resetea)
-$countdown_fin_timestamp = null;
-$mostrar_aviso_20min = false;
-if (!empty($correcciones_cierre_at) && $correcciones_cierre_at !== '0000-00-00 00:00:00') {
-    $countdown_fin_timestamp = strtotime($correcciones_cierre_at);
-    $mostrar_aviso_20min = !$isLocked && $torneo_completado && (time() < $countdown_fin_timestamp);
-}
-
-// Actas pendientes de verificación (QR)
-$actas_pendientes_count = isset($actas_pendientes_count) && $actas_pendientes_count !== null ? (int)$actas_pendientes_count : 0;
-// Auditoría: mesas Verificadas (QR con foto) vs Digitadas (por admin)
-$mesas_verificadas_count = isset($mesas_verificadas_count) && $mesas_verificadas_count !== null ? (int)$mesas_verificadas_count : 0;
-$mesas_digitadas_count = isset($mesas_digitadas_count) && $mesas_digitadas_count !== null ? (int)$mesas_digitadas_count : 0;
-
-// Estadísticas adicionales
-$total_inscritos = isset($total_inscritos) && $total_inscritos !== null ? (int)$total_inscritos : (isset($totalInscritos) && $totalInscritos !== null ? (int)$totalInscritos : 0);
-// Participantes que cuentan para rondas/mesas/BYE = solo confirmados (estatus 1)
-$inscritos_para_rondas = isset($inscritos_confirmados) && $inscritos_confirmados !== null ? (int)$inscritos_confirmados : $total_inscritos;
-$total_equipos = isset($total_equipos) && $total_equipos !== null ? (int)$total_equipos : (isset($estadisticas['total_equipos']) ? (int)$estadisticas['total_equipos'] : 0);
-$estadisticas = isset($estadisticas) && is_array($estadisticas) ? $estadisticas : [];
-
-// Obtener primera mesa para registrar resultados
-$primera_mesa = null;
-if ($ultima_ronda > 0 && isset($torneo['id'])) {
-    try {
-        $pdo = DB::pdo();
-        $stmt = $pdo->prepare("SELECT MIN(CAST(mesa AS UNSIGNED)) as primera_mesa FROM partiresul WHERE id_torneo = ? AND partida = ? AND mesa > 0");
-        $stmt->execute([$torneo['id'], $ultima_ronda]);
-        $result = $stmt->fetch(PDO::FETCH_ASSOC);
-        $primera_mesa = $result['primera_mesa'] ?? null;
-    } catch (Exception $e) {
-        error_log("Error obteniendo primera mesa en panel-moderno.php: " . $e->getMessage());
-    }
+if (!isset($is_admin_general)) {
+    $is_admin_general = false;
 }
 ?>
 
@@ -149,20 +70,7 @@ tailwind.config = {
                 </h2>
                 <div class="meta flex flex-wrap gap-4">
                     <span><i class="fas fa-calendar-alt mr-1"></i> <?php echo date('d/m/Y', strtotime($torneo['fechator'] ?? 'now')); ?></span>
-                    <span><i class="fas fa-chess mr-1"></i> 
-                        <?php 
-                        $modalidad_num = (int)($torneo['modalidad'] ?? 0);
-                        if ($modalidad_num === 3) {
-                            echo 'Equipos';
-                        } else if ($modalidad_num === 4) {
-                            echo 'Parejas fijas';
-                        } else if ($modalidad_num === 2) {
-                            echo 'Parejas';
-                        } else {
-                            echo 'Individual';
-                        }
-                        ?>
-                    </span>
+                    <span><i class="fas fa-chess mr-1"></i> <?php echo htmlspecialchars($label_modalidad ?? 'Individual'); ?></span>
                     <span><i class="fas fa-layer-group mr-1"></i> <?php echo ($torneo['rondas'] ?? 0); ?> rondas</span>
                 </div>
             </div>
@@ -284,7 +192,12 @@ tailwind.config = {
         </button>
     </div>
     
-    <?php $tiempo_ronda_min = (int)($torneo['tiempo'] ?? 35); if ($tiempo_ronda_min < 1) $tiempo_ronda_min = 35; ?>
+    <?php
+    $tiempo_ronda_min = isset($tiempo_ronda_minutos) ? (int) $tiempo_ronda_minutos : (int) ($torneo['tiempo'] ?? 35);
+    if ($tiempo_ronda_min < 1) {
+        $tiempo_ronda_min = 35;
+    }
+    ?>
     <!-- Overlay Cronómetro - pantalla completa en la misma página (tiempo definido en el torneo) -->
     <div id="cronometroOverlay" data-tiempo-minutos="<?php echo $tiempo_ronda_min; ?>">
         <div class="cron-box">

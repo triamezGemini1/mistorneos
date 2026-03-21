@@ -11,6 +11,7 @@ require_once __DIR__ . '/../config/auth.php';
 require_once __DIR__ . '/../config/db.php';
 require_once __DIR__ . '/../config/csrf.php';
 require_once __DIR__ . '/../config/MesaAsignacionService.php';
+require_once __DIR__ . '/../lib/PanelTorneoViewData.php';
 
 $current_user = Auth::user();
 $user_role = $current_user['role'] ?? '';
@@ -442,21 +443,18 @@ try {
             if (!$torneo_id) {
                 throw new Exception('Debe especificar un torneo');
             }
-            $torneo = obtenerTorneo($torneo_id, $user_id, $is_admin_general);
-            if (!$torneo) {
+            if (!obtenerTorneo($torneo_id, $user_id, $is_admin_general)) {
                 throw new Exception('Torneo no encontrado o sin permisos');
             }
-            // Usar siempre panel-moderno.php (común para todos los tipos de torneo)
-            // La vista se adapta dinámicamente según la modalidad del torneo
             $view_file = __DIR__ . '/gestion_torneos/panel-moderno.php';
-            // Obtener datos según modalidad (obtenerDatosPanel ahora incluye datos de equipos si corresponde)
-            $view_data = obtenerDatosPanel($torneo_id);
-            // Asegurar que $torneo esté en $view_data (obtenerDatosPanel ya lo incluye, pero por si acaso)
-            if (!isset($view_data['torneo']) || !$view_data['torneo']) {
-                $view_data['torneo'] = $torneo;
-            }
-            // También asegurar que torneo_id esté disponible
-            $view_data['torneo_id'] = $torneo_id;
+            $script_actual = basename($_SERVER['PHP_SELF'] ?? '');
+            $use_standalone = in_array($script_actual, ['admin_torneo.php', 'panel_torneo.php'], true);
+            $base_url = $use_standalone ? $script_actual : 'index.php?page=torneo_gestion';
+            $view_data = PanelTorneoViewData::build((int) $torneo_id);
+            $view_data['base_url'] = $base_url;
+            $view_data['use_standalone'] = $use_standalone;
+            $view_data['user_id'] = $user_id;
+            $view_data['is_admin_general'] = $is_admin_general;
             break;
             
         case 'panel_equipos':
@@ -1302,103 +1300,6 @@ function obtenerRondasGeneradas($torneo_id) {
     $stmt = $pdo->prepare($sql);
     $stmt->execute([$torneo_id]);
     return $stmt->fetchAll(PDO::FETCH_ASSOC);
-}
-
-/**
- * Obtiene datos para el panel de control
- */
-function obtenerDatosPanel($torneo_id) {
-    $pdo = DB::pdo();
-    
-    $stmt = $pdo->prepare("SELECT * FROM tournaments WHERE id = ?");
-    $stmt->execute([$torneo_id]);
-    $torneo = $stmt->fetch(PDO::FETCH_ASSOC);
-    
-    $rondas_generadas = obtenerRondasGeneradas($torneo_id);
-    $ultima_ronda = !empty($rondas_generadas) ? max(array_column($rondas_generadas, 'num_ronda')) : 0;
-    $proxima_ronda = $ultima_ronda + 1;
-    
-    $stmt = $pdo->prepare("SELECT COUNT(*) FROM inscritos WHERE torneo_id = ?");
-    $stmt->execute([$torneo_id]);
-    $total_inscritos = $stmt->fetchColumn();
-    
-    // Filtro: estatus != 4 (4 = retirado) porque estatus es numérico
-    $stmt = $pdo->prepare("SELECT COUNT(*) FROM inscritos WHERE torneo_id = ? AND estatus IN (1, 2)");
-    $stmt->execute([$torneo_id]);
-    $inscritos_confirmados = $stmt->fetchColumn();
-    
-    // Estadísticas adicionales
-    $stmt = $pdo->prepare("SELECT COUNT(*) FROM partiresul WHERE id_torneo = ? AND registrado = 1");
-    $stmt->execute([$torneo_id]);
-    $total_partidas = $stmt->fetchColumn();
-    
-    $puede_generar = true;
-    $mesas_incompletas = 0;
-    $total_mesas_ronda = 0;
-    if ($ultima_ronda > 0) {
-        $mesas_incompletas = contarMesasIncompletas($torneo_id, $ultima_ronda);
-        $puede_generar = $mesas_incompletas === 0;
-        
-        // Contar total de mesas de la última ronda
-        $stmt = $pdo->prepare("SELECT COUNT(DISTINCT mesa) FROM partiresul WHERE id_torneo = ? AND partida = ? AND mesa > 0");
-        $stmt->execute([$torneo_id, $ultima_ronda]);
-        $total_mesas_ronda = $stmt->fetchColumn();
-    }
-    
-    // Obtener información de la organización (club_responsable = org_id)
-    $organizacion_nombre = 'N/A';
-    $organizacion_logo = null;
-    if (!empty($torneo['club_responsable'])) {
-        $stmt = $pdo->prepare("SELECT nombre, logo FROM organizaciones WHERE id = ?");
-        $stmt->execute([$torneo['club_responsable']]);
-        $org = $stmt->fetch(PDO::FETCH_ASSOC);
-        $organizacion_nombre = $org['nombre'] ?? 'N/A';
-        $organizacion_logo = !empty($org['logo']) ? $org['logo'] : null;
-    }
-    $torneo['organizacion_nombre'] = $organizacion_nombre;
-    $torneo['organizacion_logo'] = $organizacion_logo;
-    
-    // Estadísticas por modalidad
-    $total_equipos = 0;
-    $total_jugadores_inscritos = 0;
-    if ((int)$torneo['modalidad'] === 3) {
-        // Modalidad equipos: obtener estadísticas de equipos
-        $stmt = $pdo->prepare("SELECT COUNT(*) FROM equipos WHERE id_torneo = ?");
-        $stmt->execute([$torneo_id]);
-        $total_equipos = (int)$stmt->fetchColumn();
-        
-        // Total de jugadores inscritos en equipos (con codigo_equipo)
-        $stmt = $pdo->prepare("SELECT COUNT(*) FROM inscritos WHERE torneo_id = ? AND codigo_equipo IS NOT NULL AND codigo_equipo != '' AND codigo_equipo != '000-000' AND estatus != 4");
-        $stmt->execute([$torneo_id]);
-        $total_jugadores_inscritos = (int)$stmt->fetchColumn();
-    }
-    
-    return [
-        'torneo' => $torneo,
-        'rondas' => $rondas_generadas,
-        'rondas_generadas' => $rondas_generadas,
-        'ultimaRonda' => $ultima_ronda,
-        'ultima_ronda' => $ultima_ronda,
-        'proximaRonda' => $proxima_ronda,
-        'proxima_ronda' => $proxima_ronda,
-        'totalInscritos' => $total_inscritos,
-        'total_inscritos' => $total_inscritos,
-        'inscritos_confirmados' => $inscritos_confirmados,
-        'total_equipos' => $total_equipos,
-        'total_jugadores_inscritos' => $total_jugadores_inscritos, // Para modalidad equipos
-        'puedeGenerarRonda' => $puede_generar,
-        'puede_generar_ronda' => $puede_generar,
-        'mesasIncompletas' => $mesas_incompletas,
-        'mesas_incompletas' => $mesas_incompletas,
-        'estadisticas' => [
-            'confirmados' => $inscritos_confirmados,
-            'solventes' => 0,
-            'total_partidas' => $total_partidas,
-            'mesas_ronda' => $total_mesas_ronda,
-            'total_equipos' => $total_equipos,
-            'total_jugadores_inscritos' => $total_jugadores_inscritos
-        ]
-    ];
 }
 
 /**
