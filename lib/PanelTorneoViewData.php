@@ -10,10 +10,80 @@ declare(strict_types=1);
 final class PanelTorneoViewData
 {
     /**
-     * Construye el array $view_data para extract() en la vista.
+     * Construye el array `$view_data` consumido por `extract()` en `panel-moderno.php`.
      *
-     * @throws RuntimeException si el torneo no existe en BD
-     * @return array<string, mixed>
+     * **Contrato completo de la vista del panel:** el controlador (`torneo_gestion.php`, `case 'panel'`)
+     * llama a este método y **fusiona** después las claves de contexto HTTP/sesión
+     * (`base_url`, `use_standalone`, `user_id`, `is_admin_general`). Cualquier vista o partial debe
+     * asumir que esas cuatro claves existen tras el `extract()` en el flujo normal.
+     *
+     * ---
+     * **Identidad y torneo**
+     * - `torneo` (array): fila `tournaments` enriquecida con `organizacion_nombre`, `organizacion_logo`.
+     * - `torneo_id` (int): mismo id pasado a `build()`.
+     *
+     * **Rondas y progreso**
+     * - `rondas`, `rondas_generadas` (array): listas agregadas por ronda (`num_ronda`, mesas, jugadores, bye, fecha).
+     * - `ultima_ronda`, `ultimaRonda` (int): número de la última ronda generada (0 si ninguna).
+     * - `proxima_ronda`, `proximaRonda` (int): siguiente ronda a generar.
+     * - `totalRondas` (int): rondas previstas del torneo (`torneo.rondas`).
+     * - `primera_mesa` (?int): menor número de mesa (>0) en la última ronda; enlace a registrar resultados.
+     *
+     * **Inscripciones y estadísticas**
+     * - `total_inscritos`, `totalInscritos` (int): todos los inscritos.
+     * - `inscritos_confirmados`, `inscritos_para_rondas` (int): inscritos confirmados (cuentan para mesas/BYE).
+     * - `total_equipos`, `total_jugadores_inscritos` (int): solo modalidad equipos (3); resto 0.
+     * - `estadisticas` (array): `confirmados`, `solventes`, `total_partidas`, `mesas_ronda`, `total_equipos`, `total_jugadores_inscritos`.
+     *
+     * **Modalidad (negocio / UI)**
+     * - `es_modalidad_equipos` (bool): modalidad 3 (cuatro integrantes por equipo).
+     * - `es_modalidad_parejas` (bool): modalidad 2.
+     * - `es_modalidad_parejas_fijas` (bool): modalidad 4.
+     * - `es_modalidad_equipos_o_parejas` (bool): equipos o parejas (2).
+     * - `label_modalidad` (string): texto ya listo para UI: Individual, Parejas, Parejas fijas, Equipos.
+     * - `podios_action` (string): `podios` o `podios_equipos` según modalidad.
+     * - `torneo_bloqueado_inscripciones` (bool): reglas de cierre de inscripción según modalidad y ronda actual.
+     *
+     * **Avance del torneo y generación de rondas**
+     * - `puede_generar_ronda`, `puedeGenerarRonda`, `puedeGenerar` (bool): **true** solo si no hay mesas
+     *   incompletas en la última ronda; en caso contrario el torneo no avanza hasta completar resultados.
+     * - `mesas_incompletas`, `mesasIncompletas`, `mesasInc` (int): mesas con `registrado` pendiente en la última ronda.
+     *
+     * **Última ronda con resultados en mesas**
+     * - `ultima_ronda_tiene_resultados` (bool): existe al menos un registro en `partiresul` con
+     *   `mesa > 0` y `registrado = 1` en la última ronda. Usado en la UI para confirmaciones estrictas
+     *   (p. ej. eliminar ronda con datos). **No** implementa la lógica de “Mano Nula” ni empates en tranque;
+     *   esas reglas viven en servicios de resultados (`ParejasResultadosService`, vistas de registro).
+     *
+     * **Cierre de torneo y ventana de correcciones**
+     * - `isLocked` (bool): torneo cerrado (`locked = 1`); solo consulta.
+     * - `correcciones_cierre_at` (?string): fecha/hora fin de ventana de correcciones (columna en BD; puede ser null).
+     * - `torneo_completado` (bool): todas las rondas generadas y sin mesas pendientes.
+     * - `puedeCerrar` (bool): se puede enviar cierre (no bloqueado, torneo completado, etc.).
+     * - `countdown_fin_timestamp` (?int): Unix timestamp para cuenta atrás hasta fin de correcciones; null si no aplica.
+     * - `mostrar_aviso_20min` (bool): mostrar aviso de countdown antes de poder finalizar con normalidad.
+     *
+     * **Auditoría y actas (seguimiento)**
+     * - `actas_pendientes_count` (int): mesas con acta QR pendiente de verificación (`estatus` + origen según esquema).
+     * - `mesas_verificadas_count` (int): mesas con resultados originados en QR (`origen_dato = qr`).
+     * - `mesas_digitadas_count` (int): mesas registradas por admin (`origen_dato = admin`).
+     *
+     * **UI y metadatos de presentación**
+     * - `page_title` (string): título escapado para pestaña/cabecera (“Panel de Control - …”).
+     * - `tiempo_ronda_minutos` (int): minutos por ronda para cronómetro (mínimo 1, por defecto 35).
+     * - `ultima_actualizacion_resultados` (null): reservado; actualmente siempre null.
+     *
+     * **Inyectadas por el controlador (no las produce `build()`):**
+     * - `base_url` (string): script o `index.php?page=torneo_gestion` para construir enlaces POST/GET.
+     * - `use_standalone` (bool): true si el entrypoint es `admin_torneo.php` o `panel_torneo.php` (separador `?` vs `&`).
+     * - `user_id` (int): usuario de sesión.
+     * - `is_admin_general` (bool): rol administrador general.
+     *
+     * @param int $torneoId Identificador del torneo (debe existir y el llamador debe haber validado permisos).
+     *
+     * @throws RuntimeException Si no hay fila en `tournaments` para `$torneoId`.
+     *
+     * @return array<string, mixed> Arreglo asociativo listo para `extract()` en la vista; ver listado anterior.
      */
     public static function build(int $torneoId): array
     {
