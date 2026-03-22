@@ -33,7 +33,6 @@ const LandingContent = {
     props: ['data', 'baseUrl', 'logoUrl'],
     emits: ['refresh-comentarios'],
     setup(props, { emit }) {
-        const mobileMenuOpen = ref(false);
         const vistaCalendario = ref('anual'); // anual | mes | dia
         const calAnio = ref(new Date().getFullYear());
         const calMes = ref(new Date().getMonth());
@@ -61,7 +60,6 @@ const LandingContent = {
         });
 
         const scrollToSection = (id) => {
-            mobileMenuOpen.value = false;
             const el = document.getElementById(id);
             if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
         };
@@ -199,7 +197,6 @@ const LandingContent = {
         };
 
         return {
-            mobileMenuOpen,
             vistaCalendario,
             calAnio,
             calMes,

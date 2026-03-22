@@ -3,7 +3,7 @@
  * Landing Page SPA - La Estación del Dominó (OFICIAL)
  * Single Page Application con Vue 3 para mejor UX
  * URL oficial: .../public/landing-spa.php
- * Base y logo vía AppHelpers para que funcionen en /pruebas/public, /mistorneos_beta/public, etc.
+ * Base y logo vía AppHelpers para subcarpetas de despliegue (p. ej. /pruebas/public).
  */
 try {
     require_once __DIR__ . '/../config/bootstrap.php';
@@ -72,8 +72,9 @@ try {
         .esports-theme section:not(#hero) { margin-top: 1.5rem; margin-bottom: 1.5rem; }
         .esports-theme section:not(#hero):first-of-type { margin-top: 2rem; }
         .esports-theme section:not(#hero) .container { padding-top: 2rem; padding-bottom: 2rem; }
-        .esports-theme #app > div.min-h-screen > p { color: var(--esports-text-muted); }
-        /* Shell estático: sin parpadeo antes de Vue (misma jerarquía que nav+hero) */
+        .esports-theme #app .landing-loading-below-fold p { color: var(--esports-text-muted); }
+        /* Shell estático LVD: fuera de Vue, primer paint sin JS */
+        #lvd-static-top { flex-shrink: 0; }
         #static-landing-shell { flex-shrink: 0; }
         .landing-loading-below-fold { min-height: min(50vh, 28rem); flex: 1 1 auto; }
         .esports-theme section:not(#hero) .container .text-center h2,
@@ -256,118 +257,49 @@ try {
         .comment-form-stars label { cursor: pointer; padding: 8px; margin: -8px; }
     </style>
 </head>
-<body class="esports-theme antialiased">
-    <div id="app" class="min-h-screen flex flex-col">
-        <div v-if="loading" class="min-h-screen flex flex-col bg-[#0f172a]">
-            <div id="static-landing-shell" class="static-landing-shell">
-                <nav class="esports-nav bg-[#0f172a]/95 border-b border-white/10 shadow-lg sticky top-0 z-50 backdrop-blur-md" aria-label="Principal">
-                    <div class="container mx-auto px-4 sm:px-6 lg:px-8">
-                        <div class="flex items-center justify-between h-16 md:h-20">
-                            <a href="<?= htmlspecialchars($base_url . 'landing-spa.php') ?>" class="flex items-center text-white font-bold hover:opacity-90 transition-opacity" title="La Estación del Dominó">
-                                <img src="<?= htmlspecialchars($logo_url) ?>" alt="La Estación del Dominó" width="200" height="50" fetchpriority="high" loading="eager" decoding="async" class="h-8 md:h-10 w-auto max-h-10 object-contain object-left">
-                            </a>
-                            <div class="hidden md:flex items-center space-x-1">
-                                <a href="#documentos" class="px-4 py-2 text-slate-300 hover:text-[#00f2ff] hover:bg-white/5 rounded-lg transition-all font-medium">Documentos</a>
-                                <a href="#eventos-masivos" class="px-4 py-2 text-slate-300 hover:text-[#00f2ff] hover:bg-white/5 rounded-lg transition-all font-medium">Eventos Nacionales</a>
-                                <a href="#logos-clientes" class="px-4 py-2 text-slate-300 hover:text-[#00f2ff] hover:bg-white/5 rounded-lg transition-all font-medium">Clientes</a>
-                                <a href="#eventos" class="px-4 py-2 text-slate-300 hover:text-[#00f2ff] hover:bg-white/5 rounded-lg transition-all font-medium">Eventos</a>
-                                <a href="#calendario" class="px-4 py-2 text-slate-300 hover:text-[#00f2ff] hover:bg-white/5 rounded-lg transition-all font-medium">Calendario</a>
-                                <a href="#registro" class="px-4 py-2 text-slate-300 hover:text-[#00f2ff] hover:bg-white/5 rounded-lg transition-all font-medium">Registro</a>
-                                <a href="#servicios" class="px-4 py-2 text-slate-300 hover:text-[#00f2ff] hover:bg-white/5 rounded-lg transition-all font-medium">Servicios</a>
-                                <a href="#galeria" class="px-4 py-2 text-slate-300 hover:text-[#00f2ff] hover:bg-white/5 rounded-lg transition-all font-medium">Galería</a>
-                                <a href="#faq" class="px-4 py-2 text-slate-300 hover:text-[#00f2ff] hover:bg-white/5 rounded-lg transition-all font-medium">FAQ</a>
-                                <a href="#comentarios" class="px-4 py-2 text-slate-300 hover:text-[#00f2ff] hover:bg-white/5 rounded-lg transition-all font-medium">Comentarios</a>
-                                <a href="<?= htmlspecialchars($base_url . 'login.php') ?>" class="ml-4 px-6 py-2.5 btn-accent rounded-lg font-semibold transition-all shadow-lg"><i class="fas fa-sign-in-alt mr-2"></i>Iniciar Sesión</a>
-                            </div>
-                            <span class="md:hidden text-white p-2 rounded-lg opacity-90" aria-hidden="true"><i class="fas fa-bars text-xl"></i></span>
-                        </div>
-                    </div>
-                </nav>
-                <section id="hero" class="relative overflow-hidden" style="background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #0f172a 100%);">
-                    <div class="absolute inset-0 opacity-30" style="background-image: radial-gradient(circle at 2px 2px, rgba(0,242,255,0.15) 1px, transparent 0); background-size: 32px 32px;"></div>
-                    <div class="absolute inset-0 bg-gradient-to-r from-[#00f2ff]/10 via-transparent to-[#00f2ff]/10"></div>
-                    <div class="container mx-auto px-4 sm:px-6 lg:px-8 py-24 md:py-32 lg:py-40 relative z-10">
-                        <div class="max-w-4xl mx-auto text-center">
-                            <h1 class="esports-font-title text-4xl md:text-5xl lg:text-7xl mb-6 leading-tight text-white tracking-tight">
-                                Domina la Mesa,<br><span class="text-[#00f2ff]">Conviértete en Leyenda</span>
-                            </h1>
-                            <p class="text-lg md:text-xl text-slate-400 mb-10 max-w-2xl mx-auto leading-relaxed">La plataforma de torneos de dominó. Inscríbete en eventos, sigue resultados en vivo y únete a la comunidad.</p>
-                            <div class="flex flex-col sm:flex-row gap-4 justify-center items-center">
-                                <a href="#registro" class="hero-cta-primary btn-accent inline-flex items-center justify-center w-full sm:w-auto px-10 py-5 text-lg"><i class="fas fa-building mr-3"></i>Solicitar Afiliación</a>
-                                <a href="<?= htmlspecialchars($base_url . 'login.php') ?>" class="w-full sm:w-auto px-8 py-4 text-slate-300 font-semibold rounded-xl border border-slate-500 hover:bg-white/5 hover:text-white transition-all text-center"><i class="fas fa-sign-in-alt mr-2"></i>Ya tengo cuenta</a>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="absolute bottom-0 left-0 right-0"><svg class="w-full h-12 md:h-20 block" viewBox="0 0 1200 120" preserveAspectRatio="none" aria-hidden="true"><path d="M0,0 C150,80 350,80 600,40 C850,0 1050,0 1200,40 L1200,120 L0,120 Z" fill="#0f172a"></path></svg></div>
-                </section>
-            </div>
-            <div class="landing-loading-below-fold flex flex-col items-center justify-center py-12 px-4 border-t border-white/5">
-                <div class="flex flex-col items-center gap-4">
-                    <i class="fas fa-spinner fa-spin text-5xl text-[#00f2ff]" aria-hidden="true"></i>
-                    <p class="text-slate-400 font-medium">Cargando contenido…</p>
-                </div>
-            </div>
-        </div>
-        <div v-else-if="error" class="min-h-screen flex flex-col items-center justify-center py-20 px-4 flex-1">
-            <div class="bg-red-50 border border-red-200 rounded-xl p-8 max-w-md text-center">
-                <i class="fas fa-exclamation-triangle text-4xl text-red-500 mb-4"></i>
-                <p class="text-red-700 font-medium mb-4">{{ error }}</p>
-                <div class="flex flex-col sm:flex-row gap-3 justify-center">
-                    <button @click="cargarDatos" class="px-6 py-2 bg-primary-500 text-white rounded-lg font-semibold hover:bg-primary-600">
-                        Reintentar
-                    </button>
-                    <a :href="baseUrl + 'landing.php'" class="px-6 py-2 bg-gray-600 text-white rounded-lg font-semibold hover:bg-gray-700 text-center no-underline">
-                        Usar versión clásica
-                    </a>
-                </div>
-            </div>
-        </div>
-        <landing-content v-else :data="data" :base-url="baseUrl" :logo-url="logoUrl" @refresh-comentarios="cargarDatos"></landing-content>
-    </div>
-
-    <script type="text/x-template" id="landing-template">
-        <div class="min-h-screen flex flex-col">
-            <!-- Navbar -->
-            <nav class="esports-nav bg-[#0f172a]/95 border-b border-white/10 shadow-lg sticky top-0 z-50 backdrop-blur-md">
+<body class="esports-theme antialiased flex flex-col min-h-screen">
+    <div id="lvd-static-top" class="flex flex-col flex-shrink-0">
+        <div id="static-landing-shell" class="static-landing-shell">
+            <nav class="esports-nav bg-[#0f172a]/95 border-b border-white/10 shadow-lg sticky top-0 z-50 backdrop-blur-md" aria-label="Principal">
                 <div class="container mx-auto px-4 sm:px-6 lg:px-8">
                     <div class="flex items-center justify-between h-16 md:h-20">
-                        <a :href="baseUrl + 'landing-spa.php'" @click.prevent="scrollToSection('hero')" class="flex items-center text-white font-bold hover:opacity-90 transition-opacity" title="La Estación del Dominó">
-                            <img :src="logoUrl" alt="La Estación del Dominó" width="200" height="50" fetchpriority="high" loading="eager" decoding="async" class="h-8 md:h-10 w-auto max-h-10 object-contain object-left">
+                        <a href="<?= htmlspecialchars($base_url . 'landing-spa.php') ?>" class="flex items-center text-white font-bold hover:opacity-90 transition-opacity" title="La Estación del Dominó — Liga Venezolana de Dominó (LVD)">
+                            <img src="<?= htmlspecialchars($logo_url) ?>" alt="La Estación del Dominó" width="200" height="50" fetchpriority="high" loading="eager" decoding="async" class="h-8 md:h-10 w-auto max-h-10 object-contain object-left">
                         </a>
                         <div class="hidden md:flex items-center space-x-1">
-                            <a href="#documentos" @click.prevent="scrollToSection('documentos')" class="px-4 py-2 text-slate-300 hover:text-[#00f2ff] hover:bg-white/5 rounded-lg transition-all font-medium">Documentos</a>
-                            <a href="#eventos-masivos" @click.prevent="scrollToSection('eventos-masivos')" class="px-4 py-2 text-slate-300 hover:text-[#00f2ff] hover:bg-white/5 rounded-lg transition-all font-medium">Eventos Nacionales</a>
-                            <a href="#logos-clientes" @click.prevent="scrollToSection('logos-clientes')" class="px-4 py-2 text-slate-300 hover:text-[#00f2ff] hover:bg-white/5 rounded-lg transition-all font-medium">Clientes</a>
-                            <a href="#eventos" @click.prevent="scrollToSection('eventos')" class="px-4 py-2 text-slate-300 hover:text-[#00f2ff] hover:bg-white/5 rounded-lg transition-all font-medium">Eventos</a>
-                            <a href="#calendario" @click.prevent="scrollToSection('calendario')" class="px-4 py-2 text-slate-300 hover:text-[#00f2ff] hover:bg-white/5 rounded-lg transition-all font-medium">Calendario</a>
-                            <a href="#registro" @click.prevent="scrollToSection('registro')" class="px-4 py-2 text-slate-300 hover:text-[#00f2ff] hover:bg-white/5 rounded-lg transition-all font-medium">Registro</a>
-                            <a href="#servicios" @click.prevent="scrollToSection('servicios')" class="px-4 py-2 text-slate-300 hover:text-[#00f2ff] hover:bg-white/5 rounded-lg transition-all font-medium">Servicios</a>
-                            <a href="#galeria" @click.prevent="scrollToSection('galeria')" class="px-4 py-2 text-slate-300 hover:text-[#00f2ff] hover:bg-white/5 rounded-lg transition-all font-medium">Galería</a>
-                            <a href="#faq" @click.prevent="scrollToSection('faq')" class="px-4 py-2 text-slate-300 hover:text-[#00f2ff] hover:bg-white/5 rounded-lg transition-all font-medium">FAQ</a>
-                            <a href="#comentarios" @click.prevent="scrollToSection('comentarios')" class="px-4 py-2 text-slate-300 hover:text-[#00f2ff] hover:bg-white/5 rounded-lg transition-all font-medium">Comentarios</a>
-                            <a :href="baseUrl + 'login.php'" class="ml-4 px-6 py-2.5 btn-accent rounded-lg font-semibold transition-all shadow-lg"><i class="fas fa-sign-in-alt mr-2"></i>Iniciar Sesión</a>
+                            <a href="#documentos" class="px-4 py-2 text-slate-300 hover:text-[#00f2ff] hover:bg-white/5 rounded-lg transition-all font-medium">Documentos</a>
+                            <a href="#eventos-masivos" class="px-4 py-2 text-slate-300 hover:text-[#00f2ff] hover:bg-white/5 rounded-lg transition-all font-medium">Eventos Nacionales</a>
+                            <a href="#logos-clientes" class="px-4 py-2 text-slate-300 hover:text-[#00f2ff] hover:bg-white/5 rounded-lg transition-all font-medium">Clientes</a>
+                            <a href="#eventos" class="px-4 py-2 text-slate-300 hover:text-[#00f2ff] hover:bg-white/5 rounded-lg transition-all font-medium">Eventos</a>
+                            <a href="#calendario" class="px-4 py-2 text-slate-300 hover:text-[#00f2ff] hover:bg-white/5 rounded-lg transition-all font-medium">Calendario</a>
+                            <a href="#registro" class="px-4 py-2 text-slate-300 hover:text-[#00f2ff] hover:bg-white/5 rounded-lg transition-all font-medium">Registro</a>
+                            <a href="#servicios" class="px-4 py-2 text-slate-300 hover:text-[#00f2ff] hover:bg-white/5 rounded-lg transition-all font-medium">Servicios</a>
+                            <a href="#galeria" class="px-4 py-2 text-slate-300 hover:text-[#00f2ff] hover:bg-white/5 rounded-lg transition-all font-medium">Galería</a>
+                            <a href="#faq" class="px-4 py-2 text-slate-300 hover:text-[#00f2ff] hover:bg-white/5 rounded-lg transition-all font-medium">FAQ</a>
+                            <a href="#comentarios" class="px-4 py-2 text-slate-300 hover:text-[#00f2ff] hover:bg-white/5 rounded-lg transition-all font-medium">Comentarios</a>
+                            <a href="<?= htmlspecialchars($base_url . 'login.php') ?>" class="ml-4 px-6 py-2.5 btn-accent rounded-lg font-semibold transition-all shadow-lg"><i class="fas fa-sign-in-alt mr-2"></i>Iniciar Sesión</a>
                         </div>
-                        <button @click="mobileMenuOpen = !mobileMenuOpen" class="md:hidden text-white p-2 rounded-lg hover:bg-white/10"><i class="fas fa-bars text-xl"></i></button>
+                        <button type="button" id="lvd-nav-mobile-toggle" class="md:hidden text-white p-2 rounded-lg hover:bg-white/10" aria-expanded="false" aria-controls="lvd-nav-mobile-panel" aria-label="Abrir menú de navegación">
+                            <i class="fas fa-bars text-xl" aria-hidden="true"></i>
+                        </button>
                     </div>
-                    <div v-show="mobileMenuOpen" class="md:hidden pb-4">
+                    <div id="lvd-nav-mobile-panel" class="md:hidden pb-4 hidden">
                         <div class="flex flex-col space-y-2">
-                            <a href="#" @click.prevent="scrollToSection('documentos')" class="px-4 py-2 text-slate-300 hover:text-[#00f2ff] hover:bg-white/5 rounded-lg">Documentos</a>
-                            <a href="#" @click.prevent="scrollToSection('eventos-masivos')" class="px-4 py-2 text-slate-300 hover:text-[#00f2ff] hover:bg-white/5 rounded-lg">Eventos Nacionales</a>
-                            <a href="#" @click.prevent="scrollToSection('logos-clientes')" class="px-4 py-2 text-slate-300 hover:text-[#00f2ff] hover:bg-white/5 rounded-lg">Clientes</a>
-                            <a href="#" @click.prevent="scrollToSection('eventos')" class="px-4 py-2 text-slate-300 hover:text-[#00f2ff] hover:bg-white/5 rounded-lg">Eventos</a>
-                            <a href="#" @click.prevent="scrollToSection('calendario')" class="px-4 py-2 text-slate-300 hover:text-[#00f2ff] hover:bg-white/5 rounded-lg">Calendario</a>
-                            <a href="#" @click.prevent="scrollToSection('registro')" class="px-4 py-2 text-slate-300 hover:text-[#00f2ff] hover:bg-white/5 rounded-lg">Registro</a>
-                            <a href="#" @click.prevent="scrollToSection('servicios')" class="px-4 py-2 text-slate-300 hover:text-[#00f2ff] hover:bg-white/5 rounded-lg">Servicios</a>
-                            <a href="#" @click.prevent="scrollToSection('galeria')" class="px-4 py-2 text-slate-300 hover:text-[#00f2ff] hover:bg-white/5 rounded-lg">Galería</a>
-                            <a href="#" @click.prevent="scrollToSection('faq')" class="px-4 py-2 text-slate-300 hover:text-[#00f2ff] hover:bg-white/5 rounded-lg">FAQ</a>
-                            <a href="#" @click.prevent="scrollToSection('comentarios')" class="px-4 py-2 text-slate-300 hover:text-[#00f2ff] hover:bg-white/5 rounded-lg">Comentarios</a>
-                            <a :href="baseUrl + 'login.php'" class="mt-2 px-4 py-2.5 btn-accent rounded-lg text-center inline-block"><i class="fas fa-sign-in-alt mr-2"></i>Iniciar Sesión</a>
+                            <a href="#documentos" class="lvd-nav-mobile-link px-4 py-2 text-slate-300 hover:text-[#00f2ff] hover:bg-white/5 rounded-lg">Documentos</a>
+                            <a href="#eventos-masivos" class="lvd-nav-mobile-link px-4 py-2 text-slate-300 hover:text-[#00f2ff] hover:bg-white/5 rounded-lg">Eventos Nacionales</a>
+                            <a href="#logos-clientes" class="lvd-nav-mobile-link px-4 py-2 text-slate-300 hover:text-[#00f2ff] hover:bg-white/5 rounded-lg">Clientes</a>
+                            <a href="#eventos" class="lvd-nav-mobile-link px-4 py-2 text-slate-300 hover:text-[#00f2ff] hover:bg-white/5 rounded-lg">Eventos</a>
+                            <a href="#calendario" class="lvd-nav-mobile-link px-4 py-2 text-slate-300 hover:text-[#00f2ff] hover:bg-white/5 rounded-lg">Calendario</a>
+                            <a href="#registro" class="lvd-nav-mobile-link px-4 py-2 text-slate-300 hover:text-[#00f2ff] hover:bg-white/5 rounded-lg">Registro</a>
+                            <a href="#servicios" class="lvd-nav-mobile-link px-4 py-2 text-slate-300 hover:text-[#00f2ff] hover:bg-white/5 rounded-lg">Servicios</a>
+                            <a href="#galeria" class="lvd-nav-mobile-link px-4 py-2 text-slate-300 hover:text-[#00f2ff] hover:bg-white/5 rounded-lg">Galería</a>
+                            <a href="#faq" class="lvd-nav-mobile-link px-4 py-2 text-slate-300 hover:text-[#00f2ff] hover:bg-white/5 rounded-lg">FAQ</a>
+                            <a href="#comentarios" class="lvd-nav-mobile-link px-4 py-2 text-slate-300 hover:text-[#00f2ff] hover:bg-white/5 rounded-lg">Comentarios</a>
+                            <a href="<?= htmlspecialchars($base_url . 'login.php') ?>" class="lvd-nav-mobile-link mt-2 px-4 py-2.5 btn-accent rounded-lg text-center inline-block"><i class="fas fa-sign-in-alt mr-2"></i>Iniciar Sesión</a>
                         </div>
                     </div>
                 </div>
             </nav>
-
-            <!-- Hero -->
             <section id="hero" class="relative overflow-hidden" style="background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #0f172a 100%);">
                 <div class="absolute inset-0 opacity-30" style="background-image: radial-gradient(circle at 2px 2px, rgba(0,242,255,0.15) 1px, transparent 0); background-size: 32px 32px;"></div>
                 <div class="absolute inset-0 bg-gradient-to-r from-[#00f2ff]/10 via-transparent to-[#00f2ff]/10"></div>
@@ -378,13 +310,67 @@ try {
                         </h1>
                         <p class="text-lg md:text-xl text-slate-400 mb-10 max-w-2xl mx-auto leading-relaxed">La plataforma de torneos de dominó. Inscríbete en eventos, sigue resultados en vivo y únete a la comunidad.</p>
                         <div class="flex flex-col sm:flex-row gap-4 justify-center items-center">
-                            <a href="#" @click.prevent="scrollToSection('registro')" class="hero-cta-primary btn-accent inline-flex items-center justify-center w-full sm:w-auto px-10 py-5 text-lg"><i class="fas fa-building mr-3"></i>Solicitar Afiliación</a>
-                            <a :href="baseUrl + 'login.php'" class="w-full sm:w-auto px-8 py-4 text-slate-300 font-semibold rounded-xl border border-slate-500 hover:bg-white/5 hover:text-white transition-all text-center"><i class="fas fa-sign-in-alt mr-2"></i>Ya tengo cuenta</a>
+                            <a href="#registro" class="hero-cta-primary btn-accent inline-flex items-center justify-center w-full sm:w-auto px-10 py-5 text-lg"><i class="fas fa-building mr-3"></i>Solicitar Afiliación</a>
+                            <a href="<?= htmlspecialchars($base_url . 'login.php') ?>" class="w-full sm:w-auto px-8 py-4 text-slate-300 font-semibold rounded-xl border border-slate-500 hover:bg-white/5 hover:text-white transition-all text-center"><i class="fas fa-sign-in-alt mr-2"></i>Ya tengo cuenta</a>
                         </div>
                     </div>
                 </div>
-                <div class="absolute bottom-0 left-0 right-0"><svg class="w-full h-12 md:h-20" viewBox="0 0 1200 120" preserveAspectRatio="none"><path d="M0,0 C150,80 350,80 600,40 C850,0 1050,0 1200,40 L1200,120 L0,120 Z" fill="#0f172a"></path></svg></div>
+                <div class="absolute bottom-0 left-0 right-0"><svg class="w-full h-12 md:h-20 block" viewBox="0 0 1200 120" preserveAspectRatio="none" aria-hidden="true"><path d="M0,0 C150,80 350,80 600,40 C850,0 1050,0 1200,40 L1200,120 L0,120 Z" fill="#0f172a"></path></svg></div>
             </section>
+        </div>
+    </div>
+    <script>
+    (function () {
+        var btn = document.getElementById('lvd-nav-mobile-toggle');
+        var panel = document.getElementById('lvd-nav-mobile-panel');
+        if (!btn || !panel) return;
+        function setOpen(open) {
+            if (open) {
+                panel.classList.remove('hidden');
+                panel.removeAttribute('hidden');
+            } else {
+                panel.classList.add('hidden');
+                panel.setAttribute('hidden', '');
+            }
+            btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+        }
+        setOpen(false);
+        btn.addEventListener('click', function () {
+            setOpen(panel.classList.contains('hidden'));
+        });
+        panel.querySelectorAll('.lvd-nav-mobile-link').forEach(function (a) {
+            a.addEventListener('click', function () { setOpen(false); });
+        });
+    })();
+    </script>
+
+    <div id="app" class="flex flex-col flex-1 min-w-0 w-full">
+        <div v-if="loading" class="landing-loading-below-fold flex flex-col items-center justify-center py-12 px-4 border-t border-white/5 bg-[#0f172a]">
+            <div class="flex flex-col items-center gap-4">
+                <i class="fas fa-spinner fa-spin text-5xl text-[#00f2ff]" aria-hidden="true"></i>
+                <p class="text-slate-400 font-medium">Cargando contenido…</p>
+            </div>
+        </div>
+        <div v-else-if="error" class="flex flex-col items-center py-12 px-4 flex-1 bg-[#0f172a]">
+            <div class="bg-red-50 border border-red-200 rounded-xl p-8 max-w-md text-center w-full">
+                <i class="fas fa-exclamation-triangle text-4xl text-red-500 mb-4"></i>
+                <p class="text-red-700 font-medium mb-4">{{ error }}</p>
+                <div class="flex flex-col sm:flex-row gap-3 justify-center">
+                    <button type="button" @click="cargarDatos" class="px-6 py-2 bg-primary-500 text-white rounded-lg font-semibold hover:bg-primary-600">
+                        Reintentar
+                    </button>
+                    <a :href="baseUrl + 'landing.php'" class="px-6 py-2 bg-gray-600 text-white rounded-lg font-semibold hover:bg-gray-700 text-center no-underline">
+                        Información LVD (página clásica)
+                    </a>
+                </div>
+            </div>
+        </div>
+        <landing-content v-else :data="data" :base-url="baseUrl" :logo-url="logoUrl" @refresh-comentarios="cargarDatos"></landing-content>
+    </div>
+
+    <script type="text/x-template" id="landing-template">
+        <div class="min-h-screen flex flex-col">
+            <!-- Nav y Hero estáticos en landing-spa.php (#lvd-static-top); aquí solo contenido dinámico para evitar CLS -->
 
             <!-- Documentos oficiales de dominó -->
             <section id="documentos" class="py-16 md:py-24 bg-gradient-to-br from-slate-50 to-blue-50">
@@ -818,7 +804,7 @@ try {
             logoUrl: <?= json_encode($logo_url) ?>
         };
     </script>
-    <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
-    <script src="<?= htmlspecialchars($base_url . 'assets/landing-spa.js') ?>"></script>
+    <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js" defer></script>
+    <script src="<?= htmlspecialchars($base_url . 'assets/landing-spa.js') ?>" defer></script>
 </body>
 </html>
