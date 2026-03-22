@@ -115,7 +115,7 @@ try {
         
         // Insertar inscripción usando función centralizada
         try {
-            $id_inscrito = InscritosHelper::insertarInscrito($pdo, [
+            $id_inscrito = InscritosHelper::registrarInscripcion($pdo, [
                 'id_usuario' => $id_usuario,
                 'torneo_id' => $torneo_id,
                 'id_club' => $id_club,

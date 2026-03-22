@@ -8,6 +8,9 @@
  * - retirado: retirado del torneo
  *
  * Los valores legacy 'solvente' y 'no_solvente' se obvian; migrar a 'confirmado' si existen.
+ *
+ * Inscripción a torneo (INSERT en tabla inscritos): usar siempre {@see InscritosHelper::registrarInscripcion()}.
+ * No insertar filas en `inscritos` desde otros archivos salvo SQLite/desktop (esquema distinto).
  */
 
 class InscritosHelper {
@@ -201,11 +204,72 @@ class InscritosHelper {
             return $inscrito;
         }, $inscritos);
     }
-    
+
     /**
-     * Función centralizada para insertar inscripción en tabla inscritos
-     * Valida todos los campos obligatorios y asegura que todos los campos tengan valores
-     * 
+     * Mapa columna_lower => nombre real en BD para `inscritos`.
+     * SHOW COLUMNS con PDO::FETCH_ASSOC (Field) evita fallos de PDO::FETCH_COLUMN en algunos drivers.
+     */
+    private static function mapaColumnasInscritos(PDO $pdo): array {
+        $stmt = $pdo->query('SHOW COLUMNS FROM `inscritos`');
+        if ($stmt === false) {
+            throw new Exception('No se pudo leer el esquema de la tabla inscritos');
+        }
+        $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        $have = [];
+        foreach ($rows as $row) {
+            if (!is_array($row)) {
+                continue;
+            }
+            $name = '';
+            if (array_key_exists('Field', $row)) {
+                $name = trim((string) $row['Field']);
+            } elseif (array_key_exists('field', $row)) {
+                $name = trim((string) $row['field']);
+            }
+            if ($name === '') {
+                continue;
+            }
+            $have[strtolower($name)] = $name;
+        }
+        foreach (['mesa', 'letra'] as $crit) {
+            if (isset($have[$crit])) {
+                continue;
+            }
+            try {
+                $chk = $pdo->prepare(
+                    "SELECT COLUMN_NAME FROM information_schema.COLUMNS
+                     WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'inscritos' AND LOWER(COLUMN_NAME) = ? LIMIT 1"
+                );
+                $chk->execute([$crit]);
+                $cn = $chk->fetchColumn();
+                if ($cn !== false && (string) $cn !== '') {
+                    $have[$crit] = (string) $cn;
+                }
+            } catch (Throwable $e) {
+                // Sin permiso a information_schema u otro error: se ignora
+            }
+        }
+        return $have;
+    }
+
+    /**
+     * Punto único para crear una inscripción al torneo (MySQL). Aplica defaults y delega en insertarInscrito().
+     *
+     * @param array $datos Mismo contrato que insertarInscrito(); mesa/letra/numero se rellenan si faltan.
+     */
+    public static function registrarInscripcion(PDO $pdo, array $datos): int {
+        $datos = $datos + [
+            'mesa' => 0,
+            'letra' => ' ',
+            'numero' => 0,
+        ];
+        return self::insertarInscrito($pdo, $datos);
+    }
+
+    /**
+     * Ejecuta el INSERT en `inscritos` (solo vía registrarInscripcion desde el resto de la app).
+     * Valida campos obligatorios y alinea columnas al esquema MySQL.
+     *
      * @param PDO $pdo Conexión a la base de datos
      * @param array $datos Datos de la inscripción:
      *   - id_usuario (int, requerido)
@@ -215,10 +279,16 @@ class InscritosHelper {
      *   - inscrito_por (int|null, opcional)
      *   - numero (int|null, opcional, default=0)
      *   - codigo_equipo (string|null, opcional)
+     *   - mesa (int, opcional, default=0) si la columna existe en BD
+     *   - letra (string, opcional, default un espacio) si la columna existe en BD
      * @return int ID del registro insertado
      * @throws Exception Si los datos son inválidos o hay error al insertar
      */
     public static function insertarInscrito(PDO $pdo, array $datos): int {
+        $datos = $datos + [
+            'mesa' => 0,
+            'letra' => ' ',
+        ];
         // Validar campos obligatorios
         $id_usuario = (int)($datos['id_usuario'] ?? 0);
         $torneo_id = (int)($datos['torneo_id'] ?? 0);
@@ -270,15 +340,7 @@ class InscritosHelper {
             ? (int)$estatus
             : (int) self::getEstatusNumero(is_string($estatus) ? $estatus : 'confirmado');
 
-        $colNames = $pdo->query('SHOW COLUMNS FROM inscritos')->fetchAll(PDO::FETCH_COLUMN);
-        $have = [];
-        foreach ($colNames as $c) {
-            $phys = trim((string) $c);
-            if ($phys === '') {
-                continue;
-            }
-            $have[strtolower($phys)] = $phys;
-        }
+        $have = self::mapaColumnasInscritos($pdo);
         $H = static function (string $n) use ($have): bool {
             return isset($have[strtolower(trim($n))]);
         };
@@ -314,11 +376,15 @@ class InscritosHelper {
             $ck = strtolower(trim($c));
             if ($H($c)) {
                 $insertCols[] = '`' . str_replace('`', '``', $have[$ck]) . '`';
-                $insertVals[] = '0';
+                $insertVals[] = ($ck === 'mesa') ? (string)(int)($datos['mesa'] ?? 0) : '0';
             }
         }
         if ($H('letra')) {
-            $push('letra', '?', ' ');
+            $letraIns = array_key_exists('letra', $datos) ? trim((string)$datos['letra']) : ' ';
+            if ($letraIns === '') {
+                $letraIns = ' ';
+            }
+            $push('letra', '?', $letraIns);
         }
         if ($H('fecha_inscripcion')) {
             $insertCols[] = '`' . $have['fecha_inscripcion'] . '`';
@@ -356,13 +422,15 @@ class InscritosHelper {
             $physNorm = strtolower(trim((string) $physicalName));
             if ($logicalKey === 'mesa' && !isset($insertedPhys[$physNorm])) {
                 $insertCols[] = '`' . str_replace('`', '``', $physicalName) . '`';
-                $insertVals[] = '0';
+                $insertVals[] = '?';
+                $params[] = (int)($datos['mesa'] ?? 0);
                 $insertedPhys[$physNorm] = true;
             }
             if ($logicalKey === 'letra' && !isset($insertedPhys[$physNorm])) {
                 $insertCols[] = '`' . str_replace('`', '``', $physicalName) . '`';
                 $insertVals[] = '?';
-                $params[] = ' ';
+                $letraIns = array_key_exists('letra', $datos) ? trim((string)$datos['letra']) : ' ';
+                $params[] = ($letraIns === '') ? ' ' : $letraIns;
                 $insertedPhys[$physNorm] = true;
             }
         }

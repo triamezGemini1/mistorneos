@@ -162,7 +162,7 @@ try {
             $stmt->execute([$torneo_id]);
             $modalidad = (int)($stmt->fetchColumn() ?? 0);
             $codigo_equipo = InscritosHelper::codigoEquipoParaInscripcionSitioIndividual($pdo, $torneo_id, $id_club, $modalidad);
-            $id_inscrito = InscritosHelper::insertarInscrito($pdo, [
+            $id_inscrito = InscritosHelper::registrarInscripcion($pdo, [
                 'id_usuario' => $id_usuario,
                 'torneo_id' => $torneo_id,
                 'id_club' => $id_club,
@@ -284,7 +284,7 @@ try {
         $modalidad = (int)($stmt->fetchColumn() ?? 0);
         $codigo_equipo = InscritosHelper::codigoEquipoParaInscripcionSitioIndividual($pdo, $torneo_id, $id_club, $modalidad);
         try {
-            $id_inscrito = InscritosHelper::insertarInscrito($pdo, [
+            $id_inscrito = InscritosHelper::registrarInscripcion($pdo, [
                 'id_usuario' => $id_usuario,
                 'torneo_id' => $torneo_id,
                 'id_club' => $id_club,
