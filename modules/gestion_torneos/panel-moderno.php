@@ -9,12 +9,12 @@
  * Fallback mínimo si la vista se incluye sin el flujo normal (p. ej. rutas legacy).
  */
 if (!isset($base_url) || !isset($use_standalone)) {
-    $script_actual = basename($_SERVER['PHP_SELF'] ?? '');
+$script_actual = basename($_SERVER['PHP_SELF'] ?? '');
     if (!isset($use_standalone)) {
         $use_standalone = in_array($script_actual, ['admin_torneo.php', 'panel_torneo.php'], true);
     }
     if (!isset($base_url)) {
-        $base_url = $use_standalone ? $script_actual : 'index.php?page=torneo_gestion';
+$base_url = $use_standalone ? $script_actual : 'index.php?page=torneo_gestion';
     }
 }
 if (!isset($user_id)) {

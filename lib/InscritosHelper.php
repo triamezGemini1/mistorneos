@@ -280,16 +280,20 @@ class InscritosHelper {
         $colNames = $pdo->query('SHOW COLUMNS FROM inscritos')->fetchAll(PDO::FETCH_COLUMN);
         $have = [];
         foreach ($colNames as $c) {
-            $have[strtolower((string)$c)] = $c;
+            $phys = trim((string) $c);
+            if ($phys === '') {
+                continue;
+            }
+            $have[strtolower($phys)] = $phys;
         }
         $H = static function (string $n) use ($have): bool {
-            return isset($have[strtolower($n)]);
+            return isset($have[strtolower(trim($n))]);
         };
         $insertCols = [];
         $insertVals = [];
         $params = [];
         $push = static function (string $col, string $sql, $param = null) use (&$insertCols, &$insertVals, &$params, $have): void {
-            $k = strtolower($col);
+            $k = strtolower(trim($col));
             if (!isset($have[$k])) {
                 return;
             }
@@ -315,14 +319,15 @@ class InscritosHelper {
             $push('codigo_equipo', '?', $codigo_equipo);
         }
         foreach (['posicion', 'ganados', 'perdidos', 'efectividad', 'puntos', 'ptosrnk', 'sancion', 'chancletas', 'zapatos', 'tarjeta', 'mesa'] as $c) {
+            $ck = strtolower(trim($c));
             if ($H($c)) {
-                $insertCols[] = '`' . $have[strtolower($c)] . '`';
+                $insertCols[] = '`' . str_replace('`', '``', $have[$ck]) . '`';
                 $insertVals[] = '0';
             }
         }
-        /* mesa/letra en inscritos (esquemas con asignación fija): sin mesa/letra hasta generar ronda */
+        /* letra: espacio hasta asignación en mesa (NOT NULL sin default en algunos esquemas) */
         if ($H('letra')) {
-            $push('letra', '?', '');
+            $push('letra', '?', ' ');
         }
         if ($H('fecha_inscripcion')) {
             $insertCols[] = '`' . $have['fecha_inscripcion'] . '`';
@@ -350,6 +355,25 @@ class InscritosHelper {
             }
             if ($ent > 0) {
                 $push('entidad_id', '?', $ent);
+            }
+        }
+        /* Respaldo: mesa=0 y letra=' ' si el motor exige columnas y no quedaron en el INSERT (p. ej. nombres atípicos en SHOW COLUMNS) */
+        $insertedPhys = [];
+        foreach ($insertCols as $qc) {
+            $insertedPhys[strtolower(trim(str_replace('`', '', $qc)))] = true;
+        }
+        foreach ($have as $logicalKey => $physicalName) {
+            $physNorm = strtolower(trim((string) $physicalName));
+            if ($logicalKey === 'mesa' && !isset($insertedPhys[$physNorm])) {
+                $insertCols[] = '`' . str_replace('`', '``', $physicalName) . '`';
+                $insertVals[] = '0';
+                $insertedPhys[$physNorm] = true;
+            }
+            if ($logicalKey === 'letra' && !isset($insertedPhys[$physNorm])) {
+                $insertCols[] = '`' . str_replace('`', '``', $physicalName) . '`';
+                $insertVals[] = '?';
+                $params[] = ' ';
+                $insertedPhys[$physNorm] = true;
             }
         }
         if ($insertCols === []) {
