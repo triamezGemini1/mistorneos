@@ -318,7 +318,7 @@ try {
             if (!obtenerTorneo($torneo_id, $user_id, $is_admin_general)) {
                 throw new Exception('Torneo no encontrado o sin permisos');
             }
-            $view_file = __DIR__ . '/gestion_torneos/panel-moderno.php';
+            $view_file = __DIR__ . '/gestion_torneos/panel.php';
             $script_actual = basename($_SERVER['PHP_SELF'] ?? '');
             $use_standalone = in_array($script_actual, ['admin_torneo.php', 'panel_torneo.php'], true);
             $base_url = $use_standalone ? $script_actual : 'index.php?page=torneo_gestion';

@@ -1,7 +1,28 @@
 <?php
 /**
- * Vista: Panel de Control de Torneo
+ * Vista: Panel de Control de Torneo — tres columnas en pantallas grandes (Bootstrap).
  */
+$script_actual = basename($_SERVER['PHP_SELF'] ?? '');
+if (!isset($use_standalone)) {
+    $use_standalone = in_array($script_actual, ['admin_torneo.php', 'panel_torneo.php'], true);
+}
+if (!isset($base_url)) {
+    $base_url = $use_standalone ? $script_actual : 'index.php?page=torneo_gestion';
+}
+$sep = $use_standalone ? '?' : '&';
+$tid = (int) ($torneo['id'] ?? 0);
+$post_action = $use_standalone ? ($base_url . '?torneo_id=' . $tid) : 'index.php?page=torneo_gestion';
+
+if (!function_exists('panel_torneo_accion_url')) {
+    /**
+     * @param array<string, string|int> $extra
+     */
+    function panel_torneo_accion_url(string $base_url, bool $use_standalone, int $tid, string $action, array $extra = []): string {
+        $parts = array_merge(['action' => $action, 'torneo_id' => (string) $tid], $extra);
+
+        return htmlspecialchars($base_url . ($use_standalone ? '?' : '&') . http_build_query($parts), ENT_QUOTES, 'UTF-8');
+    }
+}
 ?>
 
 <div class="container-fluid">
@@ -100,10 +121,11 @@
         }
     </style>
     
-    <!-- 6 Gadgets Compactos -->
+    <!-- Tres columnas: inscripciones · rondas/mesas · informes y cierre -->
     <div class="row g-3 mb-4">
+        <div class="col-12 col-lg-4 d-flex flex-column gap-3">
+        <!-- Columna 1 — Inscripciones -->
         <!-- Gadget 1: Gestionar Inscripciones -->
-        <div class="col-12 col-md-6 col-lg-6">
             <div class="card">
                 <div class="card-body p-2">
                     <div class="bg-light rounded p-2 mb-2 text-center">
@@ -125,7 +147,7 @@
                             </a>
                         <?php else: ?>
                             <!-- Modalidad Individual/Parejas: Redirigir a inscripciones normales -->
-                            <a href="index.php?page=registrants&torneo_id=<?php echo $torneo['id']; ?>" 
+                            <a href="index.php?page=registrants&torneo_id=<?php echo $torneo['id']; ?><?php echo $use_standalone ? '&return_to=panel_torneo' : ''; ?>" 
                                class="btn btn-sm btn-primary w-100">
                                 <i class="fas fa-clipboard-list mr-1"></i> Gestionar Inscripciones
                             </a>
@@ -138,7 +160,7 @@
                             } catch (Exception $e) {}
                             $torneo_iniciado_panel = !empty($rondas_panel) && (int)$rondas_panel >= 1;
                             if ($torneo_iniciado_panel): ?>
-                            <a href="index.php?page=torneo_gestion&action=sustituir_jugador&torneo_id=<?php echo $torneo['id']; ?>" 
+                            <a href="<?php echo panel_torneo_accion_url($base_url, $use_standalone, $tid, 'sustituir_jugador'); ?>" 
                                class="btn btn-sm btn-warning w-100 mt-1">
                                 <i class="fas fa-user-exchange mr-1"></i> Sustituir jugador retirado
                             </a>
@@ -147,17 +169,10 @@
                     <?php endif; ?>
                 </div>
             </div>
-        </div>
 
         <!-- Gadget 2: Inscripción en Sitio -->
-        <div class="col-12 col-md-6 col-lg-6">
             <div class="card">
                 <div class="card-body p-2">
-                    <?php
-                    $script_actual = basename($_SERVER['PHP_SELF'] ?? '');
-                    $use_standalone = in_array($script_actual, ['admin_torneo.php', 'panel_torneo.php']);
-                    $base_url = $use_standalone ? $script_actual : 'index.php?page=torneo_gestion';
-                    ?>
                     <?php if ($isLocked): ?>
                         <button type="button" class="btn btn-sm btn-secondary w-100" disabled>
                             <i class="fas fa-lock mr-1"></i> Inscripción en Sitio (Cerrado)
@@ -174,12 +189,10 @@
                     </a>
                 </div>
             </div>
-        </div>
 
         <!-- Gadget Equipos/Parejas (modalidad 2 = Parejas, 3 = Equipos) -->
         <?php if (in_array((int)($torneo['modalidad'] ?? 0), [2, 3], true)): ?>
         <?php $es_parejas_gadget = (int)($torneo['modalidad'] ?? 0) === 2; ?>
-        <div class="col-12 col-md-6 col-lg-6">
             <div class="card">
                 <div class="card-body p-2">
                     <div class="bg-light rounded p-2 mb-2 text-center">
@@ -198,11 +211,12 @@
                     <?php endif; ?>
                 </div>
             </div>
-        </div>
         <?php endif; ?>
+        </div>
 
+        <div class="col-12 col-lg-4 d-flex flex-column gap-3">
+        <!-- Columna 2 — Rondas y mesas -->
         <!-- Gadget 3: Generar Ronda -->
-        <div class="col-12 col-md-6 col-lg-6">
             <div class="card">
                 <div class="card-body p-2">
                     <?php if ($proxima_ronda <= $torneo['rondas']): ?>
@@ -217,7 +231,8 @@
                                 <?php echo $mesas_incompletas ?? 0; ?> mesa(s) pendiente(s)
                             </div>
                         <?php endif; ?>
-                        <form method="POST" action="index.php?page=torneo_gestion&action=generar_ronda">
+                        <form method="POST" action="<?php echo htmlspecialchars($post_action, ENT_QUOTES, 'UTF-8'); ?>">
+                            <input type="hidden" name="action" value="generar_ronda">
                             <input type="hidden" name="csrf_token" value="<?php echo CSRF::token(); ?>">
                             <input type="hidden" name="torneo_id" value="<?php echo $torneo['id']; ?>">
                             <input type="hidden" name="num_ronda" value="<?php echo $proxima_ronda; ?>">
@@ -236,10 +251,8 @@
                     <?php endif; ?>
                 </div>
             </div>
-        </div>
 
         <!-- Gadget 4: Ver Mesas Ronda Actual -->
-        <div class="col-12 col-md-6 col-lg-6">
             <div class="card">
                 <div class="card-body p-2">
                     <?php if (($ultima_ronda ?? 0) > 0): ?>
@@ -250,7 +263,7 @@
                                 <small class="text-muted">mesas</small>
                             <?php endif; ?>
                         </div>
-                        <a href="index.php?page=torneo_gestion&action=mesas&torneo_id=<?php echo $torneo['id']; ?>&ronda=<?php echo $ultima_ronda; ?>" 
+                        <a href="<?php echo panel_torneo_accion_url($base_url, $use_standalone, $tid, 'mesas', ['ronda' => (string) $ultima_ronda]); ?>" 
                            class="btn btn-sm btn-info w-100">
                             <i class="fas fa-eye mr-1"></i> Ver Mesas
                         </a>
@@ -262,17 +275,15 @@
                     <?php endif; ?>
                 </div>
             </div>
-        </div>
 
         <!-- Gadget 5: Agregar Mesa -->
-        <div class="col-12 col-md-6 col-lg-6">
             <div class="card">
                 <div class="card-body p-2">
                     <?php if (($ultima_ronda ?? 0) > 0): ?>
                         <div class="bg-light rounded p-2 mb-2 text-center">
                             <small class="text-muted">Ronda <?php echo $ultima_ronda; ?></small>
                         </div>
-                        <a href="index.php?page=torneo_gestion&action=agregar_mesa&torneo_id=<?php echo $torneo['id']; ?>&ronda=<?php echo $ultima_ronda; ?>" 
+                        <a href="<?php echo panel_torneo_accion_url($base_url, $use_standalone, $tid, 'agregar_mesa', ['ronda' => (string) $ultima_ronda]); ?>" 
                            class="btn btn-sm btn-info w-100 <?php echo $isLocked ? 'disabled' : ''; ?>"
                            <?php echo $isLocked ? 'aria-disabled="true" onclick="return false;" style="pointer-events:none; opacity:0.6;"' : ''; ?>>
                             <i class="fas fa-plus-circle mr-1"></i> Agregar Mesa
@@ -287,21 +298,22 @@
             </div>
         </div>
 
+        <div class="col-12 col-lg-4 d-flex flex-column gap-3">
+        <!-- Columna 3 — Informes y cierre -->
         <!-- Gadget 6: Cuadrícula / Hojas / Reportes -->
-        <div class="col-12 col-md-6 col-lg-6">
             <div class="card">
                 <div class="card-body p-2">
                     <?php if (($ultima_ronda ?? 0) > 0): ?>
                         <div class="d-grid gap-1">
-                            <a href="index.php?page=torneo_gestion&action=cuadricula&torneo_id=<?php echo $torneo['id']; ?>&ronda=<?php echo $ultima_ronda; ?>" 
+                            <a href="<?php echo panel_torneo_accion_url($base_url, $use_standalone, $tid, 'cuadricula', ['ronda' => (string) $ultima_ronda]); ?>" 
                                class="btn btn-sm btn-purple" style="font-size: 0.75rem;">
                                 <i class="fas fa-th mr-1"></i> Cuadrícula
                             </a>
-                            <a href="index.php?page=torneo_gestion&action=hojas_anotacion&torneo_id=<?php echo $torneo['id']; ?>&ronda=<?php echo $ultima_ronda; ?>" 
+                            <a href="<?php echo panel_torneo_accion_url($base_url, $use_standalone, $tid, 'hojas_anotacion', ['ronda' => (string) $ultima_ronda]); ?>" 
                                class="btn btn-sm btn-primary" style="font-size: 0.75rem;">
                                 <i class="fas fa-print mr-1"></i> Hojas Anotación
                             </a>
-                            <a href="index.php?page=torneo_gestion&action=posiciones&torneo_id=<?php echo $torneo['id']; ?>" 
+                            <a href="<?php echo panel_torneo_accion_url($base_url, $use_standalone, $tid, 'posiciones'); ?>" 
                                class="btn btn-sm btn-success" style="font-size: 0.75rem;">
                                 <i class="fas fa-trophy mr-1"></i> Posiciones
                             </a>
@@ -309,29 +321,26 @@
                             $es_modalidad_equipos_panel = isset($torneo['modalidad']) && (int)$torneo['modalidad'] === 3;
                             $podios_action_panel = $es_modalidad_equipos_panel ? 'podios_equipos' : 'podios';
                             ?>
-                            <a href="index.php?page=torneo_gestion&action=<?php echo $podios_action_panel; ?>&torneo_id=<?php echo $torneo['id']; ?>" 
+                            <a href="<?php echo panel_torneo_accion_url($base_url, $use_standalone, $tid, $podios_action_panel); ?>" 
                                class="btn btn-sm btn-warning" style="font-size: 0.75rem;">
                                 <i class="fas fa-medal mr-1"></i> Podios
                             </a>
-                            <a href="index.php?page=torneo_gestion&action=resultados_por_club&torneo_id=<?php echo $torneo['id']; ?>" 
+                            <a href="<?php echo panel_torneo_accion_url($base_url, $use_standalone, $tid, 'resultados_por_club'); ?>" 
                                class="btn btn-sm btn-info" style="font-size: 0.75rem;">
                                 <i class="fas fa-building mr-1"></i> Resultados Clubes
                             </a>
-                            <a href="index.php?page=torneo_gestion&action=resultados_reportes&torneo_id=<?php echo $torneo['id']; ?>" 
+                            <a href="<?php echo panel_torneo_accion_url($base_url, $use_standalone, $tid, 'resultados_reportes'); ?>" 
                                class="btn btn-sm btn-secondary" style="font-size: 0.75rem;">
                                 <i class="fas fa-file-pdf mr-1"></i> Reportes PDF/Excel
                             </a>
-                            <?php 
-                            $isLocked = (int)($torneo['locked'] ?? 0) === 1;
-                            $puedeCerrar = !$isLocked && ($ultima_ronda ?? 0) > 0 && ($mesas_incompletas ?? 1) == 0;
-                            ?>
-                            <form method="POST" action="index.php?page=torneo_gestion" class="d-inline"
+                            <?php $puedeCerrarTorneo = (bool) ($puedeCerrar ?? false); ?>
+                            <form method="POST" action="<?php echo htmlspecialchars($post_action, ENT_QUOTES, 'UTF-8'); ?>" class="d-inline"
                                   onsubmit="event.preventDefault(); confirmarCierreTorneoBasico(event);">
                                 <input type="hidden" name="action" value="cerrar_torneo">
                                 <input type="hidden" name="csrf_token" value="<?php echo CSRF::token(); ?>">
                                 <input type="hidden" name="torneo_id" value="<?php echo $torneo['id']; ?>">
                                 <button type="submit" class="btn btn-sm <?php echo $isLocked ? 'btn-secondary' : 'btn-dark'; ?>" 
-                                        style="font-size: 0.75rem;" <?php echo $puedeCerrar ? '' : 'disabled'; ?>>
+                                        style="font-size: 0.75rem;" <?php echo $puedeCerrarTorneo ? '' : 'disabled'; ?>>
                                     <i class="fas fa-lock mr-1"></i> <?php echo $isLocked ? 'Torneo Cerrado' : 'Cerrar Torneo'; ?>
                                 </button>
                             </form>
@@ -354,7 +363,8 @@
                 <div class="card-header d-flex justify-content-between align-items-center">
                     <h5 class="mb-0"><i class="fas fa-list mr-2"></i> Rondas Generadas</h5>
                     <?php if (!$isLocked && $puede_generar_ronda && $proxima_ronda <= $torneo['rondas']): ?>
-                        <form method="POST" action="index.php?page=torneo_gestion&action=generar_ronda" class="d-inline">
+                        <form method="POST" action="<?php echo htmlspecialchars($post_action, ENT_QUOTES, 'UTF-8'); ?>" class="d-inline">
+                            <input type="hidden" name="action" value="generar_ronda">
                             <input type="hidden" name="csrf_token" value="<?php echo CSRF::token(); ?>">
                             <input type="hidden" name="torneo_id" value="<?php echo $torneo['id']; ?>">
                             <input type="hidden" name="num_ronda" value="<?php echo $proxima_ronda; ?>">
@@ -403,7 +413,7 @@
                                             <td><?php echo $ronda['jugadores_bye']; ?></td>
                                             <td><?php echo $ronda['fecha_generacion'] ? date('d/m/Y H:i', strtotime($ronda['fecha_generacion'])) : 'N/A'; ?></td>
                                             <td>
-                                                <a href="index.php?page=torneo_gestion&action=mesas&torneo_id=<?php echo $torneo['id']; ?>&ronda=<?php echo $ronda['num_ronda']; ?>" 
+                                                <a href="<?php echo panel_torneo_accion_url($base_url, $use_standalone, $tid, 'mesas', ['ronda' => (string) $ronda['num_ronda']]); ?>" 
                                                    class="btn btn-sm btn-info">
                                                     <i class="fas fa-eye mr-1"></i> Ver Mesas
                                                 </a>

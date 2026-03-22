@@ -3,14 +3,14 @@
 declare(strict_types=1);
 
 /**
- * Capa de datos para la vista del panel de torneo (panel-moderno).
+ * Capa de datos para la vista del panel de torneo (panel.php y panel-moderno.php).
  * Centraliza consultas PDO, flags de negocio y derivados que antes estaban en obtenerDatosPanel()
  * La vista panel-moderno.php consume solo extract($view_data) + fallback mínimo de URL/sesión.
  */
 final class PanelTorneoViewData
 {
     /**
-     * Construye el array `$view_data` consumido por `extract()` en `panel-moderno.php`.
+     * Construye el array `$view_data` consumido por `extract()` en `panel.php` / `panel-moderno.php`.
      *
      * **Contrato completo de la vista del panel:** el controlador (`torneo_gestion.php`, `case 'panel'`)
      * llama a este método y **fusiona** después las claves de contexto HTTP/sesión
