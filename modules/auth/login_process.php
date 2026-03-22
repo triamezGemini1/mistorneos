@@ -3,12 +3,17 @@
 declare(strict_types=1);
 
 /**
- * Procesamiento de login administrador.
- * Capa de datos pendiente: aquí solo validación, CSRF y saneamiento.
+ * Login administrador: SOLO la tabla maestra `usuarios` / `users` (BD principal, DB_AUTH_TABLE).
+ * La BD auxiliar de personas no interviene en el login ni en credenciales.
+ * password_verify() únicamente sobre hashes generados con password_hash() en PHP.
  */
 
 $root = dirname(__DIR__, 2);
 require $root . '/config/bootstrap.php';
+require $root . '/app/Database/ConnectionException.php';
+require $root . '/app/Database/Connection.php';
+require $root . '/app/Helpers/PasswordHashInspector.php';
+require $root . '/app/Core/OrganizacionService.php';
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     header('Location: index.php', true, 303);
@@ -24,22 +29,138 @@ if (!csrf_validate($token)) {
 $usuario = isset($_POST['usuario']) ? trim((string) $_POST['usuario']) : '';
 $password = isset($_POST['password']) ? (string) $_POST['password'] : '';
 
-$errors = [];
-if ($usuario === '' || strlen($usuario) > 128) {
-    $errors[] = 'usuario';
-}
-if (strlen($password) < 8) {
-    $errors[] = 'password';
-}
-
-if ($errors !== []) {
-    $q = 'auth=invalid&fields=' . rawurlencode(implode(',', $errors));
-    header('Location: index.php?' . $q, true, 303);
+if ($usuario === '' || strlen($usuario) > 128 || strlen($password) < 8) {
+    header('Location: index.php?auth=invalid', true, 303);
     exit;
 }
 
-// TODO: comprobar credenciales contra almacén (consultas preparadas + password_verify).
-// No registrar contraseñas ni datos sensibles en logs.
+$adminRoles = ['admin_general', 'admin_torneo', 'admin_club', 'operador'];
 
-header('Location: index.php?auth=pending', true, 303);
+try {
+    $pdo = Connection::get();
+} catch (ConnectionException $e) {
+    header('Location: index.php?auth=db', true, 303);
+    exit;
+}
+
+$tablaAuth = mn_tabla_auth_operativa();
+$sql = sprintf(
+    'SELECT id, username, password_hash, email, role, status, club_id, nombre FROM `%s` WHERE username = :u OR email = :u LIMIT 1',
+    $tablaAuth
+);
+
+$stmt = $pdo->prepare($sql);
+$stmt->execute(['u' => $usuario]);
+$row = $stmt->fetch(PDO::FETCH_ASSOC);
+
+if ($row === false) {
+    header('Location: index.php?auth=invalid', true, 303);
+    exit;
+}
+
+$hash = (string) ($row['password_hash'] ?? '');
+$result = PasswordHashInspector::verify($password, $hash);
+
+if ($result['legacy_insecure']) {
+    header('Location: index.php?auth=unsafe_storage', true, 303);
+    exit;
+}
+
+if (!$result['ok']) {
+    header('Location: index.php?auth=invalid', true, 303);
+    exit;
+}
+
+if (!in_array((string) ($row['role'] ?? ''), $adminRoles, true)) {
+    header('Location: index.php?auth=invalid', true, 303);
+    exit;
+}
+
+if ((int) ($row['status'] ?? 1) !== 0) {
+    header('Location: index.php?auth=inactive', true, 303);
+    exit;
+}
+
+if (mn_usuario_bloqueado_por_is_active($pdo, (int) $row['id'])) {
+    header('Location: index.php?auth=inactive', true, 303);
+    exit;
+}
+
+if (session_status() === PHP_SESSION_ACTIVE) {
+    session_regenerate_id(true);
+}
+
+$orgId = OrganizacionService::ensureWorkspaceForAdmin(
+    $pdo,
+    (int) $row['id'],
+    (string) ($row['role'] ?? ''),
+    (string) ($row['nombre'] ?? ''),
+    (string) ($row['email'] ?? '')
+);
+
+$_SESSION['admin_user'] = [
+    'id' => (int) $row['id'],
+    'username' => (string) $row['username'],
+    'email' => (string) $row['email'],
+    'role' => (string) $row['role'],
+    'club_id' => (int) ($row['club_id'] ?? 0),
+    'organizacion_id' => $orgId,
+];
+
+if ($orgId !== null && (int) $orgId > 0) {
+    try {
+        $st = $pdo->prepare(
+            'SELECT nombre, entidad_id, entidad FROM organizaciones WHERE id = ? LIMIT 1'
+        );
+        $st->execute([(int) $orgId]);
+        $orgRow = $st->fetch(PDO::FETCH_ASSOC);
+        if (is_array($orgRow)) {
+            $_SESSION['admin_user']['organizacion_nombre'] = (string) ($orgRow['nombre'] ?? '');
+            $eid = (int) ($orgRow['entidad_id'] ?? 0);
+            if ($eid <= 0 && isset($orgRow['entidad'])) {
+                $eid = (int) $orgRow['entidad'];
+            }
+            if ($eid > 0) {
+                $_SESSION['admin_user']['entidad_id'] = $eid;
+                $st2 = $pdo->prepare('SELECT nombre FROM entidades WHERE id = ? LIMIT 1');
+                $st2->execute([$eid]);
+                $en = $st2->fetchColumn();
+                if ($en !== false) {
+                    $_SESSION['admin_user']['entidad_nombre'] = (string) $en;
+                }
+            }
+        }
+    } catch (Throwable $e) {
+        // entidades / entidad_id opcionales hasta migración
+    }
+}
+
+header('Location: dashboard_test.php', true, 303);
 exit;
+
+/**
+ * Columna opcional is_active (1 = permitido).
+ */
+function mn_tabla_auth_operativa(): string
+{
+    $t = strtolower(trim((string) (getenv('DB_AUTH_TABLE') ?: 'usuarios')));
+
+    return in_array($t, ['usuarios', 'users'], true) ? $t : 'usuarios';
+}
+
+function mn_usuario_bloqueado_por_is_active(PDO $pdo, int $userId): bool
+{
+    $tabla = mn_tabla_auth_operativa();
+    try {
+        $st = $pdo->prepare(sprintf('SELECT is_active FROM `%s` WHERE id = ? LIMIT 1', $tabla));
+        $st->execute([$userId]);
+        $r = $st->fetch(PDO::FETCH_ASSOC);
+        if ($r === false || !array_key_exists('is_active', $r)) {
+            return false;
+        }
+
+        return (int) $r['is_active'] !== 1;
+    } catch (Throwable $e) {
+        return false;
+    }
+}
