@@ -66,11 +66,10 @@ class MesaAsignacionService
         return ['sql' => " AND {$col} = ?", 'bind' => [$eid]];
     }
 
-    /** SQLite vs MySQL: fecha/hora actual en SQL embebido (no como placeholder). */
-    private function sqlNowExpr(): string
+    /** Fecha/hora para partiresul.fecha_partida: misma cadena en MySQL y SQLite (evita datetime('now') / NOW() en SQL). */
+    private function fechaPartidaAhora(): string
     {
-        $driver = $this->pdo->getAttribute(PDO::ATTR_DRIVER_NAME);
-        return $driver === 'sqlite' ? "datetime('now')" : 'NOW()';
+        return date('Y-m-d H:i:s');
     }
 
     /** SQLite: INSERT OR IGNORE — MySQL: INSERT IGNORE */
@@ -1817,6 +1816,7 @@ class MesaAsignacionService
         $this->pdo->beginTransaction();
 
         try {
+            $fechaPartida = $this->fechaPartidaAhora();
             $numeroMesa = 1;
             foreach ($mesas as $mesa) {
                 $secuencia = 1;
@@ -1824,12 +1824,11 @@ class MesaAsignacionService
                     $idUsuario = (int)($jugador['id_usuario'] ?? 0);
                     if ($idUsuario <= 0) continue; // Saltar comodín/bye
                     $eid = $this->entidadId();
-                    $nowSql = $this->sqlNowExpr();
                     $sql = "INSERT INTO partiresul 
                             (id_torneo, id_usuario, partida, mesa, secuencia, fecha_partida, registrado, entidad_id)
-                            VALUES (?, ?, ?, ?, ?, {$nowSql}, 0, ?)";
+                            VALUES (?, ?, ?, ?, ?, ?, 0, ?)";
                     $stmt = $this->pdo->prepare($sql);
-                    $stmt->execute([$torneoId, $idUsuario, $ronda, $numeroMesa, $secuencia, $eid]);
+                    $stmt->execute([$torneoId, $idUsuario, $ronda, $numeroMesa, $secuencia, $fechaPartida, $eid]);
                     $secuencia++;
                 }
                 $numeroMesa++;
@@ -1932,15 +1931,15 @@ class MesaAsignacionService
         $ent = $this->whereEntidad();
         $this->pdo->prepare("DELETE FROM partiresul WHERE id_torneo = ? AND partida = ? AND mesa = 0" . $ent['sql'])
             ->execute(array_merge([$torneoId, $ronda], $ent['bind']));
-        $nowSql = $this->sqlNowExpr();
+        $fechaPartida = $this->fechaPartidaAhora();
         $stmt = $this->pdo->prepare("
             INSERT INTO partiresul (id_torneo, id_usuario, partida, mesa, secuencia, fecha_partida, registrado, entidad_id)
-            VALUES (?, ?, ?, 0, 1, {$nowSql}, 0, ?)
+            VALUES (?, ?, ?, 0, 1, ?, 0, ?)
         ");
         foreach ($jugadoresBye as $jugador) {
             $idUsuario = (int)($jugador['id_usuario'] ?? 0);
             if ($idUsuario <= 0) continue;
-            $stmt->execute([$torneoId, $idUsuario, $ronda, $eid]);
+            $stmt->execute([$torneoId, $idUsuario, $ronda, $fechaPartida, $eid]);
         }
 
         // 2) Aplicar la regla BYE a todos los registros de la ronda con mesa=0
