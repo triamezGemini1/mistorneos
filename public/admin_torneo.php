@@ -97,7 +97,8 @@ header('Content-Type: text/html; charset=utf-8');
                 <td><?= (int) ($t['id'] ?? 0) ?></td>
                 <td><?= htmlspecialchars((string) ($t['nombre'] ?? ''), ENT_QUOTES, 'UTF-8') ?></td>
                 <td><?= htmlspecialchars((string) ($t['fechator'] ?? ''), ENT_QUOTES, 'UTF-8') ?></td>
-                <td>
+                <td class="mn-admin-torneo-actions">
+                  <a class="mn-btn mn-btn--ghost" style="font-size:0.875rem;padding:0.35rem 0.75rem;" href="<?= htmlspecialchars($publicPrefix, ENT_QUOTES, 'UTF-8') ?>panel_torneo_vida.php?torneo_id=<?= (int) ($t['id'] ?? 0) ?>">Panel</a>
                   <a class="mn-btn mn-btn--success" style="font-size:0.875rem;padding:0.35rem 0.75rem;" href="<?= htmlspecialchars($publicPrefix, ENT_QUOTES, 'UTF-8') ?>checkin.php?torneo_id=<?= (int) ($t['id'] ?? 0) ?>">Check-in</a>
                 </td>
               </tr>
