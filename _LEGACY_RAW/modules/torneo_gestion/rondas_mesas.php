@@ -583,8 +583,19 @@ function generarRonda($torneo_id, $user_id, $is_admin_general) {
             $_SESSION['error'] = $resultado['message'];
         }
         
-    } catch (Exception $e) {
-        error_log("Error al generar ronda: " . $e->getMessage() . "\n" . $e->getTraceAsString());
+    } catch (Throwable $e) {
+        $detail = $e->getMessage();
+        if ($e instanceof PDOException) {
+            $info = $e->errorInfo ?? null;
+            if (is_array($info)) {
+                $detail .= ' | SQLSTATE=' . ($info[0] ?? '') . ' code=' . ($info[1] ?? '') . ' driver=' . ($info[2] ?? '');
+            }
+        }
+        $prev = $e->getPrevious();
+        if ($prev instanceof Throwable) {
+            $detail .= ' | causa: ' . $prev->getMessage();
+        }
+        error_log('Error al generar ronda (torneo_id=' . (int)($torneo_id ?? 0) . '): ' . $detail . "\n" . $e->getTraceAsString());
         $_SESSION['error'] = 'Error al generar ronda: ' . $e->getMessage();
     }
     

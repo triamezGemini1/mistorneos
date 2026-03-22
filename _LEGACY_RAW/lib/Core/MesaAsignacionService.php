@@ -1791,6 +1791,15 @@ class MesaAsignacionService
         $this->pdo->beginTransaction();
 
         try {
+            $this->pdo->prepare('DELETE FROM partiresul WHERE id_torneo = ? AND partida = ?')
+                ->execute([$torneoId, $ronda]);
+            try {
+                $this->pdo->prepare('DELETE FROM historial_parejas WHERE torneo_id = ? AND ronda_id = ?')
+                    ->execute([$torneoId, $ronda]);
+            } catch (Exception $e) {
+                // Tabla ausente o esquema distinto
+            }
+
             $fechaPartida = $this->fechaPartidaAhora();
             $numeroMesa = 1;
             foreach ($mesas as $mesa) {
