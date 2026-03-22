@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 /**
  * Registro de Resultados (Desktop) — Replica del formulario web con sidebar y tabla completa.
  * Carga: torneo, rondas, mesas (completadas/pendientes), jugadores de la mesa actual.
@@ -7,10 +7,8 @@
 declare(strict_types=1);
 require_once __DIR__ . '/desktop_auth.php';
 require_once __DIR__ . '/db_local.php';
-require_once __DIR__ . '/../../desktop/core/db_bridge.php';
 
 $pdo = DB_Local::pdo();
-$entidad_id = DB::getEntidadId();
 $torneo_id = isset($_GET['torneo_id']) ? (int)$_GET['torneo_id'] : 0;
 $ronda = isset($_GET['partida']) ? (int)$_GET['partida'] : 0;
 $mesa_actual = isset($_GET['mesa']) ? (int)$_GET['mesa'] : 0;
@@ -33,10 +31,6 @@ $mesaAnterior = null;
 $mesaSiguiente = null;
 $tabla_partiresul_existe = false;
 
-$ent_sql = $entidad_id > 0 ? ' AND pr.entidad_id = ?' : '';
-$ent_sql_pr = $entidad_id > 0 ? ' AND entidad_id = ?' : '';
-$ent_bind = $entidad_id > 0 ? [$entidad_id] : [];
-
 try {
     $tabla_partiresul_existe = (bool) $pdo->query("SELECT 1 FROM sqlite_master WHERE type='table' AND name='partiresul' LIMIT 1")->fetch();
 } catch (Throwable $e) {
@@ -53,8 +47,8 @@ if ($torneo_id > 0) {
 
 if ($torneo_id > 0 && $tabla_partiresul_existe) {
     try {
-        $st = $pdo->prepare("SELECT DISTINCT partida FROM partiresul WHERE id_torneo = ?" . $ent_sql_pr . " ORDER BY partida ASC");
-        $st->execute(array_merge([$torneo_id], $ent_bind));
+        $st = $pdo->prepare("SELECT DISTINCT partida FROM partiresul WHERE id_torneo = ? ORDER BY partida ASC");
+        $st->execute([$torneo_id]);
         $todasLasRondas = $st->fetchAll(PDO::FETCH_ASSOC);
     } catch (Throwable $e) {
     }
@@ -71,11 +65,11 @@ if ($torneo_id > 0 && $tabla_partiresul_existe) {
         $st = $pdo->prepare("
             SELECT pr.mesa as numero, MAX(pr.registrado) as registrado
             FROM partiresul pr
-            WHERE pr.id_torneo = ? AND pr.partida = ? AND pr.mesa > 0" . $ent_sql . "
+            WHERE pr.id_torneo = ? AND pr.partida = ? AND pr.mesa > 0
             GROUP BY pr.mesa
             ORDER BY CAST(pr.mesa AS INTEGER) ASC
         ");
-        $st->execute(array_merge([$torneo_id, $ronda], $ent_bind));
+        $st->execute([$torneo_id, $ronda]);
         $raw_mesas = $st->fetchAll(PDO::FETCH_ASSOC);
         $todasLasMesas = [];
         foreach ($raw_mesas as $m) {
@@ -109,10 +103,10 @@ if ($torneo_id > 0 && $tabla_partiresul_existe) {
                     FROM partiresul pr
                     INNER JOIN usuarios u ON pr.id_usuario = u.id
                     LEFT JOIN inscritos i ON i.id_usuario = u.id AND i.torneo_id = pr.id_torneo
-                    WHERE pr.id_torneo = ? AND pr.partida = ? AND pr.mesa = ?" . $ent_sql . "
+                    WHERE pr.id_torneo = ? AND pr.partida = ? AND pr.mesa = ?
                     ORDER BY pr.secuencia ASC";
             $st = $pdo->prepare($sql);
-            $st->execute(array_merge([$torneo_id, $ronda, $mesa_actual], $ent_bind));
+            $st->execute([$torneo_id, $ronda, $mesa_actual]);
             $jugadores = $st->fetchAll(PDO::FETCH_ASSOC);
             foreach ($jugadores as &$j) {
                 $j['inscrito'] = [

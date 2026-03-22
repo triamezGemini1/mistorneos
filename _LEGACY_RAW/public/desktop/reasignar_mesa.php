@@ -6,16 +6,11 @@
 declare(strict_types=1);
 require_once __DIR__ . '/desktop_auth.php';
 require_once __DIR__ . '/db_local.php';
-require_once __DIR__ . '/../../desktop/core/db_bridge.php';
 
 $pdo = DB_Local::pdo();
-$entidad_id = DB::getEntidadId();
 $torneo_id = isset($_GET['torneo_id']) ? (int)$_GET['torneo_id'] : (int)($_POST['torneo_id'] ?? 0);
 $ronda = isset($_GET['partida']) ? (int)$_GET['partida'] : (int)($_POST['partida'] ?? 0);
 $mesa = isset($_GET['mesa']) ? (int)$_GET['mesa'] : (int)($_POST['mesa'] ?? 0);
-
-$ent_sql = $entidad_id > 0 ? ' AND pr.entidad_id = ?' : '';
-$ent_bind = $entidad_id > 0 ? [$entidad_id] : [];
 
 $torneo = null;
 $jugadores = [];
@@ -46,8 +41,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                 throw new Exception('En Parejas Fijas solo se permiten movimientos en bloque de pareja (opciones 5 o 6).');
             }
 
-            $st = $pdo->prepare("SELECT * FROM partiresul WHERE id_torneo = ? AND partida = ? AND mesa = ?" . ($entidad_id > 0 ? ' AND entidad_id = ?' : '') . " ORDER BY secuencia ASC");
-            $st->execute(array_merge([$torneo_id, $ronda, $mesa], $ent_bind));
+            $st = $pdo->prepare("SELECT * FROM partiresul WHERE id_torneo = ? AND partida = ? AND mesa = ? ORDER BY secuencia ASC");
+            $st->execute([$torneo_id, $ronda, $mesa]);
             $jugadores = $st->fetchAll(PDO::FETCH_ASSOC);
 
             if (count($jugadores) !== 4) {
@@ -84,8 +79,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
             $pdo->beginTransaction();
             try {
                 foreach ($mapaFinal as $nuevaSecuencia => $idUsuario) {
-                    $up = $pdo->prepare("UPDATE partiresul SET secuencia = ? WHERE id_torneo = ? AND partida = ? AND mesa = ? AND id_usuario = ?" . ($entidad_id > 0 ? ' AND entidad_id = ?' : ''));
-                    $up->execute(array_merge([$nuevaSecuencia, $torneo_id, $ronda, $mesa, $idUsuario], $ent_bind));
+                    $up = $pdo->prepare("UPDATE partiresul SET secuencia = ? WHERE id_torneo = ? AND partida = ? AND mesa = ? AND id_usuario = ?");
+                    $up->execute([$nuevaSecuencia, $torneo_id, $ronda, $mesa, $idUsuario]);
                 }
                 $pdo->commit();
             } catch (Throwable $e) {
@@ -114,29 +109,29 @@ if ($torneo_id > 0 && $ronda > 0 && $mesa > 0) {
             SELECT pr.*, u.nombre as nombre_completo
             FROM partiresul pr
             INNER JOIN usuarios u ON pr.id_usuario = u.id
-            WHERE pr.id_torneo = ? AND pr.partida = ? AND pr.mesa = ?" . $ent_sql . "
+            WHERE pr.id_torneo = ? AND pr.partida = ? AND pr.mesa = ?
             ORDER BY pr.secuencia ASC
         ");
-        $st->execute(array_merge([$torneo_id, $ronda, $mesa], $ent_bind));
+        $st->execute([$torneo_id, $ronda, $mesa]);
         $jugadores = $st->fetchAll(PDO::FETCH_ASSOC);
     }
 
     $st = $pdo->prepare("
         SELECT pr.mesa as numero, MAX(pr.registrado) as registrado
         FROM partiresul pr
-        WHERE pr.id_torneo = ? AND pr.partida = ? AND pr.mesa > 0" . $ent_sql . "
+        WHERE pr.id_torneo = ? AND pr.partida = ? AND pr.mesa > 0
         GROUP BY pr.mesa
         ORDER BY CAST(pr.mesa AS INTEGER) ASC
     ");
-    $st->execute(array_merge([$torneo_id, $ronda], $ent_bind));
+    $st->execute([$torneo_id, $ronda]);
     $todasLasMesas = $st->fetchAll(PDO::FETCH_ASSOC);
     foreach ($todasLasMesas as &$m) {
         $m['numero'] = (int)$m['numero'];
     }
     usort($todasLasMesas, function ($a, $b) { return $a['numero'] - $b['numero']; });
 
-    $st = $pdo->prepare("SELECT DISTINCT partida FROM partiresul WHERE id_torneo = ?" . ($entidad_id > 0 ? ' AND entidad_id = ?' : '') . " ORDER BY partida ASC");
-    $st->execute(array_merge([$torneo_id], $ent_bind));
+    $st = $pdo->prepare("SELECT DISTINCT partida FROM partiresul WHERE id_torneo = ? ORDER BY partida ASC");
+    $st->execute([$torneo_id]);
     $todasLasRondas = $st->fetchAll(PDO::FETCH_ASSOC);
 
     foreach ($todasLasMesas as $idx => $m) {

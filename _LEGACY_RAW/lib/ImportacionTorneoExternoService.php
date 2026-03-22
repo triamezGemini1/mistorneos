@@ -145,6 +145,12 @@ final class ImportacionTorneoExternoService
         if ($insertFields === []) {
             return ['insertados' => 0, 'errores' => ['partiresul: sin columnas insertables']];
         }
+        $insertFields = array_values(array_filter($insertFields, static function ($c) {
+            return strtolower((string)$c['Field']) !== 'entidad_id';
+        }));
+        if ($insertFields === []) {
+            return ['insertados' => 0, 'errores' => ['partiresul: sin columnas insertables tras excluir entidad_id']];
+        }
         $sqlParts = [];
         $placeholders = [];
         foreach ($insertFields as $c) {

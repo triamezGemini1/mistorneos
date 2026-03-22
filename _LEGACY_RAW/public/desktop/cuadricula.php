@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 /**
  * Paso 4: Cuadrícula de asignaciones por ID (Desktop).
  * Tabla ordenada por id_usuario ASC para localizar jugadores rápido. 22 filas x 9 segmentos (ID + MESA+letra).
@@ -16,9 +16,6 @@ $numRonda = isset($_GET['ronda']) ? (int)$_GET['ronda'] : 0;
 $torneo = null;
 $asignaciones = [];
 $letras = [1 => 'A', 2 => 'C', 3 => 'B', 4 => 'D'];
-$ent_sql = $entidad_id > 0 ? ' AND pr.entidad_id = ?' : '';
-$ent_bind = $entidad_id > 0 ? [$entidad_id] : [];
-
 if ($torneo_id > 0 && $numRonda > 0) {
     try {
         $st = $pdo->prepare("SELECT id, nombre, rondas FROM tournaments WHERE id = ?");
@@ -29,10 +26,10 @@ if ($torneo_id > 0 && $numRonda > 0) {
                 SELECT pr.id_usuario, pr.mesa, pr.secuencia, u.nombre AS nombre_completo, u.username
                 FROM partiresul pr
                 INNER JOIN usuarios u ON pr.id_usuario = u.id
-                WHERE pr.id_torneo = ? AND pr.partida = ?" . $ent_sql . "
+                WHERE pr.id_torneo = ? AND pr.partida = ?
                 ORDER BY pr.id_usuario ASC
             ");
-            $st->execute(array_merge([$torneo_id, $numRonda], $ent_bind));
+            $st->execute([$torneo_id, $numRonda]);
             $asignaciones = $st->fetchAll(PDO::FETCH_ASSOC);
         }
     } catch (Throwable $e) {
@@ -56,8 +53,8 @@ require_once __DIR__ . '/desktop_layout.php';
         }
         $rondas = [];
         if ($torneo_id > 0) {
-            $st = $pdo->prepare("SELECT DISTINCT partida FROM partiresul WHERE id_torneo = ?" . ($entidad_id > 0 ? ' AND entidad_id = ?' : '') . " ORDER BY partida ASC");
-            $st->execute(array_merge([$torneo_id], $ent_bind));
+            $st = $pdo->prepare("SELECT DISTINCT partida FROM partiresul WHERE id_torneo = ? ORDER BY partida ASC");
+            $st->execute([$torneo_id]);
             $rondas = $st->fetchAll(PDO::FETCH_COLUMN);
         }
         ?>

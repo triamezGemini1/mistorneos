@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 /**
  * Reporte general de resultados (Desktop).
  * Participantes con club y enlace a resumen; detalle de partidas con GFF, bye, tarjeta, sanción, observaciones.
@@ -18,7 +18,6 @@ $detalle_partidas = [];
 $torneos = [];
 
 $ent_i = logica_torneo_where_entidad('i');
-$ent_p = $entidad_id > 0 ? [' AND pr.entidad_id = ?', [$entidad_id]] : ['', []];
 
 try {
     if ($entidad_id > 0) {
@@ -56,10 +55,10 @@ try {
                 INNER JOIN usuarios u ON pr.id_usuario = u.id
                 LEFT JOIN inscritos i ON i.id_usuario = pr.id_usuario AND i.torneo_id = pr.id_torneo
                 LEFT JOIN clubes c ON c.id = COALESCE(NULLIF(i.id_club, 0), NULLIF(u.club_id, 0))
-                WHERE pr.id_torneo = ?" . $ent_p[0] . "
+                WHERE pr.id_torneo = ?
                 ORDER BY pr.partida ASC, CAST(pr.mesa AS INTEGER) ASC, pr.secuencia ASC
             ");
-            $st->execute(array_merge([$torneo_id], $ent_p[1]));
+            $st->execute([$torneo_id]);
             $detalle_partidas = $st->fetchAll(PDO::FETCH_ASSOC);
         }
     }

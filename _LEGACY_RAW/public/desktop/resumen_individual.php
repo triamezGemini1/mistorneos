@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 /**
  * Resumen individual del jugador (Desktop).
  * Muestra jugador, club, y detalle de partidas: ronda, mesa, resultado1/2, ff (falta), bye, tarjeta, sanción, chancleta, zapato, observaciones.
@@ -17,9 +17,6 @@ $from = isset($_GET['from']) ? trim((string)$_GET['from']) : 'posiciones';
 $torneo = null;
 $inscrito = null;
 $partidas = [];
-$ent_sql = $entidad_id > 0 ? ' AND pr.entidad_id = ?' : '';
-$ent_bind = $entidad_id > 0 ? [$entidad_id] : [];
-
 if ($torneo_id > 0 && $inscrito_id > 0) {
     $st = $pdo->prepare("SELECT id, nombre FROM tournaments WHERE id = ?");
     $st->execute([$torneo_id]);
@@ -40,10 +37,10 @@ if ($torneo_id > 0 && $inscrito_id > 0) {
             SELECT pr.partida, pr.mesa, pr.secuencia, pr.resultado1, pr.resultado2, pr.efectividad,
                    pr.ff, pr.tarjeta, pr.sancion, pr.chancleta, pr.zapato, pr.observaciones, pr.registrado
             FROM partiresul pr
-            WHERE pr.id_torneo = ? AND pr.id_usuario = ?" . $ent_sql . "
+            WHERE pr.id_torneo = ? AND pr.id_usuario = ?
             ORDER BY pr.partida ASC, CAST(pr.mesa AS INTEGER) ASC
         ");
-        $st->execute(array_merge([$torneo_id, $inscrito_id], $ent_bind));
+        $st->execute([$torneo_id, $inscrito_id]);
         $partidas = $st->fetchAll(PDO::FETCH_ASSOC);
     }
 }

@@ -13,7 +13,7 @@ require_once __DIR__ . '/db_bridge.php';
 require_once __DIR__ . '/../../lib/Core/TorneoMesaAsignacionResolver.php';
 require_once __DIR__ . '/InscritosHelper.php';
 
-/** Filtro evento local: fragmento SQL y bind para inscritos/partiresul (solo cuando DESKTOP_ENTIDAD_ID > 0). */
+/** Filtro evento local: fragmento SQL y bind para inscritos (solo cuando DESKTOP_ENTIDAD_ID > 0). partiresul no usa entidad_id. */
 function logica_torneo_where_entidad(string $alias = ''): array
 {
     $eid = DB::getEntidadId();
@@ -109,9 +109,8 @@ function actualizarEstadisticasInscritos($torneo_id) {
 
     foreach ($inscritos as $inscrito) {
         $idUsuario = (int)$inscrito['id_usuario'];
-        $entP = logica_torneo_where_entidad();
-        $stmt = $pdo->prepare("SELECT DISTINCT partida, mesa FROM partiresul WHERE id_torneo = ? AND id_usuario = ? AND registrado = 1" . $entP['sql'] . " ORDER BY partida, mesa");
-        $stmt->execute(array_merge([$torneo_id, $idUsuario], $entP['bind']));
+        $stmt = $pdo->prepare("SELECT DISTINCT partida, mesa FROM partiresul WHERE id_torneo = ? AND id_usuario = ? AND registrado = 1 ORDER BY partida, mesa");
+        $stmt->execute([$torneo_id, $idUsuario]);
         $mesasJugador = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
         $totalGanados = $totalPerdidos = $totalEfectividad = $totalPuntos = $totalSancion = $totalChancletas = $totalZapatos = $ultimaTarjeta = 0;
@@ -122,8 +121,8 @@ function actualizarEstadisticasInscritos($torneo_id) {
             $mesa = (int)$mesaInfo['mesa'];
 
             if ($mesa === 0) {
-                $stmt = $pdo->prepare("SELECT resultado1, resultado2, efectividad, sancion, fecha_partida FROM partiresul WHERE id_torneo = ? AND id_usuario = ? AND partida = ? AND mesa = 0 AND registrado = 1" . $entP['sql'] . " LIMIT 1");
-                $stmt->execute(array_merge([$torneo_id, $idUsuario, $partida], $entP['bind']));
+                $stmt = $pdo->prepare("SELECT resultado1, resultado2, efectividad, sancion, fecha_partida FROM partiresul WHERE id_torneo = ? AND id_usuario = ? AND partida = ? AND mesa = 0 AND registrado = 1 LIMIT 1");
+                $stmt->execute([$torneo_id, $idUsuario, $partida]);
                 $rowBye = $stmt->fetch(PDO::FETCH_ASSOC);
                 if ($rowBye) {
                     $totalGanados++;
@@ -134,8 +133,8 @@ function actualizarEstadisticasInscritos($torneo_id) {
                 continue;
             }
 
-            $stmt = $pdo->prepare("SELECT * FROM partiresul WHERE id_torneo = ? AND partida = ? AND mesa = ?" . $entP['sql'] . " ORDER BY secuencia");
-            $stmt->execute(array_merge([$torneo_id, $partida, $mesa], $entP['bind']));
+            $stmt = $pdo->prepare("SELECT * FROM partiresul WHERE id_torneo = ? AND partida = ? AND mesa = ? ORDER BY secuencia");
+            $stmt->execute([$torneo_id, $partida, $mesa]);
             $jugadoresMesa = $stmt->fetchAll(PDO::FETCH_ASSOC);
             $jugadorActual = null;
             foreach ($jugadoresMesa as $jugador) {

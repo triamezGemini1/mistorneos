@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 /**
  * Ingreso de resultados de mesa (Desktop).
  * Misma lógica y campos que la versión web; escribe en SQLite vía save_resultados.php (core/db_bridge).
@@ -34,19 +34,17 @@ try {
 } catch (Throwable $e) {
 }
 
-$ent_sql = $entidad_id > 0 ? ' AND p.entidad_id = ?' : '';
-$ent_bind = $entidad_id > 0 ? [$entidad_id] : [];
 if ($torneo_id > 0 && $tabla_partiresul_existe) {
     try {
-        $stmt = $pdo->prepare("SELECT DISTINCT partida FROM partiresul WHERE id_torneo = ?" . ($entidad_id > 0 ? ' AND entidad_id = ?' : '') . " ORDER BY partida DESC");
-        $stmt->execute($entidad_id > 0 ? [$torneo_id, $entidad_id] : [$torneo_id]);
+        $stmt = $pdo->prepare("SELECT DISTINCT partida FROM partiresul WHERE id_torneo = ? ORDER BY partida DESC");
+        $stmt->execute([$torneo_id]);
         $rondas_disponibles = $stmt->fetchAll(PDO::FETCH_COLUMN);
     } catch (Throwable $e) {
     }
     if ($partida_filtro > 0) {
         try {
-            $stmt = $pdo->prepare("SELECT DISTINCT mesa FROM partiresul WHERE id_torneo = ? AND partida = ?" . ($entidad_id > 0 ? ' AND entidad_id = ?' : '') . " ORDER BY mesa ASC");
-            $stmt->execute($entidad_id > 0 ? [$torneo_id, $partida_filtro, $entidad_id] : [$torneo_id, $partida_filtro]);
+            $stmt = $pdo->prepare("SELECT DISTINCT mesa FROM partiresul WHERE id_torneo = ? AND partida = ? ORDER BY mesa ASC");
+            $stmt->execute([$torneo_id, $partida_filtro]);
             $mesas_disponibles = $stmt->fetchAll(PDO::FETCH_COLUMN);
         } catch (Throwable $e) {
         }
@@ -58,10 +56,10 @@ if ($torneo_id > 0 && $tabla_partiresul_existe) {
                 FROM partiresul p
                 INNER JOIN inscritos i ON p.id_usuario = i.id_usuario AND p.id_torneo = i.torneo_id
                 LEFT JOIN usuarios u ON p.id_usuario = u.id
-                WHERE p.id_torneo = ? AND p.partida = ? AND p.mesa = ?" . $ent_sql . "
+                WHERE p.id_torneo = ? AND p.partida = ? AND p.mesa = ?
                 ORDER BY p.secuencia ASC
             ");
-            $stmt->execute(array_merge([$torneo_id, $partida_filtro, $mesa_filtro], $ent_bind));
+            $stmt->execute([$torneo_id, $partida_filtro, $mesa_filtro]);
             $partidas_mesa = $stmt->fetchAll(PDO::FETCH_ASSOC);
         } catch (Throwable $e) {
         }

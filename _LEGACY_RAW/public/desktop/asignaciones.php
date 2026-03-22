@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 /**
  * Mostrar asignaciones — Mesas de la ronda con Pareja A, Pareja B y Resultados.
  * Vista tipo tarjetas: título "Asignaciones - Mesas Ronda X - [Torneo]", selector Ir a mesa, grid de cards.
@@ -14,9 +14,6 @@ $numRonda = isset($_GET['ronda']) ? (int)$_GET['ronda'] : 0;
 $torneo = null;
 $mesas = [];
 $rondasDisponibles = [];
-$ent_sql = $entidad_id > 0 ? ' AND pr.entidad_id = ?' : '';
-$ent_bind = $entidad_id > 0 ? [$entidad_id] : [];
-
 if ($torneo_id > 0) {
     $pdo = DB_Local::pdo();
     $st = $pdo->prepare("SELECT id, nombre, rondas FROM tournaments WHERE id = ?");
@@ -32,10 +29,10 @@ if ($torneo_id > 0) {
             INNER JOIN usuarios u ON pr.id_usuario = u.id
             LEFT JOIN inscritos i ON i.id_usuario = u.id AND i.torneo_id = pr.id_torneo
             LEFT JOIN clubes c ON c.id = COALESCE(NULLIF(i.id_club, 0), NULLIF(u.club_id, 0))
-            WHERE pr.id_torneo = ? AND pr.partida = ? AND pr.mesa > 0" . $ent_sql . "
+            WHERE pr.id_torneo = ? AND pr.partida = ? AND pr.mesa > 0
             ORDER BY CAST(pr.mesa AS INTEGER) ASC, pr.secuencia ASC";
         $st = $pdo->prepare($sql);
-        $st->execute(array_merge([$torneo_id, $numRonda], $ent_bind));
+        $st->execute([$torneo_id, $numRonda]);
         $filas = $st->fetchAll(PDO::FETCH_ASSOC);
 
         foreach ($filas as $r) {
@@ -56,8 +53,8 @@ if ($torneo_id > 0) {
         usort($mesas, function ($a, $b) { return $a['numero'] - $b['numero']; });
     }
 
-    $st = $pdo->prepare("SELECT DISTINCT partida FROM partiresul WHERE id_torneo = ?" . ($entidad_id > 0 ? ' AND entidad_id = ?' : '') . " ORDER BY partida ASC");
-    $st->execute(array_merge([$torneo_id], $ent_bind));
+    $st = $pdo->prepare("SELECT DISTINCT partida FROM partiresul WHERE id_torneo = ? ORDER BY partida ASC");
+    $st->execute([$torneo_id]);
     $rondasDisponibles = $st->fetchAll(PDO::FETCH_COLUMN);
 }
 

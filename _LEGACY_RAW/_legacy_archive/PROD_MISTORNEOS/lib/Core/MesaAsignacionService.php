@@ -1,12 +1,10 @@
 <?php
-// Deploy: partiresul sin columna entidad_id — si ves INSERT con entidad_id, el servidor no tiene esta versión (u OPcache viejo).
 /**
  * Servicio de Asignación de Mesas para Torneos de Dominó (núcleo único).
  *
  * Ubicación: lib/Core — usado por la aplicación web (MySQL) y el desktop (SQLite).
  * Requisito: cargar antes la capa DB (p. ej. config/db.php o desktop/core/db_bridge.php)
- * para que exista DB::pdo(). El alcance de datos es por torneo (id_torneo) y por la organización
- * que posee el torneo; no se persiste ni filtra por entidad_id en partiresul ni historial_parejas.
+ * para que exista DB::pdo(). partiresul no usa entidad_id: el alcance es id_torneo (y organización fuera de esta tabla).
  *
  * NORMA POR RONDA:
  * - Base del torneo: inscritos activos (confirmados). Esa lista se usa en cada ronda.
@@ -45,7 +43,7 @@ class MesaAsignacionService
         $this->pdo = DB::pdo();
     }
 
-    /** Sin filtro entidad_id: el torneo y su organización definen el contexto. */
+    /** Filtro opcional en inscritos/historial (no se aplica a partiresul). */
     private function whereEntidad(string $alias = ''): array
     {
         return ['sql' => '', 'bind' => []];
@@ -485,12 +483,11 @@ class MesaAsignacionService
      */
     private function obtenerIdsByeRonda1($torneoId): array
     {
-        $ent = $this->whereEntidad();
         $stmt = $this->pdo->prepare("
             SELECT DISTINCT id_usuario FROM partiresul
-            WHERE id_torneo = ? AND partida = 1 AND mesa = 0 AND registrado = 1" . $ent['sql'] . "
+            WHERE id_torneo = ? AND partida = 1 AND mesa = 0 AND registrado = 1
         ");
-        $stmt->execute(array_merge([$torneoId], $ent['bind']));
+        $stmt->execute([$torneoId]);
         return array_map('intval', $stmt->fetchAll(PDO::FETCH_COLUMN));
     }
 
@@ -522,14 +519,13 @@ class MesaAsignacionService
         if ($antesDeRonda <= 1) {
             return [];
         }
-        $ent = $this->whereEntidad();
         $stmt = $this->pdo->prepare("
             SELECT id_usuario, COUNT(*) AS cnt
             FROM partiresul
-            WHERE id_torneo = ? AND partida < ? AND partida >= 1 AND mesa = 0 AND registrado = 1" . $ent['sql'] . "
+            WHERE id_torneo = ? AND partida < ? AND partida >= 1 AND mesa = 0 AND registrado = 1
             GROUP BY id_usuario
         ");
-        $stmt->execute(array_merge([$torneoId, $antesDeRonda], $ent['bind']));
+        $stmt->execute([$torneoId, $antesDeRonda]);
         $out = [];
         while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
             $out[(int)$row['id_usuario']] = (int)$row['cnt'];
@@ -1701,14 +1697,13 @@ class MesaAsignacionService
 
     private function obtenerParejasRonda($torneoId, $ronda)
     {
-        $ent = $this->whereEntidad();
         $sql = "SELECT partida, mesa, id_usuario, secuencia
                 FROM partiresul
-                WHERE id_torneo = ? AND partida = ? AND mesa > 0" . $ent['sql'] . "
+                WHERE id_torneo = ? AND partida = ? AND mesa > 0
                 ORDER BY mesa, secuencia";
         
         $stmt = $this->pdo->prepare($sql);
-        $stmt->execute(array_merge([$torneoId, $ronda], $ent['bind']));
+        $stmt->execute([$torneoId, $ronda]);
         $resultados = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
         $parejas = [];
@@ -1770,17 +1765,16 @@ class MesaAsignacionService
 
     private function obtenerMatrizEnfrentamientos($torneoId, $ronda)
     {
-        $ent = $this->whereEntidad('pr1');
         $sql = "SELECT DISTINCT pr1.id_usuario as id1, pr2.id_usuario as id2
                 FROM partiresul pr1
                 INNER JOIN partiresul pr2 ON pr1.id_torneo = pr2.id_torneo 
                     AND pr1.partida = pr2.partida 
                     AND pr1.mesa = pr2.mesa
                     AND pr1.id_usuario < pr2.id_usuario
-                WHERE pr1.id_torneo = ? AND pr1.partida = ? AND pr1.mesa > 0" . $ent['sql'];
+                WHERE pr1.id_torneo = ? AND pr1.partida = ? AND pr1.mesa > 0";
         
         $stmt = $this->pdo->prepare($sql);
-        $stmt->execute(array_merge([$torneoId, $ronda], $ent['bind']));
+        $stmt->execute([$torneoId, $ronda]);
         $resultados = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
         $matriz = [];
@@ -1906,9 +1900,8 @@ class MesaAsignacionService
         $efectividadBye = (int)round($puntosTorneo * 0.5); // 50%
 
         // 1) Crear filas mesa=0 para esta ronda (borrar previos y insertar jugadores BYE)
-        $ent = $this->whereEntidad();
-        $this->pdo->prepare("DELETE FROM partiresul WHERE id_torneo = ? AND partida = ? AND mesa = 0" . $ent['sql'])
-            ->execute(array_merge([$torneoId, $ronda], $ent['bind']));
+        $this->pdo->prepare("DELETE FROM partiresul WHERE id_torneo = ? AND partida = ? AND mesa = 0")
+            ->execute([$torneoId, $ronda]);
         $fechaPartida = $this->fechaPartidaAhora();
         $stmt = $this->pdo->prepare("
             INSERT INTO partiresul (id_torneo, id_usuario, partida, mesa, secuencia, fecha_partida, registrado)
@@ -1921,12 +1914,11 @@ class MesaAsignacionService
         }
 
         // 2) Aplicar la regla BYE a todos los registros de la ronda con mesa=0
-        $ent = $this->whereEntidad();
         $this->pdo->prepare("
             UPDATE partiresul
             SET resultado1 = ?, resultado2 = 0, efectividad = ?, registrado = 1
-            WHERE id_torneo = ? AND partida = ? AND mesa = 0" . $ent['sql'] . "
-        ")->execute(array_merge([$puntosTorneo, $efectividadBye, $torneoId, $ronda], $ent['bind']));
+            WHERE id_torneo = ? AND partida = ? AND mesa = 0
+        ")->execute([$puntosTorneo, $efectividadBye, $torneoId, $ronda]);
 
         // Las estadísticas de inscritos se actualizan desde partiresul al generar la siguiente ronda
         // o al guardar resultados (actualizarEstadisticasInscritos). No se hace N actualizaciones aquí (evita N+1).
@@ -1937,13 +1929,12 @@ class MesaAsignacionService
      */
     public function obtenerUltimaRonda($torneoId)
     {
-        $ent = $this->whereEntidad();
         $sql = "SELECT MAX(partida) as ultima_ronda
                 FROM partiresul
-                WHERE id_torneo = ?" . $ent['sql'];
+                WHERE id_torneo = ?";
         
         $stmt = $this->pdo->prepare($sql);
-        $stmt->execute(array_merge([$torneoId], $ent['bind']));
+        $stmt->execute([$torneoId]);
         $result = $stmt->fetch(PDO::FETCH_ASSOC);
         
         return (int)($result['ultima_ronda'] ?? 0);
@@ -1962,14 +1953,13 @@ class MesaAsignacionService
      */
     public function todasLasMesasCompletas($torneoId, $ronda)
     {
-        $ent = $this->whereEntidad();
         $sql = "SELECT COUNT(DISTINCT mesa) as mesas_incompletas
                 FROM partiresul
                 WHERE id_torneo = ? AND partida = ? AND mesa > 0
-                AND (registrado = 0 OR registrado IS NULL)" . $ent['sql'];
+                AND (registrado = 0 OR registrado IS NULL)";
         
         $stmt = $this->pdo->prepare($sql);
-        $stmt->execute(array_merge([$torneoId, $ronda], $ent['bind']));
+        $stmt->execute([$torneoId, $ronda]);
         $result = $stmt->fetch(PDO::FETCH_ASSOC);
         
         return (int)($result['mesas_incompletas'] ?? 0) === 0;
@@ -1980,14 +1970,13 @@ class MesaAsignacionService
      */
     public function contarMesasIncompletas($torneoId, $ronda)
     {
-        $ent = $this->whereEntidad();
         $sql = "SELECT COUNT(DISTINCT mesa) as mesas_incompletas
                 FROM partiresul
                 WHERE id_torneo = ? AND partida = ? AND mesa > 0
-                AND (registrado = 0 OR registrado IS NULL)" . $ent['sql'];
+                AND (registrado = 0 OR registrado IS NULL)";
         
         $stmt = $this->pdo->prepare($sql);
-        $stmt->execute(array_merge([$torneoId, $ronda], $ent['bind']));
+        $stmt->execute([$torneoId, $ronda]);
         $result = $stmt->fetch(PDO::FETCH_ASSOC);
         
         return (int)($result['mesas_incompletas'] ?? 0);
@@ -2000,11 +1989,10 @@ class MesaAsignacionService
      */
     public function rondaTieneResultadosEnMesas($torneoId, $ronda): bool
     {
-        $ent = $this->whereEntidad();
         $stmt = $this->pdo->prepare(
-            "SELECT COUNT(*) FROM partiresul WHERE id_torneo = ? AND partida = ? AND mesa > 0 AND registrado = 1" . $ent['sql']
+            "SELECT COUNT(*) FROM partiresul WHERE id_torneo = ? AND partida = ? AND mesa > 0 AND registrado = 1"
         );
-        $stmt->execute(array_merge([$torneoId, $ronda], $ent['bind']));
+        $stmt->execute([$torneoId, $ronda]);
         return (int)$stmt->fetchColumn() > 0;
     }
 
@@ -2026,9 +2014,9 @@ class MesaAsignacionService
                 error_log("eliminarRonda historial_parejas: " . $e->getMessage());
             }
 
-            // 2. Eliminar todos los registros de la ronda en partiresul (solo evento local)
-            $stmt = $this->pdo->prepare("DELETE FROM partiresul WHERE id_torneo = ? AND partida = ?" . $ent['sql']);
-            $stmt->execute(array_merge([$torneoId, $ronda], $ent['bind']));
+            // 2. Eliminar todos los registros de la ronda en partiresul
+            $stmt = $this->pdo->prepare("DELETE FROM partiresul WHERE id_torneo = ? AND partida = ?");
+            $stmt->execute([$torneoId, $ronda]);
 
             $this->pdo->commit();
             return true;
