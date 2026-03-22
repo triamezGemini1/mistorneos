@@ -1,0 +1,6 @@
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+  # Con DocumentRoot apuntando a /public: /unirse/mi-slug → unirse.php?slug=mi-slug
+  # Si usa subcarpeta (ej. /mistorneos/public/), añada: RewriteBase /mistorneos/public/
+  RewriteRule ^unirse/([a-zA-Z0-9\-]+)/?$ unirse.php?slug=$1 [L,QSA]
+</IfModule>
