@@ -221,7 +221,7 @@ if ($_POST['action'] === 'register_player') {
             $nac_insc = in_array($nacionalidad, ['V', 'E', 'J', 'P'], true) ? $nacionalidad : 'V';
             $ced_insc = preg_replace('/\D/', '', (string)$cedula);
             require_once __DIR__ . '/../lib/InscritosHelper.php';
-            InscritosHelper::insertarInscrito($pdo, [
+            InscritosHelper::registrarInscripcion($pdo, [
                 'id_usuario' => $id_usuario,
                 'torneo_id' => $torneo_id,
                 'id_club' => $id_club_val,

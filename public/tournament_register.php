@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 /**
  * Página Pública de Inscripción en Torneo
  * Permite a usuarios registrados inscribirse en un torneo
@@ -226,7 +226,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
             $nuevo_user_id = (int)$result['user_id'];
 
             $pdo->beginTransaction();
-            $inscripcion_id = InscritosHelper::insertarInscrito($pdo, [
+            $inscripcion_id = InscritosHelper::registrarInscripcion($pdo, [
                 'id_usuario' => $nuevo_user_id,
                 'torneo_id' => $torneo_id,
                 'id_club' => $club_id,
@@ -303,7 +303,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
         // Insertar inscripción usando función centralizada
         require_once __DIR__ . '/../lib/InscritosHelper.php';
         
-        $inscripcion_id = InscritosHelper::insertarInscrito($pdo, [
+        $inscripcion_id = InscritosHelper::registrarInscripcion($pdo, [
             'id_usuario' => $usuario['id'],
             'torneo_id' => $torneo_id,
             'id_club' => $club_id,

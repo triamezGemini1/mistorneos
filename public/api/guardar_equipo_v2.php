@@ -231,7 +231,7 @@ try {
                 } else {
                     require_once __DIR__ . '/../../lib/InscritosHelper.php';
                     require_once __DIR__ . '/../../lib/UserActivationHelper.php';
-                    $id_inscrito = InscritosHelper::insertarInscrito($pdo, [
+                    $id_inscrito = InscritosHelper::registrarInscripcion($pdo, [
                         'id_usuario' => $id_usuario,
                         'torneo_id' => $torneo_id,
                         'id_club' => $club_id,

@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 /**
  * Inscripción Pública para Eventos Masivos
  * Permite a cualquier usuario inscribirse en eventos masivos desde su dispositivo móvil
@@ -201,7 +201,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $torneo) {
             // Inscribir en el torneo usando función centralizada
             require_once __DIR__ . '/../lib/InscritosHelper.php';
             
-            $id_inscrito = InscritosHelper::insertarInscrito($pdo, [
+            $id_inscrito = InscritosHelper::registrarInscripcion($pdo, [
                 'id_usuario' => $id_usuario,
                 'torneo_id' => $torneo_id,
                 'id_club' => $id_club_inscripcion,

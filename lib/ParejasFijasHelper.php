@@ -181,7 +181,7 @@ class ParejasFijasHelper
                 $cedulaPost = preg_replace('/\D/', '', (string)($datoJugador['cedula'] ?? ''));
                 $nacionalidad = in_array($nacionalidadPost, ['V', 'E', 'J', 'P'], true) ? $nacionalidadPost : $nacionalidadDb;
                 $cedula = $cedulaPost !== '' ? $cedulaPost : $cedulaDb;
-                InscritosHelper::insertarInscrito($pdo, [
+                InscritosHelper::registrarInscripcion($pdo, [
                     'id_usuario' => $idUsuario,
                     'torneo_id' => $torneoId,
                     'id_club' => $clubId,

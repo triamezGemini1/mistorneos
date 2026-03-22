@@ -258,7 +258,7 @@ class ImportacionMasivaService
                     }
 
                     try {
-                        InscritosHelper::insertarInscrito($pdo, [
+                        InscritosHelper::registrarInscripcion($pdo, [
                             'id_usuario' => $idUsuario,
                             'torneo_id' => $torneoId,
                             'id_club' => $idClubInscrito,

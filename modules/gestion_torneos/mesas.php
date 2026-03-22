@@ -88,115 +88,12 @@ $action_param = $use_standalone ? '?' : '&';
         <?php endif; ?>
         
         <?php if (!empty($mesas_normales)): ?>
-            <div class="row">
-                <?php foreach ($mesas_normales as $mesa_data): ?>
-                    <?php 
-                    $num_mesa = $mesa_data['numero'] ?? 0;
-                    $jugadores = $mesa_data['jugadores'] ?? [];
-                    ?>
-                    <div class="col-md-6 col-lg-4 mb-4" id="mesa-<?php echo (int)$num_mesa; ?>">
-                        <div class="card">
-                            <div class="card-header" style="background-color: #e3f2fd; color: #1565c0;">
-                                <h5 class="mb-0">
-                                    <i class="fas fa-chess-board mr-2"></i> Mesa <?php echo $num_mesa; ?>
-                                </h5>
-                            </div>
-                            <div class="card-body">
-                                <?php if (count($jugadores) === 4): ?>
-                                    <?php
-                                    // Agrupar por pareja (secuencias 1-2 son Pareja A, 3-4 son Pareja B)
-                                    $pareja_a = array_filter($jugadores, function($j) { 
-                                        return is_array($j) && isset($j['secuencia']) && in_array((int)$j['secuencia'], [1, 2]); 
-                                    });
-                                    $pareja_b = array_filter($jugadores, function($j) { 
-                                        return is_array($j) && isset($j['secuencia']) && in_array((int)$j['secuencia'], [3, 4]); 
-                                    });
-                                    ?>
-                                    <div class="mb-3">
-                                        <strong class="text-primary">Pareja A:</strong>
-                                        <ul class="list-unstyled ml-3">
-                                            <?php foreach ($pareja_a as $jugador): ?>
-                                                <?php if (is_array($jugador)): ?>
-                                                    <li>
-                                                        <i class="fas fa-user mr-1"></i>
-                                                        <?php echo htmlspecialchars($jugador['nombre'] ?? $jugador['nombre_completo'] ?? 'Sin nombre'); ?>
-                                                        <?php if (!empty($jugador['club_nombre'])): ?>
-                                                            <small class="text-muted">(<?php echo htmlspecialchars($jugador['club_nombre']); ?>)</small>
-                                                        <?php endif; ?>
-                                                    </li>
-                                                <?php endif; ?>
-                                            <?php endforeach; ?>
-                                        </ul>
-                                    </div>
-                                    <div>
-                                        <strong class="text-success">Pareja B:</strong>
-                                        <ul class="list-unstyled ml-3">
-                                            <?php foreach ($pareja_b as $jugador): ?>
-                                                <?php if (is_array($jugador)): ?>
-                                                    <li>
-                                                        <i class="fas fa-user mr-1"></i>
-                                                        <?php echo htmlspecialchars($jugador['nombre'] ?? $jugador['nombre_completo'] ?? 'Sin nombre'); ?>
-                                                        <?php if (!empty($jugador['club_nombre'])): ?>
-                                                            <small class="text-muted">(<?php echo htmlspecialchars($jugador['club_nombre']); ?>)</small>
-                                                        <?php endif; ?>
-                                                    </li>
-                                                <?php endif; ?>
-                                            <?php endforeach; ?>
-                                        </ul>
-                                    </div>
-                                    
-                                    <?php
-                                    // Mostrar resultados si existen
-                                    $tiene_resultados = false;
-                                    foreach ($jugadores as $j) {
-                                        if (is_array($j) && (!empty($j['resultado1']) || !empty($j['resultado2']))) {
-                                            $tiene_resultados = true;
-                                            break;
-                                        }
-                                    }
-                                    ?>
-                                    
-                                    <?php if ($tiene_resultados && !empty($jugadores) && is_array($jugadores[0])): ?>
-                                        <hr>
-                                        <div class="small">
-                                            <strong>Resultados:</strong><br>
-                                            <?php
-                                            $primer_jugador = reset($jugadores);
-                                            $resultado1 = (int)($primer_jugador['resultado1'] ?? 0);
-                                            $resultado2 = (int)($primer_jugador['resultado2'] ?? 0);
-                                            ?>
-                                            Pareja A: <?php echo $resultado1; ?> | Pareja B: <?php echo $resultado2; ?>
-                                        </div>
-                                    <?php endif; ?>
-                                    <hr class="my-2">
-                                    <div class="d-flex gap-1 flex-wrap">
-                                        <a href="<?php echo $base_url . $action_param; ?>action=registrar_resultados&torneo_id=<?php echo $torneo['id']; ?>&ronda=<?php echo $ronda; ?>&mesa=<?php echo (int)$num_mesa; ?>"
-                                           class="btn btn-sm btn-primary" title="Registrar resultados">
-                                            <i class="fas fa-keyboard me-1"></i>Resultados
-                                        </a>
-                                        <a href="<?php echo $base_url . $action_param; ?>action=reasignar_mesa&torneo_id=<?php echo $torneo['id']; ?>&ronda=<?php echo $ronda; ?>&mesa=<?php echo (int)$num_mesa; ?>"
-                                           class="btn btn-sm" style="background-color: #20c997; color: white;" title="Intercambiar posiciones de jugadores">
-                                            <i class="fas fa-exchange-alt me-1"></i>Reasignar
-                                        </a>
-                                    </div>
-                                <?php else: ?>
-                                    <p class="text-muted">Mesas incompletas (<?php echo count($jugadores); ?> jugadores)</p>
-                                    <ul class="list-unstyled">
-                                        <?php foreach ($jugadores as $jugador): ?>
-                                            <?php if (is_array($jugador)): ?>
-                                                <li>
-                                                    <i class="fas fa-user mr-1"></i>
-                                                    <?php echo htmlspecialchars($jugador['nombre'] ?? $jugador['nombre_completo'] ?? 'Sin nombre'); ?>
-                                                </li>
-                                            <?php endif; ?>
-                                        <?php endforeach; ?>
-                                    </ul>
-                                <?php endif; ?>
-                            </div>
-                        </div>
-                    </div>
-                <?php endforeach; ?>
-            </div>
+            <?php
+            if (!function_exists('render_lvd_grid_mesas')) {
+                require_once dirname(__DIR__) . '/torneo_gestion/render_views.php';
+            }
+            render_lvd_grid_mesas($mesas_normales, $base_url, $action_param, (int)($torneo['id'] ?? 0), (int)$ronda);
+            ?>
         <?php endif; ?>
         
         <?php if (!empty($mesas_bye)): ?>

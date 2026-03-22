@@ -117,7 +117,7 @@ final class GuardarEquipoSitioService
                     if ($row) {
                         $id_inscrito = (int)$row['id'];
                     } else {
-                        $id_inscrito = InscritosHelper::insertarInscrito($pdo, [
+                        $id_inscrito = InscritosHelper::registrarInscripcion($pdo, [
                             'id_usuario' => $id_usuario,
                             'torneo_id' => $torneo_id,
                             'id_club' => $club_id,
