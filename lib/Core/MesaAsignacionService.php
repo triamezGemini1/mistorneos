@@ -1,12 +1,16 @@
 <?php
+
+declare(strict_types=1);
+
 /**
  * Fachada de asignación de mesas: delega el algoritmo en MesaAsignacionAlgorithm
  * y la persistencia/consultas en app/Core/MesaRepository.
  *
  * No genera HTML; las vistas de carga de resultados viven en public/views/partials/mesas/.
  *
- * Despliegue: no reemplazar este archivo por la copia monolítica de _LEGACY_RAW/lib/Core/MesaAsignacionService.php
- * ni por versiones que añadan entidad_id al INSERT en partiresul; TorneoMesaAsignacionResolver comprueba la propiedad $repo.
+ * Despliegue: no reemplazar por la monolítica de _LEGACY_RAW ni por versiones con entidad_id en
+ * INSERT partiresul. El respaldo debe llamarse MesaAsignacionService.old.php (sin declarar esta clase).
+ * TorneoMesaAsignacionResolver exige la propiedad $repo.
  */
 
 require_once __DIR__ . '/../../app/Core/MesaRepository.php';

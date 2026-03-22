@@ -1,4 +1,4 @@
-﻿/* Cintillo institucional (14", compacto) */
+/* Cintillo institucional (14", compacto) */
 .mn-institutional {
   background: linear-gradient(90deg, rgba(10, 37, 64, 0.06) 0%, rgba(10, 37, 64, 0.02) 100%);
   border-bottom: 1px solid var(--mn-border);
@@ -227,6 +227,39 @@
   font-size: 0.8125rem;
   color: #9fb0c0;
   line-height: 1.4;
+}
+
+/* Botón principal: carga de resultados (columna Operaciones) */
+.mn-panel-vida-carga-mesa {
+  display: block;
+  width: 100%;
+  margin: 0 0 1rem;
+  padding: 1rem 1.25rem;
+  text-align: center;
+  font-size: 1.05rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  text-decoration: none;
+  color: #0f1a12;
+  background: linear-gradient(180deg, #34d399 0%, #059669 100%);
+  border: 2px solid #6ee7b7;
+  border-radius: 14px;
+  box-shadow: 0 6px 20px rgba(5, 150, 105, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.35);
+  transition: transform 0.12s ease, box-shadow 0.15s ease, filter 0.15s ease;
+}
+
+.mn-panel-vida-carga-mesa:hover {
+  color: #0a120d;
+  text-decoration: none;
+  filter: brightness(1.06);
+  transform: translateY(-2px);
+  box-shadow: 0 10px 28px rgba(5, 150, 105, 0.55), inset 0 1px 0 rgba(255, 255, 255, 0.4);
+}
+
+.mn-panel-vida-carga-mesa:focus-visible {
+  outline: 3px solid #a7f3d0;
+  outline-offset: 3px;
 }
 
 .mn-panel-vida-tiles {

@@ -187,6 +187,11 @@ header('Content-Type: text/html; charset=utf-8');
             <h2 id="mn-col-op" class="mn-panel-vida-col-title">Operaciones</h2>
             <p class="mn-panel-vida-col-sub">Corazón del evento en pista</p>
           </div>
+          <?php if ($torneo !== null) : ?>
+            <a class="mn-panel-vida-carga-mesa" href="<?= htmlspecialchars($publicPrefix . 'carga_resultados.php?torneo_id=' . $torneoId, ENT_QUOTES, 'UTF-8') ?>">
+              CARGAR RESULTADOS DE MESA
+            </a>
+          <?php endif; ?>
           <div class="mn-panel-vida-tiles">
             <?php
             mn_panel_tile([
