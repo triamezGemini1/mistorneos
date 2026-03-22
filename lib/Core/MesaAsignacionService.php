@@ -66,6 +66,21 @@ class MesaAsignacionService
         return ['sql' => " AND {$col} = ?", 'bind' => [$eid]];
     }
 
+    /** SQLite vs MySQL: fecha/hora actual en SQL embebido (no como placeholder). */
+    private function sqlNowExpr(): string
+    {
+        $driver = $this->pdo->getAttribute(PDO::ATTR_DRIVER_NAME);
+        return $driver === 'sqlite' ? "datetime('now')" : 'NOW()';
+    }
+
+    /** SQLite: INSERT OR IGNORE — MySQL: INSERT IGNORE */
+    private function sqlInsertIgnoreInto(string $tableAndRest): string
+    {
+        $driver = $this->pdo->getAttribute(PDO::ATTR_DRIVER_NAME);
+        $kw = $driver === 'sqlite' ? 'INSERT OR IGNORE INTO' : 'INSERT IGNORE INTO';
+        return $kw . ' ' . $tableAndRest;
+    }
+
     /**
      * Genera la asignación de mesas para una ronda específica
      */
@@ -1809,9 +1824,10 @@ class MesaAsignacionService
                     $idUsuario = (int)($jugador['id_usuario'] ?? 0);
                     if ($idUsuario <= 0) continue; // Saltar comodín/bye
                     $eid = $this->entidadId();
+                    $nowSql = $this->sqlNowExpr();
                     $sql = "INSERT INTO partiresul 
                             (id_torneo, id_usuario, partida, mesa, secuencia, fecha_partida, registrado, entidad_id)
-                            VALUES (?, ?, ?, ?, ?, datetime('now'), 0, ?)";
+                            VALUES (?, ?, ?, ?, ?, {$nowSql}, 0, ?)";
                     $stmt = $this->pdo->prepare($sql);
                     $stmt->execute([$torneoId, $idUsuario, $ronda, $numeroMesa, $secuencia, $eid]);
                     $secuencia++;
@@ -1837,7 +1853,7 @@ class MesaAsignacionService
         $eid = $this->entidadId();
         try {
             $stmt = $this->pdo->prepare(
-                "INSERT OR IGNORE INTO historial_parejas (torneo_id, ronda_id, jugador_1_id, jugador_2_id, llave, entidad_id) VALUES (?, ?, ?, ?, ?, ?)"
+                $this->sqlInsertIgnoreInto('historial_parejas (torneo_id, ronda_id, jugador_1_id, jugador_2_id, llave, entidad_id) VALUES (?, ?, ?, ?, ?, ?)')
             );
             foreach ($mesasAsignadas as $mesa) {
                 if (count($mesa) < 4) continue;
@@ -1862,7 +1878,7 @@ class MesaAsignacionService
         } catch (Exception $e) {
             try {
                 $stmt = $this->pdo->prepare(
-                    "INSERT OR IGNORE INTO historial_parejas (torneo_id, ronda_id, jugador_1_id, jugador_2_id, entidad_id) VALUES (?, ?, ?, ?, ?)"
+                    $this->sqlInsertIgnoreInto('historial_parejas (torneo_id, ronda_id, jugador_1_id, jugador_2_id, entidad_id) VALUES (?, ?, ?, ?, ?)')
                 );
                 foreach ($mesasAsignadas as $mesa) {
                     if (count($mesa) < 4) continue;
@@ -1916,9 +1932,10 @@ class MesaAsignacionService
         $ent = $this->whereEntidad();
         $this->pdo->prepare("DELETE FROM partiresul WHERE id_torneo = ? AND partida = ? AND mesa = 0" . $ent['sql'])
             ->execute(array_merge([$torneoId, $ronda], $ent['bind']));
+        $nowSql = $this->sqlNowExpr();
         $stmt = $this->pdo->prepare("
             INSERT INTO partiresul (id_torneo, id_usuario, partida, mesa, secuencia, fecha_partida, registrado, entidad_id)
-            VALUES (?, ?, ?, 0, 1, datetime('now'), 0, ?)
+            VALUES (?, ?, ?, 0, 1, {$nowSql}, 0, ?)
         ");
         foreach ($jugadoresBye as $jugador) {
             $idUsuario = (int)($jugador['id_usuario'] ?? 0);
