@@ -9,6 +9,21 @@
  */
 class TorneoMesaAsignacionResolver
 {
+    /**
+     * La fachada en lib/Core/MesaAsignacionService.php debe delegar en MesaRepository (propiedad $repo).
+     * Una copia monolítica antigua en el mismo path suele incluir entidad_id en INSERT partiresul y rompe si la columna no existe.
+     */
+    private static function assertMesaAsignacionServiceEsFachada(): void
+    {
+        $rf = new ReflectionClass(MesaAsignacionService::class);
+        if (!$rf->hasProperty('repo')) {
+            throw new RuntimeException(
+                'TorneoMesaAsignacionResolver: en lib/Core/MesaAsignacionService.php está cargada la clase monolítica (no es la fachada del repo). '
+                . 'Sustituya ese archivo por la versión corta que usa MesaRepository + MesaAsignacionAlgorithm, o verá errores SQL (p. ej. entidad_id en partiresul).'
+            );
+        }
+    }
+
     public const MODALIDAD_EQUIPOS = 3;
     /** Parejas fijas / interclubes (misma familia de servicio en web). */
     public const MODALIDAD_PAREJAS_FIJAS = [2, 4];
@@ -37,6 +52,7 @@ class TorneoMesaAsignacionResolver
         if (in_array($modalidad, self::MODALIDAD_PAREJAS_FIJAS, true)) {
             if (self::esDesktopCore()) {
                 require_once __DIR__ . '/MesaAsignacionService.php';
+                self::assertMesaAsignacionServiceEsFachada();
                 return new MesaAsignacionService();
             }
             if (!class_exists('MesaAsignacionParejasFijasService', false)) {
@@ -45,6 +61,7 @@ class TorneoMesaAsignacionResolver
             return new MesaAsignacionParejasFijasService();
         }
         require_once __DIR__ . '/MesaAsignacionService.php';
+        self::assertMesaAsignacionServiceEsFachada();
         return new MesaAsignacionService();
     }
 
@@ -95,6 +112,7 @@ class TorneoMesaAsignacionResolver
             }
         }
         require_once __DIR__ . '/MesaAsignacionService.php';
+        self::assertMesaAsignacionServiceEsFachada();
         return (new MesaAsignacionService())->eliminarRonda($torneoId, $ronda);
     }
 
@@ -104,6 +122,7 @@ class TorneoMesaAsignacionResolver
     public static function rondaTieneResultadosEnMesas(int $torneoId, int $ronda): bool
     {
         require_once __DIR__ . '/MesaAsignacionService.php';
+        self::assertMesaAsignacionServiceEsFachada();
         return (new MesaAsignacionService())->rondaTieneResultadosEnMesas($torneoId, $ronda);
     }
 }

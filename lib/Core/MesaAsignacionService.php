@@ -4,6 +4,9 @@
  * y la persistencia/consultas en app/Core/MesaRepository.
  *
  * No genera HTML; las vistas de carga de resultados viven en public/views/partials/mesas/.
+ *
+ * Despliegue: no reemplazar este archivo por la copia monolítica de _LEGACY_RAW/lib/Core/MesaAsignacionService.php
+ * ni por versiones que añadan entidad_id al INSERT en partiresul; TorneoMesaAsignacionResolver comprueba la propiedad $repo.
  */
 
 require_once __DIR__ . '/../../app/Core/MesaRepository.php';
