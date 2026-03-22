@@ -129,15 +129,16 @@ final class PanelTorneoViewData
             $mesas_incompletas = self::countMesasIncompletas($pdo, $torneoId, $ultima_ronda);
             $puede_generar = $mesas_incompletas === 0;
 
-            $stmt = $pdo->prepare(
-                'SELECT COUNT(DISTINCT mesa) FROM partiresul WHERE id_torneo = ? AND partida = ? AND mesa > 0'
-            );
-            $stmt->execute([$torneoId, $ultima_ronda]);
-            $total_mesas_ronda = (int) $stmt->fetchColumn();
-
             $mesaService = new MesaAsignacionService();
             $ultima_ronda_tiene_resultados = $mesaService->rondaTieneResultadosEnMesas($torneoId, $ultima_ronda);
         }
+
+        $extStats = self::getExtendedStats($pdo, $torneoId, $ultima_ronda);
+        $total_mesas_ronda = (int) $extStats['total_mesas_ronda'];
+        $actas_pendientes_count = (int) $extStats['actas_pendientes_count'];
+        $mesas_verificadas_count = (int) $extStats['mesas_verificadas_count'];
+        $mesas_digitadas_count = (int) $extStats['mesas_digitadas_count'];
+        $primera_mesa = $extStats['primera_mesa'];
 
         $correcciones_cierre_at = $torneo['correcciones_cierre_at'] ?? null;
         if ($correcciones_cierre_at === '' || $correcciones_cierre_at === '0000-00-00 00:00:00') {
@@ -157,9 +158,6 @@ final class PanelTorneoViewData
         }
         $torneo['organizacion_nombre'] = $organizacion_nombre;
         $torneo['organizacion_logo'] = $organizacion_logo;
-
-        $actas_pendientes_count = self::countActasPendientesVerificacion($pdo, $torneoId);
-        [$mesas_verificadas_count, $mesas_digitadas_count] = self::countMesasAuditoria($pdo, $torneoId);
 
         $total_equipos = 0;
         $total_jugadores_inscritos = 0;
@@ -219,8 +217,6 @@ final class PanelTorneoViewData
             'total_jugadores_inscritos' => $total_jugadores_inscritos,
         ];
 
-        $primera_mesa = self::fetchPrimeraMesaUltimaRonda($pdo, $torneoId, $ultima_ronda);
-
         $tiempo_ronda_min = (int) ($torneo['tiempo'] ?? 35);
         if ($tiempo_ronda_min < 1) {
             $tiempo_ronda_min = 35;
@@ -273,6 +269,43 @@ final class PanelTorneoViewData
             'mostrar_aviso_20min' => $mostrar_aviso_20min,
             'tiempo_ronda_minutos' => $tiempo_ronda_min,
             'page_title' => $page_title,
+        ];
+    }
+
+    /**
+     * Estadísticas extendidas del panel: actas pendientes, auditoría QR/admin, mesas de la última ronda, primera mesa.
+     * Refactorización 2026 — concentrar consultas fuera de la vista; {@see build()} las fusiona en `$view_data`.
+     *
+     * @return array{
+     *     actas_pendientes_count: int,
+     *     mesas_verificadas_count: int,
+     *     mesas_digitadas_count: int,
+     *     total_mesas_ronda: int,
+     *     primera_mesa: int|null
+     * }
+     */
+    public static function getExtendedStats(PDO $pdo, int $torneoId, int $ultimaRonda): array
+    {
+        $actas = self::countActasPendientesVerificacion($pdo, $torneoId);
+        [$verif, $dig] = self::countMesasAuditoria($pdo, $torneoId);
+
+        $total_mesas_ronda = 0;
+        if ($ultimaRonda > 0) {
+            $stmt = $pdo->prepare(
+                'SELECT COUNT(DISTINCT mesa) FROM partiresul WHERE id_torneo = ? AND partida = ? AND mesa > 0'
+            );
+            $stmt->execute([$torneoId, $ultimaRonda]);
+            $total_mesas_ronda = (int) $stmt->fetchColumn();
+        }
+
+        $primera_mesa = self::fetchPrimeraMesaUltimaRonda($pdo, $torneoId, $ultimaRonda);
+
+        return [
+            'actas_pendientes_count' => $actas,
+            'mesas_verificadas_count' => $verif,
+            'mesas_digitadas_count' => $dig,
+            'total_mesas_ronda' => $total_mesas_ronda,
+            'primera_mesa' => $primera_mesa,
         ];
     }
 
