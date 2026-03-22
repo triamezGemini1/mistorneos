@@ -107,6 +107,7 @@ function mn_admin_op_button(array $a): void
 // Iconos SVG minimalistas (24px)
 $icoId = '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M4 4h16v16H4zM9 9h6v6H9zM8 2v4M16 2v4M8 18v4M16 18v4"/></svg>';
 $icoGrid = '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M4 4h7v7H4zm9 0h7v7h-7zM4 13h7v7H4zm9 0h7v7h-7z"/></svg>';
+$icoCarga = '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 20h9M16.5 3.5a2.12 2.12 0 013 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>';
 $icoDoc = '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M6 2h9l5 5v15H6zM14 2v6h6M8 13h8M8 17h8"/></svg>';
 $icoRank = '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 3l2.4 7.3H22l-6 4.6 2.3 7L12 17.8 5.7 22 8 14.9 2 10.3h7.6z"/></svg>';
 $icoUser = '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 20v-1a8 8 0 0116 0v1"/></svg>';
@@ -163,6 +164,14 @@ header('Content-Type: text/html; charset=utf-8');
           <h2 id="mn-ap-op" class="mn-admin-panel__col-title">Operaciones</h2>
           <div class="mn-admin-panel__col-body">
             <?php
+            mn_admin_op_button([
+                'href' => $publicPrefix . 'carga_resultados.php?torneo_id=' . (int) $torneoId . '&mesa_id=1&partida=1',
+                'label' => 'Carga de resultados',
+                'sub' => 'Puntos, sets y extras por mesa (ajuste mesa_id en la URL).',
+                'theme' => 'op',
+                'disabled' => false,
+                'icon' => $icoCarga,
+            ]);
             mn_admin_op_button([
                 'href' => '#',
                 'label' => 'Cuadrícula de mesas',
