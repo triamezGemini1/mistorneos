@@ -12,7 +12,7 @@ require_once $root . '/app/Core/TournamentEngineService.php';
 require_once $root . '/app/Core/OrganizacionService.php';
 require_once $root . '/app/Helpers/AdminApi.php';
 
-mn_admin_require_json();
+$admin = mn_admin_require_json();
 
 $scope = mn_admin_torneo_query_scope();
 if ($scope === false) {
