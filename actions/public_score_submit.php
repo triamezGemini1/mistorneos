@@ -23,6 +23,7 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 require_once __DIR__ . '/../config/bootstrap.php';
 require_once __DIR__ . '/../config/db.php';
 require_once __DIR__ . '/../lib/QrMesaTokenHelper.php';
+require_once __DIR__ . '/../lib/ResultadosPartidaEfectividad.php';
 
 $torneo_id = (int)($_POST['torneo_id'] ?? $_POST['t'] ?? 0);
 $mesa_id = (int)($_POST['mesa_id'] ?? $_POST['mesa'] ?? $_POST['m'] ?? 0);
@@ -173,18 +174,6 @@ try {
 
     $es_qr = ($origen === 'qr');
 
-    $validarPuntos = fn($p, $pt) => min($p, (int)round($pt * 1.6));
-    $efAlcanzo = fn($r1, $r2, $pt) => $r1 == $r2 ? 0 : ($r1 > $r2 ? $pt - $r2 : -($pt - $r1));
-    $efNoAlcanzo = fn($r1, $r2) => $r1 == $r2 ? 0 : ($r1 > $r2 ? $r1 - $r2 : -($r2 - $r1));
-    $calcularEf = function ($r1, $r2, $pt, $ff, $tarjeta) use ($validarPuntos, $efAlcanzo, $efNoAlcanzo) {
-        $r1 = $validarPuntos($r1, $pt);
-        $r2 = $validarPuntos($r2, $pt);
-        if ($ff == 1) return -$pt;
-        if (in_array($tarjeta, [3, 4])) return -$pt;
-        $mayor = max($r1, $r2);
-        return $mayor >= $pt ? $efAlcanzo($r1, $r2, $pt) : $efNoAlcanzo($r1, $r2);
-    };
-
     $estatus = $origen === 'qr' ? 'pendiente_verificacion' : 'confirmado';
     // Valor para BD: partiresul.estatus en producción es TINYINT (0=pendiente, 1=confirmado)
     $estatus_db = $estatus === 'confirmado' ? 1 : 0;
@@ -221,7 +210,14 @@ try {
             $sancion_calc = $procesado['sancion_para_calculo'];
             $resultado1_ajust = max(0, $resultado1 - $sancion_calc);
         }
-        $efectividad = $calcularEf($resultado1_ajust, $resultado2, $puntosTorneo, $ff, $tarjeta);
+        $efectividad = ResultadosPartidaEfectividad::calcularEfectividad(
+            $resultado1_ajust,
+            $resultado2,
+            $puntosTorneo,
+            $ff,
+            $tarjeta,
+            0
+        );
 
         $update_cols = [
             'resultado1 = ?', 'resultado2 = ?', 'efectividad = ?', 'ff = ?', 'tarjeta = ?', 'sancion = ?',

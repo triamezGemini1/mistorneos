@@ -10,7 +10,7 @@
  * Usa DB::pdo() de db_bridge (SQLite local).
  */
 require_once __DIR__ . '/db_bridge.php';
-require_once __DIR__ . '/MesaAsignacionService.php';
+require_once __DIR__ . '/../../lib/Core/MesaAsignacionService.php';
 require_once __DIR__ . '/MesaAsignacionEquiposService.php';
 require_once __DIR__ . '/InscritosHelper.php';
 

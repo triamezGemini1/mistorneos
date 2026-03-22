@@ -5,7 +5,7 @@
 
 require_once __DIR__ . '/../config/bootstrap.php';
 require_once __DIR__ . '/../config/db.php';
-require_once __DIR__ . '/../config/MesaAsignacionService.php';
+require_once __DIR__ . '/../lib/Core/MesaAsignacionService.php';
 
 $torneo_id = 4;
 $ronda = 2;

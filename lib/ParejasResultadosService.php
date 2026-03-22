@@ -2,6 +2,7 @@
 declare(strict_types=1);
 
 require_once __DIR__ . '/SancionesHelper.php';
+require_once __DIR__ . '/TorneoMesaReglas.php';
 
 final class ParejasResultadosService
 {
@@ -15,15 +16,16 @@ final class ParejasResultadosService
         int $puntosTorneo
     ): array {
         $jugadoresPost = array_values($jugadoresPost);
-        if (count($jugadoresPost) !== 4) {
-            throw new Exception('En parejas deben existir 4 jugadores por mesa.');
+        $nMesa = TorneoMesaReglas::JUGADORES_POR_MESA;
+        if (count($jugadoresPost) !== $nMesa) {
+            throw new Exception('En parejas deben existir ' . $nMesa . ' jugadores por mesa.');
         }
 
         $idsUsuarios = array_values(array_filter(array_map(static function ($j) {
             return (int)($j['id_usuario'] ?? 0);
         }, $jugadoresPost)));
-        if (count($idsUsuarios) !== 4) {
-            throw new Exception('No se pudo identificar a los 4 jugadores de la mesa.');
+        if (count($idsUsuarios) !== $nMesa) {
+            throw new Exception('No se pudo identificar a los ' . $nMesa . ' jugadores de la mesa.');
         }
 
         $ph = implode(',', array_fill(0, count($idsUsuarios), '?'));

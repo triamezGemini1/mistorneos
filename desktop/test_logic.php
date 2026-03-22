@@ -10,7 +10,7 @@ try {
     require_once __DIR__ . '/db_local.php';
     DB_Local::pdo();
     require_once __DIR__ . '/core/db_bridge.php';
-    require_once __DIR__ . '/core/MesaAsignacionService.php';
+    require_once __DIR__ . '/../lib/Core/MesaAsignacionService.php';
 
     $pdo = DB::pdo();
     $stmt = $pdo->query("SELECT COUNT(*) FROM inscritos");

@@ -314,11 +314,15 @@ class InscritosHelper {
         if ($H('codigo_equipo')) {
             $push('codigo_equipo', '?', $codigo_equipo);
         }
-        foreach (['posicion', 'ganados', 'perdidos', 'efectividad', 'puntos', 'ptosrnk', 'sancion', 'chancletas', 'zapatos', 'tarjeta'] as $c) {
+        foreach (['posicion', 'ganados', 'perdidos', 'efectividad', 'puntos', 'ptosrnk', 'sancion', 'chancletas', 'zapatos', 'tarjeta', 'mesa'] as $c) {
             if ($H($c)) {
                 $insertCols[] = '`' . $have[strtolower($c)] . '`';
                 $insertVals[] = '0';
             }
+        }
+        /* mesa/letra en inscritos (esquemas con asignación fija): sin mesa/letra hasta generar ronda */
+        if ($H('letra')) {
+            $push('letra', '?', '');
         }
         if ($H('fecha_inscripcion')) {
             $insertCols[] = '`' . $have['fecha_inscripcion'] . '`';

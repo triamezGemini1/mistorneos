@@ -2,11 +2,19 @@
 /**
  * Vista: Registrar Resultados V2 - Formulario mejorado con todas las funcionalidades
  */
+require_once __DIR__ . '/../../lib/TorneoMesaReglas.php';
 $script_actual = basename($_SERVER['PHP_SELF'] ?? '');
 $use_standalone = in_array($script_actual, ['admin_torneo.php', 'panel_torneo.php']);
 $base_url = $use_standalone ? $script_actual : 'index.php?page=torneo_gestion';
 $action_param = $use_standalone ? '?' : '&';
 $esTorneoParejas = in_array((int)($torneo['modalidad'] ?? 0), [2, 4], true);
+$mesaActualInt = (int)($mesaActual ?? 0);
+$numJugadoresMesa = isset($jugadores) && is_array($jugadores) ? count($jugadores) : 0;
+$jugadoresPorMesaRegistro = TorneoMesaReglas::JUGADORES_POR_MESA;
+$mesaTieneFormularioCompleto = ($mesaActualInt > 0 && $numJugadoresMesa === $jugadoresPorMesaRegistro);
+$mitadMesa = $mesaTieneFormularioCompleto ? (int)($jugadoresPorMesaRegistro / 2) : 0;
+$parejaA = $mesaTieneFormularioCompleto ? array_slice($jugadores, 0, $mitadMesa) : [];
+$parejaB = $mesaTieneFormularioCompleto ? array_slice($jugadores, $mitadMesa) : [];
 ?>
 
 <style>
@@ -708,7 +716,7 @@ $esTorneoParejas = in_array((int)($torneo['modalidad'] ?? 0), [2, 4], true);
                                         <i class="fas fa-arrow-left mr-2"></i>Volver al Resumen
                                     </a>
                                 <?php endif; ?>
-                                <?php if (!empty($jugadores) && count($jugadores) == 4): ?>
+                                <?php if (!empty($jugadores) && count($jugadores) === 4): ?>
                                     <a href="<?php echo $base_url . $action_param; ?>action=reasignar_mesa&torneo_id=<?php echo $torneo['id']; ?>&ronda=<?php echo $ronda; ?>&mesa=<?php echo $mesaActual; ?>" 
                                        class="btn btn-teal btn-sm" style="background-color: #20c997; color: white;">
                                         <i class="fas fa-exchange-alt mr-2"></i>Reasignar Mesa
@@ -726,17 +734,17 @@ $esTorneoParejas = in_array((int)($torneo['modalidad'] ?? 0), [2, 4], true);
                     <div id="mensaje-validacion" class="mb-3"></div>
 
                     <!-- Formulario -->
-                    <?php 
-                    $mesaValida = ((int)($mesaActual ?? 0) > 0 && !empty($jugadores) && count($jugadores) == 4);
+                    <?php
+                    $mesaValida = $mesaTieneFormularioCompleto;
                     $mesasNumeros = array_column($todasLasMesas ?? [], 'numero');
                     if ($mesaValida && !empty($mesasNumeros)) {
-                        $mesaValida = in_array((int)$mesaActual, array_map('intval', $mesasNumeros));
+                        $mesaValida = in_array((int)$mesaActual, array_map('intval', $mesasNumeros), true);
                     }
                     ?>
-                    <?php if (empty($jugadores) || count($jugadores) != 4): ?>
+                    <?php if (empty($jugadores) || !$mesaTieneFormularioCompleto): ?>
                         <div class="alert alert-warning text-center">
                             <i class="fas fa-exclamation-triangle fa-3x mb-3"></i>
-                            <p class="mb-0">No se encontraron los 4 jugadores de esta mesa</p>
+                            <p class="mb-0">La mesa debe tener exactamente 4 jugadores asignados en esta ronda (orden por secuencia). Revise la asignación o regenere la ronda.</p>
                         </div>
                     <?php elseif (!$mesaValida): ?>
                         <div class="alert alert-warning text-center">
@@ -778,21 +786,11 @@ $esTorneoParejas = in_array((int)($torneo['modalidad'] ?? 0), [2, 4], true);
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        <?php 
-                                            $parejaA = [];
-                                            $parejaB = [];
-                                            foreach ($jugadores as $jugador) {
-                                                if ($jugador['secuencia'] <= 2) {
-                                                    $parejaA[] = $jugador;
-                                                } else {
-                                                    $parejaB[] = $jugador;
-                                                }
-                                            }
-                                            
-                                            // Procesar Pareja A
-                                            foreach ($parejaA as $index => $jugador): 
+                                        <?php
+                                            $esModalidadEquipos = (int)($torneo['modalidad'] ?? 0) === 3;
+                                            foreach ($parejaA as $index => $jugador):
                                                 $indiceArray = $index;
-                                                $puntosParejaA = $jugador['resultado1'] ?? 0;
+                                                $puntosParejaA = $parejaA[0]['resultado1'] ?? 0;
                                         ?>
                                             <tr class="table-info">
                                                 <!-- ID Usuario -->
@@ -808,14 +806,14 @@ $esTorneoParejas = in_array((int)($torneo['modalidad'] ?? 0), [2, 4], true);
                                                 ?>
                                                 <td class="columna-nombre">
                                                     <span class="nombre-jugador-linea <?php echo $tieneTarjetaPrevia ? 'jugador-tarjeta-previa' : ''; ?>" <?php echo $tituloTarjeta ? 'title="' . htmlspecialchars($tituloTarjeta) . '"' : ''; ?>><?php echo htmlspecialchars($jugador['nombre_completo'] ?? $jugador['nombre'] ?? 'N/A'); ?></span>
-                                                    <?php if ($esTorneoParejas && !empty($jugador['codigo_equipo'])): ?>
-                                                        <small class="d-block text-muted">Equipo: <?php echo htmlspecialchars($jugador['codigo_equipo']); ?></small>
+                                                    <?php if (($esTorneoParejas || $esModalidadEquipos) && !empty($jugador['codigo_equipo'])): ?>
+                                                        <small class="d-block text-muted">Cód. equipo: <?php echo htmlspecialchars($jugador['codigo_equipo']); ?></small>
                                                     <?php endif; ?>
                                                 </td>
                                                 
                                                 <!-- Puntos -->
                                                 <?php if ($index == 0): ?>
-                                                <td rowspan="2" class="text-center align-middle columna-puntos">
+                                                <td rowspan="<?php echo (int)$mitadMesa; ?>" class="text-center align-middle columna-puntos">
                                 <input type="number" 
                                        id="puntos_pareja_A"
                                        class="form-control text-center font-weight-bold"
@@ -834,8 +832,8 @@ $esTorneoParejas = in_array((int)($torneo['modalidad'] ?? 0), [2, 4], true);
                                                 <?php endif; ?>
                                                 
                                                 <?php if ($index == 0): ?>
-                                                <!-- Sancion/FF/Tarjeta: un solo control por pareja -->
-                                                <td rowspan="2" class="text-center align-middle columna-sancion" data-tarjeta-inscritos="<?php echo (int)($jugador['inscrito']['tarjeta_previa'] ?? $jugador['inscrito']['tarjeta'] ?? 0); ?>">
+                                                <!-- Sancion/FF/Tarjeta: un solo control por lado -->
+                                                <td rowspan="<?php echo (int)$mitadMesa; ?>" class="text-center align-middle columna-sancion" data-tarjeta-inscritos="<?php echo (int)($jugador['inscrito']['tarjeta_previa'] ?? $jugador['inscrito']['tarjeta'] ?? 0); ?>">
                                                     <input type="number" 
                                                            name="jugadores[<?php echo $indiceArray; ?>][sancion]"
                                                            data-codigo-equipo="<?php echo htmlspecialchars($jugador['codigo_equipo'] ?? ''); ?>"
@@ -848,7 +846,7 @@ $esTorneoParejas = in_array((int)($torneo['modalidad'] ?? 0), [2, 4], true);
                                                            onchange="validarSancionYTarjeta(<?php echo $indiceArray; ?>); validarPuntosEnTiempoReal();">
                                                     <small id="indicador_tarjeta_80_<?php echo $indiceArray; ?>" class="d-block text-muted mt-1" style="display:none !important;"></small>
                                                 </td>
-                                                <td rowspan="2" class="text-center align-middle columna-forfait">
+                                                <td rowspan="<?php echo (int)$mitadMesa; ?>" class="text-center align-middle columna-forfait">
                                                     <input type="checkbox" 
                                                            name="jugadores[<?php echo $indiceArray; ?>][ff]"
                                                            id="ff_<?php echo $indiceArray; ?>"
@@ -858,7 +856,7 @@ $esTorneoParejas = in_array((int)($torneo['modalidad'] ?? 0), [2, 4], true);
                                                            <?php echo (isset($jugador['ff']) && $jugador['ff']) ? 'checked' : ''; ?>
                                                            onchange="sincronizarControlesPorCodigoEquipo(this.dataset.codigoEquipo || '', 'ff', this.checked, <?php echo $indiceArray; ?>); validarPuntosEnTiempoReal();">
                                                 </td>
-                                                <td rowspan="2" class="text-center align-middle columna-tarjeta">
+                                                <td rowspan="<?php echo (int)$mitadMesa; ?>" class="text-center align-middle columna-tarjeta">
                                                     <?php if ($esTorneoParejas): ?>
                                                         <div class="d-flex justify-content-center gap-2 flex-wrap">
                                                             <label class="mb-0">
@@ -914,11 +912,10 @@ $esTorneoParejas = in_array((int)($torneo['modalidad'] ?? 0), [2, 4], true);
                                             </tr>
                                         <?php endforeach; ?>
                                         
-                                        <?php 
-                                            // Procesar Pareja B
-                                            foreach ($parejaB as $index => $jugador): 
-                                                $indiceArray = 2 + $index;
-                                                $puntosParejaB = $jugador['resultado1'] ?? 0;
+                                        <?php
+                                            foreach ($parejaB as $index => $jugador):
+                                                $indiceArray = $mitadMesa + $index;
+                                                $puntosParejaB = $parejaB[0]['resultado1'] ?? 0;
                                         ?>
                                             <tr class="table-success">
                                                 <!-- ID Usuario -->
@@ -934,14 +931,14 @@ $esTorneoParejas = in_array((int)($torneo['modalidad'] ?? 0), [2, 4], true);
                                                 ?>
                                                 <td class="columna-nombre">
                                                     <span class="nombre-jugador-linea <?php echo $tieneTarjetaPrevia ? 'jugador-tarjeta-previa' : ''; ?>" <?php echo $tituloTarjeta ? 'title="' . htmlspecialchars($tituloTarjeta) . '"' : ''; ?>><?php echo htmlspecialchars($jugador['nombre_completo'] ?? $jugador['nombre'] ?? 'N/A'); ?></span>
-                                                    <?php if ($esTorneoParejas && !empty($jugador['codigo_equipo'])): ?>
-                                                        <small class="d-block text-muted">Equipo: <?php echo htmlspecialchars($jugador['codigo_equipo']); ?></small>
+                                                    <?php if (($esTorneoParejas || $esModalidadEquipos) && !empty($jugador['codigo_equipo'])): ?>
+                                                        <small class="d-block text-muted">Cód. equipo: <?php echo htmlspecialchars($jugador['codigo_equipo']); ?></small>
                                                     <?php endif; ?>
                                                 </td>
                                                 
                                                 <!-- Puntos -->
                                                 <?php if ($index == 0): ?>
-                                                <td rowspan="2" class="text-center align-middle columna-puntos">
+                                                <td rowspan="<?php echo (int)$mitadMesa; ?>" class="text-center align-middle columna-puntos">
                                                     <input type="number" 
                                                            id="puntos_pareja_B"
                                                            class="form-control text-center font-weight-bold"
@@ -960,7 +957,7 @@ $esTorneoParejas = in_array((int)($torneo['modalidad'] ?? 0), [2, 4], true);
                                                 <?php endif; ?>
                                                 
                                                 <?php if ($index == 0): ?>
-                                                <td rowspan="2" class="text-center align-middle columna-sancion" data-tarjeta-inscritos="<?php echo (int)($jugador['inscrito']['tarjeta_previa'] ?? $jugador['inscrito']['tarjeta'] ?? 0); ?>">
+                                                <td rowspan="<?php echo (int)$mitadMesa; ?>" class="text-center align-middle columna-sancion" data-tarjeta-inscritos="<?php echo (int)($jugador['inscrito']['tarjeta_previa'] ?? $jugador['inscrito']['tarjeta'] ?? 0); ?>">
                                                     <input type="number" 
                                                            name="jugadores[<?php echo $indiceArray; ?>][sancion]"
                                                            data-codigo-equipo="<?php echo htmlspecialchars($jugador['codigo_equipo'] ?? ''); ?>"
@@ -973,7 +970,7 @@ $esTorneoParejas = in_array((int)($torneo['modalidad'] ?? 0), [2, 4], true);
                                                            onchange="validarSancionYTarjeta(<?php echo $indiceArray; ?>); validarPuntosEnTiempoReal();">
                                                     <small id="indicador_tarjeta_80_<?php echo $indiceArray; ?>" class="d-block text-muted mt-1" style="display:none !important;"></small>
                                                 </td>
-                                                <td rowspan="2" class="text-center align-middle columna-forfait">
+                                                <td rowspan="<?php echo (int)$mitadMesa; ?>" class="text-center align-middle columna-forfait">
                                                     <input type="checkbox" 
                                                            name="jugadores[<?php echo $indiceArray; ?>][ff]"
                                                            id="ff_<?php echo $indiceArray; ?>"
@@ -983,7 +980,7 @@ $esTorneoParejas = in_array((int)($torneo['modalidad'] ?? 0), [2, 4], true);
                                                            <?php echo (isset($jugador['ff']) && $jugador['ff']) ? 'checked' : ''; ?>
                                                            onchange="sincronizarControlesPorCodigoEquipo(this.dataset.codigoEquipo || '', 'ff', this.checked, <?php echo $indiceArray; ?>); validarPuntosEnTiempoReal();">
                                                 </td>
-                                                <td rowspan="2" class="text-center align-middle columna-tarjeta">
+                                                <td rowspan="<?php echo (int)$mitadMesa; ?>" class="text-center align-middle columna-tarjeta">
                                                     <?php if ($esTorneoParejas): ?>
                                                         <div class="d-flex justify-content-center gap-2 flex-wrap">
                                                             <label class="mb-0">
@@ -1131,6 +1128,9 @@ $esTorneoParejas = in_array((int)($torneo['modalidad'] ?? 0), [2, 4], true);
 </div>
 
 <script>
+const NUM_JUGADORES_MESA = <?php echo (int)$jugadoresPorMesaRegistro; ?>;
+const INDICES_LADO_A = <?php echo json_encode($mesaTieneFormularioCompleto ? range(0, $mitadMesa - 1) : []); ?>;
+const INDICES_LADO_B = <?php echo json_encode($mesaTieneFormularioCompleto ? range($mitadMesa, $jugadoresPorMesaRegistro - 1) : []); ?>;
 // Función para mostrar/ocultar sidebar en móvil
 function toggleSidebar() {
     const sidebar = document.getElementById('sidebar-mesas');
@@ -1329,72 +1329,54 @@ function irAMesaDesdeInput() {
     window.location.href = url;
 }
 
-// Función para distribuir puntos de las parejas a los jugadores individuales
+// Distribuye puntos de los lados A/B (2 vs 2 sobre 4 jugadores por mesa)
 function distribuirPuntos(pareja) {
-    // Si se llama con 'todas', distribuir ambas parejas
     if (pareja === 'todas') {
         distribuirPuntos('A');
         distribuirPuntos('B');
         return;
     }
-    
-    // Obtener puntos actuales de ambas parejas
-    const puntosParejaA = parseInt(document.getElementById('puntos_pareja_A').value) || 0;
-    const puntosParejaB = parseInt(document.getElementById('puntos_pareja_B').value) || 0;
-    
-    // Determinar qué pareja estamos procesando
-    let puntosPareja, puntosContraria, indices;
+
+    const inputA = document.getElementById('puntos_pareja_A');
+    const inputB = document.getElementById('puntos_pareja_B');
+    if (!inputA || !inputB || !INDICES_LADO_A.length || !INDICES_LADO_B.length) {
+        return;
+    }
+
+    const puntosParejaA = parseInt(inputA.value, 10) || 0;
+    const puntosParejaB = parseInt(inputB.value, 10) || 0;
+
+    let puntosPareja, puntosContraria, indices, indicesOtroLado;
     if (pareja === 'A') {
         puntosPareja = puntosParejaA;
         puntosContraria = puntosParejaB;
-        indices = [0, 1]; // Secuencias 1-2
+        indices = INDICES_LADO_A;
+        indicesOtroLado = INDICES_LADO_B;
     } else {
         puntosPareja = puntosParejaB;
         puntosContraria = puntosParejaA;
-        indices = [2, 3]; // Secuencias 3-4
+        indices = INDICES_LADO_B;
+        indicesOtroLado = INDICES_LADO_A;
     }
-    
-    // Distribuir puntos a cada jugador de la pareja
-    // IMPORTANTE: Siempre actualizar ambos campos (resultado1 y resultado2) para mantener sincronización
+
     indices.forEach(index => {
         const campoR1 = document.getElementById('resultado1_' + index);
         const campoR2 = document.getElementById('resultado2_' + index);
-        
         if (campoR1) {
             campoR1.value = puntosPareja;
-            console.log('Distribuido resultado1[' + index + '] = ' + puntosPareja + ' (Pareja ' + pareja + ')');
-        } else {
-            console.error('No se encontró resultado1_' + index);
         }
         if (campoR2) {
             campoR2.value = puntosContraria;
-            console.log('Distribuido resultado2[' + index + '] = ' + puntosContraria + ' (Contraria)');
-        } else {
-            console.error('No se encontró resultado2_' + index);
         }
     });
-    
-    // IMPORTANTE: Cuando se actualiza una pareja, también actualizar la pareja contraria
-    // para mantener sincronización de resultado2
-    if (pareja === 'A') {
-        // Si actualizamos A, actualizar resultado2 de B (que apunta a A)
-        [2, 3].forEach(index => {
-            const campoR2 = document.getElementById('resultado2_' + index);
-            if (campoR2) {
-                campoR2.value = puntosParejaA;
-                console.log('Actualizado resultado2[' + index + '] = ' + puntosParejaA + ' (desde Pareja A)');
-            }
-        });
-    } else {
-        // Si actualizamos B, actualizar resultado2 de A (que apunta a B)
-        [0, 1].forEach(index => {
-            const campoR2 = document.getElementById('resultado2_' + index);
-            if (campoR2) {
-                campoR2.value = puntosParejaB;
-                console.log('Actualizado resultado2[' + index + '] = ' + puntosParejaB + ' (desde Pareja B)');
-            }
-        });
-    }
+
+    const puntosParaResultado2DelOtro = pareja === 'A' ? puntosParejaA : puntosParejaB;
+    indicesOtroLado.forEach(index => {
+        const campoR2 = document.getElementById('resultado2_' + index);
+        if (campoR2) {
+            campoR2.value = puntosParaResultado2DelOtro;
+        }
+    });
 }
 
 // Devuelve true si el textbox "Ir a Mesa" tiene un valor válido (> 0 y en lista de mesas)
@@ -1431,7 +1413,7 @@ function actualizarEstadoPorMesa() {
     ];
     controles.forEach(el => { if (el) el.disabled = !habilitado; });
     
-    for (let i = 0; i < 4; i++) {
+    for (let i = 0; i < NUM_JUGADORES_MESA; i++) {
         const sancion = document.querySelector('input[name="jugadores[' + i + '][sancion]"]');
         const ff = document.getElementById('ff_' + i);
         if (sancion) sancion.disabled = !habilitado;
@@ -1458,13 +1440,20 @@ function actualizarEstadoBotonGuardar() {
         btnGuardar.disabled = true;
         return;
     }
+
+    const elA = document.getElementById('puntos_pareja_A');
+    const elB = document.getElementById('puntos_pareja_B');
+    if (!elA || !elB) {
+        btnGuardar.disabled = true;
+        return;
+    }
+
+    const puntosA = parseInt(elA.value, 10) || 0;
+    const puntosB = parseInt(elB.value, 10) || 0;
     
-    const puntosA = parseInt(document.getElementById('puntos_pareja_A').value) || 0;
-    const puntosB = parseInt(document.getElementById('puntos_pareja_B').value) || 0;
-    
-    // Verificar si hay forfait marcado (cualquiera de los 4 jugadores)
+    // Forfait en cualquier jugador de la mesa
     let hayForfait = false;
-    for (let i = 0; i < 4; i++) {
+    for (let i = 0; i < NUM_JUGADORES_MESA; i++) {
         const ff = document.getElementById('ff_' + i);
         if (ff && ff.checked) {
             hayForfait = true;
@@ -1472,9 +1461,9 @@ function actualizarEstadoBotonGuardar() {
         }
     }
     
-    // Verificar si hay tarjeta grave - roja (3) o negra (4) (cualquiera de los 4 jugadores)
+    // Tarjeta grave (3 o 4) en cualquier jugador de la mesa
     let hayTarjetaGrave = false;
-    for (let i = 0; i < 4; i++) {
+    for (let i = 0; i < NUM_JUGADORES_MESA; i++) {
         const campoTarjeta = document.getElementById('tarjeta_' + i);
         if (campoTarjeta) {
             const tarjeta = parseInt(campoTarjeta.value) || 0;
@@ -1502,7 +1491,7 @@ let sincronizandoPorEquipo = false;
 function sincronizarControlesPorCodigoEquipo(codigoEquipo, campo, valor, indiceOrigen) {
     if (!ES_TORNEO_PAREJAS || !codigoEquipo || sincronizandoPorEquipo) return;
     sincronizandoPorEquipo = true;
-    for (let i = 0; i < 4; i++) {
+    for (let i = 0; i < NUM_JUGADORES_MESA; i++) {
         if (i === indiceOrigen) continue;
         const inputCodigo = document.querySelector('input[name="jugadores[' + i + '][codigo_equipo]"]');
         if (!inputCodigo || (inputCodigo.value || '').trim() !== codigoEquipo) continue;
@@ -1627,13 +1616,13 @@ function seleccionarTarjeta(index, tarjeta, forzarValor = false) {
     sincronizarControlesPorCodigoEquipo(codigoEquipo, 'tarjeta', tarjeta, index);
 }
 
-// Un solo indicador por mesa: sincroniza pena_mesa con los 4 hidden chancleta/zapato
+// Un solo indicador por mesa: sincroniza pena_mesa con los hidden chancleta/zapato de cada jugador
 function procesarPena() {
     const radioChancleta = document.getElementById('pena_mesa_chancleta');
     const radioZapato = document.getElementById('pena_mesa_zapato');
     const esChancleta = radioChancleta && radioChancleta.checked;
     const esZapato = radioZapato && radioZapato.checked;
-    for (let i = 0; i < 4; i++) {
+    for (let i = 0; i < NUM_JUGADORES_MESA; i++) {
         const ch = document.getElementById('chancleta_' + i);
         const zp = document.getElementById('zapato_' + i);
         if (ch) ch.value = esChancleta ? '1' : '0';
@@ -1676,10 +1665,11 @@ function limpiarFormularioSilencioso() {
     distribuirPuntos('todas');
     
     // Limpiar tarjetas
-    for (let i = 0; i < 4; i++) {
+    for (let i = 0; i < NUM_JUGADORES_MESA; i++) {
         const botones = document.querySelectorAll('[data-index="' + i + '"].tarjeta-btn');
         botones.forEach(btn => btn.classList.remove('activo'));
-        document.getElementById('tarjeta_' + i).value = 0;
+        const ti = document.getElementById('tarjeta_' + i);
+        if (ti) ti.value = '0';
         const sancion = document.querySelector('input[name="jugadores[' + i + '][sancion]"]');
         if (sancion) sancion.value = '0';
         const ff = document.getElementById('ff_' + i);
@@ -1743,7 +1733,7 @@ async function guardarManoDesierta() {
     if (puntosA) puntosA.value = '0';
     if (puntosB) puntosB.value = '0';
 
-    for (let i = 0; i < 4; i++) {
+    for (let i = 0; i < NUM_JUGADORES_MESA; i++) {
         const ff = document.getElementById('ff_' + i);
         if (ff) ff.checked = false;
         const tarjeta = document.getElementById('tarjeta_' + i);
@@ -1811,17 +1801,18 @@ function validarPuntosInmediato(event) {
 }
 
 function validarPuntosEnTiempoReal() {
-    const puntosA = parseInt(document.getElementById('puntos_pareja_A').value) || 0;
-    const puntosB = parseInt(document.getElementById('puntos_pareja_B').value) || 0;
-    const puntosTorneo = <?php echo (int)($torneo['puntos'] ?? 100); ?>;
-    // Máximo permitido: puntos del torneo + 60% = puntosTorneo * 1.6
-    const maximoPermitido = Math.round(puntosTorneo * 1.6);
-    
     const campoA = document.getElementById('puntos_pareja_A');
     const campoB = document.getElementById('puntos_pareja_B');
     const mensajeDiv = document.getElementById('mensaje-validacion');
+    if (!campoA || !campoB || !mensajeDiv) {
+        return;
+    }
+
+    const puntosA = parseInt(campoA.value, 10) || 0;
+    const puntosB = parseInt(campoB.value, 10) || 0;
+    const puntosTorneo = <?php echo (int)($torneo['puntos'] ?? 100); ?>;
+    const maximoPermitido = Math.round(puntosTorneo * 1.6);
     
-    // Remover clases de error previas
     campoA.classList.remove('border-danger', 'bg-danger', 'border-warning', 'bg-warning');
     campoB.classList.remove('border-danger', 'bg-danger', 'border-warning', 'bg-warning');
     mensajeDiv.classList.remove('show', 'alert', 'alert-danger', 'alert-warning');
@@ -1831,11 +1822,14 @@ function validarPuntosEnTiempoReal() {
     let hayForfait = false;
     let hayTarjetaGrave = false;
     
-    for (let i = 0; i < 4; i++) {
+    for (let i = 0; i < NUM_JUGADORES_MESA; i++) {
         const ff = document.getElementById('ff_' + i);
         if (ff && ff.checked) hayForfait = true;
-        const tarjeta = parseInt(document.getElementById('tarjeta_' + i).value) || 0;
-        if (tarjeta == 3 || tarjeta == 4) hayTarjetaGrave = true;
+        const elTar = document.getElementById('tarjeta_' + i);
+        if (elTar) {
+            const tarjeta = parseInt(elTar.value, 10) || 0;
+            if (tarjeta == 3 || tarjeta == 4) hayTarjetaGrave = true;
+        }
     }
     
     let hayError = false;
@@ -1895,24 +1889,30 @@ function validarResultados() {
         return false;
     }
     
-    const puntosA = parseInt(document.getElementById('puntos_pareja_A').value) || 0;
-    const puntosB = parseInt(document.getElementById('puntos_pareja_B').value) || 0;
+    const inpA = document.getElementById('puntos_pareja_A');
+    const inpB = document.getElementById('puntos_pareja_B');
+    if (!inpA || !inpB) {
+        return false;
+    }
+    const puntosA = parseInt(inpA.value, 10) || 0;
+    const puntosB = parseInt(inpB.value, 10) || 0;
     const puntosTorneo = <?php echo (int)($torneo['puntos'] ?? 100); ?>;
-    // Máximo permitido: puntos del torneo + 60% = puntosTorneo * 1.6
     const maximoPermitido = Math.round(puntosTorneo * 1.6);
     
-    // Obtener estado de forfait y tarjetas
     let hayForfait = false;
     let hayTarjetaGrave = false;
     
-    for (let i = 0; i < 4; i++) {
+    for (let i = 0; i < NUM_JUGADORES_MESA; i++) {
         const ff = document.getElementById('ff_' + i);
         if (ff && ff.checked) {
             hayForfait = true;
         }
-        const tarjeta = parseInt(document.getElementById('tarjeta_' + i).value) || 0;
-        if (tarjeta == 3 || tarjeta == 4) {
-            hayTarjetaGrave = true;
+        const elTarj = document.getElementById('tarjeta_' + i);
+        if (elTarj) {
+            const tarjeta = parseInt(elTarj.value, 10) || 0;
+            if (tarjeta == 3 || tarjeta == 4) {
+                hayTarjetaGrave = true;
+            }
         }
     }
     
@@ -2011,7 +2011,7 @@ document.addEventListener('DOMContentLoaded', function() {
             distribuirPuntos('todas');
             
             // Verificar que todos los campos estén correctamente actualizados
-            for (let i = 0; i < 4; i++) {
+            for (let i = 0; i < NUM_JUGADORES_MESA; i++) {
                 const r1 = document.getElementById('resultado1_' + i);
                 const r2 = document.getElementById('resultado2_' + i);
                 if (r1 && r2) {
@@ -2024,12 +2024,12 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     
     // Mostrar indicador de tarjeta por acumulación (80 pts) si ya viene con 80 en el formulario
-    for (let i = 0; i < 4; i++) {
+    for (let i = 0; i < NUM_JUGADORES_MESA; i++) {
         validarSancionYTarjeta(i);
     }
 
     // Inicializar tarjetas visualmente (mostrar el estado actual)
-    for (let i = 0; i < 4; i++) {
+    for (let i = 0; i < NUM_JUGADORES_MESA; i++) {
         const tarjetaInput = document.getElementById('tarjeta_' + i);
         if (tarjetaInput) {
             const tarjetaValue = parseInt(tarjetaInput.value) || 0;
@@ -2111,7 +2111,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     
     // Actualizar estado cuando cambian forfait o tarjetas
-    for (let i = 0; i < 4; i++) {
+    for (let i = 0; i < NUM_JUGADORES_MESA; i++) {
         const ff = document.getElementById('ff_' + i);
         if (ff) {
             ff.addEventListener('change', function() {
@@ -2132,7 +2132,7 @@ document.addEventListener('DOMContentLoaded', function() {
         function actualizarPenaMesaTodos() {
             const esChancleta = penaMesaChancleta.checked;
             const esZapato = penaMesaZapato.checked;
-            for (let i = 0; i < 4; i++) {
+            for (let i = 0; i < NUM_JUGADORES_MESA; i++) {
                 const ch = document.getElementById('chancleta_' + i);
                 const zp = document.getElementById('zapato_' + i);
                 if (ch) ch.value = esChancleta ? '1' : '0';

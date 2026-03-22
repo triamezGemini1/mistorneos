@@ -11,7 +11,7 @@ require_once __DIR__ . '/../config/auth.php';
 require_once __DIR__ . '/../config/db.php';
 require_once __DIR__ . '/../config/csrf.php';
 require_once __DIR__ . '/../lib/InscritosHelper.php';
-require_once __DIR__ . '/../config/MesaAsignacionService.php';
+require_once __DIR__ . '/../lib/Core/MesaAsignacionService.php';
 
 $current_user = Auth::user();
 $user_role = $current_user['role'] ?? '';
@@ -1524,7 +1524,7 @@ function obtenerDatosNotificacionesTorneo($torneo_id) {
             require_once __DIR__ . '/../config/MesaAsignacionEquiposService.php';
             $mesaService = new MesaAsignacionEquiposService();
         } else {
-            require_once __DIR__ . '/../config/MesaAsignacionService.php';
+            require_once __DIR__ . '/../lib/Core/MesaAsignacionService.php';
             $mesaService = new MesaAsignacionService();
         }
         $ultima_ronda = $mesaService->obtenerUltimaRonda($torneo_id);
@@ -3802,7 +3802,7 @@ function generarRonda($torneo_id, $user_id, $is_admin_general) {
             require_once __DIR__ . '/../config/MesaAsignacionEquiposService.php';
             $mesaService = new MesaAsignacionEquiposService();
         } else {
-            require_once __DIR__ . '/../config/MesaAsignacionService.php';
+            require_once __DIR__ . '/../lib/Core/MesaAsignacionService.php';
             $mesaService = new MesaAsignacionService();
         }
         

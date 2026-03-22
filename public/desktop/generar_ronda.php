@@ -1,8 +1,8 @@
-﻿<?php
+<?php
 /**
  * Generar Ronda (Desktop) — Pasos 3 y 8 del ciclo.
  * Invoca core/logica_torneo.php (generarRonda), que a su vez usa:
- * - core/MesaAsignacionService.php (individual) o MesaAsignacionEquiposService.php (equipos).
+ * - lib/Core/MesaAsignacionService.php (individual) o MesaAsignacionEquiposService.php (equipos).
  * Las especificaciones (individual/parejas/equipos) se leen de la tabla tournaments en SQLite local (modalidad).
  * POST: torneo_id. Redirige al panel con status=success o error.
  */

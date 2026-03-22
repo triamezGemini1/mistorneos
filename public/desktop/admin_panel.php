@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 /**
  * Panel de control simplificado (Desktop): torneos, inscritos, mesas y puntajes sobre SQLite.
  */
@@ -85,7 +85,7 @@ require_once __DIR__ . '/desktop_layout.php';
             <ol class="mb-0 list-inline">
                 <li class="list-inline-item me-2"><a href="./crear_torneo.php">1. Crear Torneo</a></li>
                 <li class="list-inline-item me-2"><a href="./inscribir.php">2. Inscripción</a></li>
-                <li class="list-inline-item me-2">3. Generar Ronda (botón abajo; usa core/MesaAsignacionService)</li>
+                <li class="list-inline-item me-2">3. Generar Ronda (botón abajo; usa lib/Core/MesaAsignacionService)</li>
                 <li class="list-inline-item me-2"><a href="./cuadricula.php">4. Cuadrícula por ID</a></li>
                 <li class="list-inline-item me-2"><a href="./imprimir_hojas.php">5. Imprimir Hojas</a></li>
                 <li class="list-inline-item me-2"><a href="./resultados.php">6. Ingresar Resultados</a></li>
