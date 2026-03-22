@@ -3,7 +3,8 @@
 declare(strict_types=1);
 
 /**
- * Controlador de vista: formularios de carga de resultados (Modelo A estándar / Modelo B parejas).
+ * Controlador de vista: formularios de carga de resultados.
+ * Toda persistencia pasa por TournamentPersistenceService::grabarResultados().
  * GET: torneo_id, mesa_id, partida (opcional, default 1).
  */
 
@@ -14,6 +15,7 @@ require_once $root . '/app/Database/Connection.php';
 require_once $root . '/app/Core/TournamentEngineService.php';
 require_once $root . '/app/Core/OrganizacionService.php';
 require_once $root . '/app/Core/CargaResultadosService.php';
+require_once $root . '/app/Core/TournamentPersistenceService.php';
 require_once $root . '/app/Helpers/AdminApi.php';
 
 if (mn_admin_session() === null) {
@@ -26,6 +28,7 @@ if (mn_admin_session() === null) {
 $admin = mn_admin_session();
 $scope = mn_admin_torneo_query_scope();
 $adminId = (int) ($admin['id'] ?? 0);
+$orgScope = $scope === false ? null : $scope;
 
 $script = $_SERVER['SCRIPT_NAME'] ?? '';
 $publicPrefix = str_contains($script, '/public/') ? '' : 'public/';
@@ -52,7 +55,8 @@ $torneo = null;
 $filas = [];
 $puntosObjetivo = CargaResultadosService::puntosObjetivoMesa();
 $tipoRaw = 'individual';
-$esParejas = false;
+/** Carga vinculada: solo tipo_torneo parejas. */
+$cargaVinculada = false;
 
 if ($scope === false) {
     $error = $error ?? 'Sin organización en sesión.';
@@ -67,85 +71,67 @@ if ($scope === false) {
     }
 
     if (isset($pdo) && $pdo instanceof PDO) {
+        $torneo = TournamentEngineService::getTorneo($pdo, $torneoId, $orgScope);
+        if ($torneo === null || !OrganizacionService::adminPuedeGestionarTorneo($admin, $torneo)) {
+            $error = $error ?? 'Torneo no encontrado o sin permiso.';
+            $torneo = null;
+        } else {
+            $tipoRaw = strtolower(trim((string) ($torneo['tipo_torneo'] ?? 'individual')));
+            if (!in_array($tipoRaw, ['individual', 'parejas', 'equipos'], true)) {
+                $tipoRaw = 'individual';
+            }
+            $cargaVinculada = $tipoRaw === 'parejas';
+            $filas = CargaResultadosService::obtenerFilasMesa($pdo, $torneoId, $partida, $mesaId);
+        }
+
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $token = isset($_POST['csrf_token']) ? (string) $_POST['csrf_token'] : '';
             if (!csrf_validate($token)) {
                 $error = 'Sesión de seguridad inválida. Recargue la página.';
+            } elseif ($torneo === null) {
+                $error = $error ?? 'No se puede guardar: torneo no válido o sin permiso.';
             } else {
                 $action = (string) ($_POST['action'] ?? '');
                 try {
                     if ($action === 'guardar_estandar') {
-                        $lineas = $_POST['lineas'] ?? [];
-                        if (!is_array($lineas)) {
-                            throw new InvalidArgumentException('Datos de formulario inválidos.');
-                        }
-                        $idsOrden = [];
-                        $porFila = [];
-                        $sumP = 0;
-                        foreach ($lineas as $row) {
-                            if (!is_array($row)) {
-                                continue;
-                            }
-                            $pid = (int) ($row['partiresul_id'] ?? 0);
-                            if ($pid <= 0) {
-                                continue;
-                            }
-                            $p = (float) ($row['puntos'] ?? 0);
-                            $sumP += $p;
-                            $idsOrden[] = $pid;
-                            $porFila[] = [
-                                'puntos' => $p,
-                                'sets' => (float) ($row['sets'] ?? 0),
-                                'chancleta' => (float) ($row['chancleta'] ?? 0),
-                                'zapato' => (float) ($row['zapato'] ?? 0),
-                            ];
-                        }
-                        if ($idsOrden === []) {
-                            throw new InvalidArgumentException('No hay líneas válidas para guardar.');
-                        }
-                        if ((int) round($sumP) !== $puntosObjetivo) {
-                            throw new InvalidArgumentException(
-                                'La suma de puntos debe ser exactamente ' . $puntosObjetivo . ' (reglamento de mesa).'
-                            );
-                        }
-                        CargaResultadosService::guardarEstandar($pdo, $torneoId, $idsOrden, $porFila, $adminId);
+                        TournamentPersistenceService::grabarResultados(
+                            $pdo,
+                            $torneo,
+                            $partida,
+                            $mesaId,
+                            'estandar',
+                            ['lineas' => $_POST['lineas'] ?? []],
+                            $adminId,
+                            $orgScope
+                        );
                         $_SESSION['carga_resultados_ok'] = 'Resultados guardados correctamente.';
                         header('Location: ' . $publicPrefix . 'carga_resultados.php?torneo_id=' . $torneoId . '&mesa_id=' . $mesaId . '&partida=' . $partida, true, 303);
                         exit;
                     }
 
                     if ($action === 'guardar_parejas') {
-                        $pa1 = (int) ($_POST['pid_a1'] ?? 0);
-                        $pa2 = (int) ($_POST['pid_a2'] ?? 0);
-                        $pb1 = (int) ($_POST['pid_b1'] ?? 0);
-                        $pb2 = (int) ($_POST['pid_b2'] ?? 0);
-                        if ($pa1 <= 0 || $pa2 <= 0 || $pb1 <= 0 || $pb2 <= 0) {
-                            throw new InvalidArgumentException('Faltan identificadores de pareja.');
-                        }
-                        $pA = (float) ($_POST['puntos_A'] ?? 0);
-                        $pB = (float) ($_POST['puntos_B'] ?? 0);
-                        if ((int) round($pA + $pB) !== $puntosObjetivo) {
-                            throw new InvalidArgumentException(
-                                'Puntos pareja A + puntos pareja B deben sumar ' . $puntosObjetivo . '.'
-                            );
-                        }
-                        $datos = [
-                            'puntos_A' => $pA,
-                            'sets_A' => (float) ($_POST['sets_A'] ?? 0),
-                            'chancleta_A' => (float) ($_POST['chancleta_A'] ?? 0),
-                            'zapato_A' => (float) ($_POST['zapato_A'] ?? 0),
-                            'puntos_B' => $pB,
-                            'sets_B' => (float) ($_POST['sets_B'] ?? 0),
-                            'chancleta_B' => (float) ($_POST['chancleta_B'] ?? 0),
-                            'zapato_B' => (float) ($_POST['zapato_B'] ?? 0),
-                        ];
-                        CargaResultadosService::guardarParejas(
+                        TournamentPersistenceService::grabarResultados(
                             $pdo,
-                            $torneoId,
-                            [$pa1, $pa2],
-                            [$pb1, $pb2],
-                            $datos,
-                            $adminId
+                            $torneo,
+                            $partida,
+                            $mesaId,
+                            'parejas',
+                            [
+                                'pid_a1' => (int) ($_POST['pid_a1'] ?? 0),
+                                'pid_a2' => (int) ($_POST['pid_a2'] ?? 0),
+                                'pid_b1' => (int) ($_POST['pid_b1'] ?? 0),
+                                'pid_b2' => (int) ($_POST['pid_b2'] ?? 0),
+                                'puntos_A' => (float) ($_POST['puntos_A'] ?? 0),
+                                'sets_A' => (float) ($_POST['sets_A'] ?? 0),
+                                'chancleta_A' => (float) ($_POST['chancleta_A'] ?? 0),
+                                'zapato_A' => (float) ($_POST['zapato_A'] ?? 0),
+                                'puntos_B' => (float) ($_POST['puntos_B'] ?? 0),
+                                'sets_B' => (float) ($_POST['sets_B'] ?? 0),
+                                'chancleta_B' => (float) ($_POST['chancleta_B'] ?? 0),
+                                'zapato_B' => (float) ($_POST['zapato_B'] ?? 0),
+                            ],
+                            $adminId,
+                            $orgScope
                         );
                         $_SESSION['carga_resultados_ok'] = 'Resultados de parejas guardados (replicados a ambos integrantes).';
                         header('Location: ' . $publicPrefix . 'carga_resultados.php?torneo_id=' . $torneoId . '&mesa_id=' . $mesaId . '&partida=' . $partida, true, 303);
@@ -156,19 +142,6 @@ if ($scope === false) {
                 }
             }
         }
-
-        $torneo = TournamentEngineService::getTorneo($pdo, $torneoId, $scope);
-        if ($torneo === null || !OrganizacionService::adminPuedeGestionarTorneo($admin, $torneo)) {
-            $error = $error ?? 'Torneo no encontrado o sin permiso.';
-            $torneo = null;
-        } else {
-            $tipoRaw = strtolower(trim((string) ($torneo['tipo_torneo'] ?? 'individual')));
-            if (!in_array($tipoRaw, ['individual', 'parejas', 'equipos'], true)) {
-                $tipoRaw = 'individual';
-            }
-            $esParejas = $tipoRaw === 'parejas';
-            $filas = CargaResultadosService::obtenerFilasMesa($pdo, $torneoId, $partida, $mesaId);
-        }
     }
 }
 
@@ -176,6 +149,7 @@ $csrfToken = csrf_token();
 $partials = $root . '/public/views/partials';
 
 $tipoEtiqueta = $tipoRaw === 'parejas' ? 'Parejas' : ($tipoRaw === 'equipos' ? 'Equipos' : 'Individual');
+$etiquetaCarga = $cargaVinculada ? 'Carga vinculada (parejas)' : 'Carga independiente (4 registros)';
 $panelBack = $torneoId > 0
     ? $publicPrefix . 'admin_panel.php?torneo_id=' . $torneoId
     : $publicPrefix . 'admin_torneo.php';
@@ -202,6 +176,7 @@ header('Content-Type: text/html; charset=utf-8');
         <h1 class="mn-carga-res-hero-title"><?= htmlspecialchars((string) $torneo['nombre'], ENT_QUOTES, 'UTF-8') ?></h1>
         <p class="mn-carga-res-hero-tipo">
           Tipo: <strong><?= htmlspecialchars($tipoEtiqueta, ENT_QUOTES, 'UTF-8') ?></strong>
+          · <?= htmlspecialchars($etiquetaCarga, ENT_QUOTES, 'UTF-8') ?>
         </p>
       </header>
     <?php endif; ?>
@@ -215,18 +190,18 @@ header('Content-Type: text/html; charset=utf-8');
 
     <?php if ($torneo !== null && $filas !== []) : ?>
       <div
-        class="mn-carga-res-forms"
+        class="mn-carga-res-forms<?= $cargaVinculada ? ' mn-form-carga--vinculada' : ' mn-form-carga--independiente' ?>"
         data-puntos-objetivo="<?= (int) $puntosObjetivo ?>"
-        data-modo="<?= $esParejas ? 'parejas' : 'estandar' ?>"
+        data-modo="<?= $cargaVinculada ? 'parejas' : 'estandar' ?>"
       >
-        <?php if ($esParejas) : ?>
+        <?php if ($cargaVinculada) : ?>
           <?php if (count($filas) >= 4) : ?>
-            <?php require $partials . '/form_carga_parejas.php'; ?>
+            <?php require $partials . '/mesas/form_carga_vinculada.php'; ?>
           <?php else : ?>
-            <p class="mn-hint mn-hint--error">El modo parejas requiere 4 jugadores asignados en esta mesa y partida (filas en partiresul).</p>
+            <p class="mn-hint mn-hint--error">La carga vinculada requiere 4 jugadores en esta mesa y partida (filas en partiresul).</p>
           <?php endif; ?>
         <?php else : ?>
-          <?php require $partials . '/form_carga_estandar.php'; ?>
+          <?php require $partials . '/mesas/form_carga_independiente.php'; ?>
         <?php endif; ?>
       </div>
     <?php elseif ($torneo !== null && $filas === [] && $error === null) : ?>

@@ -3,7 +3,10 @@
 declare(strict_types=1);
 
 /**
- * Lectura y persistencia de resultados por mesa (partiresul legacy).
+ * Lectura de mesa y actualización baja nivel de partiresul.
+ * La entrada operativa para guardar resultados con validación e integridad es
+ * {@see TournamentPersistenceService::grabarResultados()}.
+ *
  * Modelo A: filas independientes. Modelo B: parejas (replica puntos/sets/extras a ambos integrantes).
  */
 final class CargaResultadosService

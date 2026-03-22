@@ -1,0 +1,247 @@
+<?php
+
+declare(strict_types=1);
+
+require_once dirname(__DIR__, 2) . '/lib/InscritosHelper.php';
+require_once __DIR__ . '/MesaAsignacionMatriz.php';
+require_once __DIR__ . '/MesaRepositoryPersistTrait.php';
+
+/**
+ * Persistencia y lecturas para asignación de mesas (partiresul, historial_parejas, inscritos).
+ */
+final class MesaRepository
+{
+    use MesaRepositoryPersistTrait;
+
+    private PDO $pdo;
+
+    public function __construct(PDO $pdo)
+    {
+        $this->pdo = $pdo;
+    }
+
+    /** @return array{sql:string,bind:array} */
+    private function whereEntidad(string $alias = ''): array
+    {
+        return ['sql' => '', 'bind' => []];
+    }
+
+    public function fechaPartidaAhora(): string
+    {
+        return date('Y-m-d H:i:s');
+    }
+
+    public function sqlInsertIgnoreInto(string $tableAndRest): string
+    {
+        $driver = $this->pdo->getAttribute(PDO::ATTR_DRIVER_NAME);
+        $kw = $driver === 'sqlite' ? 'INSERT OR IGNORE INTO' : 'INSERT IGNORE INTO';
+
+        return $kw . ' ' . $tableAndRest;
+    }
+
+    /**
+     * @return list<array<string, mixed>>
+     */
+    public function obtenerClasificacionInscritos(int $torneoId): array
+    {
+        $ent = $this->whereEntidad('i');
+        $sql = 'SELECT i.*, u.nombre, u.sexo, c.nombre as club_nombre, c.id as club_id
+                FROM inscritos i
+                INNER JOIN usuarios u ON i.id_usuario = u.id
+                LEFT JOIN clubes c ON i.id_club = c.id
+                WHERE i.torneo_id = ? AND ' . InscritosHelper::sqlWhereSoloConfirmadoConAlias('i') . $ent['sql'] . '
+                ORDER BY i.posicion ASC, i.ganados DESC, i.efectividad DESC, i.puntos DESC, i.id_usuario ASC';
+        $stmt = $this->pdo->prepare($sql);
+        $stmt->execute(array_merge([$torneoId], $ent['bind']));
+
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    /**
+     * @return list<int>
+     */
+    public function obtenerIdsByeRonda1(int $torneoId): array
+    {
+        $stmt = $this->pdo->prepare(
+            'SELECT DISTINCT id_usuario FROM partiresul
+            WHERE id_torneo = ? AND partida = 1 AND mesa = 0 AND registrado = 1'
+        );
+        $stmt->execute([$torneoId]);
+
+        return array_map('intval', $stmt->fetchAll(PDO::FETCH_COLUMN));
+    }
+
+    /**
+     * @return array<int, int> id_usuario => cantidad BYE
+     */
+    public function obtenerConteoByePorJugador(int $torneoId, int $antesDeRonda): array
+    {
+        if ($antesDeRonda <= 1) {
+            return [];
+        }
+        $stmt = $this->pdo->prepare(
+            'SELECT id_usuario, COUNT(*) AS cnt
+            FROM partiresul
+            WHERE id_torneo = ? AND partida < ? AND partida >= 1 AND mesa = 0 AND registrado = 1
+            GROUP BY id_usuario'
+        );
+        $stmt->execute([$torneoId, $antesDeRonda]);
+        $out = [];
+        while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
+            $out[(int) $row['id_usuario']] = (int) $row['cnt'];
+        }
+
+        return $out;
+    }
+
+    /**
+     * @return list<array<string, mixed>>
+     */
+    public function obtenerClasificacionInscritosParaRonda2(int $torneoId): array
+    {
+        $entI = $this->whereEntidad('i');
+        $sql = 'SELECT i.*, u.nombre, u.sexo, c.nombre as club_nombre, c.id as club_id,
+                (CASE WHEN pr1.id IS NOT NULL AND pr1.registrado = 1 AND pr1.resultado1 > pr1.resultado2 THEN 1 ELSE 0 END) AS ganador_r1,
+                (CASE WHEN pr1.id IS NOT NULL AND pr1.registrado = 1 AND pr1.resultado1 > pr1.resultado2 AND pr1.mesa = 0 THEN 1 ELSE 0 END) AS bye_r1
+                FROM inscritos i
+                INNER JOIN usuarios u ON i.id_usuario = u.id
+                LEFT JOIN clubes c ON i.id_club = c.id
+                LEFT JOIN partiresul pr1 ON pr1.id_torneo = i.torneo_id AND pr1.id_usuario = i.id_usuario AND pr1.partida = 1
+                WHERE i.torneo_id = ? AND ' . InscritosHelper::sqlWhereSoloConfirmadoConAlias('i') . $entI['sql'] . '
+                ORDER BY
+                    (CASE WHEN pr1.id IS NOT NULL AND pr1.registrado = 1 AND pr1.resultado1 > pr1.resultado2 THEN 1 ELSE 0 END) DESC,
+                    (CASE WHEN pr1.id IS NOT NULL AND pr1.registrado = 1 AND pr1.resultado1 > pr1.resultado2 AND pr1.mesa = 0 THEN 1 ELSE 0 END) ASC,
+                    i.efectividad DESC, i.puntos DESC, i.id_usuario ASC';
+        $stmt = $this->pdo->prepare($sql);
+        $stmt->execute(array_merge([$torneoId], $entI['bind']));
+
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    /**
+     * @return array<int, array<int, true>>
+     */
+    public function obtenerMatrizCompañerosDesdeHistorial(int $torneoId, int $hastaRonda): array
+    {
+        try {
+            $ent = $this->whereEntidad();
+            $sql = 'SELECT jugador_1_id, jugador_2_id FROM historial_parejas WHERE torneo_id = ? AND ronda_id <= ?' . $ent['sql'];
+            $stmt = $this->pdo->prepare($sql);
+            $stmt->execute(array_merge([$torneoId, $hastaRonda], $ent['bind']));
+            $filas = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+            return MesaAsignacionMatriz::crearMatrizCompañeros(
+                array_map(static fn ($r) => [(int) $r['jugador_1_id'], (int) $r['jugador_2_id']], $filas)
+            );
+        } catch (Exception $e) {
+            return [];
+        }
+    }
+
+    public function yaJugaronJuntos(int $torneoId, int $id1, int $id2, int $hastaRonda): bool
+    {
+        $idMenor = min($id1, $id2);
+        $idMayor = max($id1, $id2);
+        $llave = $idMenor . '-' . $idMayor;
+        $ent = $this->whereEntidad();
+        try {
+            $stmt = $this->pdo->prepare(
+                'SELECT 1 FROM historial_parejas WHERE torneo_id = ? AND llave = ? AND ronda_id <= ?' . $ent['sql'] . ' LIMIT 1'
+            );
+            $stmt->execute(array_merge([$torneoId, $llave, $hastaRonda], $ent['bind']));
+
+            return (bool) $stmt->fetch();
+        } catch (Exception $e) {
+            try {
+                $stmt = $this->pdo->prepare(
+                    'SELECT 1 FROM historial_parejas WHERE torneo_id = ? AND jugador_1_id = ? AND jugador_2_id = ? AND ronda_id <= ?' . $ent['sql'] . ' LIMIT 1'
+                );
+                $stmt->execute(array_merge([$torneoId, $idMenor, $idMayor, $hastaRonda], $ent['bind']));
+
+                return (bool) $stmt->fetch();
+            } catch (Exception $e2) {
+                return false;
+            }
+        }
+    }
+
+    /**
+     * @return list<array{0:mixed,1:mixed}>
+     */
+    public function obtenerParejasRonda(int $torneoId, int $ronda): array
+    {
+        $sql = 'SELECT partida, mesa, id_usuario, secuencia
+                FROM partiresul
+                WHERE id_torneo = ? AND partida = ? AND mesa > 0
+                ORDER BY mesa, secuencia';
+        $stmt = $this->pdo->prepare($sql);
+        $stmt->execute([$torneoId, $ronda]);
+        $resultados = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        $parejas = [];
+        $mesaActual = null;
+        $jugadoresMesa = [];
+
+        foreach ($resultados as $r) {
+            if ($mesaActual !== $r['mesa']) {
+                if (count($jugadoresMesa) >= 4) {
+                    $parejas[] = [$jugadoresMesa[0], $jugadoresMesa[1]];
+                    $parejas[] = [$jugadoresMesa[2], $jugadoresMesa[3]];
+                } elseif (count($jugadoresMesa) >= 2) {
+                    $parejas[] = [$jugadoresMesa[0], $jugadoresMesa[1]];
+                }
+                $mesaActual = $r['mesa'];
+                $jugadoresMesa = [];
+            }
+            $jugadoresMesa[] = $r['id_usuario'];
+        }
+
+        if (count($jugadoresMesa) >= 4) {
+            $parejas[] = [$jugadoresMesa[0], $jugadoresMesa[1]];
+            $parejas[] = [$jugadoresMesa[2], $jugadoresMesa[3]];
+        } elseif (count($jugadoresMesa) >= 2) {
+            $parejas[] = [$jugadoresMesa[0], $jugadoresMesa[1]];
+        }
+
+        return $parejas;
+    }
+
+    /**
+     * @return list<array{0:mixed,1:mixed}>
+     */
+    public function obtenerParejasRondasAnteriores(int $torneoId, int $hastaRonda): array
+    {
+        $todasParejas = [];
+        for ($r = 1; $r <= $hastaRonda; $r++) {
+            $parejas = $this->obtenerParejasRonda($torneoId, $r);
+            $todasParejas = array_merge($todasParejas, $parejas);
+        }
+
+        return $todasParejas;
+    }
+
+    /**
+     * @return array<int, array<int, true>>
+     */
+    public function obtenerMatrizEnfrentamientos(int $torneoId, int $ronda): array
+    {
+        $sql = 'SELECT DISTINCT pr1.id_usuario as id1, pr2.id_usuario as id2
+                FROM partiresul pr1
+                INNER JOIN partiresul pr2 ON pr1.id_torneo = pr2.id_torneo
+                    AND pr1.partida = pr2.partida
+                    AND pr1.mesa = pr2.mesa
+                    AND pr1.id_usuario < pr2.id_usuario
+                WHERE pr1.id_torneo = ? AND pr1.partida = ? AND pr1.mesa > 0';
+        $stmt = $this->pdo->prepare($sql);
+        $stmt->execute([$torneoId, $ronda]);
+        $resultados = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        $matriz = [];
+        foreach ($resultados as $r) {
+            $matriz[$r['id1']][$r['id2']] = true;
+            $matriz[$r['id2']][$r['id1']] = true;
+        }
+
+        return $matriz;
+    }
+}

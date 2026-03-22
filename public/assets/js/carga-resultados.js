@@ -51,7 +51,7 @@
         e.preventDefault();
         showMsg(
           'mn-carga-valid-parejas',
-          'Puntos pareja A + pareja B deben sumar ' + objetivo + ' (actual: ' + Math.round(a + b) + ').'
+          'Puntos pareja 1 + pareja 2 deben sumar ' + objetivo + ' (actual: ' + Math.round(a + b) + ').'
         );
         return;
       }

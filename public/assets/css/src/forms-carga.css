@@ -1,0 +1,249 @@
+/* Carga de resultados (14") */
+.mn-visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.mn-carga-res-body {
+  margin: 0;
+  background: var(--mn-surface);
+  min-height: 100vh;
+}
+
+.mn-carga-res-wrap {
+  padding: 0.75rem 0 1.5rem;
+  max-width: 1100px;
+}
+
+.mn-carga-res-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem 1rem;
+  margin-bottom: 0.75rem;
+}
+
+.mn-carga-res-link {
+  font-weight: 700;
+  color: var(--mn-blue-accent);
+}
+
+.mn-carga-res-env {
+  font-size: 0.75rem;
+  color: var(--mn-slate-muted);
+}
+
+.mn-carga-res-env code {
+  font-size: 0.7rem;
+}
+
+.mn-carga-res-hero {
+  text-align: center;
+  margin-bottom: 1rem;
+}
+
+.mn-carga-res-hero-title {
+  margin: 0;
+  font-size: clamp(1.35rem, 2.5vw, 1.65rem);
+  font-weight: 800;
+  color: var(--mn-blue-deep);
+}
+
+.mn-carga-res-hero-tipo {
+  margin: 0.35rem 0 0;
+  font-size: 1rem;
+  color: var(--mn-slate-muted);
+}
+
+.mn-carga-res-hero-tipo strong {
+  color: var(--mn-blue-accent);
+}
+
+.mn-carga-res-form {
+  margin-top: 0.5rem;
+}
+
+.mn-carga-res-gridhead {
+  display: grid;
+  grid-template-columns: minmax(7rem, 1.4fr) repeat(3, minmax(5rem, 1fr));
+  gap: 0.5rem 0.75rem;
+  align-items: end;
+  margin-bottom: 0.5rem;
+  padding: 0 0.25rem;
+}
+
+.mn-carga-res-th {
+  font-size: 0.6875rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--mn-slate-muted);
+}
+
+.mn-carga-res-row {
+  display: grid;
+  grid-template-columns: minmax(7rem, 1.4fr) repeat(3, minmax(5rem, 1fr));
+  gap: 0.5rem 0.75rem;
+  align-items: center;
+  padding: 0.65rem 0.5rem;
+  margin-bottom: 0.5rem;
+  background: var(--mn-card);
+  border-radius: var(--mn-radius);
+  border: 1px solid var(--mn-border);
+}
+
+@media (max-width: 720px) {
+  .mn-carga-res-gridhead,
+  .mn-carga-res-row {
+    grid-template-columns: 1fr;
+  }
+
+  .mn-carga-res-th {
+    display: none;
+  }
+}
+
+.mn-carga-res-cell--jug {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.mn-carga-res-nom {
+  font-size: 1rem;
+  color: var(--mn-blue-deep);
+}
+
+.mn-carga-res-doc {
+  font-size: 0.8125rem;
+  color: var(--mn-slate-muted);
+}
+
+.mn-carga-res-input {
+  font-size: 1.125rem !important;
+  font-weight: 600;
+  padding: 0.65rem 0.85rem !important;
+  min-height: 3rem;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.mn-carga-res-input--sm {
+  font-size: 1rem !important;
+  min-height: 2.75rem;
+}
+
+.mn-carga-res-extras {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.mn-carga-res-extras--block {
+  margin-top: 0.35rem;
+}
+
+.mn-carga-res-parejas {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem 1.25rem;
+  margin-bottom: 1rem;
+}
+
+@media (max-width: 800px) {
+  .mn-carga-res-parejas {
+    grid-template-columns: 1fr;
+  }
+}
+
+.mn-carga-res-bloque {
+  background: var(--mn-card);
+  border: 2px solid var(--mn-border);
+  border-radius: 14px;
+  padding: 1rem 1.1rem 1.15rem;
+  box-shadow: var(--mn-shadow);
+}
+
+.mn-carga-res-bloque--a {
+  border-top: 4px solid var(--mn-blue-accent);
+}
+
+.mn-carga-res-bloque--b {
+  border-top: 4px solid var(--mn-success);
+}
+
+.mn-carga-res-bloque-title {
+  margin: 0 0 0.5rem;
+  font-size: 1.125rem;
+  font-weight: 800;
+  color: var(--mn-blue-deep);
+}
+
+.mn-carga-res-bloque-hint {
+  margin: 0 0 0.65rem;
+  font-size: 0.8125rem;
+  line-height: 1.4;
+}
+
+.mn-carga-res-bloque-jug {
+  margin: 0 0 1rem;
+  font-size: 0.9375rem;
+  line-height: 1.45;
+  color: var(--mn-slate);
+}
+
+.mn-carga-res-bloque-nom {
+  font-weight: 700;
+}
+
+.mn-carga-res-bloque-sep {
+  display: inline-block;
+  margin: 0 0.35rem;
+  color: var(--mn-slate-muted);
+  font-weight: 600;
+}
+
+.mn-carga-res-bloque-fields .mn-label {
+  font-size: 0.8125rem;
+  margin-bottom: 0.25rem;
+}
+
+.mn-carga-res-bloque-fields .mn-input {
+  margin-bottom: 0.65rem;
+}
+
+.mn-carga-res-valid-msg {
+  margin: 0.5rem 0 0.75rem;
+}
+
+.mn-carga-res-submit {
+  width: 100%;
+  margin-top: 0.5rem;
+  padding: 1rem 1.25rem !important;
+  font-size: 1.125rem !important;
+  font-weight: 800 !important;
+}
+
+/* Pantallas ~14": ancho cómodo según modalidad de carga */
+.mn-form-carga--vinculada .mn-carga-res-parejas {
+  max-width: 920px;
+  margin-inline: auto;
+}
+
+.mn-form-carga--independiente .mn-carga-res-form {
+  max-width: 100%;
+}
+
+@media (min-width: 900px) and (max-width: 1440px) {
+  .mn-carga-res-wrap {
+    max-width: min(1100px, 96vw);
+  }
+}

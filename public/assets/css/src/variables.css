@@ -1,0 +1,76 @@
+﻿/**
+ * mistorneos — núcleo visual
+ * Paleta: azul profundo (marca), gris pizarra (texto), verde éxito (acciones positivas).
+ * Contenedor principal optimizado para ~14" (max-width 1280px).
+ */
+
+:root {
+  --mn-blue-deep: #0a2540;
+  --mn-blue-mid: #123a5c;
+  --mn-blue-accent: #1e5a8a;
+  --mn-slate: #2f3e46;
+  --mn-slate-muted: #5c6b73;
+  --mn-success: #1b7f5a;
+  --mn-success-hover: #156b4c;
+  --mn-surface: #f6f8fa;
+  --mn-card: #ffffff;
+  --mn-border: #d8e0e6;
+  --mn-shadow: 0 8px 24px rgba(10, 37, 64, 0.08);
+  --mn-radius: 10px;
+  --mn-font: system-ui, -apple-system, "Segoe UI", Roboto, Ubuntu, sans-serif;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  margin: 0;
+  font-family: var(--mn-font);
+  font-size: 1rem;
+  line-height: 1.5;
+  color: var(--mn-slate);
+  background: var(--mn-surface);
+}
+
+a {
+  color: var(--mn-blue-accent);
+  text-decoration: none;
+}
+
+a:hover {
+  text-decoration: underline;
+}
+
+.mn-container {
+  width: 100%;
+  max-width: 1280px;
+  margin-inline: auto;
+  padding-inline: clamp(1rem, 4vw, 1.5rem);
+}
+
+.mn-skip {
+  position: absolute;
+  left: -9999px;
+  top: auto;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+}
+
+.mn-skip:focus {
+  left: 1rem;
+  top: 1rem;
+  width: auto;
+  height: auto;
+  padding: 0.5rem 1rem;
+  background: var(--mn-card);
+  border: 2px solid var(--mn-blue-accent);
+  z-index: 2000;
+}
