@@ -10,7 +10,7 @@
 require_once __DIR__ . '/../config/auth.php';
 require_once __DIR__ . '/../config/db.php';
 require_once __DIR__ . '/../config/csrf.php';
-require_once __DIR__ . '/../lib/Core/MesaAsignacionService.php';
+require_once __DIR__ . '/../lib/Core/TorneoMesaAsignacionResolver.php';
 require_once __DIR__ . '/torneo_gestion/rondas_mesas.php';
 require_once __DIR__ . '/torneo_gestion/actions_inscritos.php';
 require_once __DIR__ . '/torneo_gestion/render_views.php';
@@ -1068,16 +1068,7 @@ function obtenerDatosNotificacionesTorneo($torneo_id) {
     $ultima_ronda = 0;
     try {
         $modalidad = (int)($torneo['modalidad'] ?? 0);
-        if ($modalidad === 3) {
-            require_once __DIR__ . '/../config/MesaAsignacionEquiposService.php';
-            $mesaService = new MesaAsignacionEquiposService();
-        } elseif (in_array($modalidad, [2, 4], true)) {
-            require_once __DIR__ . '/../config/MesaAsignacionParejasFijasService.php';
-            $mesaService = new MesaAsignacionParejasFijasService();
-        } else {
-            require_once __DIR__ . '/../lib/Core/MesaAsignacionService.php';
-            $mesaService = new MesaAsignacionService();
-        }
+        $mesaService = TorneoMesaAsignacionResolver::servicioPorModalidad($modalidad);
         $ultima_ronda = $mesaService->obtenerUltimaRonda($torneo_id);
     } catch (Exception $e) {}
     $stmt = $pdo->prepare("SELECT COUNT(*) FROM inscritos WHERE torneo_id = ? AND estatus != 4");

@@ -5,12 +5,17 @@
 
 require_once __DIR__ . '/../config/bootstrap.php';
 require_once __DIR__ . '/../config/db.php';
-require_once __DIR__ . '/../lib/Core/MesaAsignacionService.php';
+require_once __DIR__ . '/../lib/Core/TorneoMesaAsignacionResolver.php';
 
 $torneo_id = 4;
 $ronda = 2;
 
 $pdo = DB::pdo();
+$stMod = $pdo->prepare('SELECT modalidad, rondas FROM tournaments WHERE id = ?');
+$stMod->execute([$torneo_id]);
+$trow = $stMod->fetch(PDO::FETCH_ASSOC) ?: ['modalidad' => 0, 'rondas' => 3];
+$modalidad = (int) ($trow['modalidad'] ?? 0);
+$total_rondas = (int) ($trow['rondas'] ?? 3);
 
 echo "=== REGENERANDO RONDA 2 DEL TORNEO ID $torneo_id ===\n\n";
 
@@ -22,8 +27,9 @@ echo "   ✓ Ronda 2 eliminada\n\n";
 
 // Generar nueva ronda 2
 echo "2. Generando nueva ronda 2...\n";
-$mesaService = new MesaAsignacionService();
-$resultado = $mesaService->generarAsignacionRonda($torneo_id, $ronda, 3);
+$mesaService = TorneoMesaAsignacionResolver::servicioPorModalidad($modalidad);
+$estrategia = TorneoMesaAsignacionResolver::estrategiaDesdeRequest($modalidad, []);
+$resultado = $mesaService->generarAsignacionRonda($torneo_id, $ronda, $total_rondas, $estrategia);
 
 if ($resultado['success']) {
     echo "   ✓ Ronda 2 generada exitosamente\n";

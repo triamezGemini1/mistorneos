@@ -1,11 +1,12 @@
 <?php
+// Deploy: partiresul sin columna entidad_id — si ves INSERT con entidad_id, el servidor no tiene esta versión (u OPcache viejo).
 /**
  * Servicio de Asignación de Mesas para Torneos de Dominó (núcleo único).
  *
  * Ubicación: lib/Core — usado por la aplicación web (MySQL) y el desktop (SQLite).
  * Requisito: cargar antes la capa DB (p. ej. config/db.php o desktop/core/db_bridge.php)
- * para que exista DB::pdo(). El filtro por entidad_id solo aplica si existe DB::getEntidadId()
- * y devuelve un id > 0 (modo desktop multi-evento).
+ * para que exista DB::pdo(). El alcance de datos es por torneo (id_torneo) y por la organización
+ * que posee el torneo; no se persiste ni filtra por entidad_id en partiresul ni historial_parejas.
  *
  * NORMA POR RONDA:
  * - Base del torneo: inscritos activos (confirmados). Esa lista se usa en cada ronda.
@@ -44,26 +45,24 @@ class MesaAsignacionService
         $this->pdo = DB::pdo();
     }
 
-    /**
-     * Filtro por evento local (desktop). En web (MySQL) no existe DB::getEntidadId() → 0 → sin filtro extra.
-     */
-    private function entidadId(): int
-    {
-        if (method_exists(DB::class, 'getEntidadId')) {
-            return (int) DB::getEntidadId();
-        }
-        return 0;
-    }
-
-    /** Fragmento SQL y valor para WHERE entidad_id (vacío si no hay filtro). */
+    /** Sin filtro entidad_id: el torneo y su organización definen el contexto. */
     private function whereEntidad(string $alias = ''): array
     {
-        $eid = $this->entidadId();
-        if ($eid <= 0) {
-            return ['sql' => '', 'bind' => []];
-        }
-        $col = $alias !== '' ? $alias . '.entidad_id' : 'entidad_id';
-        return ['sql' => " AND {$col} = ?", 'bind' => [$eid]];
+        return ['sql' => '', 'bind' => []];
+    }
+
+    /** Fecha/hora para partiresul.fecha_partida: misma cadena en MySQL y SQLite (evita datetime('now') / NOW() en SQL). */
+    private function fechaPartidaAhora(): string
+    {
+        return date('Y-m-d H:i:s');
+    }
+
+    /** SQLite: INSERT OR IGNORE — MySQL: INSERT IGNORE */
+    private function sqlInsertIgnoreInto(string $tableAndRest): string
+    {
+        $driver = $this->pdo->getAttribute(PDO::ATTR_DRIVER_NAME);
+        $kw = $driver === 'sqlite' ? 'INSERT OR IGNORE INTO' : 'INSERT IGNORE INTO';
+        return $kw . ' ' . $tableAndRest;
     }
 
     /**
@@ -584,15 +583,13 @@ class MesaAsignacionService
     private function obtenerClasificacionInscritosParaRonda2($torneoId)
     {
         $entI = $this->whereEntidad('i');
-        $entP = $this->whereEntidad('pr1');
-        $joinEnt = $entP['sql'] !== '' ? ' AND pr1.entidad_id = ?' : '';
         $sql = "SELECT i.*, u.nombre, u.sexo, c.nombre as club_nombre, c.id as club_id,
                 (CASE WHEN pr1.id IS NOT NULL AND pr1.registrado = 1 AND pr1.resultado1 > pr1.resultado2 THEN 1 ELSE 0 END) AS ganador_r1,
                 (CASE WHEN pr1.id IS NOT NULL AND pr1.registrado = 1 AND pr1.resultado1 > pr1.resultado2 AND pr1.mesa = 0 THEN 1 ELSE 0 END) AS bye_r1
                 FROM inscritos i
                 INNER JOIN usuarios u ON i.id_usuario = u.id
                 LEFT JOIN clubes c ON i.id_club = c.id
-                LEFT JOIN partiresul pr1 ON pr1.id_torneo = i.torneo_id AND pr1.id_usuario = i.id_usuario AND pr1.partida = 1" . $joinEnt . "
+                LEFT JOIN partiresul pr1 ON pr1.id_torneo = i.torneo_id AND pr1.id_usuario = i.id_usuario AND pr1.partida = 1
                 WHERE i.torneo_id = ? AND " . InscritosHelper::sqlWhereSoloConfirmadoConAlias('i') . $entI['sql'] . "
                 ORDER BY
                     (CASE WHEN pr1.id IS NOT NULL AND pr1.registrado = 1 AND pr1.resultado1 > pr1.resultado2 THEN 1 ELSE 0 END) DESC,
@@ -600,8 +597,7 @@ class MesaAsignacionService
                     i.efectividad DESC, i.puntos DESC, i.id_usuario ASC";
         
         $stmt = $this->pdo->prepare($sql);
-        $bind = array_merge([$torneoId], $entP['bind'], $entI['bind']);
-        $stmt->execute(array_merge($entP['bind'], [$torneoId], $entI['bind']));
+        $stmt->execute(array_merge([$torneoId], $entI['bind']));
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 
@@ -1781,7 +1777,6 @@ class MesaAsignacionService
                     AND pr1.partida = pr2.partida 
                     AND pr1.mesa = pr2.mesa
                     AND pr1.id_usuario < pr2.id_usuario
-                    " . ($ent['sql'] !== '' ? " AND pr2.entidad_id = pr1.entidad_id" : '') . "
                 WHERE pr1.id_torneo = ? AND pr1.partida = ? AND pr1.mesa > 0" . $ent['sql'];
         
         $stmt = $this->pdo->prepare($sql);
@@ -1802,18 +1797,18 @@ class MesaAsignacionService
         $this->pdo->beginTransaction();
 
         try {
+            $fechaPartida = $this->fechaPartidaAhora();
             $numeroMesa = 1;
             foreach ($mesas as $mesa) {
                 $secuencia = 1;
                 foreach ($mesa as $jugador) {
                     $idUsuario = (int)($jugador['id_usuario'] ?? 0);
                     if ($idUsuario <= 0) continue; // Saltar comodín/bye
-                    $eid = $this->entidadId();
                     $sql = "INSERT INTO partiresul 
-                            (id_torneo, id_usuario, partida, mesa, secuencia, fecha_partida, registrado, entidad_id)
-                            VALUES (?, ?, ?, ?, ?, datetime('now'), 0, ?)";
+                            (id_torneo, id_usuario, partida, mesa, secuencia, fecha_partida, registrado)
+                            VALUES (?, ?, ?, ?, ?, ?, 0)";
                     $stmt = $this->pdo->prepare($sql);
-                    $stmt->execute([$torneoId, $idUsuario, $ronda, $numeroMesa, $secuencia, $eid]);
+                    $stmt->execute([$torneoId, $idUsuario, $ronda, $numeroMesa, $secuencia, $fechaPartida]);
                     $secuencia++;
                 }
                 $numeroMesa++;
@@ -1834,10 +1829,9 @@ class MesaAsignacionService
      */
     private function guardarHistorialParejas(array $mesasAsignadas, int $torneoId, int $rondaId): void
     {
-        $eid = $this->entidadId();
         try {
             $stmt = $this->pdo->prepare(
-                "INSERT OR IGNORE INTO historial_parejas (torneo_id, ronda_id, jugador_1_id, jugador_2_id, llave, entidad_id) VALUES (?, ?, ?, ?, ?, ?)"
+                $this->sqlInsertIgnoreInto('historial_parejas (torneo_id, ronda_id, jugador_1_id, jugador_2_id, llave) VALUES (?, ?, ?, ?, ?)')
             );
             foreach ($mesasAsignadas as $mesa) {
                 if (count($mesa) < 4) continue;
@@ -1850,19 +1844,19 @@ class MesaAsignacionService
                     $idMenor = min($a, $c);
                     $idMayor = max($a, $c);
                     $llave = $idMenor . '-' . $idMayor;
-                    $stmt->execute([$torneoId, $rondaId, $idMenor, $idMayor, $llave, $eid]);
+                    $stmt->execute([$torneoId, $rondaId, $idMenor, $idMayor, $llave]);
                 }
                 if ($b > 0 && $d > 0) {
                     $idMenor = min($b, $d);
                     $idMayor = max($b, $d);
                     $llave = $idMenor . '-' . $idMayor;
-                    $stmt->execute([$torneoId, $rondaId, $idMenor, $idMayor, $llave, $eid]);
+                    $stmt->execute([$torneoId, $rondaId, $idMenor, $idMayor, $llave]);
                 }
             }
         } catch (Exception $e) {
             try {
                 $stmt = $this->pdo->prepare(
-                    "INSERT OR IGNORE INTO historial_parejas (torneo_id, ronda_id, jugador_1_id, jugador_2_id, entidad_id) VALUES (?, ?, ?, ?, ?)"
+                    $this->sqlInsertIgnoreInto('historial_parejas (torneo_id, ronda_id, jugador_1_id, jugador_2_id) VALUES (?, ?, ?, ?)')
                 );
                 foreach ($mesasAsignadas as $mesa) {
                     if (count($mesa) < 4) continue;
@@ -1872,10 +1866,10 @@ class MesaAsignacionService
                     $b = (int)($ids[2] ?? 0);
                     $d = (int)($ids[3] ?? 0);
                     if ($a > 0 && $c > 0) {
-                        $stmt->execute([$torneoId, $rondaId, min($a, $c), max($a, $c), $eid]);
+                        $stmt->execute([$torneoId, $rondaId, min($a, $c), max($a, $c)]);
                     }
                     if ($b > 0 && $d > 0) {
-                        $stmt->execute([$torneoId, $rondaId, min($b, $d), max($b, $d), $eid]);
+                        $stmt->execute([$torneoId, $rondaId, min($b, $d), max($b, $d)]);
                     }
                 }
             } catch (Exception $e2) {
@@ -1912,18 +1906,18 @@ class MesaAsignacionService
         $efectividadBye = (int)round($puntosTorneo * 0.5); // 50%
 
         // 1) Crear filas mesa=0 para esta ronda (borrar previos y insertar jugadores BYE)
-        $eid = $this->entidadId();
         $ent = $this->whereEntidad();
         $this->pdo->prepare("DELETE FROM partiresul WHERE id_torneo = ? AND partida = ? AND mesa = 0" . $ent['sql'])
             ->execute(array_merge([$torneoId, $ronda], $ent['bind']));
+        $fechaPartida = $this->fechaPartidaAhora();
         $stmt = $this->pdo->prepare("
-            INSERT INTO partiresul (id_torneo, id_usuario, partida, mesa, secuencia, fecha_partida, registrado, entidad_id)
-            VALUES (?, ?, ?, 0, 1, datetime('now'), 0, ?)
+            INSERT INTO partiresul (id_torneo, id_usuario, partida, mesa, secuencia, fecha_partida, registrado)
+            VALUES (?, ?, ?, 0, 1, ?, 0)
         ");
         foreach ($jugadoresBye as $jugador) {
             $idUsuario = (int)($jugador['id_usuario'] ?? 0);
             if ($idUsuario <= 0) continue;
-            $stmt->execute([$torneoId, $idUsuario, $ronda, $eid]);
+            $stmt->execute([$torneoId, $idUsuario, $ronda, $fechaPartida]);
         }
 
         // 2) Aplicar la regla BYE a todos los registros de la ronda con mesa=0

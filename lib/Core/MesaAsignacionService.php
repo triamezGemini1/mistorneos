@@ -1,4 +1,5 @@
 <?php
+// Deploy: partiresul sin columna entidad_id — si ves INSERT con entidad_id, el servidor no tiene esta versión (u OPcache viejo).
 /**
  * Servicio de Asignación de Mesas para Torneos de Dominó (núcleo único).
  *

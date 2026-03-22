@@ -4,7 +4,7 @@
  * Delegado desde modules/torneo_gestion.php (misma sesión y helpers del módulo).
  */
 
-require_once __DIR__ . '/../../lib/Core/MesaAsignacionService.php';
+require_once __DIR__ . '/../../lib/Core/TorneoMesaAsignacionResolver.php';
 /**
  * Obtiene datos de mesas de una ronda.
  * Si el usuario es operador, solo se devuelven las mesas de su ámbito (asignadas a él).
@@ -471,20 +471,7 @@ function generarRonda($torneo_id, $user_id, $is_admin_general) {
         $total_rondas = (int)($torneo['rondas'] ?? 0);
         $modalidad = (int)($torneo['modalidad'] ?? 0);
 
-        // Determinar qué servicio usar según modalidad (3 = Equipos, 2/4 = Parejas)
-        $es_torneo_equipos = ($modalidad === 3);
-        $es_torneo_parejas = in_array($modalidad, [2, 4], true);
-        
-        if ($es_torneo_equipos) {
-            require_once __DIR__ . '/../../config/MesaAsignacionEquiposService.php';
-            $mesaService = new MesaAsignacionEquiposService();
-        } elseif ($es_torneo_parejas) {
-            require_once __DIR__ . '/../../config/MesaAsignacionParejasFijasService.php';
-            $mesaService = new MesaAsignacionParejasFijasService();
-        } else {
-            require_once __DIR__ . '/../../lib/Core/MesaAsignacionService.php';
-            $mesaService = new MesaAsignacionService();
-        }
+        $mesaService = TorneoMesaAsignacionResolver::servicioPorModalidad($modalidad);
         
         // Verificar que la última ronda esté completa
         $ultima_ronda = $mesaService->obtenerUltimaRonda($torneo_id);
@@ -509,15 +496,7 @@ function generarRonda($torneo_id, $user_id, $is_admin_general) {
         }
         
         $proxima_ronda = $ultima_ronda + 1;
-        
-        // Obtener estrategia de asignación (equipos: secuencial, parejas: por tipo_torneo; resto: separar)
-        if ($es_torneo_equipos) {
-            $estrategia = $_POST['estrategia_asignacion'] ?? 'secuencial';
-        } elseif ($es_torneo_parejas) {
-            $estrategia = $_POST['estrategia_asignacion'] ?? 'numero_aleatorio';
-        } else {
-            $estrategia = $_POST['estrategia_ronda2'] ?? 'separar';
-        }
+        $estrategia = TorneoMesaAsignacionResolver::estrategiaDesdeRequest($modalidad);
         
         // Generar ronda usando el servicio apropiado
         $resultado = $mesaService->generarAsignacionRonda(
@@ -624,16 +603,7 @@ function eliminarUltimaRonda($torneo_id, $user_id, $is_admin_general) {
         $stmt->execute([$torneo_id]);
         $torneo = $stmt->fetch(PDO::FETCH_ASSOC);
         $modalidad = (int)($torneo['modalidad'] ?? 0);
-        if ($modalidad === 3) {
-            require_once __DIR__ . '/../../config/MesaAsignacionEquiposService.php';
-            $mesaService = new MesaAsignacionEquiposService();
-        } elseif (in_array($modalidad, [2, 4], true)) {
-            require_once __DIR__ . '/../../config/MesaAsignacionParejasFijasService.php';
-            $mesaService = new MesaAsignacionParejasFijasService();
-        } else {
-            require_once __DIR__ . '/../../lib/Core/MesaAsignacionService.php';
-            $mesaService = new MesaAsignacionService();
-        }
+        $mesaService = TorneoMesaAsignacionResolver::servicioPorModalidad($modalidad);
         $ultima_ronda = $mesaService->obtenerUltimaRonda($torneo_id);
         
         if ($ultima_ronda === 0) {
@@ -642,13 +612,7 @@ function eliminarUltimaRonda($torneo_id, $user_id, $is_admin_general) {
             exit;
         }
         
-        // Eliminar ronda (partiresul e historial_parejas): usar servicio que tenga eliminarRonda
-        if (in_array($modalidad, [2, 4], true) && $mesaService instanceof MesaAsignacionParejasFijasService) {
-            $eliminada = $mesaService->eliminarRonda($torneo_id, $ultima_ronda);
-        } else {
-            require_once __DIR__ . '/../../lib/Core/MesaAsignacionService.php';
-            $eliminada = (new MesaAsignacionService())->eliminarRonda($torneo_id, $ultima_ronda);
-        }
+        $eliminada = TorneoMesaAsignacionResolver::eliminarRonda($torneo_id, $ultima_ronda, $modalidad);
         
         if ($eliminada) {
             $_SESSION['success'] = "Ronda {$ultima_ronda} eliminada exitosamente";

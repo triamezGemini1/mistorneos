@@ -5,7 +5,6 @@
  */
 
 require_once __DIR__ . '/../../lib/ResultadosPartidaEfectividad.php';
-require_once __DIR__ . '/../../lib/Core/MesaAsignacionService.php';
 /**
  * Obtiene datos de posiciones
  */

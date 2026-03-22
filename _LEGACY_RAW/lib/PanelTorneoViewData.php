@@ -89,7 +89,7 @@ final class PanelTorneoViewData
     {
         require_once __DIR__ . '/../config/db.php';
         require_once __DIR__ . '/InscritosHelper.php';
-        require_once __DIR__ . '/Core/MesaAsignacionService.php';
+        require_once __DIR__ . '/Core/TorneoMesaAsignacionResolver.php';
 
         self::ensureCorreccionesCierreColumn();
 
@@ -129,8 +129,7 @@ final class PanelTorneoViewData
             $mesas_incompletas = self::countMesasIncompletas($pdo, $torneoId, $ultima_ronda);
             $puede_generar = $mesas_incompletas === 0;
 
-            $mesaService = new MesaAsignacionService();
-            $ultima_ronda_tiene_resultados = $mesaService->rondaTieneResultadosEnMesas($torneoId, $ultima_ronda);
+            $ultima_ronda_tiene_resultados = TorneoMesaAsignacionResolver::rondaTieneResultadosEnMesas($torneoId, $ultima_ronda);
         }
 
         $extStats = self::getExtendedStats($pdo, $torneoId, $ultima_ronda);
