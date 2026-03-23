@@ -719,21 +719,38 @@ foreach ($eventos_calendario as $ev) {
                                     ];
                                 }
                                 
-                                // Obtener clubes afiliados del club principal
-                                $stmt_clubes = $pdo->prepare("
-                                    SELECT 
-                                        c.id,
-                                        c.nombre,
-                                        c.delegado,
-                                        c.telefono,
-                                        c.direccion
-                                    FROM clubes c
-                                    WHERE c.organizacion_id = (SELECT organizacion_id FROM clubes WHERE id = ? LIMIT 1)
-                                      AND c.id != ? AND c.estatus = 1
-                                    ORDER BY c.nombre ASC
-                                ");
-                                $stmt_clubes->execute([$evento['club_id'], $evento['club_id']]);
-                                $clubes_afiliados = $stmt_clubes->fetchAll(PDO::FETCH_ASSOC);
+                                // Obtener clubes afiliados del club principal (compatibilidad nombre/name).
+                                try {
+                                    $stmt_clubes = $pdo->prepare("
+                                        SELECT 
+                                            c.id,
+                                            c.nombre,
+                                            c.delegado,
+                                            c.telefono,
+                                            c.direccion
+                                        FROM clubes c
+                                        WHERE c.organizacion_id = (SELECT organizacion_id FROM clubes WHERE id = ? LIMIT 1)
+                                          AND c.id != ? AND c.estatus = 1
+                                        ORDER BY c.nombre ASC
+                                    ");
+                                    $stmt_clubes->execute([$evento['club_id'], $evento['club_id']]);
+                                    $clubes_afiliados = $stmt_clubes->fetchAll(PDO::FETCH_ASSOC);
+                                } catch (Exception $eNombre) {
+                                    $stmt_clubes = $pdo->prepare("
+                                        SELECT 
+                                            c.id,
+                                            c.name AS nombre,
+                                            c.delegado,
+                                            c.telefono,
+                                            c.direccion
+                                        FROM clubes c
+                                        WHERE c.organizacion_id = (SELECT organizacion_id FROM clubes WHERE id = ? LIMIT 1)
+                                          AND c.id != ? AND c.estatus = 1
+                                        ORDER BY c.name ASC
+                                    ");
+                                    $stmt_clubes->execute([$evento['club_id'], $evento['club_id']]);
+                                    $clubes_afiliados = $stmt_clubes->fetchAll(PDO::FETCH_ASSOC);
+                                }
                             } catch (Exception $e) {
                                 error_log("Error obteniendo información del club: " . $e->getMessage());
                             }

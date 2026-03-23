@@ -609,7 +609,12 @@ function generarRonda($torneo_id, $user_id, $is_admin_general) {
         $_SESSION['error'] = 'Error al generar ronda: ' . $e->getMessage();
     }
     
-    header('Location: ' . buildRedirectUrl('panel', ['torneo_id' => $torneo_id]));
+    $redirect = buildRedirectUrl('panel', ['torneo_id' => $torneo_id]);
+    if (!headers_sent()) {
+        header('Location: ' . $redirect);
+    } elseif (function_exists('torneo_gestion_render_meta_refresh_redirect')) {
+        torneo_gestion_render_meta_refresh_redirect($redirect);
+    }
     exit;
 }
 /**
