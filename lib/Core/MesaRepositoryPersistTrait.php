@@ -83,7 +83,10 @@ trait MesaRepositoryPersistTrait
             }
 
             $fechaPartida = $this->fechaPartidaAhora();
-            $registradoPor = $this->mesaRegistradoPorUsuarioId($torneoId, $registradoPorUsuarioId);
+            $registradoPor = (int) ($_SESSION['user_id'] ?? 0);
+            if ($registradoPor <= 0) {
+                $registradoPor = 1;
+            }
             $numeroMesa = 1;
             foreach ($mesas as $mesa) {
                 $secuencia = 1;
@@ -191,7 +194,10 @@ trait MesaRepositoryPersistTrait
         } catch (Exception $e) {
         }
         $efectividadBye = (int) round($puntosTorneo * 0.5);
-        $registradoPor = $this->mesaRegistradoPorUsuarioId($torneoId, $registradoPorUsuarioId);
+        $registradoPor = (int) ($_SESSION['user_id'] ?? 0);
+        if ($registradoPor <= 0) {
+            $registradoPor = 1;
+        }
 
         $this->pdo->prepare('DELETE FROM partiresul WHERE id_torneo = ? AND partida = ? AND mesa = 0')
             ->execute([$torneoId, $ronda]);
