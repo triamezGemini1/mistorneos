@@ -23,9 +23,17 @@ class MesaAsignacionAlgorithm
 
     protected MesaRepository $repo;
 
+    /** Id del admin que genera la ronda (prioridad sobre sesión en partiresul.registrado_por). */
+    private ?int $registradoPorUsuarioId = null;
+
     public function __construct(MesaRepository $repo)
     {
         $this->repo = $repo;
+    }
+
+    public function setRegistradoPorUsuarioId(?int $id): void
+    {
+        $this->registradoPorUsuarioId = ($id !== null && $id > 0) ? $id : null;
     }
 
     /**

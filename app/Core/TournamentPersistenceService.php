@@ -54,7 +54,8 @@ final class TournamentPersistenceService
         int $torneoId,
         int $ronda,
         array $mesas,
-        ?int $organizacionScope = null
+        ?int $organizacionScope = null,
+        ?int $registradoPorUsuarioId = null
     ): void {
         $torneo = TournamentEngineService::getTorneo($pdo, $torneoId, $organizacionScope);
         if ($torneo === null) {
@@ -62,7 +63,7 @@ final class TournamentPersistenceService
         }
 
         $repo = new MesaRepository($pdo);
-        $repo->guardarAsignacionRonda($torneoId, $ronda, $mesas);
+        $repo->guardarAsignacionRonda($torneoId, $ronda, $mesas, $registradoPorUsuarioId);
     }
 
     /**

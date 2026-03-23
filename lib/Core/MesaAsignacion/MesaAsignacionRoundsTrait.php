@@ -76,9 +76,9 @@ trait MesaAsignacionRoundsTrait
             }
         }
 
-        $this->repo->guardarAsignacionRonda($torneoId, 1, $mesasArray);
+        $this->repo->guardarAsignacionRonda($torneoId, 1, $mesasArray, $this->registradoPorUsuarioId);
         if (!empty($jugadoresBye)) {
-            $this->repo->aplicarBye($torneoId, 1, $jugadoresBye);
+            $this->repo->aplicarBye($torneoId, 1, $jugadoresBye, 3, $this->registradoPorUsuarioId);
         }
 
         return [
@@ -157,9 +157,9 @@ trait MesaAsignacionRoundsTrait
 
         $mesasArray = $this->validarYRotarRonda2($mesasArray, $matrizCompañeros);
 
-        $this->repo->guardarAsignacionRonda($torneoId, 2, $mesasArray);
+        $this->repo->guardarAsignacionRonda($torneoId, 2, $mesasArray, $this->registradoPorUsuarioId);
         if (!empty($jugadoresBye)) {
-            $this->repo->aplicarBye($torneoId, 2, $jugadoresBye);
+            $this->repo->aplicarBye($torneoId, 2, $jugadoresBye, 3, $this->registradoPorUsuarioId);
         }
 
         return [
@@ -310,9 +310,9 @@ trait MesaAsignacionRoundsTrait
         // Garantizar exactamente numMesas mesas de 4: si hay mesas de más, redistribuir
         $mesas = $this->ajustarMesasExactas($mesas, $numMesas, $jugadoresParaMesas);
 
-        $this->repo->guardarAsignacionRonda($torneoId, $numRonda, $mesas);
+        $this->repo->guardarAsignacionRonda($torneoId, $numRonda, $mesas, $this->registradoPorUsuarioId);
         if (!empty($jugadoresBye)) {
-            $this->repo->aplicarBye($torneoId, $numRonda, $jugadoresBye);
+            $this->repo->aplicarBye($torneoId, $numRonda, $jugadoresBye, 3, $this->registradoPorUsuarioId);
         }
 
         return [
@@ -375,9 +375,9 @@ trait MesaAsignacionRoundsTrait
             $indice += 4;
         }
 
-        $this->repo->guardarAsignacionRonda($torneoId, $numRonda, $mesas);
+        $this->repo->guardarAsignacionRonda($torneoId, $numRonda, $mesas, $this->registradoPorUsuarioId);
         if (!empty($jugadoresBye)) {
-            $this->repo->aplicarBye($torneoId, $numRonda, $jugadoresBye);
+            $this->repo->aplicarBye($torneoId, $numRonda, $jugadoresBye, 3, $this->registradoPorUsuarioId);
         }
 
         return [

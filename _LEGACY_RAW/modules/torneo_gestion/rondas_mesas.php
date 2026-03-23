@@ -498,13 +498,23 @@ function generarRonda($torneo_id, $user_id, $is_admin_general) {
         $proxima_ronda = $ultima_ronda + 1;
         $estrategia = TorneoMesaAsignacionResolver::estrategiaDesdeRequest($modalidad);
         
-        // Generar ronda usando el servicio apropiado
-        $resultado = $mesaService->generarAsignacionRonda(
-            $torneo_id,
-            $proxima_ronda,
-            $total_rondas,
-            $estrategia
-        );
+        // Generar ronda (individual: MesaAsignacionService — pasar user_id explícito para partiresul.registrado_por)
+        if (get_class($mesaService) === 'MesaAsignacionService') {
+            $resultado = $mesaService->generarAsignacionRonda(
+                $torneo_id,
+                $proxima_ronda,
+                $total_rondas,
+                $estrategia,
+                (int) $user_id
+            );
+        } else {
+            $resultado = $mesaService->generarAsignacionRonda(
+                $torneo_id,
+                $proxima_ronda,
+                $total_rondas,
+                $estrategia
+            );
+        }
         
         if ($resultado['success']) {
             $mensaje = $resultado['message'];

@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 
 trait MesaAsignacionConflictos1Trait
 {
@@ -359,4 +359,3 @@ trait MesaAsignacionConflictos1Trait
         return $mesaActual; // No se pudo resolver
     }
 }
-

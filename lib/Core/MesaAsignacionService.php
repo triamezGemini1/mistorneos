@@ -28,8 +28,10 @@ class MesaAsignacionService
         $this->algorithm = new MesaAsignacionAlgorithm($this->repo);
     }
 
-    public function generarAsignacionRonda($torneoId, $numRonda, $totalRondas, $estrategiaRonda2 = 'separar')
+    public function generarAsignacionRonda($torneoId, $numRonda, $totalRondas, $estrategiaRonda2 = 'separar', $registradoPorUsuarioId = null)
     {
+        $this->algorithm->setRegistradoPorUsuarioId($registradoPorUsuarioId !== null ? (int) $registradoPorUsuarioId : null);
+
         return $this->algorithm->generarAsignacionRonda($torneoId, $numRonda, $totalRondas, $estrategiaRonda2);
     }
 

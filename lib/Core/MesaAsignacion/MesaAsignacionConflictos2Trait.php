@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 
 trait MesaAsignacionConflictos2Trait
 {
@@ -282,4 +282,3 @@ trait MesaAsignacionConflictos2Trait
         return $resultado;
     }
 }
-
