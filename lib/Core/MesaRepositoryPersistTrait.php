@@ -10,26 +10,59 @@ declare(strict_types=1);
 trait MesaRepositoryPersistTrait
 {
     /**
-     * Usuario que genera la ronda: $preferido (p. ej. user_id del panel), sesión admin/atleta, o 1.
+     * Usuario que genera la ronda: $preferido, sesión actual o creador del torneo.
      */
-    private function mesaRegistradoPorUsuarioId(?int $preferido = null): int
+    private function mesaRegistradoPorUsuarioId(int $torneoId, ?int $preferido = null): int
     {
         if ($preferido !== null && $preferido > 0) {
             return $preferido;
         }
-        if (session_status() !== PHP_SESSION_ACTIVE) {
-            return 1;
+        if (session_status() === PHP_SESSION_ACTIVE) {
+            $sessionUserId = (int) ($_SESSION['user_id'] ?? 0);
+            if ($sessionUserId > 0) {
+                return $sessionUserId;
+            }
+            $admin = $_SESSION['admin_user'] ?? null;
+            if (is_array($admin) && !empty($admin['id'])) {
+                return max(1, (int) $admin['id']);
+            }
+            $user = $_SESSION['user'] ?? null;
+            if (is_array($user) && !empty($user['id'])) {
+                return max(1, (int) $user['id']);
+            }
         }
-        $admin = $_SESSION['admin_user'] ?? null;
-        if (is_array($admin) && !empty($admin['id'])) {
-            return max(1, (int) $admin['id']);
-        }
-        $user = $_SESSION['user'] ?? null;
-        if (is_array($user) && !empty($user['id'])) {
-            return max(1, (int) $user['id']);
+
+        $creador = $this->torneoCreadorUsuarioId($torneoId);
+        if ($creador > 0) {
+            return $creador;
         }
 
         return 1;
+    }
+
+    /**
+     * Busca el usuario creador del torneo en esquemas históricos.
+     */
+    private function torneoCreadorUsuarioId(int $torneoId): int
+    {
+        if ($torneoId <= 0) {
+            return 0;
+        }
+        $columnas = ['owner_user_id', 'creado_por', 'user_id', 'admin_id', 'creador_id'];
+        foreach ($columnas as $columna) {
+            try {
+                $stmt = $this->pdo->prepare("SELECT $columna AS uid FROM tournaments WHERE id = ? LIMIT 1");
+                $stmt->execute([$torneoId]);
+                $uid = (int) ($stmt->fetchColumn() ?: 0);
+                if ($uid > 0) {
+                    return $uid;
+                }
+            } catch (Exception $e) {
+                // Columna inexistente en este esquema; probar la siguiente.
+            }
+        }
+
+        return 0;
     }
 
     /**
@@ -50,7 +83,7 @@ trait MesaRepositoryPersistTrait
             }
 
             $fechaPartida = $this->fechaPartidaAhora();
-            $registradoPor = $this->mesaRegistradoPorUsuarioId($registradoPorUsuarioId);
+            $registradoPor = $this->mesaRegistradoPorUsuarioId($torneoId, $registradoPorUsuarioId);
             $numeroMesa = 1;
             foreach ($mesas as $mesa) {
                 $secuencia = 1;
@@ -158,7 +191,7 @@ trait MesaRepositoryPersistTrait
         } catch (Exception $e) {
         }
         $efectividadBye = (int) round($puntosTorneo * 0.5);
-        $registradoPor = $this->mesaRegistradoPorUsuarioId($registradoPorUsuarioId);
+        $registradoPor = $this->mesaRegistradoPorUsuarioId($torneoId, $registradoPorUsuarioId);
 
         $this->pdo->prepare('DELETE FROM partiresul WHERE id_torneo = ? AND partida = ? AND mesa = 0')
             ->execute([$torneoId, $ronda]);
