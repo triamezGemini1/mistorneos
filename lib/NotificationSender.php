@@ -4,8 +4,20 @@
  * Soporta: WhatsApp (enlace wa.me), Email (PHPMailer), Telegram (Bot API)
  */
 require_once __DIR__ . '/TelegramBot.php';
+if (!class_exists('Env')) {
+    require_once __DIR__ . '/Env.php';
+    Env::load(__DIR__ . '/../.env');
+}
 
 class NotificationSender {
+    
+    /** Obtiene variable de entorno (Env o $_ENV) */
+    private static function env(string $key, $default = '') {
+        if (class_exists('Env')) {
+            return Env::get($key, $default);
+        }
+        return $_ENV[$key] ?? $default;
+    }
     
     /**
      * Genera URL de WhatsApp wa.me con mensaje prellenado
@@ -44,19 +56,56 @@ class NotificationSender {
             $mail = new PHPMailer\PHPMailer\PHPMailer(true);
             $mail->CharSet = 'UTF-8';
             $mail->isSMTP();
-            $mail->Host = $_ENV['MAIL_HOST'] ?? 'smtp.gmail.com';
+            $mail->Host = self::env('MAIL_HOST', 'smtp.gmail.com');
             $mail->SMTPAuth = true;
-            $mail->Username = $_ENV['MAIL_USERNAME'] ?? '';
-            $mail->Password = $_ENV['MAIL_PASSWORD'] ?? '';
+            $mail->Username = self::env('MAIL_USERNAME', '');
+            $mail->Password = self::env('MAIL_PASSWORD', '');
             $mail->SMTPSecure = PHPMailer\PHPMailer\PHPMailer::ENCRYPTION_STARTTLS;
-            $mail->Port = (int)($_ENV['MAIL_PORT'] ?? 587);
+            $mail->Port = (int)self::env('MAIL_PORT', 587);
             
-            $mail->setFrom($_ENV['MAIL_FROM_ADDRESS'] ?? $_ENV['MAIL_FROM'] ?? 'noreply@mistorneos.com', $_ENV['MAIL_FROM_NAME'] ?? 'La Estación del Dominó');
+            $mail->setFrom(self::env('MAIL_FROM_ADDRESS', self::env('MAIL_FROM', 'noreply@mistorneos.com')), self::env('MAIL_FROM_NAME', 'La Estación del Dominó'));
             $mail->addAddress($email, $nombre_destinatario ?: '');
             $mail->Subject = $asunto;
             $mail->isHTML(true);
             $mail->Body = nl2br(htmlspecialchars($mensaje));
             
+            $mail->send();
+            return ['ok' => true, 'error' => null];
+        } catch (Exception $e) {
+            return ['ok' => false, 'error' => $e->getMessage()];
+        }
+    }
+    
+    /**
+     * Envía email HTML (cuerpo ya formateado en HTML)
+     * @param string $email Destinatario
+     * @param string $asunto Asunto
+     * @param string $html_body Cuerpo HTML
+     * @param string $nombre_destinatario Nombre para personalizar
+     * @return array ['ok' => bool, 'error' => string|null]
+     */
+    public static function sendEmailHtml(string $email, string $asunto, string $html_body, string $nombre_destinatario = ''): array {
+        if (empty($email) || !filter_var($email, FILTER_VALIDATE_EMAIL)) {
+            return ['ok' => false, 'error' => 'Email inválido'];
+        }
+        if (!class_exists('PHPMailer\PHPMailer\PHPMailer')) {
+            return ['ok' => false, 'error' => 'PHPMailer no disponible'];
+        }
+        try {
+            $mail = new PHPMailer\PHPMailer\PHPMailer(true);
+            $mail->CharSet = 'UTF-8';
+            $mail->isSMTP();
+            $mail->Host = self::env('MAIL_HOST', 'smtp.gmail.com');
+            $mail->SMTPAuth = true;
+            $mail->Username = self::env('MAIL_USERNAME', '');
+            $mail->Password = self::env('MAIL_PASSWORD', '');
+            $mail->SMTPSecure = PHPMailer\PHPMailer\PHPMailer::ENCRYPTION_STARTTLS;
+            $mail->Port = (int)self::env('MAIL_PORT', 587);
+            $mail->setFrom(self::env('MAIL_FROM_ADDRESS', self::env('MAIL_FROM', 'noreply@mistorneos.com')), self::env('MAIL_FROM_NAME', 'La Estación del Dominó'));
+            $mail->addAddress($email, $nombre_destinatario ?: '');
+            $mail->Subject = $asunto;
+            $mail->isHTML(true);
+            $mail->Body = $html_body;
             $mail->send();
             return ['ok' => true, 'error' => null];
         } catch (Exception $e) {

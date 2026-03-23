@@ -5,6 +5,7 @@
 $script_actual = basename($_SERVER['PHP_SELF'] ?? '');
 $use_standalone = in_array($script_actual, ['admin_torneo.php', 'panel_torneo.php']);
 $base_url = $use_standalone ? $script_actual : 'index.php?page=torneo_gestion';
+$action_param = $use_standalone ? '?' : '&';
 ?>
 
 <div class="container-fluid">
@@ -167,6 +168,17 @@ $base_url = $use_standalone ? $script_actual : 'index.php?page=torneo_gestion';
                                             Pareja A: <?php echo $resultado1; ?> | Pareja B: <?php echo $resultado2; ?>
                                         </div>
                                     <?php endif; ?>
+                                    <hr class="my-2">
+                                    <div class="d-flex gap-1 flex-wrap">
+                                        <a href="<?php echo $base_url . $action_param; ?>action=registrar_resultados&torneo_id=<?php echo $torneo['id']; ?>&ronda=<?php echo $ronda; ?>&mesa=<?php echo (int)$num_mesa; ?>"
+                                           class="btn btn-sm btn-primary" title="Registrar resultados">
+                                            <i class="fas fa-keyboard me-1"></i>Resultados
+                                        </a>
+                                        <a href="<?php echo $base_url . $action_param; ?>action=reasignar_mesa&torneo_id=<?php echo $torneo['id']; ?>&ronda=<?php echo $ronda; ?>&mesa=<?php echo (int)$num_mesa; ?>"
+                                           class="btn btn-sm" style="background-color: #20c997; color: white;" title="Intercambiar posiciones de jugadores">
+                                            <i class="fas fa-exchange-alt me-1"></i>Reasignar
+                                        </a>
+                                    </div>
                                 <?php else: ?>
                                     <p class="text-muted">Mesas incompletas (<?php echo count($jugadores); ?> jugadores)</p>
                                     <ul class="list-unstyled">

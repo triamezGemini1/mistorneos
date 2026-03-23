@@ -9,6 +9,7 @@ require_once __DIR__ . '/../../config/db.php';
 require_once __DIR__ . '/../../config/csrf.php';
 require_once __DIR__ . '/../../config/auth.php';
 require_once __DIR__ . '/../../lib/InscritosHelper.php';
+require_once __DIR__ . '/../../lib/UserActivationHelper.php';
 
 Auth::requireRole(['admin_general', 'admin_torneo', 'admin_club']);
 CSRF::validate();
@@ -102,12 +103,19 @@ try {
         exit;
     }
     
-    // Si no se especificó club, usar el club del usuario o el club del administrador
+    // Si no se especificó club: inscripción en sitio asume el club de la organización (club_responsable del torneo)
     if (!$id_club) {
-        $stmt = $pdo->prepare("SELECT club_id FROM usuarios WHERE id = ?");
-        $stmt->execute([$id_usuario]);
-        $usuario_club = $stmt->fetchColumn();
-        $id_club = $usuario_club ?: $user_club_id;
+        $stmt = $pdo->prepare("SELECT club_responsable FROM tournaments WHERE id = ? LIMIT 1");
+        $stmt->execute([$torneo_id]);
+        $club_org = $stmt->fetchColumn();
+        if (!empty($club_org) && (int)$club_org > 0) {
+            $id_club = (int)$club_org;
+        } else {
+            $stmt = $pdo->prepare("SELECT club_id FROM usuarios WHERE id = ?");
+            $stmt->execute([$id_usuario]);
+            $usuario_club = $stmt->fetchColumn();
+            $id_club = $usuario_club ?: $user_club_id;
+        }
     }
     
     // Insertar inscripción usando función centralizada
@@ -119,7 +127,7 @@ try {
         'inscrito_por' => $inscrito_por,
         'numero' => 0 // Se asignará después si es necesario para equipos
     ]);
-    
+    UserActivationHelper::activateUser($pdo, $id_usuario);
     header('Location: ../../public/index.php?page=tournament_admin&torneo_id=' . $torneo_id . '&action=inscribir_sitio&success=' . urlencode('Jugador inscrito exitosamente'));
     exit;
     

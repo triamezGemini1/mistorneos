@@ -158,7 +158,7 @@
                                 <i class="fas fa-arrow-left me-1"></i>Volver a la lista
                             </a>
                         <?php else: ?>
-                            <a href="index.php?page=home" class="btn btn-outline-secondary">
+                            <a href="<?= htmlspecialchars(class_exists('AppHelpers') ? AppHelpers::dashboard('home') : 'index.php?page=home') ?>" class="btn btn-outline-secondary">
                                 <i class="fas fa-arrow-left me-1"></i>Volver al inicio
                             </a>
                         <?php endif; ?>

@@ -1,4 +1,4 @@
-<?php
+ï»¿<?php
 
 require_once __DIR__ . '/../../config/bootstrap.php';
 require_once __DIR__ . '/../../config/auth.php';
@@ -13,7 +13,7 @@ $search = $_GET['search'] ?? '';
 $allowed_types = ['invitation', 'norms', 'poster'];
 if (!in_array($file_type, $allowed_types)) {
     http_response_code(400);
-    echo json_encode(['error' => 'Tipo de archivo no válido']);
+    echo json_encode(['error' => 'Tipo de archivo no vï¿½lido']);
     exit;
 }
 
@@ -25,7 +25,7 @@ if (is_dir($upload_dir)) {
     $files = array_diff(scandir($upload_dir), ['.', '..', 'README.md']);
     
     foreach ($files as $file) {
-        // Filtrar por búsqueda si se especifica
+        // Filtrar por bï¿½squeda si se especifica
         if (!empty($search) && stripos($file, $search) === false) {
             continue;
         }
@@ -55,7 +55,7 @@ if (is_dir($upload_dir)) {
     }
 }
 
-// Ordenar por fecha de modificación (más reciente primero)
+// Ordenar por fecha de modificaciï¿½n (mï¿½s reciente primero)
 usort($files_data, function($a, $b) {
     return $b['modified'] - $a['modified'];
 });

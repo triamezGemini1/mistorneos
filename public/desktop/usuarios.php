@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 /**
  * Panel de Gestión: administradores de las organizaciones.
  * Muestra Nombre, Organización, Rol y toggle Activar/Desactivar (is_active).

@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 /**
  * Script para verificar conexión a MySQL
  * ELIMINAR DESPUÉS DE USAR

@@ -1,18 +1,16 @@
 <?php
 /**
  * Layout específico para el Administrador de Torneos
- * Diseño moderno, práctico y responsive
+ * Usa cabecera unificada (includes/header.php) para favicon y meta.
  */
 $current_user = Auth::user();
 $page_title = $page_title ?? 'Administrador de Torneos';
+$header_title = $page_title . ' - La Estación del Dominó';
 ?>
 <!DOCTYPE html>
 <html lang="es">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes">
+<?php include_once __DIR__ . '/../../includes/header.php'; ?>
     <meta name="theme-color" content="#667eea">
-    <title><?php echo htmlspecialchars($page_title); ?> - La Estación del Dominó</title>
     
     <!-- Preconnect: conexiones tempranas a CDNs -->
     <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
@@ -493,9 +491,12 @@ $page_title = $page_title ?? 'Administrador de Torneos';
             padding: 0.375rem 0.75rem;
             font-size: 0.875rem;
         }
+
+        /* Panel de Control de Torneos: +1pt en todo el contenido */
+        body.page-panel-control-torneos { font-size: 1.083rem; }
     </style>
 </head>
-<body>
+<body class="<?= (isset($action) && in_array($action, ['panel', 'panel_equipos'], true)) ? 'page-panel-control-torneos' : '' ?>">
     <!-- Sidebar -->
     <nav class="admin-sidebar" id="adminSidebar">
         <div class="sidebar-header">
@@ -542,7 +543,7 @@ $page_title = $page_title ?? 'Administrador de Torneos';
             // Si no tenemos la modalidad del torneo, obtenerla de la base de datos
             if ($torneo_id_safe > 0 && $torneo_modalidad === null) {
                 try {
-                    require_once __DIR__ . '/../../config/db.php';
+                    require_once __DIR__ . '/../../config/db_config.php';
                     $stmt = DB::pdo()->prepare("SELECT modalidad, nombre FROM tournaments WHERE id = ?");
                     $stmt->execute([$torneo_id_safe]);
                     $torneo_data = $stmt->fetch(PDO::FETCH_ASSOC);
@@ -604,7 +605,6 @@ $page_title = $page_title ?? 'Administrador de Torneos';
                     <i class="fas fa-images"></i>
                     <span>Galería de Fotos</span>
                 </a>
-                
                 <?php if (($current_user['role'] ?? '') === 'admin_club'): ?>
                 <!-- Invitaciones (solo admin_club, deshabilitadas si torneo iniciado o cerrado) -->
                 <?php if ($torneo_iniciado): ?>
@@ -617,6 +617,11 @@ $page_title = $page_title ?? 'Administrador de Torneos';
                     <span>Generar Link Invitación</span>
                 </span>
                 <?php else: ?>
+                <a href="index.php?page=invitacion_clubes&torneo_id=<?php echo $torneo_id_safe; ?>" 
+                   class="nav-link-sidebar <?php echo ($_GET['page'] ?? '') === 'invitacion_clubes' ? 'active' : ''; ?>">
+                    <i class="fas fa-address-book"></i>
+                    <span>Invitación de clubes</span>
+                </a>
                 <a href="index.php?page=player_invitations&torneo_id=<?php echo $torneo_id_safe; ?>" 
                    class="nav-link-sidebar <?php echo ($_GET['page'] ?? '') === 'player_invitations' ? 'active' : ''; ?>">
                     <i class="fab fa-whatsapp"></i>
@@ -626,6 +631,11 @@ $page_title = $page_title ?? 'Administrador de Torneos';
                    class="nav-link-sidebar <?php echo ($_GET['page'] ?? '') === 'tournaments/invitation_link' ? 'active' : ''; ?>">
                     <i class="fas fa-link"></i>
                     <span>Generar Link Invitación</span>
+                </a>
+                <a href="index.php?page=invitations&filter_torneo=<?php echo $torneo_id_safe; ?>" 
+                   class="nav-link-sidebar <?php echo ($_GET['page'] ?? '') === 'invitations' ? 'active' : ''; ?>">
+                    <i class="fas fa-paper-plane"></i>
+                    <span>Despacho de Invitaciones</span>
                 </a>
                 <?php endif; ?>
                 <?php endif; ?>

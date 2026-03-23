@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 /**
  * Reporte de resultados por equipos - Detallado (Desktop).
  * Stub Enterprise White. Solo para torneos modalidad equipos. Recibe torneo_id por GET.

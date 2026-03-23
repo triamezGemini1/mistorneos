@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 /**
  * Mostrar asignaciones — Mesas de la ronda con Pareja A, Pareja B y Resultados.
  * Vista tipo tarjetas: título "Asignaciones - Mesas Ronda X - [Torneo]", selector Ir a mesa, grid de cards.

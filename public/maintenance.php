@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 /**
  * Página de Mantenimiento
  * Muestra un mensaje amigable mientras el sitio está en mantenimiento
@@ -12,9 +12,9 @@ $allowed_ips = [
     // 'TU.IP.PUBLICA.AQUI',
 ];
 
-// Si tu IP está permitida, redirigir al sitio normal
+// Si tu IP está permitida, redirigir al dashboard (mismo contexto que la app; evita perder subcarpeta)
 if (in_array($_SERVER['REMOTE_ADDR'] ?? '', $allowed_ips)) {
-    header('Location: landing.php');
+    header('Location: index.php');
     exit;
 }
 

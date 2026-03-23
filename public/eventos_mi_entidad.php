@@ -1,20 +1,19 @@
-<?php
+﻿<?php
+require_once __DIR__ . '/../config/session_start_early.php';
 /**
- * Página de Eventos por Entidad/Club
- * Muestra torneos programados según la entidad/club del usuario autenticado
+ * Eventos por Entidad/Club. Patrón en bloque: db_config → auth_service → requireAuth.
  */
 
 require_once __DIR__ . '/../config/bootstrap.php';
-require_once __DIR__ . '/../config/db.php';
+require_once __DIR__ . '/../config/db_config.php';
+require_once __DIR__ . '/../config/auth_service.php';
 require_once __DIR__ . '/../config/auth.php';
+AuthService::requireAuth();
 
 // Incluir función getEntidadesOptions si no está disponible
 if (!function_exists('getEntidadesOptions')) {
     require_once __DIR__ . '/../modules/users.php';
 }
-
-// Verificar autenticación
-Auth::requireLogin();
 
 $current_user = Auth::user();
 $user_role = $current_user['role'] ?? 'usuario';
@@ -425,8 +424,4 @@ function formatearFecha($fecha) {
         </div>
     </div>
 
-    <?php include __DIR__ . '/includes/footer.php'; ?>
-
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js" defer></script>
-</body>
-</html>
+    <?php include_once __DIR__ . '/../includes/footer.php'; ?>

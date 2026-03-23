@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 /**
  * Guarda un jugador desde el formulario inline (AJAX).
  * Acepta texto para Entidad/Organización/Club: si existe en SQLite usa su ID; si no, crea el registro con sync_status=0.

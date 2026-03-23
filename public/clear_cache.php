@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 /**
  * Script temporal para limpiar caché de OPcache
  * ELIMINAR ESTE ARCHIVO DESPUÉS DE USARLO POR SEGURIDAD

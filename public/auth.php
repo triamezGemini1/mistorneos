@@ -1,7 +1,7 @@
-<?php
+ï»¿<?php
 
 
 require_once __DIR__ . '/../config/bootstrap.php';
 
 // Este archivo ya no se usa directamente
-// La lógica de autenticación está en el layout.php
+// La lï¿½gica de autenticaciï¿½n estï¿½ en el layout.php

@@ -98,207 +98,7 @@ function generarPaginadorClubs($pagina_actual, $total_paginas, $base_url, $param
     return $html;
 }
 
-/**
- * Obtiene los mejores N jugadores de cada club en un torneo
- * 
- * Regla: Se toman los topN primeros CLASIFICADOS de cada club (por ganados, efectividad, puntos).
- * Se consideran TODOS los jugadores que estén dentro de ese límite.
- * 
- * @param PDO $pdo Conexión a la base de datos
- * @param int $torneo_id ID del torneo
- * @param int $topN Número máximo de jugadores a considerar por club (pareclub del torneo)
- * @return array Array con 'estadisticas' y 'detalle'
- */
-function obtenerTopJugadoresPorClub($pdo, $torneo_id, $topN) {
-    // Obtener TODOS los jugadores del torneo, ordenados por club y clasificación real
-    $sql = "SELECT 
-                i.*,
-                i.id_club as codigo_club,
-                u.nombre as nombre_completo,
-                u.username,
-                u.sexo,
-                u.cedula,
-                c.id as club_id_from_join,
-                c.nombre as club_nombre,
-                c.logo as club_logo,
-                (
-                    SELECT COUNT(DISTINCT pr1.partida, pr1.mesa)
-                    FROM `partiresul` pr1
-                    LEFT JOIN `partiresul` pr_oponente ON pr1.id_torneo = pr_oponente.id_torneo 
-                        AND pr1.partida = pr_oponente.partida 
-                        AND pr1.mesa = pr_oponente.mesa
-                        AND pr_oponente.id_usuario != pr1.id_usuario
-                        AND (
-                            (pr1.secuencia IN (1, 2) AND pr_oponente.secuencia IN (3, 4)) OR
-                            (pr1.secuencia IN (3, 4) AND pr_oponente.secuencia IN (1, 2))
-                        )
-                    LEFT JOIN `partiresul` pr_compañero ON pr1.id_torneo = pr_compañero.id_torneo 
-                        AND pr1.partida = pr_compañero.partida 
-                        AND pr1.mesa = pr_compañero.mesa
-                        AND pr_compañero.id_usuario != pr1.id_usuario
-                        AND (
-                            (pr1.secuencia IN (1, 2) AND pr_compañero.secuencia IN (1, 2) AND pr_compañero.secuencia != pr1.secuencia) OR
-                            (pr1.secuencia IN (3, 4) AND pr_compañero.secuencia IN (3, 4) AND pr_compañero.secuencia != pr1.secuencia)
-                        )
-                    WHERE pr1.id_usuario = i.id_usuario
-                        AND pr1.id_torneo = ?
-                        AND pr1.registrado = 1
-                        AND pr1.ff = 0
-                        AND pr1.resultado1 = 200
-                        AND pr1.efectividad = 100
-                        AND pr1.resultado1 > pr1.resultado2
-                        AND (
-                            pr_oponente.ff = 1 OR
-                            pr_compañero.ff = 1
-                        )
-                ) as ganadas_por_forfait
-            FROM inscritos i
-            INNER JOIN usuarios u ON i.id_usuario = u.id
-            LEFT JOIN clubes c ON i.id_club = c.id
-            WHERE i.torneo_id = ? 
-                AND i.estatus != 'retirado'
-            ORDER BY COALESCE(i.id_club, -1) ASC, 
-                     CAST(i.ganados AS SIGNED) DESC, 
-                     CAST(i.efectividad AS SIGNED) DESC, 
-                     CAST(i.puntos AS SIGNED) DESC";
-    
-    $stmt = $pdo->prepare($sql);
-    $stmt->execute([$torneo_id, $torneo_id]);
-    $todos_jugadores = $stmt->fetchAll(PDO::FETCH_ASSOC);
-    
-    // Agrupar por club y tomar SOLO los topN primeros clasificados de cada club
-    $jugadores_por_club = [];
-    foreach ($todos_jugadores as $jugador) {
-        $codigo_club = isset($jugador['id_club']) && $jugador['id_club'] !== null 
-            ? (int)$jugador['id_club'] 
-            : ((int)($jugador['codigo_club'] ?? 0));
-        
-        if ($codigo_club == 0) $codigo_club = -1; // Sin club
-        
-        if (!isset($jugadores_por_club[$codigo_club])) {
-            $stmt_club = $pdo->prepare("SELECT id, nombre, logo FROM clubes WHERE id = ?");
-            $stmt_club->execute([$codigo_club]);
-            $club_info = $stmt_club->fetch(PDO::FETCH_ASSOC);
-            $nombre_final = $club_info ? $club_info['nombre'] : ($jugador['club_nombre'] ?? 'Sin Club');
-            
-            $jugadores_por_club[$codigo_club] = [
-                'codigo_club' => $codigo_club,
-                'club_nombre' => $nombre_final,
-                'club_logo' => $club_info ? $club_info['logo'] : ($jugador['club_logo'] ?? null),
-                'jugadores' => []
-            ];
-        }
-        
-        // Solo agregar si aún no hemos alcanzado el límite topN para este club
-        $cantidad_actual = count($jugadores_por_club[$codigo_club]['jugadores']);
-        if ($cantidad_actual < $topN) {
-            $jugadores_por_club[$codigo_club]['jugadores'][] = $jugador;
-        }
-    }
-    
-    // Los jugadores ya vienen ordenados por clasificación (ganados, efectividad, puntos) y limitados a topN por club
-    // IMPORTANTE: NO reordenar - mantener el orden original del torneo (ganados DESC, efectividad DESC, puntos DESC)
-    $estadisticas = [];
-    $detalle = [];
-    
-    foreach ($jugadores_por_club as $codigo_club => $club_data) {
-        // Jugadores ya limitados a topN primeros clasificados por club (ganados, efectividad, puntos)
-        $jugadores_seleccionados = $club_data['jugadores'];
-        
-        // Calcular estadísticas del grupo
-        $total_puntos_grupo = 0;
-        $total_efectividad = 0;
-        $total_ganados = 0;
-        $total_perdidos = 0;
-        $total_ptosrnk = 0;
-        $total_gff = 0;
-        $mejor_posicion = 999;
-        $cantidad_jugadores = count($jugadores_seleccionados);
-        
-        foreach ($jugadores_seleccionados as $index => $jugador) {
-            $ganados = (int)($jugador['ganados'] ?? 0);
-            $perdidos = (int)($jugador['perdidos'] ?? 0);
-            $efectividad = (int)($jugador['efectividad'] ?? 0);
-            $puntos = (int)($jugador['puntos'] ?? 0);
-            $ptosrnk = (int)($jugador['ptosrnk'] ?? 0);
-            $gff = (int)($jugador['ganadas_por_forfait'] ?? 0);
-            $posicion = (int)($jugador['posicion'] ?? 0);
-            
-            $total_puntos_grupo += $puntos;
-            $total_efectividad += $efectividad;
-            $total_ganados += $ganados;
-            $total_perdidos += $perdidos;
-            $total_ptosrnk += $ptosrnk;
-            $total_gff += $gff;
-            
-            if ($posicion > 0 && $posicion < $mejor_posicion) {
-                $mejor_posicion = $posicion;
-            }
-            
-            // Agregar al detalle
-            // IMPORTANTE: Mantener la posición original del torneo (no reasignar)
-            $detalle[] = [
-                'codigo_club' => $codigo_club,
-                'club_nombre' => $club_data['club_nombre'],
-                'ranking' => $index + 1, // Ranking dentro del club (1, 2, 3...) - solo para referencia
-                'nombre' => $jugador['nombre_completo'] ?? $jugador['nombre'] ?? 'N/A',
-                'id_usuario' => (int)$jugador['id_usuario'],
-                'cedula' => $jugador['cedula'] ?? '',
-                'ganados' => $ganados,
-                'perdidos' => $perdidos,
-                'efectividad' => $efectividad,
-                'puntos' => $puntos,
-                'ptosrnk' => $ptosrnk,
-                'gff' => $gff,
-                'posicion' => $posicion, // Posición original del torneo (NO reasignar)
-                'zapato' => (int)($jugador['zapato'] ?? $jugador['zapatos'] ?? 0),
-                'chancletas' => (int)($jugador['chancletas'] ?? 0),
-                'sancion' => (int)($jugador['sancion'] ?? 0),
-                'tarjeta' => (int)($jugador['tarjeta'] ?? 0)
-            ];
-        }
-        
-        // Calcular promedio de efectividad
-        $promedio_efectividad = $cantidad_jugadores > 0 
-            ? (int)round($total_efectividad / $cantidad_jugadores) 
-            : 0;
-        
-        // Agregar estadísticas del club
-        error_log("obtenerTopJugadoresPorClub: Agregando estadísticas para club ID: $codigo_club, Nombre: {$club_data['club_nombre']}, Jugadores: $cantidad_jugadores");
-        $estadisticas[] = [
-            'codigo_club' => $codigo_club,
-            'club_nombre' => $club_data['club_nombre'],
-            'club_logo' => $club_data['club_logo'],
-            'total_puntos_grupo' => $total_puntos_grupo,
-            'promedio_efectividad' => $promedio_efectividad,
-            'total_ganados' => $total_ganados,
-            'total_perdidos' => $total_perdidos,
-            'total_efectividad' => $total_efectividad,
-            'total_ptosrnk' => $total_ptosrnk,
-            'total_gff' => $total_gff,
-            'mejor_posicion' => $mejor_posicion == 999 ? 0 : $mejor_posicion,
-            'cantidad_jugadores' => $cantidad_jugadores
-        ];
-    }
-    
-    error_log("obtenerTopJugadoresPorClub: Total estadísticas generadas: " . count($estadisticas));
-    
-    // Ordenar estadísticas: partidos ganados DESC, efectividad DESC, puntos DESC
-    usort($estadisticas, function($a, $b) {
-        if ($a['total_ganados'] != $b['total_ganados']) {
-            return $b['total_ganados'] <=> $a['total_ganados'];
-        }
-        if ($a['total_efectividad'] != $b['total_efectividad']) {
-            return $b['total_efectividad'] <=> $a['total_efectividad'];
-        }
-        return $b['total_puntos_grupo'] <=> $a['total_puntos_grupo'];
-    });
-    
-    return [
-        'estadisticas' => $estadisticas,
-        'detalle' => $detalle
-    ];
-}
+require_once __DIR__ . '/../../lib/ResultadosPorClubHelper.php';
 
 // Asegurar que las posiciones estén actualizadas
 if (function_exists('recalcularPosiciones')) {
@@ -606,12 +406,26 @@ $base_url_return = $use_standalone ? $script_actual : 'index.php?page=torneo_ges
 
 <div class="min-h-screen bg-gradient-to-br from-purple-600 via-purple-700 to-indigo-800 p-6">
     <!-- Botón de retorno al panel -->
-    <div class="mb-4">
+    <div class="mb-4 flex flex-wrap gap-2">
         <a href="<?php echo $base_url_return . ($use_standalone ? '?' : '&'); ?>action=panel&torneo_id=<?php echo $torneo_id; ?>" 
            class="inline-flex items-center px-6 py-3 bg-gray-800 hover:bg-gray-900 text-white rounded-lg shadow-lg transition-all transform hover:scale-105 font-bold">
             <i class="fas fa-arrow-left mr-2"></i>
             Volver al Panel de Control
         </a>
+        <a href="<?php echo htmlspecialchars(AppHelpers::url('index.php', ['page' => 'torneo_gestion', 'action' => 'resultados_reportes', 'torneo_id' => $torneo_id])); ?>"
+           class="inline-flex items-center px-6 py-3 bg-amber-600 hover:bg-amber-700 text-white rounded-lg shadow-lg font-bold">
+            <i class="fas fa-file-alt mr-2"></i> Reportes PDF/Excel
+        </a>
+        <a href="<?php echo htmlspecialchars(AppHelpers::url('export_resultados_pdf.php', ['torneo_id' => $torneo_id, 'tipo' => 'clubes_resumido'])); ?>"
+           class="inline-flex items-center px-4 py-3 bg-red-200 text-black font-bold rounded-lg border-2 border-black" target="_blank" rel="noopener">PDF clubes resumido</a>
+        <a href="<?php echo htmlspecialchars(AppHelpers::url('export_resultados_pdf.php', ['torneo_id' => $torneo_id, 'tipo' => 'clubes_detallado'])); ?>"
+           class="inline-flex items-center px-4 py-3 bg-red-100 text-black font-bold rounded-lg border-2 border-black" target="_blank" rel="noopener">PDF clubes detallado</a>
+        <a href="<?php echo htmlspecialchars(AppHelpers::url('export_resultados_excel.php', ['torneo_id' => $torneo_id])); ?>"
+           class="inline-flex items-center px-4 py-3 bg-green-200 text-black font-bold rounded-lg border-2 border-black">Excel</a>
+        <a href="<?php echo htmlspecialchars(AppHelpers::url('index.php', ['page' => 'torneo_gestion', 'action' => 'resultados_reportes_print', 'torneo_id' => $torneo_id, 'tipo' => 'clubes_resumido'])); ?>" target="_blank" rel="noopener"
+           class="inline-flex items-center px-4 py-3 bg-blue-200 text-black font-bold rounded-lg border-2 border-black">Impr. resumido</a>
+        <a href="<?php echo htmlspecialchars(AppHelpers::url('index.php', ['page' => 'torneo_gestion', 'action' => 'resultados_reportes_print', 'torneo_id' => $torneo_id, 'tipo' => 'clubes_detallado'])); ?>" target="_blank" rel="noopener"
+           class="inline-flex items-center px-4 py-3 bg-blue-100 text-black font-bold rounded-lg border-2 border-black">Impr. detallado</a>
     </div>
     
     <!-- Header -->

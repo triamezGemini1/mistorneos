@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 /**
  * Crear Torneo (Desktop). Formulario simplificado para uso local.
  * Inserción en tournaments vía db_bridge; entidad_id = getEntidadId(), uuid = uniqid().

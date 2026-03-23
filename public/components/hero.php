@@ -1,10 +1,10 @@
-<?php
+﻿<?php
 /**
  * Componente Hero - Sección principal de bienvenida (layout compacto)
  * Dos columnas: texto y CTA a la izquierda, imagen/media a la derecha
  * Variables globales disponibles: $user, app_base_url()
  */
-$hero_logo_url = app_base_url() . '/lib/Assets/mislogos/logo4.png';
+$hero_logo_url = class_exists('AppHelpers') ? AppHelpers::getAppLogo() : (rtrim(app_base_url(), '/') . '/public/view_image.php?path=' . rawurlencode('lib/Assets/mislogos/logo4.png'));
 ?>
     <!-- Hero Section (compacto, dos columnas) -->
     <section class="relative bg-gradient-to-br from-primary-700 via-primary-600 to-primary-500 text-white overflow-hidden min-h-[100vh] flex items-center">
@@ -28,7 +28,7 @@ $hero_logo_url = app_base_url() . '/lib/Assets/mislogos/logo4.png';
                     </p>
                     <div class="flex flex-col sm:flex-row gap-3 justify-center lg:justify-start">
                         <a href="#registro" class="inline-flex items-center justify-center px-6 py-3 bg-accent text-primary-700 font-semibold rounded-xl hover:bg-accentDark hover:text-white transition-all duration-300 shadow-lg hover:shadow-xl">
-                            <i class="fas fa-user-plus mr-2"></i>Registrarme
+                            <i class="fas fa-building mr-2"></i>Solicitar Afiliación
                         </a>
                         <a href="login.php" class="inline-flex items-center justify-center px-6 py-3 bg-white/10 backdrop-blur-sm text-white font-semibold rounded-xl border-2 border-white/30 hover:bg-white hover:text-primary-700 transition-all duration-300">
                             <i class="fas fa-sign-in-alt mr-2"></i>Ya tengo cuenta

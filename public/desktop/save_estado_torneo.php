@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 /**
  * Cambia el estatus de un torneo (Activo/Inactivo) y registra la acción en auditoría.
  * POST: torneo_id, estatus (0|1)

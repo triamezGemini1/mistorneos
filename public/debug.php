@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 /**
  * Script de diagnóstico temporal
  * ELIMINAR DESPUÉS DE USAR
@@ -18,7 +18,7 @@ $files_to_check = [
     'config/bootstrap.php',
     'lib/Log.php',
     'config/environment.php',
-    'config/db.php'
+    'config/db_config.php'
 ];
 
 foreach ($files_to_check as $file) {

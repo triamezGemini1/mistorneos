@@ -27,25 +27,39 @@ final class Security
     public static function authenticateUser(string $username, string $password): ?array
     {
         try {
-            // Primero buscar el usuario sin filtrar por status para diagnosticar
-            $stmt = DB::pdo()->prepare("
+            $pdo = DB::pdo();
+            $usernameTrim = trim($username);
+
+            $stmt = $pdo->prepare("
                 SELECT id, username, password_hash, email, role, status, club_id, entidad, uuid, photo_path
-                FROM usuarios 
+                FROM usuarios
                 WHERE username = ? OR email = ?
             ");
-            $stmt->execute([$username, $username]);
+            $stmt->execute([$usernameTrim, $usernameTrim]);
             $user = $stmt->fetch(PDO::FETCH_ASSOC);
 
-            // Si no existe el usuario
+            // Si no existe el usuario ($username es el valor enviado en esta petición, no de sesión)
             if (!$user) {
-                error_log("Autenticación fallida: Usuario '{$username}' no existe");
+                error_log("Autenticación fallida (usuario enviado en petición: '{$username}'): no existe");
                 return null;
             }
 
-            // Solo pueden entrar usuarios activos (status = 0). 1 = inactivo
-            if ((int)$user['status'] !== 0) {
-                error_log("Autenticación fallida: Usuario '{$username}' inactivo (status={$user['status']})");
+            // Verificar contraseña primero (no revelar si estaba inactivo si la contraseña falla)
+            if (!self::verifyPassword($password, $user['password_hash'])) {
+                error_log("Autenticación fallida (usuario enviado en petición: '{$username}'): contraseña incorrecta");
                 return null;
+            }
+
+            // Auto-activar al iniciar sesión: si estaba inactivo (status != 0), activar sin más protocolos
+            if ((int)$user['status'] !== 0) {
+                try {
+                    $up = DB::pdo()->prepare("UPDATE usuarios SET status = 0 WHERE id = ?");
+                    $up->execute([$user['id']]);
+                    $user['status'] = 0;
+                    error_log("Usuario '{$username}' (id={$user['id']}) activado automáticamente al iniciar sesión");
+                } catch (Exception $e) {
+                    error_log("Error al activar usuario en login: " . $e->getMessage());
+                }
             }
 
             // Bloqueo por is_active: si está en 0 (desactivado por Master Admin), no puede entrar (web)
@@ -54,17 +68,11 @@ final class Security
                 $stmt2->execute([$user['id']]);
                 $row = $stmt2->fetch(PDO::FETCH_ASSOC);
                 if ($row !== false && isset($row['is_active']) && (int)$row['is_active'] !== 1) {
-                    error_log("Autenticación fallida: Usuario '{$username}' desactivado (is_active=0)");
+                    error_log("Autenticación fallida (usuario enviado en petición: '{$username}'): desactivado is_active=0");
                     return null;
                 }
             } catch (Throwable $e) {
                 // Columna is_active puede no existir en instalaciones antiguas
-            }
-
-            // Verificar contraseña
-            if (!self::verifyPassword($password, $user['password_hash'])) {
-                error_log("Autenticación fallida: Contraseña incorrecta para usuario '{$username}'");
-                return null;
             }
 
             // Usuario válido y autenticado
@@ -233,6 +241,7 @@ final class Security
             $pdo = DB::pdo();
             
             // Verificar si el username ya existe
+            $username = trim($data['username']);
             $stmt = $pdo->prepare("SELECT id FROM usuarios WHERE username = ?");
             $stmt->execute([$username]);
             if ($stmt->fetch()) {
@@ -286,6 +295,30 @@ final class Security
                     $placeholders[] = '?';
                 }
             }
+
+            // Columnas NOT NULL sin valor: rellenar con valor por defecto (ej. registro Fast-Track)
+            try {
+                $cols = $pdo->query("SHOW COLUMNS FROM usuarios")->fetchAll(PDO::FETCH_ASSOC);
+                $existing = array_flip($fields);
+                foreach ($cols as $col) {
+                    $name = $col['Field'];
+                    if (isset($existing[$name])) {
+                        continue;
+                    }
+                    $null = strtoupper((string) ($col['Null'] ?? 'YES'));
+                    $default = $col['Default'] ?? null;
+                    $keyDefault = $col['Key'] ?? '';
+                    if ($null === 'NO' && ($default === null || $default === '') && $keyDefault !== 'PRI' && $name !== 'id' && $name !== 'created_at') {
+                        $type = strtoupper((string) ($col['Type'] ?? ''));
+                        $defaultVal = (strpos($type, 'INT') !== false || strpos($type, 'DECIMAL') !== false) ? 0 : 'N/A';
+                        $fields[] = $name;
+                        $values[] = $defaultVal;
+                        $placeholders[] = '?';
+                    }
+                }
+            } catch (Throwable $e) {
+                // Ignorar si la tabla no existe o no hay permiso
+            }
             
             // Agregar created_at
             $fields[] = 'created_at';
@@ -301,6 +334,24 @@ final class Security
             
             return ['success' => true, 'user_id' => $user_id, 'errors' => []];
             
+        } catch (PDOException $e) {
+            $msg = $e->getMessage();
+            $code = $e->getCode();
+            // Duplicate entry: 1062 (MySQL) o mensaje "Duplicate entry"
+            if ($code == 23000 || $code == 1062 || stripos($msg, 'Duplicate entry') !== false) {
+                if (stripos($msg, 'cedula') !== false) {
+                    return ['success' => false, 'user_id' => null, 'errors' => ['Ya existe un usuario con esta cédula.']];
+                }
+                if (stripos($msg, 'username') !== false) {
+                    return ['success' => false, 'user_id' => null, 'errors' => ['El nombre de usuario ya existe.']];
+                }
+                if (stripos($msg, 'email') !== false) {
+                    return ['success' => false, 'user_id' => null, 'errors' => ['Ya existe un usuario con este correo electrónico.']];
+                }
+                return ['success' => false, 'user_id' => null, 'errors' => ['El registro ya existe (clave duplicada).']];
+            }
+            error_log("Error al crear usuario: " . $msg);
+            return ['success' => false, 'user_id' => null, 'errors' => ['Error al crear el usuario: ' . $msg]];
         } catch (Exception $e) {
             error_log("Error al crear usuario: " . $e->getMessage());
             return ['success' => false, 'user_id' => null, 'errors' => ['Error al crear el usuario: ' . $e->getMessage()]];

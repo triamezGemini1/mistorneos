@@ -111,15 +111,17 @@
                         <small class="text-muted"><?php echo $inscritos_confirmados; ?> confirmados</small>
                     </div>
                     <?php if ($isLocked): ?>
+                        <!-- Torneo finalizado: inscripciones cerradas -->
                         <button type="button" class="btn btn-sm btn-secondary w-100" disabled>
                             <i class="fas fa-lock mr-1"></i> Gestionar Inscripciones (Cerrado)
                         </button>
                     <?php else: ?>
-                        <?php if ((int)($torneo['modalidad'] ?? 0) === 3): ?>
-                            <!-- Modalidad Equipos: Redirigir a gestionar inscripciones -->
+                        <?php if (in_array((int)($torneo['modalidad'] ?? 0), [2, 3], true)): ?>
+                            <?php $es_parejas_panel = (int)($torneo['modalidad'] ?? 0) === 2; ?>
+                            <!-- Modalidad Parejas (2) o Equipos (3): mismo flujo inscripción -->
                             <a href="<?php echo $base_url . ($use_standalone ? '?' : '&'); ?>action=gestionar_inscripciones_equipos&torneo_id=<?php echo $torneo['id']; ?>" 
                                class="btn btn-sm btn-primary w-100">
-                                <i class="fas fa-users mr-1"></i> Inscripciones por Equipos
+                                <i class="fas fa-users mr-1"></i> <?php echo $es_parejas_panel ? 'Inscripciones por Parejas' : 'Inscripciones por Equipos'; ?>
                             </a>
                         <?php else: ?>
                             <!-- Modalidad Individual/Parejas: Redirigir a inscripciones normales -->
@@ -127,6 +129,20 @@
                                class="btn btn-sm btn-primary w-100">
                                 <i class="fas fa-clipboard-list mr-1"></i> Gestionar Inscripciones
                             </a>
+                            <?php
+                            $rondas_panel = [];
+                            try {
+                                $st = DB::pdo()->prepare("SELECT MAX(CAST(partida AS UNSIGNED)) AS ultima FROM partiresul WHERE id_torneo = ? AND mesa > 0");
+                                $st->execute([$torneo['id']]);
+                                $rondas_panel = $st->fetchColumn();
+                            } catch (Exception $e) {}
+                            $torneo_iniciado_panel = !empty($rondas_panel) && (int)$rondas_panel >= 1;
+                            if ($torneo_iniciado_panel): ?>
+                            <a href="index.php?page=torneo_gestion&action=sustituir_jugador&torneo_id=<?php echo $torneo['id']; ?>" 
+                               class="btn btn-sm btn-warning w-100 mt-1">
+                                <i class="fas fa-user-exchange mr-1"></i> Sustituir jugador retirado
+                            </a>
+                            <?php endif; ?>
                         <?php endif; ?>
                     <?php endif; ?>
                 </div>
@@ -152,27 +168,32 @@
                             <i class="fas fa-user-check mr-1"></i> Inscripción en Sitio
                         </a>
                     <?php endif; ?>
+                    <a href="index.php?page=tournament_admin&torneo_id=<?php echo (int)$torneo['id']; ?>&action=activar_participantes" 
+                       class="btn btn-sm btn-outline-primary w-100 mt-1">
+                        <i class="fas fa-user-check mr-1"></i> Activar participantes
+                    </a>
                 </div>
             </div>
         </div>
 
-        <!-- Gadget Equipos (Solo para modalidad Equipos) -->
-        <?php if ((int)($torneo['modalidad'] ?? 0) === 3): ?>
+        <!-- Gadget Equipos/Parejas (modalidad 2 = Parejas, 3 = Equipos) -->
+        <?php if (in_array((int)($torneo['modalidad'] ?? 0), [2, 3], true)): ?>
+        <?php $es_parejas_gadget = (int)($torneo['modalidad'] ?? 0) === 2; ?>
         <div class="col-12 col-md-6 col-lg-6">
             <div class="card">
                 <div class="card-body p-2">
                     <div class="bg-light rounded p-2 mb-2 text-center">
                         <div class="h5 mb-0 text-indigo fw-bold"><?php echo $total_equipos ?? 0; ?></div>
-                        <small class="text-muted">Equipos inscritos</small>
+                        <small class="text-muted"><?php echo $es_parejas_gadget ? 'Parejas inscritas' : 'Equipos inscritos'; ?></small>
                     </div>
                     <?php if ($isLocked): ?>
                         <button type="button" class="btn btn-sm btn-secondary w-100" disabled>
-                            <i class="fas fa-lock mr-1"></i> Gestionar Equipos (Cerrado)
+                            <i class="fas fa-lock mr-1"></i> <?php echo $es_parejas_gadget ? 'Gestionar Parejas (Cerrado)' : 'Gestionar Equipos (Cerrado)'; ?>
                         </button>
                     <?php else: ?>
-                        <a href="<?php echo $base_url . ($use_standalone ? '?' : '&'); ?>action=equipos&torneo_id=<?php echo $torneo['id']; ?>" 
+                        <a href="<?php echo $base_url . ($use_standalone ? '?' : '&'); ?>action=<?php echo $es_parejas_gadget ? 'gestionar_inscripciones_equipos' : 'equipos'; ?>&torneo_id=<?php echo $torneo['id']; ?>" 
                            class="btn btn-sm btn-indigo w-100 text-white" style="background-color: #6610f2;">
-                            <i class="fas fa-users mr-1"></i> Gestionar Equipos
+                            <i class="fas fa-users mr-1"></i> <?php echo $es_parejas_gadget ? 'Gestionar Parejas' : 'Gestionar Equipos'; ?>
                         </a>
                     <?php endif; ?>
                 </div>
@@ -295,6 +316,10 @@
                             <a href="index.php?page=torneo_gestion&action=resultados_por_club&torneo_id=<?php echo $torneo['id']; ?>" 
                                class="btn btn-sm btn-info" style="font-size: 0.75rem;">
                                 <i class="fas fa-building mr-1"></i> Resultados Clubes
+                            </a>
+                            <a href="index.php?page=torneo_gestion&action=resultados_reportes&torneo_id=<?php echo $torneo['id']; ?>" 
+                               class="btn btn-sm btn-secondary" style="font-size: 0.75rem;">
+                                <i class="fas fa-file-pdf mr-1"></i> Reportes PDF/Excel
                             </a>
                             <?php 
                             $isLocked = (int)($torneo['locked'] ?? 0) === 1;

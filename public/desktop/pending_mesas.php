@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 /**
  * Devuelve el número de mesas pendientes de registrar (partiresul.registrado = 0).
  * Usado por el Panel para actualizar el contador sin recargar la página.

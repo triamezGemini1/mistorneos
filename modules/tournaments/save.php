@@ -1,5 +1,10 @@
 <?php
 
+// Evitar salida previa que impida el redirect (pantalla blanca)
+if (!ob_get_level()) {
+    ob_start();
+}
+
 require_once __DIR__ . '/../../config/bootstrap.php';
 require_once __DIR__ . '/../../config/db.php';
 require_once __DIR__ . '/../../config/csrf.php';
@@ -31,7 +36,7 @@ try {
     if (empty($_POST['clase']) || !in_array((int)$_POST['clase'], [1, 2])) {
         throw new Exception('La clase del torneo es inv�lida');
     }
-    if (empty($_POST['modalidad']) || !in_array((int)$_POST['modalidad'], [1, 2, 3])) {
+    if (empty($_POST['modalidad']) || !in_array((int)$_POST['modalidad'], [1, 2, 3, 4])) {
         throw new Exception('La modalidad del torneo es inv�lida');
     }
     
@@ -85,6 +90,17 @@ try {
     $permite_inscripcion_linea = isset($_POST['permite_inscripcion_linea']) ? 1 : 0;
     // publicar_landing: el admin decide cuándo publicar (por defecto 0 para torneos nuevos)
     $publicar_landing = isset($_POST['publicar_landing']) ? 1 : 0;
+    // Hora y tipo de torneo (opcionales)
+    $hora_torneo = !empty($_POST['hora_torneo']) ? trim($_POST['hora_torneo']) : null;
+    if ($hora_torneo !== null && !preg_match('/^\d{1,2}:\d{2}(:\d{2})?$/', $hora_torneo)) {
+        $hora_torneo = null;
+    }
+    // tipo_torneo: entero (índice) 0=no definido, 1=interclubes, 2=suizo_puro, 3=suizo_sin_repetir
+    $tipo_torneo_raw = isset($_POST['tipo_torneo']) ? trim((string)$_POST['tipo_torneo']) : '';
+    $tipo_torneo = null;
+    if ($tipo_torneo_raw !== '' && in_array((int)$tipo_torneo_raw, [1, 2, 3], true)) {
+        $tipo_torneo = (int)$tipo_torneo_raw;
+    }
     
     // La organización del torneo se obtiene del admin_club que lo crea
     $organizacion_id = null;
@@ -172,7 +188,12 @@ try {
         $tiene_entidad = in_array('entidad', $cols);
         $tiene_permite_inscripcion = in_array('permite_inscripcion_linea', $cols);
         $tiene_publicar_landing = in_array('publicar_landing', $cols);
-    } catch (Exception $e) {}
+        $tiene_hora_torneo = in_array('hora_torneo', $cols);
+        $tiene_tipo_torneo = in_array('tipo_torneo', $cols);
+    } catch (Exception $e) {
+        $tiene_hora_torneo = false;
+        $tiene_tipo_torneo = false;
+    }
     
     // owner_user_id: SIEMPRE el ID del admin que registra (no aceptar desde POST)
     $owner_user_id = $user_id;
@@ -187,6 +208,14 @@ try {
         if ($tiene_publicar_landing) {
             $ins_cols .= ", publicar_landing";
             $ins_vals .= ", :publicar_landing";
+        }
+        if ($tiene_hora_torneo) {
+            $ins_cols .= ", hora_torneo";
+            $ins_vals .= ", :hora_torneo";
+        }
+        if ($tiene_tipo_torneo) {
+            $ins_cols .= ", tipo_torneo";
+            $ins_vals .= ", :tipo_torneo";
         }
         $stmt = DB::pdo()->prepare("INSERT INTO tournaments ($ins_cols) VALUES ($ins_vals)");
         
@@ -215,6 +244,12 @@ try {
         }
         if ($tiene_publicar_landing) {
             $exec_params[':publicar_landing'] = $publicar_landing;
+        }
+        if ($tiene_hora_torneo) {
+            $exec_params[':hora_torneo'] = $hora_torneo;
+        }
+        if ($tiene_tipo_torneo) {
+            $exec_params[':tipo_torneo'] = $tipo_torneo === null ? 0 : $tipo_torneo;
         }
         $stmt->execute($exec_params);
     } elseif ($tiene_organizacion && $tiene_owner) {
@@ -483,21 +518,31 @@ try {
         $stmt_update->execute($file_updates);
     }
     
-    // Redirigir con �xito
-    $base = function_exists('app_base_url') ? rtrim(app_base_url(), '/') : '';
-    if ($base === '') {
-        $base = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? 'https' : 'http') . '://' . ($_SERVER['HTTP_HOST'] ?? 'localhost');
+    // Redirigir con éxito a la lista de torneos
+    $success_msg = 'Torneo creado exitosamente';
+    $_SESSION['success'] = $success_msg;
+    $script_path = isset($_SERVER['SCRIPT_NAME']) ? $_SERVER['SCRIPT_NAME'] : 'index.php';
+    $redirect_url = $script_path . '?page=tournaments&success=' . urlencode($success_msg);
+    if (ob_get_level()) ob_end_clean();
+    if (!headers_sent()) {
+        header('Location: ' . $redirect_url, true, 302);
+        exit;
     }
-    header('Location: ' . $base . '/public/index.php?page=tournaments&success=' . urlencode('Torneo creado exitosamente'));
+    echo '<meta http-equiv="refresh" content="0;url=' . htmlspecialchars($redirect_url) . '"><p>Torneo creado. Redirigiendo...</p>';
     exit;
 
 } catch (Exception $e) {
-    // Redirigir con error
-    $base = function_exists('app_base_url') ? rtrim(app_base_url(), '/') : '';
-    if ($base === '') {
-        $base = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? 'https' : 'http') . '://' . ($_SERVER['HTTP_HOST'] ?? 'localhost');
+    $error_msg = $e->getMessage();
+    error_log('Tournaments save error: ' . $error_msg);
+    $_SESSION['error'] = $error_msg;
+    $script_path = isset($_SERVER['SCRIPT_NAME']) ? $_SERVER['SCRIPT_NAME'] : 'index.php';
+    $redirect_url = $script_path . '?page=tournaments&action=new&error=' . urlencode($error_msg);
+    if (ob_get_level()) ob_end_clean();
+    if (!headers_sent()) {
+        header('Location: ' . $redirect_url, true, 302);
+        exit;
     }
-    header('Location: ' . $base . '/public/index.php?page=tournaments&action=new&error=' . urlencode($e->getMessage()));
+    echo '<meta http-equiv="refresh" content="0;url=' . htmlspecialchars($redirect_url) . '"><p>Error: ' . htmlspecialchars($error_msg) . '. Redirigiendo...</p>';
     exit;
 }
 

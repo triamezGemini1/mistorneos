@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 /**
  * Endpoint de sincronización: devuelve jugadores (usuarios) para la app desktop.
  * Solo accesible con API_KEY (header X-API-Key o query api_key).
@@ -15,7 +15,7 @@ if (!is_file($baseDir . '/config/bootstrap.php')) {
     exit;
 }
 require_once $baseDir . '/config/bootstrap.php';
-require_once $baseDir . '/config/db.php';
+require_once $baseDir . '/config/db_config.php';
 
 $apiKey = trim((string)($_SERVER['HTTP_X_API_KEY'] ?? $_GET['api_key'] ?? ''));
 error_log('[fetch_jugadores] API key recibida (longitud ' . strlen($apiKey) . '): ' . (strlen($apiKey) > 0 ? substr($apiKey, 0, 4) . '...' : '(vacía)'));

@@ -18,6 +18,7 @@ class EquiposHelper {
     
     const MAX_JUGADORES_POR_EQUIPO = 4;
     const MODALIDAD_EQUIPOS = 3;
+    const MODALIDAD_PAREJAS = 2;
     
     const ESTATUS_ACTIVO = 0;
     const ESTATUS_INACTIVO = 1;
@@ -51,59 +52,60 @@ class EquiposHelper {
                 return ['success' => false, 'id' => null, 'codigo' => null, 'message' => 'Torneo no encontrado'];
             }
             
-            error_log("EquiposHelper::crearEquipo - Torneo encontrado, modalidad=" . ($torneo['modalidad'] ?? 'NULL'));
-            if ((int)$torneo['modalidad'] !== self::MODALIDAD_EQUIPOS) {
-                error_log("EquiposHelper::crearEquipo - ERROR: Modalidad incorrecta (esperado 3, obtenido " . ($torneo['modalidad'] ?? 'NULL') . ")");
-                return ['success' => false, 'id' => null, 'codigo' => null, 'message' => 'El torneo no es modalidad equipos'];
+            $modalidad = (int)($torneo['modalidad'] ?? 0);
+            error_log("EquiposHelper::crearEquipo - Torneo encontrado, modalidad=" . $modalidad);
+            if ($modalidad !== self::MODALIDAD_EQUIPOS && $modalidad !== self::MODALIDAD_PAREJAS) {
+                error_log("EquiposHelper::crearEquipo - ERROR: Modalidad incorrecta (esperado 2 o 3, obtenido " . $modalidad . ")");
+                return ['success' => false, 'id' => null, 'codigo' => null, 'message' => 'El torneo no es modalidad equipos ni parejas'];
             }
-            
-            // Verificar que no exista un equipo con el mismo nombre
-            error_log("EquiposHelper::crearEquipo - Verificando duplicado");
-            $stmt = $pdo->prepare("
-                SELECT id FROM equipos 
-                WHERE id_torneo = ? AND id_club = ? AND UPPER(nombre_equipo) = UPPER(?)
-            ");
-            $stmt->execute([$torneoId, $clubId, trim($nombreEquipo)]);
-            
-            if ($stmt->fetch()) {
-                error_log("EquiposHelper::crearEquipo - ERROR: Equipo duplicado");
-                return ['success' => false, 'id' => null, 'codigo' => null, 'message' => 'Ya existe un equipo con ese nombre en este club'];
+            $es_parejas = ($modalidad === self::MODALIDAD_PAREJAS);
+            $nombreEquipoTrim = trim($nombreEquipo);
+            if ($es_parejas && $nombreEquipoTrim === '') {
+                $nombreEquipoTrim = null;
+            } elseif (!$es_parejas && $nombreEquipoTrim === '') {
+                return ['success' => false, 'id' => null, 'codigo' => null, 'message' => 'El nombre del equipo es obligatorio'];
             }
-            error_log("EquiposHelper::crearEquipo - No hay duplicado, continuando");
-            
-            // Crear equipo y forzar formato de código: club "000" + "-" + secuencial (1..N) por club en el torneo
-            // Intentar procedimiento almacenado, si falla usar inserción directa
-            error_log("EquiposHelper::crearEquipo - Intentando crear equipo");
+            if ($nombreEquipoTrim !== null && $nombreEquipoTrim !== '') {
+                $stmt = $pdo->prepare("
+                    SELECT id FROM equipos 
+                    WHERE id_torneo = ? AND id_club = ? AND UPPER(nombre_equipo) = UPPER(?)
+                ");
+                $stmt->execute([$torneoId, $clubId, $nombreEquipoTrim]);
+                if ($stmt->fetch()) {
+                    return ['success' => false, 'id' => null, 'codigo' => null, 'message' => 'Ya existe un equipo/pareja con ese nombre en este club'];
+                }
+            }
             $equipoId = null;
-            try {
-                error_log("EquiposHelper::crearEquipo - Intentando SP sp_crear_equipo");
-                $stmt = $pdo->prepare("CALL sp_crear_equipo(?, ?, ?, ?, @id_equipo, @codigo, @msg)");
-                $stmt->execute([$torneoId, $clubId, strtoupper(trim($nombreEquipo)), $creadoPor]);
-                $result = $pdo->query("SELECT @id_equipo as id, @codigo as codigo, @msg as mensaje")->fetch(PDO::FETCH_ASSOC);
-                error_log("EquiposHelper::crearEquipo - SP resultado: " . json_encode($result, JSON_UNESCAPED_UNICODE));
-                if ((int)$result['id'] > 0) {
-                    $equipoId = (int)$result['id'];
-                    error_log("EquiposHelper::crearEquipo - Equipo creado por SP, id=$equipoId");
-                } else {
-                    error_log("EquiposHelper::crearEquipo - SP falló: " . ($result['mensaje'] ?? 'Sin mensaje'));
-                    return ['success' => false, 'id' => null, 'codigo' => null, 'message' => $result['mensaje']];
-                }
-            } catch (PDOException $e) {
-                // Inserción directa si no existe el SP
-                error_log("EquiposHelper::crearEquipo - SP no disponible, usando inserción directa: " . $e->getMessage());
+            $usar_insercion_directa = $es_parejas && $nombreEquipoTrim === null;
+            if (!$usar_insercion_directa) {
                 try {
-                    $stmt = $pdo->prepare("
-                        INSERT INTO equipos (id_torneo, id_club, nombre_equipo, creado_por)
-                        VALUES (?, ?, UPPER(?), ?)
-                    ");
-                    $stmt->execute([$torneoId, $clubId, trim($nombreEquipo), $creadoPor]);
-                    $equipoId = (int)$pdo->lastInsertId();
-                    error_log("EquiposHelper::crearEquipo - Equipo insertado directamente, id=$equipoId");
-                } catch (PDOException $e2) {
-                    error_log("EquiposHelper::crearEquipo - ERROR en inserción directa: " . $e2->getMessage());
-                    error_log("EquiposHelper::crearEquipo - SQL Error Info: " . json_encode($stmt->errorInfo()));
-                    throw $e2;
+                    $stmt = $pdo->prepare("CALL sp_crear_equipo(?, ?, ?, ?, @id_equipo, @codigo, @msg)");
+                    $stmt->execute([$torneoId, $clubId, strtoupper($nombreEquipoTrim), $creadoPor]);
+                    $result = $pdo->query("SELECT @id_equipo as id, @codigo as codigo, @msg as mensaje")->fetch(PDO::FETCH_ASSOC);
+                    if ((int)$result['id'] > 0) {
+                        $equipoId = (int)$result['id'];
+                    } else {
+                        $usar_insercion_directa = true;
+                    }
+                } catch (PDOException $e) {
+                    $usar_insercion_directa = true;
                 }
+            }
+            if ($usar_insercion_directa) {
+                $stmt = $pdo->prepare('SELECT COALESCE(MAX(consecutivo_club), 0) + 1 FROM equipos WHERE id_torneo = ? AND id_club = ?');
+                $stmt->execute([$torneoId, $clubId]);
+                $consecutivoIns = (int)$stmt->fetchColumn();
+                if ($consecutivoIns < 1) {
+                    $consecutivoIns = 1;
+                }
+                $codigoIns = str_pad((string)$clubId, 3, '0', STR_PAD_LEFT) . '-' . str_pad((string)$consecutivoIns, 3, '0', STR_PAD_LEFT);
+                $nombreParaInsert = ($es_parejas && $nombreEquipoTrim === null) ? ('Pareja ' . $codigoIns) : strtoupper($nombreEquipoTrim);
+                $stmt = $pdo->prepare('
+                    INSERT INTO equipos (id_torneo, id_club, nombre_equipo, creado_por, consecutivo_club, codigo_equipo)
+                    VALUES (?, ?, ?, ?, ?, ?)
+                ');
+                $stmt->execute([$torneoId, $clubId, $nombreParaInsert, $creadoPor, $consecutivoIns, $codigoIns]);
+                $equipoId = (int)$pdo->lastInsertId();
             }
 
             // Calcular consecutivo por club y actualizar código con el formato requerido

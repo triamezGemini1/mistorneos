@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 /**
  * Procesador de cola de notificaciones (Telegram).
  * Ejecutar en segundo plano vía Cron cada 1–2 minutos.
@@ -12,7 +12,7 @@
  * Si no está definida, solo se permite ejecución por CLI.
  */
 require_once __DIR__ . '/../config/bootstrap.php';
-require_once __DIR__ . '/../config/db.php';
+require_once __DIR__ . '/../config/db_config.php';
 require_once __DIR__ . '/../lib/NotificationManager.php';
 
 // Permitir solo Cron (CLI) o petición HTTP con clave

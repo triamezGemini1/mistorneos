@@ -1,6 +1,9 @@
 <?php
+/**
+ * Inscripción por invitación (token). Patrón en bloque: conexión única; sin requireAuth (acceso por token).
+ */
 require_once __DIR__ . '/../config/bootstrap.php';
-require_once __DIR__ . '/../config/db.php';
+require_once __DIR__ . '/../config/db_config.php';
 require_once __DIR__ . '/../config/csrf.php';
 
 // Obtener par�metros de la URL
@@ -317,8 +320,8 @@ if ($invitation_data && !$error_message && $club_authenticated) {
                             <div class="col-md-3">
                                 <div class="logo-container">
                                     <?php if ($organizer_club_data && $organizer_club_data['logo']): ?>
-                                        <img src="<?= htmlspecialchars($organizer_club_data['logo']) ?>" 
-                                             alt="Club Organizador" 
+                                        <img src="<?= htmlspecialchars(class_exists('AppHelpers') ? AppHelpers::imageUrl($organizer_club_data['logo']) : $organizer_club_data['logo']) ?>"
+                                             alt="Club Organizador"
                                              class="img-fluid">
                                     <?php else: ?>
                                         <i class="fas fa-building text-muted fs-1"></i>
@@ -352,8 +355,8 @@ if ($invitation_data && !$error_message && $club_authenticated) {
                             <div class="col-md-3">
                                 <div class="logo-container">
                                     <?php if ($club_data && $club_data['logo']): ?>
-                                        <img src="<?= htmlspecialchars($club_data['logo']) ?>" 
-                                             alt="Club Invitado" 
+                                        <img src="<?= htmlspecialchars(class_exists('AppHelpers') ? AppHelpers::imageUrl($club_data['logo']) : $club_data['logo']) ?>"
+                                             alt="Club Invitado"
                                              class="img-fluid">
                                     <?php else: ?>
                                         <i class="fas fa-building text-muted fs-1"></i>
@@ -715,17 +718,25 @@ if ($invitation_data && !$error_message && $club_authenticated) {
                 showLoadingIndicator();
                 
                 // Buscar en la base de datos (local y externa)
-                const url = apiUrl(`search_persona.php?nacionalidad=${nacionalidad}&cedula=${encodeURIComponent(cedula)}`);
+                const torneoId = '<?= (int)($torneo_id ?? 0) ?>';
+                const url = apiUrl(`search_persona.php?nacionalidad=${nacionalidad}&cedula=${encodeURIComponent(cedula)}&torneo_id=${torneoId}`);
                 console.log('?? URL de b�squeda:', url);
                 
                 const response = await fetch(url);
                 console.log('?? Response status:', response.status);
                 
                 const result = await response.json();
-                console.log('?? Resultado completo:', result);
+                
+                if (result.status === 'ya_inscrito') {
+                    showMessage(result.mensaje || 'Ya está inscrito en este torneo. Puede iniciar una nueva inscripción.', 'info');
+                    clearFormFields();
+                    const nac = document.getElementById('nacionalidad');
+                    if (nac) nac.focus();
+                    hideLoadingIndicator();
+                    return;
+                }
                 
                 if (result.encontrado && result.persona) {
-                    console.log('? Datos de persona encontrados:', result.persona);
                     
                     // Llenar campos autom�ticamente
                     document.getElementById('nombre').value = result.persona.nombre || '';
@@ -811,9 +822,7 @@ if ($invitation_data && !$error_message && $club_authenticated) {
                 const result = await response.json();
                 
                 if (result.success && result.exists) {
-                    showMessage(`Esta c�dula ya est� inscrita en este torneo (${result.data.nombre})`, 'warning');
-                    
-                    // Limpiar campos para permitir nueva b�squeda
+                    showMessage(`Ya está registrado (${result.data.nombre}). Puede iniciar una nueva inscripción.`, 'info');
                     clearFormFields();
                 }
             } catch (error) {
@@ -821,13 +830,15 @@ if ($invitation_data && !$error_message && $club_authenticated) {
             }
         }
         
-        // Funci�n para limpiar campos del formulario
+        // Funci�n para limpiar campos del formulario (tras cédula ya registrada)
         function clearFormFields() {
+            const nac = document.getElementById('nacionalidad');
+            if (nac) nac.value = '';
             document.getElementById('cedula').value = '';
             document.getElementById('nombre').value = '';
             document.getElementById('sexo').value = '';
             document.getElementById('fechnac').value = '';
-            document.getElementById('cedula').focus();
+            if (nac) nac.focus();
         }
     </script>
 </body>

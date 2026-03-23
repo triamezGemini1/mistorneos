@@ -114,8 +114,12 @@ $action_param = $use_standalone ? '?' : '&';
                         </button>
                     <?php else: ?>
                         <a href="<?php echo $base_url . ($use_standalone ? '?' : '&'); ?>action=inscribir_equipo_sitio&torneo_id=<?php echo $torneo['id']; ?>" 
-                           class="btn btn-sm btn-warning w-100">
+                           class="btn btn-sm btn-warning w-100 mb-1">
                             <i class="fas fa-user-plus mr-1"></i> Inscribir en Sitio
+                        </a>
+                        <a href="<?php echo $base_url . ($use_standalone ? '?' : '&'); ?>action=carga_masiva_equipos_sitio&torneo_id=<?php echo $torneo['id']; ?>" 
+                           class="btn btn-sm btn-outline-warning w-100">
+                            <i class="fas fa-file-upload mr-1"></i> Carga masiva CSV/Excel
                         </a>
                     <?php endif; ?>
                 </div>

@@ -1,14 +1,14 @@
 <?php
+/**
+ * Portal de usuario. Patrón en bloque: db_config → auth_service → requireAuth.
+ */
+require_once __DIR__ . '/../config/session_start_early.php';
 require_once __DIR__ . '/../config/bootstrap.php';
-require_once __DIR__ . '/../config/db.php';
-require_once __DIR__ . '/../config/csrf.php';
+require_once __DIR__ . '/../config/db_config.php';
+require_once __DIR__ . '/../config/auth_service.php';
 require_once __DIR__ . '/../config/auth.php';
-
-// Verificar autenticación
-if (!isset($_SESSION['user'])) {
-    header('Location: ' . AppHelpers::url('login.php'));
-    exit;
-}
+require_once __DIR__ . '/../config/csrf.php';
+AuthService::requireAuth();
 
 $user = $_SESSION['user'];
 $pdo = DB::pdo();
@@ -637,7 +637,7 @@ $tiene_telegram = !empty($telegram_chat_id_actual);
         <div class="container">
             <a class="navbar-brand d-flex align-items-center" href="<?= $base_url ?>/public/user_portal.php">
                 <?php 
-                $logo_url = app_base_url() . '/lib/Assets/mislogos/logo4.png';
+                $logo_url = AppHelpers::getAppLogo();
                 ?>
                 <img src="<?= htmlspecialchars($logo_url) ?>" alt="La Estación del Dominó" class="me-2" style="height: 35px;">
                 Portal del Jugador
@@ -699,6 +699,9 @@ $tiene_telegram = !empty($telegram_chat_id_actual);
                         <hr>
                         <a class="nav-link <?= $section === 'perfil' ? 'active' : '' ?>" href="?section=perfil">
                             <i class="fas fa-user-cog me-2"></i>Mi Perfil
+                        </a>
+                        <a class="nav-link" href="<?= htmlspecialchars(rtrim(class_exists('AppHelpers') ? AppHelpers::getPublicUrl() : $base_url, '/') . '/profile.php') ?>">
+                            <i class="fas fa-user-edit me-2"></i>Perfil completo (panel)
                         </a>
                         <a class="nav-link <?= $section === 'credencial' ? 'active' : '' ?>" href="?section=credencial">
                             <i class="fas fa-id-badge me-2"></i>Mi Credencial
@@ -892,7 +895,7 @@ $tiene_telegram = !empty($telegram_chat_id_actual);
                                         <div class="club-card">
                                             <div class="club-icon">
                                                 <?php 
-                                                $logo_url = app_base_url() . '/lib/Assets/mislogos/logo4.png';
+                                                $logo_url = AppHelpers::getAppLogo();
                                                 ?>
                                                 <img src="<?= htmlspecialchars($logo_url) ?>" alt="La Estación del Dominó" style="height: 40px;">
                                             </div>

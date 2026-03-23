@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 /**
  * Endpoint para actualizar torneos
  * Permite que admin_club edite torneos sin ser bloqueado por .htaccess

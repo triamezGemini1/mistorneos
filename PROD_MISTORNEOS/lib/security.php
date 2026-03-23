@@ -42,16 +42,35 @@ final class Security
                 return null;
             }
 
-            // Solo pueden entrar usuarios activos (status = 0). 1 = inactivo
-            if ((int)$user['status'] !== 0) {
-                error_log("Autenticación fallida: Usuario '{$username}' inactivo (status={$user['status']})");
-                return null;
-            }
-
-            // Verificar contraseña
+            // Verificar contraseña primero (no revelar si estaba inactivo si la contraseña falla)
             if (!self::verifyPassword($password, $user['password_hash'])) {
                 error_log("Autenticación fallida: Contraseña incorrecta para usuario '{$username}'");
                 return null;
+            }
+
+            // Auto-activar al iniciar sesión: si estaba inactivo (status != 0), activar sin más protocolos
+            if ((int)$user['status'] !== 0) {
+                try {
+                    $up = DB::pdo()->prepare("UPDATE usuarios SET status = 0 WHERE id = ?");
+                    $up->execute([$user['id']]);
+                    $user['status'] = 0;
+                    error_log("Usuario '{$username}' (id={$user['id']}) activado automáticamente al iniciar sesión");
+                } catch (Exception $e) {
+                    error_log("Error al activar usuario en login: " . $e->getMessage());
+                }
+            }
+
+            // Bloqueo por is_active: si está en 0 (desactivado por Master Admin), no puede entrar (web)
+            try {
+                $stmt2 = DB::pdo()->prepare("SELECT is_active FROM usuarios WHERE id = ?");
+                $stmt2->execute([$user['id']]);
+                $row = $stmt2->fetch(PDO::FETCH_ASSOC);
+                if ($row !== false && isset($row['is_active']) && (int)$row['is_active'] !== 1) {
+                    error_log("Autenticación fallida: Usuario '{$username}' desactivado (is_active=0)");
+                    return null;
+                }
+            } catch (Throwable $e) {
+                // Columna is_active puede no existir en instalaciones antiguas
             }
 
             // Usuario válido y autenticado

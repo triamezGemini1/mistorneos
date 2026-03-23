@@ -19,13 +19,13 @@ Auth::requireRole(['admin_general', 'admin_torneo', 'admin_club']);
 $torneo_id = isset($_GET['torneo_id']) ? (int)$_GET['torneo_id'] : 0;
 
 if ($torneo_id <= 0) {
-    header('Location: index.php?page=tournaments&error=' . urlencode('Debe seleccionar un torneo'));
+    header('Location: index.php?page=torneo_gestion&action=index&error=' . urlencode('Debe seleccionar un torneo'));
     exit;
 }
 
 // Verificar acceso al torneo
 if (!Auth::canAccessTournament($torneo_id)) {
-    header('Location: index.php?page=tournaments&error=' . urlencode('No tiene permisos para acceder a este torneo'));
+    header('Location: index.php?page=torneo_gestion&action=index&error=' . urlencode('No tiene permisos para acceder a este torneo'));
     exit;
 }
 
@@ -47,7 +47,7 @@ $stmt->execute([$torneo_id]);
 $torneo = $stmt->fetch(PDO::FETCH_ASSOC);
 
 if (!$torneo) {
-    header('Location: index.php?page=tournaments&error=' . urlencode('Torneo no encontrado'));
+    header('Location: index.php?page=torneo_gestion&action=index&error=' . urlencode('Torneo no encontrado'));
     exit;
 }
 
@@ -275,6 +275,19 @@ $error_message = $_GET['error'] ?? null;
         }
     </style>
 
+<?php
+$acciones_solo_reporte = ['generar_qr', 'imprimir_qr_lote', 'reporte_identificacion_jugadores'];
+if (in_array($menu_action, $acciones_solo_reporte, true)) {
+    $action_file = __DIR__ . '/tournament_admin/' . $menu_action . '.php';
+    if (file_exists($action_file)) {
+        echo '<div class="container-fluid py-3">';
+        require $action_file;
+        echo '</div>';
+    } else {
+        require __DIR__ . '/tournament_admin/dashboard.php';
+    }
+} else {
+?>
 <div class="container-fluid">
         <!-- Header de Identificación Superior -->
         <div class="tournament-header">
@@ -348,19 +361,30 @@ $error_message = $_GET['error'] ?? null;
                         // El botón solo se habilita si todas las rondas están completas
                         $puede_finalizar = !$torneo_finalizado && $puede_acceder && $rondas_completadas;
                         ?>
+                        <?php
+                        $es_reporte_tarjetas = in_array($menu_action, ['imprimir_qr_lote', 'reporte_identificacion_jugadores'], true);
+                        ?>
                         <?php if ($torneo_finalizado): ?>
                             <span class="badge bg-danger fs-6 mb-2 d-block">
                                 <i class="fas fa-lock me-2"></i>Torneo Finalizado
                             </span>
-                        <?php elseif (!$rondas_completadas): ?>
+                        <?php elseif (!$rondas_completadas && !$es_reporte_tarjetas): ?>
                             <div class="alert alert-warning mb-2 p-2" style="font-size: 0.85rem;">
                                 <i class="fas fa-info-circle me-1"></i>
                                 <small><?= htmlspecialchars($mensaje_rondas) ?></small>
                             </div>
                         <?php endif; ?>
-                        <a href="index.php?page=tournaments" class="btn btn-light btn-lg">
-                            <i class="fas fa-arrow-left me-2"></i>Volver a Torneos
+                        <?php
+                        $acciones_impresion = ['generar_qr', 'imprimir_qr_lote', 'reporte_identificacion_jugadores'];
+                        $mostrar_retorno_layout = !in_array($menu_action, $acciones_impresion, true);
+                        if ($mostrar_retorno_layout):
+                            $base_retorno = function_exists('app_base_url') ? rtrim(app_base_url(), '/') . '/public' : '';
+                            $url_retorno = ($base_retorno !== '' ? $base_retorno . '/' : '') . 'index.php?page=torneo_gestion&action=panel&torneo_id=' . (int)$torneo_id;
+                        ?>
+                        <a href="<?= htmlspecialchars($url_retorno) ?>" class="btn btn-light btn-lg">
+                            <i class="fas fa-arrow-left me-2"></i>Volver al panel
                         </a>
+                        <?php endif; ?>
                         <?php if ($puede_finalizar): ?>
                             <button type="button" class="btn btn-danger btn-lg ms-2" id="btnCerrarTorneo" title="Finalizar Torneo">
                                 <i class="fas fa-lock me-2"></i>Finalizar Torneo
@@ -499,6 +523,12 @@ $error_message = $_GET['error'] ?? null;
                     </a>
                     <?php endif; ?>
                     
+                    <a href="index.php?page=tournament_admin&torneo_id=<?= $torneo_id ?>&action=activar_participantes" 
+                       class="menu-item d-block text-decoration-none text-dark <?= $menu_action === 'activar_participantes' ? 'active' : '' ?>">
+                        <i class="fas fa-user-check"></i>
+                        <strong>Activar participantes</strong>
+                    </a>
+                    
                     <?php if ($mostrar('invitar_whatsapp')): ?>
                     <a href="index.php?page=tournament_admin&torneo_id=<?= $torneo_id ?>&action=invitar_whatsapp" 
                        class="menu-item d-block text-decoration-none text-dark <?= $menu_action === 'invitar_whatsapp' ? 'active' : '' ?>">
@@ -564,10 +594,18 @@ $error_message = $_GET['error'] ?? null;
                     </a>
                     <?php endif; ?>
                     
+                    <?php if ($mostrar('generar_qr')): ?>
+                    <a href="index.php?page=tournament_admin&torneo_id=<?= $torneo_id ?>&action=generar_qr" 
+                       class="menu-item d-block text-decoration-none text-dark <?= $menu_action === 'generar_qr' ? 'active' : '' ?>">
+                        <i class="fas fa-qrcode"></i>
+                        <strong>Generar e imprimir QR del torneo</strong>
+                    </a>
+                    <?php endif; ?>
+                    
                     <?php if ($mostrar('generar_qr_general')): ?>
                     <a href="index.php?page=tournament_admin&torneo_id=<?= $torneo_id ?>&action=generar_qr_general" 
-                       class="menu-item d-block text-decoration-none text-dark <?= in_array($menu_action, ['generar_qr_general', 'generar_qr']) ? 'active' : '' ?>">
-                        <i class="fas fa-qrcode"></i>
+                       class="menu-item d-block text-decoration-none text-dark <?= $menu_action === 'generar_qr_general' ? 'active' : '' ?>">
+                        <i class="fas fa-list"></i>
                         <strong>QR General</strong>
                     </a>
                     <?php endif; ?>
@@ -577,6 +615,14 @@ $error_message = $_GET['error'] ?? null;
                        class="menu-item d-block text-decoration-none text-dark <?= $menu_action === 'generar_qr_personal' ? 'active' : '' ?>">
                         <i class="fas fa-user-qrcode"></i>
                         <strong>QR Personal</strong>
+                    </a>
+                    <?php endif; ?>
+                    
+                    <?php if ($mostrar('generar_qr')): ?>
+                    <a href="index.php?page=tournament_admin&torneo_id=<?= $torneo_id ?>&action=reporte_identificacion_jugadores" 
+                       class="menu-item d-block text-decoration-none text-dark <?= $menu_action === 'reporte_identificacion_jugadores' ? 'active' : '' ?>">
+                        <i class="fas fa-address-card"></i>
+                        <strong>Identificación de jugadores</strong>
                     </a>
                     <?php endif; ?>
                 </div>
@@ -589,11 +635,7 @@ $error_message = $_GET['error'] ?? null;
                 // Las variables $torneo_id, $torneo, $pdo, $tabla_inscritos_existe, $tabla_partiresul_existe
                 // están disponibles para todas las subpáginas
                 
-                // Manejar acciones de QR (redirigir generar_qr a generar_qr_general para compatibilidad)
-                if ($menu_action === 'generar_qr') {
-                    $menu_action = 'generar_qr_general';
-                }
-                
+                // generar_qr carga la página completa de QRs (generar_qr.php); generar_qr_general y generar_qr_personal son opciones alternativas
                 $action_file = __DIR__ . '/tournament_admin/' . $menu_action . '.php';
                 
                 if (file_exists($action_file)) {
@@ -695,4 +737,6 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 });
 </script>
-
+<?php
+}
+?>

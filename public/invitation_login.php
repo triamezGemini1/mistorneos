@@ -1,7 +1,11 @@
 <?php
-
-if (!defined('APP_BOOTSTRAPPED')) { require __DIR__ . '/../config/bootstrap.php'; }
-require_once __DIR__ . '/../config/db.php';
+/**
+ * Login por invitación (token). Patrón en bloque: conexión única; sin requireAuth (acceso por token).
+ */
+if (!defined('APP_BOOTSTRAPPED')) {
+    require_once __DIR__ . '/../config/bootstrap.php';
+}
+require_once __DIR__ . '/../config/db_config.php';
 require_once __DIR__ . '/../config/auth.php';
 
 // Obtener par�metros de la URL de invitaci�n
@@ -246,8 +250,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !$error_message) {
                             <div class="col-md-3">
                                 <div class="logo-container">
                                     <?php if ($club_data && $club_data['logo']): ?>
-                                        <img src="<?= htmlspecialchars($club_data['logo']) ?>" 
-                                             alt="Club Invitado" 
+                                        <img src="<?= htmlspecialchars(class_exists('AppHelpers') ? AppHelpers::imageUrl($club_data['logo']) : $club_data['logo']) ?>"
+                                             alt="Club Invitado"
                                              class="img-fluid">
                                     <?php else: ?>
                                         <i class="fas fa-building text-muted fs-1"></i>

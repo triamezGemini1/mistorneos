@@ -5,11 +5,18 @@
  * si existe → asignar rol; si no existe pero está en solicitudes_afiliacion → debe registrarse primero.
  * Misma lógica que api/search_user_persona.php (raíz) para que la búsqueda funcione desde public/.
  */
+if (ob_get_level()) {
+    ob_end_clean();
+}
+ob_start();
 
 require_once __DIR__ . '/../../config/bootstrap.php';
-require_once __DIR__ . '/../../config/db.php';
+require_once __DIR__ . '/../../config/db_config.php';
 
-header('Content-Type: application/json; charset=utf-8');
+ob_end_clean();
+if (!headers_sent()) {
+    header('Content-Type: application/json; charset=utf-8');
+}
 
 $cedula = trim($_GET['cedula'] ?? '');
 $nacionalidad = trim($_GET['nacionalidad'] ?? 'V');
@@ -258,15 +265,25 @@ try {
         
         try {
             $database = new PersonaDatabase();
-            $result = $database->searchPersonaById($nacionalidad, $cedula_externa);
-            
-            if (isset($result['encontrado']) && $result['encontrado'] && isset($result['persona'])) {
+            $nacPrimera = strtoupper($nacionalidad);
+            $nacionalidadesIntento = [$nacPrimera];
+            // Si la primera búsqueda es como venezolano (V) y no hay fila, reintentar como extranjero (E), p. ej. E-9488701
+            if ($nacPrimera === 'V') {
+                $nacionalidadesIntento[] = 'E';
+            }
+            $nacionalidadesIntento = array_values(array_unique($nacionalidadesIntento));
+
+            foreach ($nacionalidadesIntento as $nacTry) {
+                $result = $database->searchPersonaById($nacTry, $cedula_externa);
+                if (!isset($result['encontrado']) || !$result['encontrado'] || !isset($result['persona'])) {
+                    continue;
+                }
                 $persona = $result['persona'];
                 // Cédula solo numérica; nacionalidad en campo específico (no concatenar)
                 $cedulaNum = isset($persona['cedula']) ? preg_replace('/\D/', '', $persona['cedula']) : $cedula_externa;
-                $nac = $persona['nacionalidad'] ?? $nacionalidad;
-                if (!in_array(strtoupper($nac), ['V', 'E', 'J', 'P'])) {
-                    $nac = $nacionalidad;
+                $nac = $persona['nacionalidad'] ?? $nacTry;
+                if (!in_array(strtoupper($nac), ['V', 'E', 'J', 'P'], true)) {
+                    $nac = $nacTry;
                 }
                 echo json_encode([
                     'success' => true,

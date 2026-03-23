@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 /**
  * Agregar mesa (Desktop). Redirige a gestión de rondas / cuadrícula.
  */

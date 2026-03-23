@@ -7,7 +7,7 @@
  */
 
 require_once __DIR__ . '/../config/bootstrap.php';
-require_once __DIR__ . '/../config/db.php';
+require_once __DIR__ . '/../config/db_config.php';
 require_once __DIR__ . '/../config/auth.php';
 require_once __DIR__ . '/../lib/InscritosPartiresulHelper.php';
 require_once __DIR__ . '/../lib/app_helpers.php';
@@ -52,7 +52,7 @@ try {
             t.clase,
             o.nombre as organizacion_nombre,
             o.responsable as club_delegado,
-            (SELECT COUNT(*) FROM inscritos WHERE torneo_id = t.id AND estatus = 'confirmado') as total_inscritos,
+            (SELECT COUNT(*) FROM inscritos WHERE torneo_id = t.id AND (estatus IS NULL OR (estatus != 4 AND estatus != 'retirado'))) as total_inscritos,
             (SELECT COUNT(*) FROM partiresul WHERE id_torneo = t.id AND registrado = 1) as total_partidas,
             (SELECT COUNT(*) FROM club_photos WHERE torneo_id = t.id) as total_fotos
         FROM tournaments t
@@ -88,7 +88,7 @@ $clases = [1 => 'Abierto', 2 => 'Por Categorías'];
     <meta property="og:url" content="<?= htmlspecialchars(app_base_url() . '/public/resultados.php') ?>">
     <meta property="og:title" content="Resultados de Torneos - La Estación del Dominó">
     <meta property="og:description" content="Consulta los resultados de todos los torneos de dominó realizados en Venezuela.">
-    <meta property="og:image" content="<?= htmlspecialchars(app_base_url() . '/lib/Assets/mislogos/logo4.png') ?>">
+    <meta property="og:image" content="<?= htmlspecialchars(AppHelpers::getAppLogo()) ?>">
     
     <!-- Twitter -->
     <meta name="twitter:card" content="summary_large_image">
@@ -236,7 +236,7 @@ $clases = [1 => 'Abierto', 2 => 'Por Categorías'];
                                         </div>
                                     </div>
                                     <div class="torneo-actions">
-                                        <a href="resultados_detalle.php?torneo_id=<?= $torneo['id'] ?>" 
+                                        <a href="evento_resultados.php?torneo_id=<?= $torneo['id'] ?>" 
                                            class="btn btn-primary btn-sm">
                                             <i class="fas fa-chart-bar me-1"></i>Ver Resultados
                                         </a>

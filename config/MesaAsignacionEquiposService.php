@@ -429,7 +429,7 @@ class MesaAsignacionEquiposService
         $sql = "SELECT i.id as id_inscrito, i.id_usuario, i.codigo_equipo, 
                        u.cedula, u.nombre, u.id as usuario_id,
                        i.puntos, i.ganados, i.perdidos, i.efectividad, i.posicion,
-                       i.gff, i.sancion, i.tarjeta
+                       (SELECT COUNT(*) FROM partiresul pr_gff WHERE pr_gff.id_usuario = i.id_usuario AND pr_gff.id_torneo = i.torneo_id AND pr_gff.ff = 1) AS gff, i.sancion, i.tarjeta
                 FROM inscritos i
                 INNER JOIN usuarios u ON i.id_usuario = u.id
                 WHERE i.torneo_id = ? AND i.codigo_equipo = ? AND i.estatus != 4
@@ -476,7 +476,7 @@ class MesaAsignacionEquiposService
         $sql = "SELECT i.id as id_inscrito, i.id_usuario, i.codigo_equipo, 
                        u.cedula, u.nombre, u.id as usuario_id,
                        i.puntos, i.ganados, i.perdidos, i.efectividad, i.posicion,
-                       i.gff, i.sancion, i.tarjeta
+                       (SELECT COUNT(*) FROM partiresul pr_gff WHERE pr_gff.id_usuario = i.id_usuario AND pr_gff.id_torneo = i.torneo_id AND pr_gff.ff = 1) AS gff, i.sancion, i.tarjeta
                 FROM inscritos i
                 INNER JOIN usuarios u ON i.id_usuario = u.id
                 WHERE i.torneo_id = ? AND i.codigo_equipo = ? AND i.estatus != 4
@@ -721,10 +721,11 @@ class MesaAsignacionEquiposService
             foreach ($mesas as $mesa) {
                 $secuencia = 1;
                 foreach ($mesa as $jugador) {
+                    $registrado_por = (class_exists('Auth') && method_exists('Auth', 'id')) ? ((int)Auth::id() ?: 1) : 1;
                     $sql = "INSERT INTO partiresul 
-                            (id_torneo, id_usuario, partida, mesa, secuencia, fecha_partida, registrado,
+                            (id_torneo, id_usuario, partida, mesa, secuencia, fecha_partida, registrado, registrado_por,
                              resultado1, resultado2, efectividad, ff)
-                            VALUES (?, ?, ?, ?, ?, NOW(), 0, 0, 0, 0, 0)";
+                            VALUES (?, ?, ?, ?, ?, NOW(), 0, ?, 0, 0, 0, 0)";
                     
                     $stmt = $this->pdo->prepare($sql);
                     $stmt->execute([
@@ -732,7 +733,8 @@ class MesaAsignacionEquiposService
                         $jugador['id_usuario'],
                         $ronda,
                         $numeroMesa,
-                        $secuencia
+                        $secuencia,
+                        $registrado_por
                     ]);
                     $secuencia++;
                 }

@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 /**
  * Gestión de Rondas (Desktop).
  * Botón "Generar Ronda" que invoca logica_torneo.php con estrategias como argumentos (no solo $_POST).

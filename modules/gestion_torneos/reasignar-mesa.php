@@ -6,6 +6,7 @@
 $script_actual = basename($_SERVER['PHP_SELF'] ?? '');
 $use_standalone = in_array($script_actual, ['admin_torneo.php', 'panel_torneo.php']);
 $base_url = $use_standalone ? $script_actual : 'index.php?page=torneo_gestion';
+$esParejasFijas = ((int)($torneo['modalidad'] ?? 0) === 4);
 ?>
 <!DOCTYPE html>
 <html lang="es">
@@ -206,7 +207,7 @@ $base_url = $use_standalone ? $script_actual : 'index.php?page=torneo_gestion';
                               class="card shadow"
                               onsubmit="event.preventDefault(); reasignarMesaConfirmar(event);">
                             <div class="card-body">
-                                <input type="hidden" name="csrf_token" value="<?php echo Auth::generateCsrfToken(); ?>">
+                                <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars(CSRF::token(), ENT_QUOTES); ?>">
                                 <input type="hidden" name="action" value="ejecutar_reasignacion">
                                 <input type="hidden" name="torneo_id" value="<?php echo $torneo['id']; ?>">
                                 <input type="hidden" name="ronda" value="<?php echo $ronda; ?>">
@@ -281,35 +282,43 @@ $base_url = $use_standalone ? $script_actual : 'index.php?page=torneo_gestion';
                                         <h5 class="mb-3">
                                             <i class="fas fa-list-check mr-2"></i>Opciones de Reasignación
                                         </h5>
+                                        <?php if ($esParejasFijas): ?>
+                                            <div class="alert alert-info py-2">
+                                                <i class="fas fa-link mr-1"></i>
+                                                Parejas Fijas: los jugadores del mismo <strong>código de pareja</strong> se mueven en bloque.
+                                            </div>
+                                        <?php endif; ?>
 
                                         <div class="form-group">
-                                            <!-- Opción 1 -->
-                                            <label class="opcion-reasignacion d-block mb-2">
-                                                <input type="radio" name="opcion_reasignacion" value="1" required class="mr-2">
-                                                <span class="font-weight-bold">Opción 1: Intercambiar Posición 1 con 3</span>
-                                                <small class="d-block text-muted">El jugador en posición 1 intercambia con el jugador en posición 3</small>
-                                            </label>
+                                            <?php if (!$esParejasFijas): ?>
+                                                <!-- Opción 1 -->
+                                                <label class="opcion-reasignacion d-block mb-2">
+                                                    <input type="radio" name="opcion_reasignacion" value="1" required class="mr-2">
+                                                    <span class="font-weight-bold">Opción 1: Intercambiar Posición 1 con 3</span>
+                                                    <small class="d-block text-muted">El jugador en posición 1 intercambia con el jugador en posición 3</small>
+                                                </label>
 
-                                            <!-- Opción 2 -->
-                                            <label class="opcion-reasignacion d-block mb-2">
-                                                <input type="radio" name="opcion_reasignacion" value="2" required class="mr-2">
-                                                <span class="font-weight-bold">Opción 2: Intercambiar Posición 1 con 4</span>
-                                                <small class="d-block text-muted">El jugador en posición 1 intercambia con el jugador en posición 4</small>
-                                            </label>
+                                                <!-- Opción 2 -->
+                                                <label class="opcion-reasignacion d-block mb-2">
+                                                    <input type="radio" name="opcion_reasignacion" value="2" required class="mr-2">
+                                                    <span class="font-weight-bold">Opción 2: Intercambiar Posición 1 con 4</span>
+                                                    <small class="d-block text-muted">El jugador en posición 1 intercambia con el jugador en posición 4</small>
+                                                </label>
 
-                                            <!-- Opción 3 -->
-                                            <label class="opcion-reasignacion d-block mb-2">
-                                                <input type="radio" name="opcion_reasignacion" value="3" required class="mr-2">
-                                                <span class="font-weight-bold">Opción 3: Intercambiar Posición 2 con 3</span>
-                                                <small class="d-block text-muted">El jugador en posición 2 intercambia con el jugador en posición 3</small>
-                                            </label>
+                                                <!-- Opción 3 -->
+                                                <label class="opcion-reasignacion d-block mb-2">
+                                                    <input type="radio" name="opcion_reasignacion" value="3" required class="mr-2">
+                                                    <span class="font-weight-bold">Opción 3: Intercambiar Posición 2 con 3</span>
+                                                    <small class="d-block text-muted">El jugador en posición 2 intercambia con el jugador en posición 3</small>
+                                                </label>
 
-                                            <!-- Opción 4 -->
-                                            <label class="opcion-reasignacion d-block mb-2">
-                                                <input type="radio" name="opcion_reasignacion" value="4" required class="mr-2">
-                                                <span class="font-weight-bold">Opción 4: Intercambiar Posición 2 con 4</span>
-                                                <small class="d-block text-muted">El jugador en posición 2 intercambia con el jugador en posición 4</small>
-                                            </label>
+                                                <!-- Opción 4 -->
+                                                <label class="opcion-reasignacion d-block mb-2">
+                                                    <input type="radio" name="opcion_reasignacion" value="4" required class="mr-2">
+                                                    <span class="font-weight-bold">Opción 4: Intercambiar Posición 2 con 4</span>
+                                                    <small class="d-block text-muted">El jugador en posición 2 intercambia con el jugador en posición 4</small>
+                                                </label>
+                                            <?php endif; ?>
 
                                             <!-- Opción 5 -->
                                             <label class="opcion-reasignacion d-block mb-2">

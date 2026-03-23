@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 /**
  * Script de prueba para verificar que los logs funcionan correctamente
  * Acceder a: http://localhost/mistorneos/public/api/test_logs.php

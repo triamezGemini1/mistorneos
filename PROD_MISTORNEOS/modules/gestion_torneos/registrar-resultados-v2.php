@@ -1122,6 +1122,12 @@ $action_param = $use_standalone ? '?' : '&';
                                             class="btn btn-warning">
                                         <i class="fas fa-eraser mr-2"></i>Limpiar
                                     </button>
+                                    <button type="button"
+                                            id="btn-mano-desierta"
+                                            onclick="guardarManoDesierta()"
+                                            class="btn btn-secondary">
+                                        <i class="fas fa-flag mr-2"></i>Mano Desierta
+                                    </button>
                                     
                                     <button type="submit" 
                                             id="btn-guardar"
@@ -1435,6 +1441,7 @@ function actualizarEstadoPorMesa() {
         document.getElementById('puntos_pareja_B'),
         document.getElementById('btn-guardar'),
         document.getElementById('btn-limpiar'),
+        document.getElementById('btn-mano-desierta'),
         document.querySelector('textarea[name="observaciones"]')
     ];
     controles.forEach(el => { if (el) el.disabled = !habilitado; });
@@ -1669,6 +1676,66 @@ function limpiarFormularioSilencioso() {
     actualizarEstadoPorMesa();
 }
 
+async function guardarManoDesierta() {
+    if (!esMesaValidaEnInput()) {
+        Swal.fire({
+            icon: 'error',
+            title: 'Mesa no válida',
+            text: 'Seleccione una mesa válida antes de registrar Mano Desierta.',
+            confirmButtonColor: '#667eea'
+        });
+        return;
+    }
+
+    const confirmacion = await Swal.fire({
+        title: '¿Registrar Mano Desierta?',
+        text: 'Se guardará la mesa automáticamente con resultado 0-0 para ambas parejas.',
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonText: 'Sí, registrar',
+        cancelButtonText: 'Cancelar',
+        confirmButtonColor: '#667eea',
+        cancelButtonColor: '#6c757d'
+    });
+
+    if (!confirmacion.isConfirmed) {
+        return;
+    }
+
+    const form = document.getElementById('formResultados');
+    if (!form) {
+        return;
+    }
+
+    // Mano desierta limpia sanciones/incidencias y fija marcador 0-0.
+    const puntosA = document.getElementById('puntos_pareja_A');
+    const puntosB = document.getElementById('puntos_pareja_B');
+    if (puntosA) puntosA.value = '0';
+    if (puntosB) puntosB.value = '0';
+
+    for (let i = 0; i < 4; i++) {
+        const ff = document.getElementById('ff_' + i);
+        if (ff) ff.checked = false;
+        const tarjeta = document.getElementById('tarjeta_' + i);
+        if (tarjeta) tarjeta.value = '0';
+        const sancion = document.querySelector('input[name="jugadores[' + i + '][sancion]"]');
+        if (sancion) sancion.value = '0';
+        const botones = document.querySelectorAll('[data-index="' + i + '"].tarjeta-btn');
+        botones.forEach(btn => btn.classList.remove('activo'));
+    }
+
+    const penaMesaC = document.getElementById('pena_mesa_chancleta');
+    const penaMesaZ = document.getElementById('pena_mesa_zapato');
+    if (penaMesaC) penaMesaC.checked = false;
+    if (penaMesaZ) penaMesaZ.checked = false;
+
+    distribuirPuntos('todas');
+    procesarPena();
+    validarPuntosEnTiempoReal();
+
+    form.requestSubmit();
+}
+
 // Función para validar puntos en tiempo real
 // Función para validar puntos inmediatamente al salir del campo (onblur)
 function validarPuntosInmediato(event) {
@@ -1757,12 +1824,11 @@ function validarPuntosEnTiempoReal() {
         mensaje += '⚠️ Pareja B: El monto es exagerado. ';
     }
     
-    // Validar igualdad (solo si no hay forfait o tarjeta grave)
+    // Empate en tranque: mano nula (0-0 para ambas parejas) al guardar
     if (puntosA == puntosB && puntosA > 0 && !hayForfait && !hayTarjetaGrave) {
         campoA.classList.add('border-warning', 'bg-warning');
         campoB.classList.add('border-warning', 'bg-warning');
-        hayError = true;
-        mensaje += '⚠️ Los puntos no pueden ser iguales. Debe haber un ganador o una falta (forfait/tarjeta roja/negra). ';
+        mensaje += 'ℹ️ Empate detectado: se registrará Mano Nula (0-0 para ambas parejas). ';
     }
     
     // Validar que solo uno alcance los puntos del torneo
@@ -1850,20 +1916,9 @@ function validarResultados() {
         return false;
     }
     
-    // Validación 2: No deben ser iguales (a menos que haya forfait o tarjeta grave)
+    // Validación 2: empate permitido como Mano Nula (0-0)
     if (puntosA == puntosB && puntosA > 0 && !hayForfait && !hayTarjetaGrave) {
-        Swal.fire({
-            icon: 'error',
-            title: 'Error de validación',
-            text: 'Los puntos no pueden ser iguales (' + puntosA + '). Debe haber un ganador o una falta (forfait/tarjeta roja/negra)',
-            confirmButtonColor: '#667eea'
-        });
-        const campoActivo = document.activeElement;
-        if (campoActivo && (campoActivo.id === 'puntos_pareja_A' || campoActivo.id === 'puntos_pareja_B')) {
-            campoActivo.focus();
-            campoActivo.select();
-        }
-        return false;
+        // No bloquear: backend aplica Mano Nula automáticamente.
     }
     
     // Validación 3: Solo uno debe alcanzar o superar los puntos del torneo

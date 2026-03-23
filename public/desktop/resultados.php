@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 /**
  * Ingreso de resultados de mesa (Desktop).
  * Misma lógica y campos que la versión web; escribe en SQLite vía save_resultados.php (core/db_bridge).

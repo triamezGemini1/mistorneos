@@ -6,10 +6,74 @@
 $torneo = $torneo ?? ['id' => 0, 'nombre' => 'Torneo'];
 $torneo_id = $torneo_id ?? (int)($_GET['torneo_id'] ?? 0);
 $script_actual = basename($_SERVER['PHP_SELF'] ?? '');
-$base_panel = in_array($script_actual, ['admin_torneo.php', 'panel_torneo.php']) ? $script_actual : 'index.php?page=torneo_gestion';
-$url_panel = class_exists('AppHelpers') 
-    ? AppHelpers::url($base_panel, ['action' => 'panel', 'torneo_id' => $torneo_id])
-    : ($base_panel . (strpos($base_panel, '?') !== false ? '&' : '?') . "action=panel&torneo_id=" . $torneo_id);
+$return_to_raw = trim((string)($_GET['return_to'] ?? ''));
+$return_to_safe = '';
+if ($return_to_raw !== '' && !preg_match('#^(https?|javascript|data):#i', $return_to_raw)) {
+    $return_to_safe = $return_to_raw;
+}
+
+if ($return_to_safe !== '') {
+    $url_panel = $return_to_safe;
+} elseif (in_array($script_actual, ['admin_torneo.php', 'panel_torneo.php'], true)) {
+    $url_panel = $script_actual . '?action=panel&torneo_id=' . (int)$torneo_id;
+} else {
+    $url_panel = 'index.php?page=torneo_gestion&action=panel&torneo_id=' . (int)$torneo_id;
+}
+
+// Banner configurable e interactivo:
+// rota entre todos los banners publicados con selector=0 según nivel de acceso.
+// Niveles permitidos para este reloj: [0 (maestro), nivel_organizador].
+$banners_cronometro = [];
+try {
+    $nivel_organizador = (int)($torneo['owner_user_id'] ?? 0);
+    if ($nivel_organizador <= 0 && !empty($torneo['club_responsable'])) {
+        $stmtOrg = DB::pdo()->prepare("SELECT admin_user_id FROM organizaciones WHERE id = ? LIMIT 1");
+        $stmtOrg->execute([(int)$torneo['club_responsable']]);
+        $nivel_organizador = (int)$stmtOrg->fetchColumn();
+    }
+
+    $niveles = [0];
+    if ($nivel_organizador > 0) {
+        $niveles[] = $nivel_organizador;
+    }
+    $niveles = array_values(array_unique($niveles));
+    $ph_niveles = implode(',', array_fill(0, count($niveles), '?'));
+
+    $sqlBanners = "
+        SELECT contenido
+        FROM bannerclock
+        WHERE estatus = 1
+          AND selector = 0
+          AND nivel IN ($ph_niveles)
+        ORDER BY
+          CASE WHEN nivel = 0 THEN 0 ELSE 1 END ASC,
+          id DESC
+    ";
+    $stmtBanners = DB::pdo()->prepare($sqlBanners);
+    $stmtBanners->execute($niveles);
+    $rows = $stmtBanners->fetchAll(PDO::FETCH_COLUMN);
+    foreach ($rows as $texto) {
+        $texto = trim((string)$texto);
+        if ($texto !== '') {
+            $banners_cronometro[] = $texto;
+        }
+    }
+} catch (Exception $e) {
+    // Fallback silencioso para no romper el cronómetro si falta tabla o datos.
+}
+
+// Fallback legado por si aún no hay registros en bannerclock.
+if (empty($banners_cronometro)) {
+    $fallback_banner = trim((string)($torneo['banner_cronometro'] ?? $torneo['mensaje_cronometro'] ?? ''));
+    if ($fallback_banner !== '') {
+        $banners_cronometro[] = $fallback_banner;
+    }
+}
+if (empty($banners_cronometro)) {
+    $banners_cronometro[] = 'Mesa tecnica activa - Mantenga el orden de juego';
+}
+
+$logo_url = class_exists('AppHelpers') ? AppHelpers::getAppLogo() : '';
 ?>
 <!DOCTYPE html>
 <html lang="es">
@@ -29,6 +93,89 @@ $url_panel = class_exists('AppHelpers')
             flex-direction: column;
             align-items: center;
             justify-content: center;
+        }
+        .cron-logo-corner {
+            position: fixed;
+            top: 14px;
+            left: 14px;
+            z-index: 1000;
+            background: rgba(255, 255, 255, 0.12);
+            border: 1px solid rgba(255, 255, 255, 0.25);
+            border-radius: 12px;
+            padding: 0.45rem 0.6rem;
+            backdrop-filter: blur(5px);
+        }
+        .cron-logo-corner img {
+            height: 34px;
+            width: auto;
+            display: block;
+        }
+        .cron-banner {
+            width: 90%;
+            max-width: 805px;
+            margin-bottom: 1rem;
+            background: rgba(251, 191, 36, 0.18);
+            border: 1px solid rgba(251, 191, 36, 0.65);
+            border-radius: 12px;
+            padding: 0.5rem 0.7rem;
+            font-weight: 700;
+            font-size: 2rem;
+            line-height: 1.2;
+            letter-spacing: 0.02em;
+            box-shadow: 0 8px 22px rgba(0, 0, 0, 0.28);
+        }
+        .cron-banner-wrap {
+            display: grid;
+            grid-template-columns: 42px 1fr 42px;
+            align-items: center;
+            gap: 0.35rem;
+        }
+        .cron-banner-text {
+            min-height: 1.6rem;
+            padding: 0.2rem 0.4rem;
+            overflow: hidden;
+            position: relative;
+            white-space: nowrap;
+        }
+        .cron-banner-track {
+            display: inline-flex;
+            align-items: center;
+            gap: 2.5rem;
+            width: max-content;
+            will-change: transform;
+            animation: marqueeBanner 28s linear infinite;
+        }
+        .cron-banner-item {
+            display: inline-block;
+            white-space: nowrap;
+        }
+        .cron-banner-btn {
+            border: none;
+            border-radius: 8px;
+            background: rgba(0, 0, 0, 0.28);
+            color: #fff;
+            height: 34px;
+            cursor: pointer;
+            transition: all 0.15s ease-in-out;
+        }
+        .cron-banner-btn:hover { background: rgba(0, 0, 0, 0.45); transform: scale(1.03); }
+        .cron-banner-dots {
+            margin-top: 0.4rem;
+            display: flex;
+            justify-content: center;
+            gap: 0.4rem;
+        }
+        .cron-banner-dot {
+            width: 7px;
+            height: 7px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.45);
+            cursor: pointer;
+        }
+        .cron-banner-dot.is-active { background: #fff; }
+        @keyframes marqueeBanner {
+            0% { transform: translateX(0%); }
+            100% { transform: translateX(-50%); }
         }
         .cronometro-box {
             width: 90%;
@@ -134,6 +281,25 @@ $url_panel = class_exists('AppHelpers')
     </style>
 </head>
 <body>
+    <?php if ($logo_url !== ''): ?>
+    <div class="cron-logo-corner" title="La Estacion del Domino">
+        <img src="<?= htmlspecialchars($logo_url) ?>" alt="La Estacion del Domino">
+    </div>
+    <?php endif; ?>
+
+    <div class="cron-banner" id="cronBanner">
+        <div class="cron-banner-wrap">
+            <button type="button" class="cron-banner-btn" id="btnBannerPrev" title="Banner anterior">
+                <i class="fas fa-chevron-left"></i>
+            </button>
+            <div class="cron-banner-text" id="cronBannerTexto"></div>
+            <button type="button" class="cron-banner-btn" id="btnBannerNext" title="Banner siguiente">
+                <i class="fas fa-chevron-right"></i>
+            </button>
+        </div>
+        <div class="cron-banner-dots" id="cronBannerDots"></div>
+    </div>
+
     <div class="cronometro-box">
         <div class="cronometro-header">
             <h1><i class="fas fa-clock me-2"></i>Cronómetro - <?= htmlspecialchars($torneo['nombre'] ?? 'Ronda') ?></h1>
@@ -172,10 +338,13 @@ $url_panel = class_exists('AppHelpers')
     
     <script>
     const TORNEO_ID = <?= (int)$torneo_id ?>;
+    const BANNERS = <?= json_encode(array_values($banners_cronometro), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?>;
     const LS_KEY = 'cronometro_activo_' + TORNEO_ID;
     let tiempoRestante = 35 * 60;
     let tiempoOriginal = 35 * 60;
     let cronometroInterval = null;
+    let bannerIndex = 0;
+    let bannerTimer = null;
     let estaCorriendo = false;
     let alarmaReproducida = false;
     let alarmaRepetida = false;
@@ -280,7 +449,71 @@ $url_panel = class_exists('AppHelpers')
         if (!estaCorriendo) actualizarDisplay();
         document.getElementById('configPanel').style.display = 'none';
     }
+
+    function renderBanner() {
+        const texto = document.getElementById('cronBannerTexto');
+        const dotsWrap = document.getElementById('cronBannerDots');
+        if (!texto || !Array.isArray(BANNERS) || BANNERS.length === 0) return;
+        const value = String(BANNERS[bannerIndex] || '').trim();
+        const esc = (v) => v.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+        const animSeconds = Math.max(16, Math.min(44, Math.ceil(value.length / 3)));
+        texto.innerHTML = '<div class="cron-banner-track">' +
+            '<span class="cron-banner-item">' + esc(value) + '</span>' +
+            '<span class="cron-banner-item clone">' + esc(value) + '</span>' +
+            '</div>';
+        const track = texto.querySelector('.cron-banner-track');
+        if (track) {
+            track.style.animationDuration = animSeconds + 's';
+        }
+        if (dotsWrap) {
+            const dots = dotsWrap.querySelectorAll('.cron-banner-dot');
+            dots.forEach((dot, idx) => {
+                dot.classList.toggle('is-active', idx === bannerIndex);
+            });
+        }
+    }
+
+    function moveBanner(step) {
+        if (!Array.isArray(BANNERS) || BANNERS.length <= 1) return;
+        bannerIndex = (bannerIndex + step + BANNERS.length) % BANNERS.length;
+        renderBanner();
+    }
+
+    function startBannerRotation() {
+        if (!Array.isArray(BANNERS) || BANNERS.length <= 1) return;
+        if (bannerTimer) clearInterval(bannerTimer);
+        bannerTimer = setInterval(() => moveBanner(1), 10000);
+    }
+
+    function initBanner() {
+        const btnPrev = document.getElementById('btnBannerPrev');
+        const btnNext = document.getElementById('btnBannerNext');
+        const bannerBox = document.getElementById('cronBanner');
+        const dotsWrap = document.getElementById('cronBannerDots');
+        if (!Array.isArray(BANNERS) || BANNERS.length === 0) return;
+
+        if (dotsWrap) {
+            dotsWrap.innerHTML = '';
+            BANNERS.forEach((_, idx) => {
+                const dot = document.createElement('span');
+                dot.className = 'cron-banner-dot' + (idx === 0 ? ' is-active' : '');
+                dot.addEventListener('click', () => { bannerIndex = idx; renderBanner(); });
+                dotsWrap.appendChild(dot);
+            });
+        }
+        if (btnPrev) btnPrev.addEventListener('click', () => moveBanner(-1));
+        if (btnNext) btnNext.addEventListener('click', () => moveBanner(1));
+
+        renderBanner();
+        startBannerRotation();
+
+        if (bannerBox) {
+            bannerBox.addEventListener('mouseenter', () => { if (bannerTimer) clearInterval(bannerTimer); });
+            bannerBox.addEventListener('mouseleave', () => startBannerRotation());
+        }
+    }
     
+    initBanner();
     actualizarDisplay();
     window.addEventListener('beforeunload', function() { localStorage.removeItem(LS_KEY); });
     </script>

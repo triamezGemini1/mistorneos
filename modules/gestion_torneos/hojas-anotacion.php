@@ -471,7 +471,7 @@ if (!isset($base_url) || !isset($use_standalone)) {
             <!-- Zona: título + info alrededor del QR flotante -->
             <div class="zona-qr">
                 <div class="header-torneo">
-                    <div class="nombre-torneo"><?php echo htmlspecialchars($torneo['nombre'] ?? 'Torneo'); ?></div>
+                    <div class="nombre-torneo"><?php echo htmlspecialchars($torneo['nombre'] ?? 'Torneo'); ?><?php if (!empty($torneo['fechator'])): ?> — <?php echo date('d/m/Y', strtotime($torneo['fechator'])); ?><?php endif; ?></div>
                     <div class="header-ronda-mesa">Ronda: <?php echo $ronda; ?> - Mesa: <?php echo $mesa['numero']; ?></div>
                 </div>
                 <div class="linea-con-qr">

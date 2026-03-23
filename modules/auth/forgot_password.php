@@ -70,8 +70,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             if ($user) {
                 $token = bin2hex(random_bytes(32));
-                $pdo->prepare("UPDATE usuarios SET recovery_token = ? WHERE id = ?")->execute([$token, Auth::id()]);
-                $reset_link = "http://" . $_SERVER['HTTP_HOST'] . "/modules/auth/reset_password.php?token=" . $token;
+                $user_id = (int) $user['id'];
+                $pdo->prepare("UPDATE usuarios SET recovery_token = ? WHERE id = ?")->execute([$token, $user_id]);
+                $base = class_exists('AppHelpers') ? rtrim(AppHelpers::getPublicUrl(), '/') : '';
+                if ($base === '' && !empty($_SERVER['HTTP_HOST'])) {
+                    $scheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
+                    $base = $scheme . '://' . $_SERVER['HTTP_HOST'] . (strpos($_SERVER['SCRIPT_NAME'] ?? '', 'public') !== false ? dirname($_SERVER['SCRIPT_NAME']) : '/public');
+                }
+                $reset_link = rtrim($base, '/') . '/reset_password.php?token=' . urlencode($token);
 
                 $mailer = crearMailer();
                 if ($mailer) {
@@ -188,16 +194,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 <i class="fas fa-paper-plane me-1"></i>Enviar enlace
               </button>
             </form>
+            <?php
+            $entry_dir = rtrim(dirname($_SERVER['SCRIPT_NAME'] ?? ''), '/');
+            $login_href = $entry_dir . '/login.php';
+            $recover_user_href = $entry_dir . '/recover_user.php';
+            $landing_href = $entry_dir . '/landing.php';
+            ?>
             <div class="d-flex justify-content-between align-items-center mt-3">
-              <a class="small text-decoration-none" href="/public/login.php">
+              <a class="small text-decoration-none" href="<?= htmlspecialchars($login_href) ?>">
                 <i class="fas fa-arrow-left me-1"></i>Volver al login
               </a>
-              <a class="small text-decoration-none" href="/modules/auth/recover_user.php">
+              <a class="small text-decoration-none" href="<?= htmlspecialchars($recover_user_href) ?>">
                 <i class="fas fa-user-circle me-1"></i>Olvidé mi usuario
               </a>
             </div>
             <div class="text-center mt-3">
-              <a href="/public/landing.php" class="text-muted text-decoration-none small">
+              <a href="<?= htmlspecialchars($landing_href) ?>" class="text-muted text-decoration-none small">
                 <i class="fas fa-home me-1"></i>Volver al inicio
               </a>
             </div>

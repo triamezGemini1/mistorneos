@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 /**
  * Exporta al servidor web los jugadores locales con sync_status = 0.
  * Envía POST (JSON) a api/sync_api.php; si responde éxito, marca sync_status = 1 en SQLite.

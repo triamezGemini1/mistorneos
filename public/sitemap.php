@@ -1,11 +1,11 @@
-<?php
+﻿<?php
 /**
  * Sitemap XML Dinámico
  * Genera un sitemap actualizado con todos los torneos públicos
  */
 
 require_once __DIR__ . '/../config/bootstrap.php';
-require_once __DIR__ . '/../config/db.php';
+require_once __DIR__ . '/../config/db_config.php';
 require_once __DIR__ . '/../lib/app_helpers.php';
 
 header('Content-Type: application/xml; charset=utf-8');
@@ -73,7 +73,7 @@ echo '<?xml version="1.0" encoding="UTF-8"?>';
         <priority>0.8</priority>
     </url>
     <url>
-        <loc><?= htmlspecialchars($base_url) ?>/public/resultados_detalle.php?torneo_id=<?= $torneo['id'] ?></loc>
+        <loc><?= htmlspecialchars($base_url) ?>/public/evento_resultados.php?torneo_id=<?= $torneo['id'] ?></loc>
         <lastmod><?= date('Y-m-d', strtotime($torneo['updated_at'] ?? $torneo['fechator'])) ?></lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.8</priority>

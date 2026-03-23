@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 /**
  * Resumen individual del jugador (Desktop).
  * Muestra jugador, club, y detalle de partidas: ronda, mesa, resultado1/2, ff (falta), bye, tarjeta, sanción, chancleta, zapato, observaciones.

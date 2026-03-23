@@ -1,11 +1,11 @@
-<?php
+﻿<?php
 /**
  * Formulario público para cargar acta de resultados de mesa
  * Acceso: GET ?torneo_id=X&mesa_id=Y&ronda=Z
  * Escaneando el QR de la hoja de anotación se llega aquí con los parámetros pre-cargados.
  */
 require_once __DIR__ . '/../config/bootstrap.php';
-require_once __DIR__ . '/../config/db.php';
+require_once __DIR__ . '/../config/db_config.php';
 
 $torneo_id = (int)($_GET['torneo_id'] ?? 0);
 $mesa_id = (int)($_GET['mesa_id'] ?? $_GET['mesa'] ?? 0);

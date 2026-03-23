@@ -5,42 +5,25 @@ require_once __DIR__ . '/../../config/csrf.php';
 require_once __DIR__ . '/../../config/auth.php';
 require_once __DIR__ . '/../../lib/security.php';
 
-// Verificar si PHPMailer está disponible (ya cargado por bootstrap o composer)
-$mailer_available = class_exists('PHPMailer\PHPMailer\PHPMailer');
-
 Auth::requireRole(['admin_general']);
 
 /**
- * Envía notificación por email
+ * Envía notificación por email al solicitante (aprobación o rechazo)
+ * Usa NotificationSender para configuración unificada.
  */
 function enviarNotificacionAfiliacion($email, $nombre, $username, $aprobado = true, $motivo = '') {
-    global $mailer_available;
-    
-    if (!$mailer_available || empty($email)) {
+    if (empty($email) || !filter_var($email, FILTER_VALIDATE_EMAIL)) {
         return false;
     }
+    if (!class_exists('NotificationSender')) {
+        require_once __DIR__ . '/../../lib/NotificationSender.php';
+    }
     
-    try {
-        $mail = new PHPMailer\PHPMailer\PHPMailer(true);
-        $mail->CharSet = 'UTF-8';
-        
-        // Configuración del servidor (usar configuración del .env o valores por defecto)
-        $mail->isSMTP();
-        $mail->Host = $_ENV['MAIL_HOST'] ?? 'smtp.gmail.com';
-        $mail->SMTPAuth = true;
-        $mail->Username = $_ENV['MAIL_USERNAME'] ?? '';
-        $mail->Password = $_ENV['MAIL_PASSWORD'] ?? '';
-        $mail->SMTPSecure = PHPMailer\PHPMailer\PHPMailer::ENCRYPTION_STARTTLS;
-        $mail->Port = $_ENV['MAIL_PORT'] ?? 587;
-        
-        $mail->setFrom($_ENV['MAIL_FROM'] ?? 'noreply@laestaciondeldomino.com', 'La Estación del Dominó');
-        $mail->addAddress($email, $nombre);
-        
-        $mail->isHTML(true);
-        
-        if ($aprobado) {
-            $mail->Subject = '¡Tu solicitud de afiliación ha sido aprobada!';
-            $mail->Body = "
+    $app_url = rtrim($_ENV['APP_URL'] ?? 'http://localhost/mistorneos', '/');
+    
+    if ($aprobado) {
+        $asunto = '¡Tu solicitud de afiliación ha sido aprobada!';
+        $body = "
                 <div style='font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;'>
                     <div style='background: linear-gradient(135deg, #48bb78 0%, #38a169 100%); color: white; padding: 20px; text-align: center;'>
                         <h1 style='margin: 0;'>🎉 ¡Felicitaciones!</h1>
@@ -63,11 +46,11 @@ function enviarNotificacionAfiliacion($email, $nombre, $username, $aprobado = tr
                         <div style='background: #e6fffa; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #38a169;'>
                             <h3 style='margin-top: 0; color: #2d3748;'><i class='fas fa-book' style='margin-right: 10px;'></i>Manual de Usuario</h3>
                             <p style='margin-bottom: 10px;'>Consulta el manual completo con todas las funcionalidades del sistema:</p>
-                            <p style='margin-bottom: 15px;'><a href='" . rtrim($_ENV['APP_URL'] ?? 'http://localhost/mistorneos', '/') . "/manuales_web/manual_usuario.php' style='color: #38a169; font-weight: bold; text-decoration: none;'>📖 Ver Manual de Usuario</a></p>
+                            <p style='margin-bottom: 15px;'><a href='" . $app_url . "/manuales_web/manual_usuario.php' style='color: #38a169; font-weight: bold; text-decoration: none;'>📖 Ver Manual de Usuario</a></p>
                             <p style='margin: 0; font-size: 14px; color: #4a5568;'><strong>Nota:</strong> El manual solo está disponible para usuarios registrados. Debes iniciar sesión para acceder. El manual incluye guías paso a paso para crear torneos, invitar jugadores, gestionar inscripciones, administrar resultados y mucho más.</p>
                         </div>
                         <p style='text-align: center; margin-top: 30px;'>
-                            <a href='" . ($_ENV['APP_URL'] ?? 'http://localhost/mistorneos') . "/public/login.php' style='background: #48bb78; color: white; padding: 12px 30px; text-decoration: none; border-radius: 5px;'>Iniciar Sesión</a>
+                            <a href='" . $app_url . "/public/login.php' style='background: #48bb78; color: white; padding: 12px 30px; text-decoration: none; border-radius: 5px;'>Iniciar Sesión</a>
                         </p>
                     </div>
                     <div style='background: #2d3748; color: white; padding: 15px; text-align: center; font-size: 12px;'>
@@ -75,9 +58,10 @@ function enviarNotificacionAfiliacion($email, $nombre, $username, $aprobado = tr
                     </div>
                 </div>
             ";
-        } else {
-            $mail->Subject = 'Actualización sobre tu solicitud de afiliación';
-            $mail->Body = "
+        $result = NotificationSender::sendEmailHtml($email, $asunto, $body, $nombre);
+    } else {
+        $asunto = 'Actualización sobre tu solicitud de afiliación';
+        $body = "
                 <div style='font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;'>
                     <div style='background: linear-gradient(135deg, #c53030 0%, #9b2c2c 100%); color: white; padding: 20px; text-align: center;'>
                         <h1 style='margin: 0;'>Solicitud No Aprobada</h1>
@@ -85,7 +69,7 @@ function enviarNotificacionAfiliacion($email, $nombre, $username, $aprobado = tr
                     <div style='padding: 30px; background: #f7fafc;'>
                         <p>Hola <strong>{$nombre}</strong>,</p>
                         <p>Lamentamos informarte que tu solicitud de afiliación a <strong>La Estación del Dominó</strong> no ha sido aprobada en esta ocasión.</p>
-                        " . ($motivo ? "<div style='background: #fed7d7; padding: 15px; border-radius: 8px; margin: 20px 0;'><strong>Motivo:</strong> {$motivo}</div>" : "") . "
+                        " . ($motivo ? "<div style='background: #fed7d7; padding: 15px; border-radius: 8px; margin: 20px 0;'><strong>Motivo:</strong> " . htmlspecialchars($motivo) . "</div>" : "") . "
                         <p>Si tienes alguna pregunta o deseas más información, no dudes en contactarnos.</p>
                         <p>Puedes volver a enviar una solicitud cuando lo consideres conveniente.</p>
                     </div>
@@ -94,14 +78,13 @@ function enviarNotificacionAfiliacion($email, $nombre, $username, $aprobado = tr
                     </div>
                 </div>
             ";
-        }
-        
-        $mail->send();
-        return true;
-    } catch (Exception $e) {
-        error_log("Error enviando email de afiliación: " . $e->getMessage());
-        return false;
+        $result = NotificationSender::sendEmailHtml($email, $asunto, $body, $nombre);
     }
+    
+    if (!$result['ok']) {
+        error_log("Error enviando email de afiliación: " . ($result['error'] ?? 'desconocido'));
+    }
+    return $result['ok'];
 }
 
 $pdo = DB::pdo();
@@ -191,14 +174,22 @@ try {
         }
     }
     $has_user_id = false;
+    $has_organizacion_id = false;
+    $has_tipo_solicitud = false;
     foreach ($cols as $col) {
-        if (strtolower($col['Field'] ?? $col['field'] ?? '') === 'user_id') {
-            $has_user_id = true;
-            break;
-        }
+        $f = strtolower($col['Field'] ?? $col['field'] ?? '');
+        if ($f === 'user_id') $has_user_id = true;
+        if ($f === 'organizacion_id') $has_organizacion_id = true;
+        if ($f === 'tipo_solicitud') $has_tipo_solicitud = true;
     }
     if (!$has_user_id) {
         $pdo->exec("ALTER TABLE solicitudes_afiliacion ADD COLUMN user_id INT NULL AFTER id");
+    }
+    if (!$has_organizacion_id) {
+        $pdo->exec("ALTER TABLE solicitudes_afiliacion ADD COLUMN organizacion_id INT NULL AFTER user_id");
+    }
+    if (!$has_tipo_solicitud) {
+        $pdo->exec("ALTER TABLE solicitudes_afiliacion ADD COLUMN tipo_solicitud VARCHAR(20) NULL DEFAULT 'particular' AFTER organizacion_id");
     }
 } catch (Exception $e) {
     // Ignorar errores de alteración
@@ -280,27 +271,41 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $admin_user_id = (int) $pdo->lastInsertId();
                 }
 
-                // Crear organización asociada al nuevo admin
-                $org_nombre = trim($solicitud['club_nombre'] ?? '');
-                $org_direccion = trim($solicitud['org_direccion'] ?? $solicitud['club_ubicacion'] ?? '') ?: null;
-                $org_responsable = trim($solicitud['org_responsable'] ?? $solicitud['nombre'] ?? '') ?: null;
-                $org_telefono = trim($solicitud['org_telefono'] ?? $solicitud['celular'] ?? '') ?: null;
-                $org_email = trim($solicitud['org_email'] ?? $solicitud['email'] ?? '') ?: null;
-                $org_entidad = $entidad;
+                $organizacion_id_solicitud = isset($solicitud['organizacion_id']) && (int)$solicitud['organizacion_id'] > 0 ? (int)$solicitud['organizacion_id'] : null;
+                $tipo_solicitud = $solicitud['tipo_solicitud'] ?? 'particular';
 
-                $stmt = $pdo->prepare("
-                    INSERT INTO organizaciones (nombre, direccion, responsable, telefono, email, entidad, admin_user_id, estatus, created_at, updated_at)
-                    VALUES (?, ?, ?, ?, ?, ?, ?, 1, NOW(), NOW())
-                ");
-                $stmt->execute([
-                    $org_nombre,
-                    $org_direccion,
-                    $org_responsable,
-                    $org_telefono,
-                    $org_email,
-                    $org_entidad,
-                    $admin_user_id
-                ]);
+                if ($organizacion_id_solicitud && ($tipo_solicitud === 'asociacion' || $tipo_solicitud === 'asociación')) {
+                    // Solicitud de asociación: asignar usuario a la organización existente (solo si aún no tiene responsable)
+                    $stmt = $pdo->prepare("UPDATE organizaciones SET admin_user_id = ?, updated_at = NOW() WHERE id = ? AND estatus = 1 AND (admin_user_id IS NULL OR admin_user_id = 0)");
+                    $stmt->execute([$admin_user_id, $organizacion_id_solicitud]);
+                    if ($stmt->rowCount() === 0) {
+                        throw new Exception('La asociación seleccionada ya está asignada a otro responsable. No se puede aprobar esta solicitud.');
+                    }
+                    $nota = "Asociación existente asignada (org id {$organizacion_id_solicitud}).";
+                } else {
+                    // Solicitud particular: crear nueva organización
+                    $org_nombre = trim($solicitud['club_nombre'] ?? '');
+                    $org_direccion = trim($solicitud['org_direccion'] ?? $solicitud['club_ubicacion'] ?? '') ?: null;
+                    $org_responsable = trim($solicitud['org_responsable'] ?? $solicitud['nombre'] ?? '') ?: null;
+                    $org_telefono = trim($solicitud['org_telefono'] ?? $solicitud['celular'] ?? '') ?: null;
+                    $org_email = trim($solicitud['org_email'] ?? $solicitud['email'] ?? '') ?: null;
+                    $org_entidad = $entidad;
+
+                    $stmt = $pdo->prepare("
+                        INSERT INTO organizaciones (nombre, direccion, responsable, telefono, email, entidad, admin_user_id, estatus, created_at, updated_at)
+                        VALUES (?, ?, ?, ?, ?, ?, ?, 1, NOW(), NOW())
+                    ");
+                    $stmt->execute([
+                        $org_nombre,
+                        $org_direccion,
+                        $org_responsable,
+                        $org_telefono,
+                        $org_email,
+                        $org_entidad,
+                        $admin_user_id
+                    ]);
+                    $nota = "Organización: " . ($solicitud['club_nombre'] ?? 'N/A');
+                }
 
                 // Actualizar estado de la solicitud
                 $stmt = $pdo->prepare("
@@ -308,7 +313,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     SET estatus = 'aprobada', notas_admin = ?, revisado_at = NOW(), revisado_por = ?
                     WHERE id = ?
                 ");
-                $nota = "Organización: " . ($solicitud['club_nombre'] ?? 'N/A');
                 $stmt->execute([$nota, Auth::user()['id'], $request_id]);
                 
                 $pdo->commit();
@@ -321,11 +325,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     true
                 );
                 
-                $message = !empty($solicitud['user_id'])
-                    ? "Solicitud aprobada. Usuario '{$solicitud['username']}' asignado como administrador de la organización."
-                    : "Solicitud aprobada. Usuario '{$solicitud['username']}' creado como administrador de organización.";
+                if ($organizacion_id_solicitud && ($tipo_solicitud === 'asociacion' || $tipo_solicitud === 'asociación')) {
+                    $message = "Solicitud aprobada. Usuario '{$solicitud['username']}' asignado como responsable de la asociación.";
+                } else {
+                    $message = !empty($solicitud['user_id'])
+                        ? "Solicitud aprobada. Usuario '{$solicitud['username']}' asignado como administrador de la organización."
+                        : "Solicitud aprobada. Usuario '{$solicitud['username']}' creado como administrador de organización.";
+                }
                 if ($email_enviado) {
                     $message .= " Se envió notificación por email.";
+                } elseif (!empty($solicitud['email'])) {
+                    $message .= " No se pudo enviar el email (verifique MAIL_HOST, MAIL_USERNAME, MAIL_PASSWORD en .env).";
                 }
                 
                 // Guardar mensaje y datos en sesión para mostrar modal de WhatsApp
@@ -376,8 +386,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $stmt->execute([$notes, Auth::user()['id'], $request_id]);
             
             // Enviar notificación de rechazo
+            $email_rechazo_ok = false;
             if ($solicitud && $solicitud['email']) {
-                enviarNotificacionAfiliacion(
+                $email_rechazo_ok = enviarNotificacionAfiliacion(
                     $solicitud['email'], 
                     $solicitud['nombre'], 
                     '', 
@@ -386,7 +397,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 );
             }
             
-            $_SESSION['success_message'] = 'Solicitud rechazada';
+            $_SESSION['success_message'] = 'Solicitud rechazada' . ($solicitud && $solicitud['email'] && !$email_rechazo_ok ? '. No se pudo enviar el email al solicitante (verifique configuración de correo en .env).' : '');
             $_SESSION['message_type'] = 'warning';
         } catch (Exception $e) {
             $_SESSION['error_message'] = 'Error: ' . $e->getMessage();
@@ -616,6 +627,13 @@ $status_badges = [
                                         <small class="text-muted"><?= htmlspecialchars($sol['nacionalidad'] . '-' . $sol['cedula']) ?></small>
                                         <?php if (!empty($sol['user_id'])): ?>
                                             <br><span class="badge bg-info mt-1">Usuario existente – registro de organización</span>
+                                        <?php endif; ?>
+                                        <?php
+                                        $tipo_sol = $sol['tipo_solicitud'] ?? 'particular';
+                                        if ($tipo_sol === 'asociacion' || $tipo_sol === 'asociación'): ?>
+                                            <br><span class="badge bg-primary mt-1">Asociación</span>
+                                        <?php else: ?>
+                                            <br><span class="badge bg-secondary mt-1">Particular</span>
                                         <?php endif; ?>
                                     </td>
                                     <td>

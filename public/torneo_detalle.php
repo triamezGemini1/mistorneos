@@ -5,7 +5,7 @@
  */
 
 require_once __DIR__ . '/../config/bootstrap.php';
-require_once __DIR__ . '/../config/db.php';
+require_once __DIR__ . '/../config/db_config.php';
 require_once __DIR__ . '/../lib/app_helpers.php';
 require_once __DIR__ . '/../lib/UrlHelper.php';
 
@@ -74,9 +74,9 @@ $afiche_url = $tournament_file_url($torneo_data['afiche'] ?? '');
 $invitacion_url = $tournament_file_url($torneo_data['invitacion'] ?? '');
 $normas_url = $tournament_file_url($torneo_data['normas'] ?? '');
 if (!empty($torneo_data['organizacion_logo'])) {
-    $logo_org_url = rtrim($public_url, '/') . '/view_image.php?path=' . rawurlencode($torneo_data['organizacion_logo']);
+    $logo_org_url = AppHelpers::imageUrl($torneo_data['organizacion_logo']);
 } else {
-    $logo_org_url = rtrim($public_url, '/') . '/view_image.php?path=' . rawurlencode('lib/Assets/mislogos/logo4.png');
+    $logo_org_url = AppHelpers::getAppLogo();
 }
 $landing_url = rtrim($public_url, '/') . '/landing.php';
 ?>
@@ -98,7 +98,7 @@ $landing_url = rtrim($public_url, '/') . '/landing.php';
     <meta property="og:url" content="<?= htmlspecialchars(app_base_url() . '/public/torneo_detalle.php?torneo_id=' . $torneo_id) ?>">
     <meta property="og:title" content="<?= htmlspecialchars($torneo_data['nombre']) ?> - Torneo de Dominó">
     <meta property="og:description" content="Información del torneo de dominó <?= htmlspecialchars($torneo_data['nombre']) ?>. <?= date('d/m/Y', strtotime($torneo_data['fechator'])) ?>">
-    <meta property="og:image" content="<?= htmlspecialchars(app_base_url() . '/lib/Assets/mislogos/logo4.png') ?>">
+    <meta property="og:image" content="<?= htmlspecialchars(AppHelpers::getAppLogo()) ?>">
     
     <!-- Twitter -->
     <meta name="twitter:card" content="summary_large_image">

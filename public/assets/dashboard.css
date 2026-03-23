@@ -505,6 +505,7 @@ a:hover {
   position: sticky;
   top: 0;
   z-index: var(--z-sticky);
+  overflow: visible; /* permite que el dropdown del usuario se muestre fuera del navbar */
   backdrop-filter: blur(10px);
   background: rgba(255, 255, 255, 0.95) !important;
 }
@@ -603,6 +604,20 @@ a:hover {
   margin-top: 0.5rem;
   background: var(--white);
   min-width: 200px;
+  z-index: 1050; /* por encima del navbar para que el menú usuario se vea */
+}
+
+.navbar .dropdown-menu {
+  z-index: 1060;
+}
+
+/* Menú usuario: asegurar que siempre sea clickeable en subrutas y páginas con mucho contenido (ej. inscripción en sitio) */
+#user-menu-dropdown {
+  position: relative;
+  z-index: 1050;
+}
+#user-menu-dropdown .dropdown-menu {
+  z-index: 1100;
 }
 
 .dropdown-item {
@@ -2104,4 +2119,9 @@ select:focus {
   font-size: 14px;
   line-height: 1.5;
   color: #333;
+}
+
+/* Panel de Control de Torneos (torneo_gestion + action=panel): aumentar tamaño de letra 1 punto */
+body.page-panel-control-torneos {
+  font-size: 1.083rem; /* 16px + 1pt ≈ 17.33px */
 }

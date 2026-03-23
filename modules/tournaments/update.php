@@ -1,5 +1,9 @@
 <?php
 
+if (!ob_get_level()) {
+    ob_start();
+}
+
 require_once __DIR__ . '/../../config/bootstrap.php';
 require_once __DIR__ . '/../../config/db.php';
 require_once __DIR__ . '/../../config/csrf.php';
@@ -33,7 +37,7 @@ try {
     if (empty($_POST['clase']) || !in_array((int)$_POST['clase'], [1, 2])) {
         throw new Exception('La clase del torneo es inv�lida');
     }
-    if (empty($_POST['modalidad']) || !in_array((int)$_POST['modalidad'], [1, 2, 3])) {
+    if (empty($_POST['modalidad']) || !in_array((int)$_POST['modalidad'], [1, 2, 3, 4])) {
         throw new Exception('La modalidad del torneo es inv�lida');
     }
     
@@ -41,9 +45,13 @@ try {
     $tiene_owner_col = false;
     $tiene_permite_inscripcion_col = false;
     $tiene_publicar_landing_col = false;
+    $tiene_hora_torneo_col = false;
+    $tiene_tipo_torneo_col = false;
     try {
         $cols = DB::pdo()->query("SHOW COLUMNS FROM tournaments")->fetchAll(PDO::FETCH_COLUMN);
         $tiene_owner_col = in_array('owner_user_id', $cols);
+        $tiene_hora_torneo_col = in_array('hora_torneo', $cols);
+        $tiene_tipo_torneo_col = in_array('tipo_torneo', $cols);
         $tiene_permite_inscripcion_col = in_array('permite_inscripcion_linea', $cols);
         $tiene_publicar_landing_col = in_array('publicar_landing', $cols);
     } catch (Exception $e) {
@@ -159,6 +167,16 @@ try {
     $cuenta_id = !empty($_POST['cuenta_id']) ? (int)$_POST['cuenta_id'] : null;
     $permite_inscripcion_linea = isset($_POST['permite_inscripcion_linea']) ? 1 : 0;
     $publicar_landing = isset($_POST['publicar_landing']) ? 1 : 0;
+    $hora_torneo = !empty($_POST['hora_torneo']) ? trim($_POST['hora_torneo']) : null;
+    if ($hora_torneo !== null && !preg_match('/^\d{1,2}:\d{2}(:\d{2})?$/', $hora_torneo)) {
+        $hora_torneo = null;
+    }
+    // tipo_torneo: entero (índice) 0=no definido, 1=interclubes, 2=suizo_puro, 3=suizo_sin_repetir
+    $tipo_torneo_raw = isset($_POST['tipo_torneo']) ? trim((string)$_POST['tipo_torneo']) : '';
+    $tipo_torneo = null;
+    if ($tipo_torneo_raw !== '' && in_array((int)$tipo_torneo_raw, [1, 2, 3], true)) {
+        $tipo_torneo = (int)$tipo_torneo_raw;
+    }
     
     // Validar: solo admin_general puede cambiar la organización del torneo
     // admin_club y admin_torneo mantienen la organización original
@@ -227,6 +245,12 @@ try {
         normas = :normas,
         afiche = :afiche
     ";
+    if ($tiene_hora_torneo_col) {
+        $update_fields .= ", hora_torneo = :hora_torneo";
+    }
+    if ($tiene_tipo_torneo_col) {
+        $update_fields .= ", tipo_torneo = :tipo_torneo";
+    }
     $params = [
         ':id' => $id,
         ':nombre' => $nombre,
@@ -248,6 +272,12 @@ try {
         ':normas' => $file_paths['normas'],
         ':afiche' => $file_paths['afiche']
     ];
+    if ($tiene_hora_torneo_col) {
+        $params[':hora_torneo'] = $hora_torneo;
+    }
+    if ($tiene_tipo_torneo_col) {
+        $params[':tipo_torneo'] = $tipo_torneo === null ? 0 : $tipo_torneo;
+    }
     
     if ($tiene_owner_col && $owner_user_id > 0) {
         $update_fields .= ", owner_user_id = :owner_user_id";
@@ -274,15 +304,16 @@ try {
     }
     
     // Redirigir con �xito
-    $redirect_url = app_base_url() . '/public/index.php?page=tournaments&success=' . urlencode('Torneo actualizado exitosamente');
-    header('Location: ' . $redirect_url);
+    $redirect_url = class_exists('AppHelpers') ? AppHelpers::dashboard('tournaments', ['success' => 'Torneo actualizado exitosamente']) : 'index.php?page=tournaments&success=' . urlencode('Torneo actualizado exitosamente');
+    if (ob_get_level()) ob_end_clean();
+    header('Location: ' . $redirect_url, true, 302);
     exit;
-    
+
 } catch (Exception $e) {
-    // Redirigir con error
     $id = isset($id) ? $id : ($_POST['id'] ?? 0);
-    $redirect_url = app_base_url() . '/public/index.php?page=tournaments&action=edit&id=' . $id . '&error=' . urlencode($e->getMessage());
-    header('Location: ' . $redirect_url);
+    $redirect_url = class_exists('AppHelpers') ? AppHelpers::dashboard('tournaments', ['action' => 'edit', 'id' => (int)$id, 'error' => $e->getMessage()]) : 'index.php?page=tournaments&action=edit&id=' . (int)$id . '&error=' . urlencode($e->getMessage());
+    if (ob_get_level()) ob_end_clean();
+    header('Location: ' . $redirect_url, true, 302);
     exit;
 }
 

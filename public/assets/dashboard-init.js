@@ -6,6 +6,47 @@
   'use strict';
 
   function initDashboard() {
+    // Menú de usuario: inicializar Bootstrap dropdown y fallback si no abre (p. ej. en inscripción en sitio / subrutas)
+    var userDropdown = document.getElementById('user-menu-dropdown');
+    var userMenuButton = document.getElementById('userMenuButton');
+    var userMenuList = userDropdown && userDropdown.querySelector('.dropdown-menu');
+    if (userDropdown && typeof bootstrap !== 'undefined' && bootstrap.Dropdown) {
+      try {
+        bootstrap.Dropdown.getOrCreateInstance(userDropdown);
+      } catch (e) { /* ignorar */ }
+    }
+    // Fallback: si al hacer clic en el botón el menú no se abre en 150ms, abrirlo manualmente (Bootstrap puede fallar en subrutas/inscripción en sitio)
+    if (userMenuButton && userMenuList) {
+      userMenuButton.addEventListener('click', function () {
+        var menu = userMenuList;
+        setTimeout(function () {
+          if (!menu.classList.contains('show')) {
+            menu.classList.add('show');
+            userMenuButton.setAttribute('aria-expanded', 'true');
+            var closeOnClickOutside = function (ev) {
+              if (!userDropdown.contains(ev.target)) {
+                menu.classList.remove('show');
+                userMenuButton.setAttribute('aria-expanded', 'false');
+                document.removeEventListener('click', closeOnClickOutside);
+              }
+            };
+            setTimeout(function () { document.addEventListener('click', closeOnClickOutside); }, 10);
+          }
+        }, 150);
+      });
+    }
+    // Forzar navegación en cualquier enlace del menú usuario
+    if (userDropdown) {
+      userDropdown.addEventListener('click', function (e) {
+        var link = e.target && e.target.closest ? e.target.closest('a[href]') : null;
+        if (link && link.href && link.getAttribute('href') !== '#') {
+          e.preventDefault();
+          e.stopPropagation();
+          window.location.href = link.href;
+        }
+      });
+    }
+
     // Mover alertas del contenido a la zona superpuesta (no desplazan el layout)
     var flashContainer = document.getElementById('app-flash-messages');
     var main = document.querySelector('main');

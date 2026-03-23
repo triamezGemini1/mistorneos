@@ -3,11 +3,15 @@
  * Vista: Inscribir Equipos en Sitio
  * Formulario simplificado que muestra solo jugadores NO inscritos
  */
+if (ob_get_level() < 5) {
+    ob_start(null, 2 * 1024 * 1024);
+}
 $torneo = $view_data['torneo'] ?? [];
 $jugadores_disponibles = $view_data['jugadores_disponibles'] ?? [];
 $clubes_disponibles = $view_data['clubes_disponibles'] ?? [];
 $equipos_registrados = $view_data['equipos_registrados'] ?? [];
 $jugadores_por_equipo = $view_data['jugadores_por_equipo'] ?? 4;
+$api_base_path = (function_exists('AppHelpers') ? AppHelpers::getPublicPath() : '/mistorneos/public/') . 'api/';
 
 // Determinar si el torneo ya inició (tiene rondas)
 $torneo_iniciado = false;
@@ -24,27 +28,15 @@ if (!empty($torneo['id'])) {
     }
 }
 
-// Determinar si el torneo ya inició (tiene rondas)
-$torneo_iniciado = false;
-if (!empty($torneo['id'])) {
-    try {
-        $pdo = DB::pdo();
-        $stmt = $pdo->prepare("SELECT MAX(CAST(partida AS UNSIGNED)) AS ultima_ronda FROM partiresul WHERE id_torneo = ? AND mesa > 0");
-        $stmt->execute([(int)$torneo['id']]);
-        $ultima_ronda = (int)($stmt->fetchColumn() ?? 0);
-        $torneo_iniciado = $ultima_ronda > 0;
-    } catch (Exception $e) {
-        $torneo_iniciado = false;
-    }
-}
-
 $script_actual = basename($_SERVER['PHP_SELF'] ?? '');
 $use_standalone = in_array($script_actual, ['admin_torneo.php', 'panel_torneo.php']);
 $base_url = $use_standalone ? $script_actual : 'index.php?page=torneo_gestion';
 
 // Ruta base para API (dinámica según entorno)
 $api_base_path = (function_exists('AppHelpers') ? AppHelpers::getPublicPath() : '/mistorneos/public/') . 'api/';
+$api_guardar_equipo = $base_url . ($use_standalone ? '?' : '&') . 'action=guardar_equipo_sitio&torneo_id=' . (int)($torneo['id'] ?? 0);
 ?>
+<!-- inscribir_equipo_sitio: POST interno guardar_equipo_sitio -->
 <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
 <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
 <style>
@@ -380,6 +372,31 @@ $api_base_path = (function_exists('AppHelpers') ? AppHelpers::getPublicPath() : 
 <script>
 const JUGADORES_POR_EQUIPO = <?php echo $jugadores_por_equipo; ?>;
 const TORNEO_ID = <?php echo $torneo['id']; ?>;
+const EQUIPOS_EDITAR = <?php
+$map = [];
+foreach ($equipos_registrados as $eq) {
+    $id = (int)($eq['id'] ?? 0);
+    if ($id <= 0) {
+        continue;
+    }
+    $map[(string)$id] = [
+        'id' => $id,
+        'codigo_equipo' => $eq['codigo_equipo'] ?? '',
+        'nombre_equipo' => $eq['nombre_equipo'] ?? '',
+        'id_club' => (int)($eq['id_club'] ?? 0),
+        'club_nombre' => $eq['nombre_club'] ?? 'Sin Club',
+        'jugadores' => array_values(array_map(static function ($j) {
+            return [
+                'id_inscrito' => (int)($j['id_inscrito'] ?? 0),
+                'id_usuario' => (int)($j['id_usuario'] ?? 0),
+                'cedula' => (string)($j['cedula'] ?? ''),
+                'nombre' => (string)($j['nombre'] ?? ''),
+            ];
+        }, $eq['jugadores'] ?? [])),
+    ];
+}
+echo json_encode($map, JSON_UNESCAPED_UNICODE);
+?>;
 
 // Validar formulario al cargar
 document.addEventListener('DOMContentLoaded', function() {
@@ -835,12 +852,13 @@ document.getElementById('formEquipo').addEventListener('submit', async function(
     }
     
     console.log('Total de jugadores a enviar:', jugadoresEnviados.length);
-    console.log('Enviando datos al servidor...');
-    
+    var _urlGuardar = <?php echo json_encode($api_guardar_equipo); ?>;
+    console.log('[Inscribir equipo] POST a:', _urlGuardar);
     try {
-        const response = await fetch('<?php echo $api_base_path; ?>guardar_equipo.php', {
+        const response = await fetch(_urlGuardar, {
             method: 'POST',
-            body: formData
+            body: formData,
+            credentials: 'same-origin'
         });
         
         console.log('Respuesta recibida, status:', response.status);
@@ -914,94 +932,66 @@ document.getElementById('formEquipo').addEventListener('submit', async function(
     }
 });
 
-// Cargar equipo en el formulario al seleccionarlo de la lista
-async function cargarEquipo(equipoId) {
-    try {
-        const response = await fetch(`<?php echo $api_base_path; ?>obtener_equipo.php?id=${equipoId}`);
-        const data = await response.json();
-        
-        if (data.success && data.equipo) {
-            const equipo = data.equipo;
-            
-            // Marcar equipo seleccionado visualmente
-            document.querySelectorAll('.equipo-registrado-item').forEach(item => {
-                item.classList.remove('selected');
-            });
-            const equipoElement = document.querySelector(`[data-equipo-id="${equipoId}"]`);
-            if (equipoElement) {
-                equipoElement.classList.add('selected');
-            }
-            
-            // Cargar datos del equipo en el formulario
-            document.getElementById('equipo_id').value = equipo.id || '';
-            document.getElementById('codigo_equipo').value = equipo.codigo_equipo || '';
-            document.getElementById('nombre_equipo').value = equipo.nombre_equipo || '';
-            document.getElementById('club_id').value = equipo.id_club || '';
-            
-            // Limpiar jugadores actuales y devolverlos a la lista si están asignados
-            for (let i = 1; i <= JUGADORES_POR_EQUIPO; i++) {
-                const fila = document.querySelector(`[data-posicion="${i}"]`);
-                const jugadorDataStr = fila ? fila.getAttribute('data-jugador-asignado') : null;
-                if (jugadorDataStr) {
-                    try {
-                        const jugador = JSON.parse(jugadorDataStr);
-                        devolverJugadorAListado(jugador);
-                    } catch (e) {}
-                }
-                limpiarJugador(i);
-            }
-            
-            // Cargar jugadores del equipo en el formulario
-            if (equipo.jugadores && equipo.jugadores.length > 0) {
-                equipo.jugadores.forEach((jugador, index) => {
-                    const posicion = index + 1;
-                    if (posicion <= JUGADORES_POR_EQUIPO) {
-                        const jugadorData = {
-                            id: jugador.id_inscrito || jugador.id || '',
-                            id_inscrito: jugador.id_inscrito || '',
-                            id_usuario: jugador.id_usuario || jugador.usuario_id || '',
-                            cedula: jugador.cedula || '',
-                            nombre: jugador.nombre || '',
-                            club_nombre: equipo.club_nombre || 'Sin Club'
-                        };
-                        asignarJugadorAPosicion(posicion, jugadorData);
-                        
-                        // Quitar jugador de la lista de disponibles si está (por id_usuario)
-                        const items = document.querySelectorAll('.jugador-item');
-                        items.forEach(item => {
-                            const itemIdUsuario = item.getAttribute('data-id-usuario');
-                            if (itemIdUsuario && itemIdUsuario == jugadorData.id_usuario) {
-                                item.remove();
-                            }
-                        });
-                    }
-                });
-            }
-            
-            // Habilitar formulario y actualizar bloqueo (el club y nombre ya están llenos)
-            actualizarBloqueoSeleccionJugadores();
-            
-            // Scroll al formulario
-            document.getElementById('formEquipo').scrollIntoView({ behavior: 'smooth', block: 'start' });
-            
-            validarFormulario();
-        } else {
-            Swal.fire({
-                icon: 'error',
-                title: 'Error',
-                text: 'Error al cargar los datos del equipo',
-                confirmButtonColor: '#3b82f6'
-            });
-        }
-    } catch (error) {
-        console.error('Error:', error);
-        Swal.fire({
-            icon: 'error',
-            title: 'Error',
-            text: 'Error al cargar el equipo',
-            confirmButtonColor: '#3b82f6'
-        });
+function cargarEquipo(equipoId) {
+    var equipo = EQUIPOS_EDITAR[String(equipoId)] || EQUIPOS_EDITAR[equipoId];
+    if (!equipo) {
+        Swal.fire({ icon: 'info', title: 'Recargar', text: 'Recarga la página (F5) para ver equipos actualizados.', confirmButtonColor: '#3b82f6' });
+        return;
     }
+    document.querySelectorAll('.equipo-registrado-item').forEach(function (item) { item.classList.remove('selected'); });
+    var el = document.querySelector('[data-equipo-id="' + equipoId + '"]');
+    if (el) {
+        el.classList.add('selected');
+    }
+    document.getElementById('equipo_id').value = equipo.id;
+    document.getElementById('codigo_equipo').value = equipo.codigo_equipo || '';
+    document.getElementById('nombre_equipo').value = equipo.nombre_equipo || '';
+    var selClub = document.getElementById('club_id');
+    var idClub = (equipo.id_club !== undefined && equipo.id_club !== null) ? String(equipo.id_club) : '';
+    if (idClub && selClub) {
+        var opt = selClub.querySelector('option[value="' + idClub.replace(/"/g, '\\"') + '"]');
+        if (!opt) {
+            opt = document.createElement('option');
+            opt.value = idClub;
+            opt.textContent = equipo.club_nombre || ('Club #' + idClub);
+            selClub.appendChild(opt);
+        }
+        selClub.value = idClub;
+    } else if (selClub) {
+        selClub.value = '';
+    }
+    for (var i = 1; i <= JUGADORES_POR_EQUIPO; i++) {
+        var fila = document.querySelector('[data-posicion="' + i + '"]');
+        var s = fila ? fila.getAttribute('data-jugador-asignado') : null;
+        if (s) {
+            try {
+                devolverJugadorAListado(JSON.parse(s));
+            } catch (e) {}
+        }
+        limpiarJugador(i);
+    }
+    (equipo.jugadores || []).forEach(function (jugador, index) {
+        var posicion = index + 1;
+        if (posicion > JUGADORES_POR_EQUIPO) {
+            return;
+        }
+        asignarJugadorAPosicion(posicion, {
+            id: jugador.id_inscrito,
+            id_inscrito: jugador.id_inscrito,
+            id_usuario: jugador.id_usuario,
+            cedula: jugador.cedula || '',
+            nombre: jugador.nombre || '',
+            club_nombre: equipo.club_nombre || 'Sin Club'
+        });
+        document.querySelectorAll('.jugador-item').forEach(function (item) {
+            if (item.getAttribute('data-id-usuario') == jugador.id_usuario) {
+                item.remove();
+            }
+        });
+    });
+    actualizarBloqueoSeleccionJugadores();
+    document.getElementById('formEquipo').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    validarFormulario();
 }
 
 // Eliminar equipo

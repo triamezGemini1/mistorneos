@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 /**
  * Elimina un jugador (usuario con role = 'usuario') de la base SQLite. Requiere confirmación en el cliente.
  */

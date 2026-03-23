@@ -47,6 +47,17 @@ if ($photo_actual) {
         : AppHelpers::getBaseUrl() . '/upload/' . $photo_actual;
 }
 $form_action = AppHelpers::url('profile_save.php');
+$role_original = (string)($_SESSION['user']['role_original'] ?? ($_SESSION['user']['role'] ?? ''));
+$role_mode_actual = (int)($_SESSION['user']['role_switch_mode'] ?? (($role_original === 'admin_general') ? 0 : 0));
+$url_switch_role = AppHelpers::url('switch_role.php');
+$current_uri = $_SERVER['REQUEST_URI'] ?? AppHelpers::url('index.php', ['page' => 'users/profile']);
+$role_labels = [
+  0 => '0 - Admin General',
+  1 => '1 - Admin Organización',
+  2 => '2 - Admin Torneo',
+  3 => '3 - Operador',
+  4 => '4 - Usuario Común',
+];
 ?>
 
 <?php $ok = isset($_GET['ok']) ? true : false; ?>
@@ -228,6 +239,40 @@ $form_action = AppHelpers::url('profile_save.php');
                   </form>
                 </div>
               </div>
+
+              <?php if ($role_original === 'admin_general'): ?>
+              <div class="card mb-4 border-warning">
+                <div class="card-header bg-warning-subtle">
+                  <strong><i class="fas fa-user-shield me-2"></i>Selector de perfil operativo</strong>
+                </div>
+                <div class="card-body">
+                  <p class="mb-2 text-muted">
+                    Como admin general puedes simular permisos de otros perfiles para pruebas.
+                  </p>
+                  <form method="POST" action="<?= htmlspecialchars($url_switch_role) ?>">
+                    <input type="hidden" name="csrf_token" value="<?= htmlspecialchars(CSRF::token()) ?>">
+                    <input type="hidden" name="return_to" value="<?= htmlspecialchars($current_uri) ?>">
+                    <div class="row g-2 align-items-end">
+                      <div class="col-md-8">
+                        <label class="form-label">Rol operativo</label>
+                        <select class="form-select" name="role_mode">
+                          <?php foreach ($role_labels as $k => $lbl): ?>
+                            <option value="<?= (int)$k ?>" <?= $role_mode_actual === (int)$k ? 'selected' : '' ?>>
+                              <?= htmlspecialchars($lbl) ?>
+                            </option>
+                          <?php endforeach; ?>
+                        </select>
+                      </div>
+                      <div class="col-md-4">
+                        <button type="submit" class="btn btn-warning w-100">
+                          <i class="fas fa-vial me-1"></i>Aplicar perfil
+                        </button>
+                      </div>
+                    </div>
+                  </form>
+                </div>
+              </div>
+              <?php endif; ?>
 
               <div class="card">
                 <div class="card-header bg-light">

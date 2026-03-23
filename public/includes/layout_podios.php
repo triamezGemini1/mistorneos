@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 /**
  * Layout mínimo para la vista Podios / Podios Equipos.
  * Se usa cuando se accede a Podios desde el dashboard para mostrar solo la página

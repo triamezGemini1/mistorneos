@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 /**
  * Torneos Desktop: listado de torneos de la entidad. Crear si no hay; desde cada uno acceder al panel.
  */

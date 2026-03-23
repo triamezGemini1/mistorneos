@@ -4,8 +4,9 @@ require_once __DIR__ . '/../../config/bootstrap.php';
 require_once __DIR__ . '/../../config/db.php';
 require_once __DIR__ . '/../../config/csrf.php';
 require_once __DIR__ . '/../../config/auth.php';
+require_once __DIR__ . '/../../config/admin_general_auth.php';
 
-Auth::requireRole(['admin_general','admin_torneo','admin_club']);
+requireAdminGeneral();
 CSRF::validate();
 
 try {
@@ -29,15 +30,7 @@ try {
         throw new Exception('Club no encontrado');
     }
     
-    // Verificar permisos si es admin_club
     $current_user = Auth::user();
-    if (($current_user['role'] ?? '') === 'admin_club') {
-        require_once __DIR__ . '/../../lib/ClubHelper.php';
-        $admin_club_id = (int)($current_user['club_id'] ?? 0);
-        if (!$admin_club_id || !ClubHelper::isClubSupervised($admin_club_id, $id)) {
-            throw new Exception('No tiene permisos para actualizar este club');
-        }
-    }
 
     // Preparar datos
     $nombre = trim($_POST['nombre']);

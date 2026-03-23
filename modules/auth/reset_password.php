@@ -16,8 +16,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (strlen($new_password) < 8) { $error = 'La contraseña debe tener al menos 8 caracteres'; }
     else {
         $hash = password_hash($new_password, PASSWORD_DEFAULT);
-        $pdo->prepare("UPDATE usuarios SET password_hash = ?, recovery_token = NULL WHERE id = ?")->execute([$hash, Auth::id()]);
-        header('Location: /modules/auth/login.php?reset=1');
+        $user_id = (int) $user['id'];
+        $pdo->prepare("UPDATE usuarios SET password_hash = ?, recovery_token = NULL WHERE id = ?")->execute([$hash, $user_id]);
+        $entry_dir = rtrim(dirname($_SERVER['SCRIPT_NAME'] ?? ''), '/');
+        $scheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
+        $host = $_SERVER['HTTP_HOST'] ?? 'localhost';
+        $login_url = $scheme . '://' . $host . $entry_dir . '/login.php?reset=1';
+        header('Location: ' . $login_url);
         exit;
     }
 }

@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 /**
  * Estado de sincronización: pendientes, último sync, enlace a import/export.
  */

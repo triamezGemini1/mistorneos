@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 /**
  * Finalizar torneo (Desktop): pone estatus = 0 y redirige al panel.
  */

@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 /**
  * Script único: inserta o actualiza el usuario administrador en la SQLite local.
  * Usa la MISMA base de datos que el login (desktop/data/mistorneos_local.db).

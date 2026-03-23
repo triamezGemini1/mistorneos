@@ -15,12 +15,16 @@ Auth::requireRole(['admin_general','admin_torneo']);
 $title = "Editar Invitaci�n";
 $errors = [];
 
-if (!isset($_GET['id'])) {
+if (!isset($_GET['id']) && !isset($_POST['id'])) {
     header("Location: index.php");
     exit;
 }
 
-$id = (int)$_GET['id'];
+$id = (int)($_GET['id'] ?? $_POST['id'] ?? 0);
+if ($id <= 0) {
+    header("Location: index.php");
+    exit;
+}
 
 try {
     $pdo = DB::pdo();
@@ -28,7 +32,7 @@ try {
     // Obtener invitaci�n
     $stmt = $pdo->prepare("
         SELECT i.*, t.nombre as torneo_nombre, c.nombre as club_nombre
-        FROM invitations i
+        FROM " . TABLE_INVITATIONS . " i
         INNER JOIN tournaments t ON i.torneo_id = t.id
         INNER JOIN clubes c ON i.club_id = c.id
         WHERE i.id = ?
@@ -48,6 +52,8 @@ try {
         $acceso2 = $_POST['acceso2'];
         $usuario = trim($_POST['usuario'] ?? '');
         $estado = $_POST['estado'];
+        $invitado_delegado = trim($_POST['invitado_delegado'] ?? '');
+        $invitado_email = trim($_POST['invitado_email'] ?? '');
         
         // Validaciones
         if (empty($acceso1) || empty($acceso2)) {
@@ -56,22 +62,32 @@ try {
             $errors[] = "La fecha de inicio no puede ser mayor que la fecha fin";
         }
         
-        // Actualizar
+        // Actualizar (token no se modifica; invitado_delegado e invitado_email si existen)
         if (empty($errors)) {
-            $stmt = $pdo->prepare("
-                UPDATE invitations 
-                SET acceso1 = ?, 
-                    acceso2 = ?, 
-                    usuario = ?,
-                    estado = ?
-                WHERE id = ?
-            ");
-            
-            if ($stmt->execute([$acceso1, $acceso2, $usuario, $estado, $id])) {
-                header("Location: index.php?msg=" . urlencode("Invitaci�n actualizada exitosamente"));
+            $cols = $pdo->query("SHOW COLUMNS FROM " . TABLE_INVITATIONS)->fetchAll(PDO::FETCH_COLUMN);
+            $set = "acceso1 = ?, acceso2 = ?, usuario = ?, estado = ?";
+            $params = [$acceso1, $acceso2, $usuario, $estado];
+            if (in_array('invitado_delegado', $cols, true)) {
+                $set .= ", invitado_delegado = ?";
+                $params[] = $invitado_delegado === '' ? null : $invitado_delegado;
+            }
+            if (in_array('invitado_email', $cols, true)) {
+                $set .= ", invitado_email = ?";
+                $params[] = $invitado_email === '' ? null : $invitado_email;
+            }
+            $params[] = $id;
+            $stmt = $pdo->prepare("UPDATE " . TABLE_INVITATIONS . " SET " . $set . " WHERE id = ?");
+            if ($stmt->execute($params)) {
+                $redirect = "index.php?page=invitations&msg=" . urlencode("Invitación actualizada");
+                if (!empty($_POST['return_to']) && $_POST['return_to'] === 'invitacion_clubes' && !empty($_POST['torneo_id'])) {
+                    $redirect = "index.php?page=invitacion_clubes&torneo_id=" . (int)$_POST['torneo_id'] . "&success=" . urlencode("Invitación actualizada");
+                } elseif (!empty($_POST['filter_torneo'])) {
+                    $redirect .= "&filter_torneo=" . (int)$_POST['filter_torneo'];
+                }
+                header("Location: " . $redirect);
                 exit;
             } else {
-                $errors[] = "Error al actualizar la invitaci�n";
+                $errors[] = "Error al actualizar la invitacion";
             }
         }
     }
@@ -151,7 +167,21 @@ try {
                                 <option value="cancelada" <?= $invitacion['estado'] === 'cancelada' ? 'selected' : '' ?>>Cancelada</option>
                             </select>
                         </div>
-
+                        <div class="mb-3">
+                            <label class="form-label">Delegado / Contacto invitado</label>
+                            <input type="text" name="invitado_delegado" class="form-control" value="<?= htmlspecialchars($invitacion['invitado_delegado'] ?? '') ?>" placeholder="Nombre del delegado">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Email del invitado</label>
+                            <input type="email" name="invitado_email" class="form-control" value="<?= htmlspecialchars($invitacion['invitado_email'] ?? '') ?>" placeholder="email@ejemplo.com">
+                        </div>
+                        <?php if (!empty($_GET['filter_torneo'])): ?>
+                        <input type="hidden" name="filter_torneo" value="<?= (int)$_GET['filter_torneo'] ?>">
+                        <?php endif; ?>
+                        <?php if (!empty($_GET['return_to']) && $_GET['return_to'] === 'invitacion_clubes' && !empty($_GET['torneo_id'])): ?>
+                        <input type="hidden" name="return_to" value="invitacion_clubes">
+                        <input type="hidden" name="torneo_id" value="<?= (int)$_GET['torneo_id'] ?>">
+                        <?php endif; ?>
                         <div class="alert alert-secondary">
                             <small>
                                 <strong>Creada:</strong> <?= date('d/m/Y H:i', strtotime($invitacion['fecha_creacion'])) ?><br>
@@ -161,11 +191,17 @@ try {
 
                         <div class="border-top pt-3 mt-3">
                             <button type="submit" class="btn btn-primary">
-                                ? Guardar Cambios
+                                Guardar Cambios
                             </button>
-                            <a href="index.php" class="btn btn-secondary">
-                                ? Cancelar
-                            </a>
+                            <?php
+                            $cancel_url = 'index.php';
+                            if (!empty($_GET['return_to']) && $_GET['return_to'] === 'invitacion_clubes' && !empty($_GET['torneo_id'])) {
+                                $cancel_url = 'index.php?page=invitacion_clubes&torneo_id=' . (int)$_GET['torneo_id'];
+                            } elseif (!empty($_GET['filter_torneo'])) {
+                                $cancel_url = 'index.php?page=invitations&filter_torneo=' . (int)$_GET['filter_torneo'];
+                            }
+                            ?>
+                            <a href="<?= htmlspecialchars($cancel_url) ?>" class="btn btn-secondary">Cancelar</a>
                         </div>
                     </form>
                 </div>

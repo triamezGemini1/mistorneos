@@ -1,0 +1,148 @@
+/**
+ * Design System - Mistorneos
+ * Tipografía: Inter. Paleta: 60% principal, 30% blanco/gris, 10% acento.
+ * Componentes: Cards, sombras suaves, border-radius 12px.
+ * Mobile-First. Sin tocar lógica PHP/SQL.
+ */
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
+:root {
+  /* Tipografía */
+  --ds-font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --ds-font-size-base: 1rem;
+  --ds-font-size-sm: 0.875rem;
+  --ds-font-size-lg: 1.125rem;
+  --ds-font-size-xl: 1.25rem;
+  --ds-font-weight-normal: 400;
+  --ds-font-weight-medium: 500;
+  --ds-font-weight-semibold: 600;
+  --ds-font-weight-bold: 700;
+  --ds-line-height: 1.5;
+  --ds-letter-spacing: 0.01em;
+
+  /* Colores principales (60%) */
+  --ds-primary: #4f46e5;
+  --ds-primary-hover: #4338ca;
+  --ds-primary-light: #e0e7ff;
+  --ds-secondary: #6366f1;
+  --ds-success: #10b981;
+  --ds-success-hover: #059669;
+  --ds-info: #06b6d4;
+  --ds-info-hover: #0891b2;
+  --ds-warning: #f59e0b;
+  --ds-warning-hover: #d97706;
+  --ds-danger: #ef4444;
+  --ds-danger-hover: #dc2626;
+
+  /* Neutros (30% blanco/gris) */
+  --ds-white: #ffffff;
+  --ds-gray-50: #f9fafb;
+  --ds-gray-100: #f3f4f6;
+  --ds-gray-200: #e5e7eb;
+  --ds-gray-300: #d1d5db;
+  --ds-gray-500: #6b7280;
+  --ds-gray-700: #374151;
+  --ds-gray-900: #111827;
+
+  /* Acento (10%) */
+  --ds-accent: #7c3aed;
+  --ds-accent-light: #ede9fe;
+
+  /* Componentes */
+  --ds-radius: 12px;
+  --ds-radius-sm: 8px;
+  --ds-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -2px rgba(0, 0, 0, 0.05);
+  --ds-shadow-hover: 0 10px 15px -3px rgba(0, 0, 0, 0.08), 0 4px 6px -4px rgba(0, 0, 0, 0.05);
+  --ds-transition: 0.2s ease;
+}
+
+/* Base tipográfica (opcional: aplicar a body cuando se use el design system en la página) */
+.ds-root,
+.ds-root body {
+  font-family: var(--ds-font-family);
+  font-size: var(--ds-font-size-base);
+  font-weight: var(--ds-font-weight-normal);
+  line-height: var(--ds-line-height);
+  letter-spacing: var(--ds-letter-spacing);
+  color: var(--ds-gray-900);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Card base */
+.ds-card {
+  background: var(--ds-white);
+  border-radius: var(--ds-radius);
+  box-shadow: var(--ds-shadow);
+  border: 1px solid var(--ds-gray-200);
+  overflow: hidden;
+  transition: box-shadow var(--ds-transition);
+}
+.ds-card:hover {
+  box-shadow: var(--ds-shadow-hover);
+}
+
+.ds-card-header {
+  padding: 1rem 1.25rem;
+  font-weight: var(--ds-font-weight-semibold);
+  font-size: var(--ds-font-size-lg);
+  border-bottom: 1px solid var(--ds-gray-200);
+  background: var(--ds-gray-50);
+}
+
+.ds-card-body {
+  padding: 1.25rem;
+}
+
+/* Botones base */
+.ds-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1.25rem;
+  font-family: var(--ds-font-family);
+  font-size: var(--ds-font-size-sm);
+  font-weight: var(--ds-font-weight-medium);
+  line-height: 1.25;
+  border-radius: var(--ds-radius-sm);
+  border: none;
+  cursor: pointer;
+  transition: transform var(--ds-transition), box-shadow var(--ds-transition), background-color var(--ds-transition);
+  text-decoration: none;
+  min-height: 44px;
+}
+.ds-btn:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: var(--ds-shadow-hover);
+}
+.ds-btn:active:not(:disabled) {
+  transform: translateY(0);
+}
+.ds-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.ds-btn-primary { background-color: var(--ds-primary); color: var(--ds-white); }
+.ds-btn-primary:hover:not(:disabled) { background-color: var(--ds-primary-hover); }
+.ds-btn-success { background-color: var(--ds-success); color: var(--ds-white); }
+.ds-btn-success:hover:not(:disabled) { background-color: var(--ds-success-hover); }
+.ds-btn-info { background-color: var(--ds-info); color: var(--ds-white); }
+.ds-btn-info:hover:not(:disabled) { background-color: var(--ds-info-hover); }
+.ds-btn-warning { background-color: var(--ds-warning); color: var(--ds-white); }
+.ds-btn-warning:hover:not(:disabled) { background-color: var(--ds-warning-hover); }
+.ds-btn-danger { background-color: var(--ds-danger); color: var(--ds-white); }
+.ds-btn-danger:hover:not(:disabled) { background-color: var(--ds-danger-hover); }
+.ds-btn-secondary { background-color: var(--ds-gray-500); color: var(--ds-white); }
+.ds-btn-secondary:hover:not(:disabled) { background-color: var(--ds-gray-700); }
+
+/* Utilidades */
+.ds-flex { display: flex; }
+.ds-flex-wrap { flex-wrap: wrap; }
+.ds-items-center { align-items: center; }
+.ds-gap-1 { gap: 0.25rem; }
+.ds-gap-2 { gap: 0.5rem; }
+.ds-gap-4 { gap: 1rem; }
+.ds-grow-1 { flex: 1; min-width: 0; }

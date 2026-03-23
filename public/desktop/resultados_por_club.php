@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 /**
  * Resultados por club (Desktop). Redirige a posiciones; en una versión futura podría filtrar por club.
  */

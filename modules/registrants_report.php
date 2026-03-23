@@ -133,8 +133,11 @@ if (!empty($filter_torneo)) {
                     <p class="text-muted mb-0">Genera reportes de jugadores inscritos con filtros personalizados</p>
                 </div>
                 <div>
-                    <a href="index.php?page=registrants" class="btn btn-secondary">
+                    <a href="index.php?page=registrants" class="btn btn-secondary me-2">
                         <i class="fas fa-arrow-left me-2"></i>Volver a Inscritos
+                    </a>
+                    <a href="index.php?page=registrants_report_retirados<?= !empty($filter_torneo) ? '&filter_torneo=' . (int)$filter_torneo : '' ?><?= !empty($filter_clubs) ? '&' . http_build_query(['filter_clubs' => $filter_clubs]) : '' ?>" class="btn btn-warning text-dark">
+                        <i class="fas fa-user-minus me-2"></i>Reporte Retirados
                     </a>
                 </div>
             </div>

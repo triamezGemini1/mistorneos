@@ -17,19 +17,26 @@ $envValue = function($key, $default = '') {
     return class_exists('Env') ? (Env::get($key) ?? $default) : $default;
 };
 
+/**
+ * Misma lógica que config/db_config.php (Env::getDb / getDbSecondary).
+ * Evita contraseña vacía si solo existen DB_PROD_PASSWORD / DB_PROD_SECONDARY_PASSWORD.
+ */
+$dbPass = class_exists('Env') ? (Env::getDb('PASSWORD') ?: $envValue('DB_PASSWORD', '')) : $envValue('DB_PASSWORD', '');
+$dbSecondaryPass = class_exists('Env') ? (Env::getDbSecondary('PASSWORD') ?: $envValue('DB_SECONDARY_PASSWORD', '')) : $envValue('DB_SECONDARY_PASSWORD', '');
+
 return [
     'db' => [
         'host' => $envValue('DB_HOST', 'localhost'),
         'port' => $envValue('DB_PORT', '3306'),
         'name' => $envValue('DB_DATABASE', 'laestaci1_mistorneos'),
         'user' => $envValue('DB_USERNAME', 'laestaci1_admin'),
-        'pass' => $envValue('DB_PASSWORD', ''),
+        'pass' => $dbPass,
         'charset' => 'utf8mb4',
         'secondary_host' => $envValue('DB_SECONDARY_HOST', 'localhost'),
         'secondary_port' => $envValue('DB_SECONDARY_PORT', '3306'),
         'secondary_name' => $envValue('DB_SECONDARY_DATABASE', 'laestaci1_fvdadmin'),
         'secondary_user' => $envValue('DB_SECONDARY_USERNAME', 'laestaci1_admin'),
-        'secondary_pass' => $envValue('DB_SECONDARY_PASSWORD', ''),
+        'secondary_pass' => $dbSecondaryPass,
         'secondary_charset' => 'utf8mb4',
     ],
 
@@ -38,7 +45,7 @@ return [
         'port' => $envValue('DB_SECONDARY_PORT', '3306'),
         'name' => $envValue('DB_SECONDARY_DATABASE', 'laestaci1_fvdadmin'),
         'user' => $envValue('DB_SECONDARY_USERNAME', 'laestaci1_admin'),
-        'pass' => $envValue('DB_SECONDARY_PASSWORD', ''),
+        'pass' => $dbSecondaryPass,
         'table' => 'dbo.persona',
         'table_dev' => 'dbo.persona',
     ],

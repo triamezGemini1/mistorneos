@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 /**
  * Componente Características - ¿Qué Ofrecemos? / Servicios
  * Variables globales disponibles: $user, app_base_url()

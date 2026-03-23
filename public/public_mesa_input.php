@@ -1,11 +1,11 @@
-<?php
+﻿<?php
 /**
  * Interfaz de Mesa - Registro de resultados vía QR (La Estación)
  * Acceso: GET ?t=X&m=Y&r=Z&token=HASH
  * Versión ligera: CSS inline, sin librerías externas, envío expedito.
  */
 require_once __DIR__ . '/../config/bootstrap.php';
-require_once __DIR__ . '/../config/db.php';
+require_once __DIR__ . '/../config/db_config.php';
 require_once __DIR__ . '/../lib/QrMesaTokenHelper.php';
 
 $torneo_id = (int)($_GET['t'] ?? $_GET['torneo_id'] ?? 0);

@@ -51,14 +51,45 @@ class AppHelpers {
                 } else {
                     self::$base_url = rtrim($cfg, '/');
                 }
-            } else {
-                // Auto-detección: localhost/127.0.0.1 → /mistorneos; producción → raíz o APP_URL en .env
+            }
+            // Si la petición es bajo /pruebas o /beta, forzar la base a ese subpath (evita estructura rota cuando APP_URL no está en .env beta)
+            if (isset($_SERVER['REQUEST_URI'])) {
+                $uriPath = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
+                if ($uriPath && $uriPath !== '/' && preg_match('#^/(pruebas|beta)(/|$)#', $uriPath, $m)) {
+                    $subpath = '/' . $m[1];
+                    $protocol = isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? 'https' : 'http';
+                    $host = $_SERVER['HTTP_HOST'] ?? 'localhost';
+                    $correctBase = $protocol . '://' . $host . $subpath;
+                    if (strpos(self::$base_url ?? '', $subpath) === false) {
+                        self::$base_url = $correctBase;
+                    }
+                }
+            }
+            if (self::$base_url === null) {
+                // Auto-detección: localhost → /mistorneos; subpath /pruebas o /beta → usar ese path; resto → raíz
                 $protocol = isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? 'https' : 'http';
                 $host = $_SERVER['HTTP_HOST'] ?? 'localhost';
                 $hostLower = strtolower($host);
                 $isLocalhost = ($hostLower === 'localhost' || $hostLower === '127.0.0.1'
                     || strpos($hostLower, 'localhost:') === 0 || strpos($hostLower, '127.0.0.1:') === 0);
                 $path = $isLocalhost ? '/mistorneos' : '';
+                // Entorno de pruebas bajo subpath: si la petición viene de /pruebas (o /beta), usar ese path para assets y enlaces
+                if ($path === '' && isset($_SERVER['REQUEST_URI'])) {
+                    $uriPath = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
+                    if ($uriPath && $uriPath !== '/' && preg_match('#^/(pruebas|beta)(/|$)#', $uriPath, $m)) {
+                        $path = '/' . $m[1];
+                    }
+                }
+                // Subcarpeta tipo /mistorneos_beta/public: derivar base desde SCRIPT_NAME para que redirects y assets funcionen
+                if ($path === '' && !empty($_SERVER['SCRIPT_NAME'])) {
+                    $scriptDir = str_replace('\\', '/', dirname($_SERVER['SCRIPT_NAME']));
+                    if ($scriptDir !== '.' && $scriptDir !== '' && $scriptDir !== '/' && (str_ends_with($scriptDir, '/public') || strpos($scriptDir, '/public/') !== false)) {
+                        $path = $scriptDir === '/public' ? '' : rtrim(preg_replace('#/public/?$#', '', $scriptDir), '/');
+                        if ($path !== '' && $path[0] !== '/') {
+                            $path = '/' . $path;
+                        }
+                    }
+                }
                 self::$base_url = $protocol . '://' . $host . $path;
             }
             if (str_ends_with(self::$base_url, '/public')) {
@@ -70,9 +101,39 @@ class AppHelpers {
 
     /**
      * URL de la carpeta public/ (assets, index.php, etc.)
+     * Si está definida URL_BASE (ej. /pruebas/public/), se usa para anclar a la subcarpeta.
      */
     public static function getPublicUrl(): string {
+        if (defined('URL_BASE') && URL_BASE !== '' && URL_BASE !== '/') {
+            $scheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
+            $host = $_SERVER['HTTP_HOST'] ?? 'localhost';
+            $path = rtrim(URL_BASE, '/');
+            // Si la petición es a public/api/..., la base debe ser public/, no public/api/
+            if (preg_match('#^(.*/public)/api(/.*)?$#', $path)) {
+                $path = preg_replace('#^(.*/public)/api(/.*)?$#', '$1', $path);
+            } elseif (preg_match('#^(.*)/api$#', $path)) {
+                $path = preg_replace('#^(.*)/api$#', '$1', $path);
+            }
+            return $scheme . '://' . $host . $path;
+        }
         return rtrim(self::getBaseUrl(), '/') . '/public';
+    }
+
+    /**
+     * Base URL del entry point actual (SCRIPT_NAME), para que redirects no se vayan a la raíz del dominio.
+     * Uso: header('Location: ' . AppHelpers::getRequestEntryUrl() . '/index.php');
+     * En /pruebas/public/ o /mistorneos_beta/public/ devuelve la URL de esa carpeta.
+     */
+    public static function getRequestEntryUrl(): string {
+        if (!empty($_SERVER['SCRIPT_NAME'])) {
+            $dir = dirname($_SERVER['SCRIPT_NAME']);
+            if ($dir !== '.' && $dir !== '' && $dir !== '/') {
+                $scheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
+                $host = $_SERVER['HTTP_HOST'] ?? 'localhost';
+                return rtrim($scheme . '://' . $host . str_replace('\\', '/', $dir), '/');
+            }
+        }
+        return rtrim(self::getPublicUrl(), '/');
     }
     
     /**
@@ -102,6 +163,15 @@ class AppHelpers {
     public static function dashboard(string $page = 'home', array $params = []): string {
         $params['page'] = $page;
         return self::url('index.php', $params);
+    }
+
+    /** URL segura a torneo_gestion (siempre vía public/index.php; evita enlaces rotos a modules/). */
+    public static function torneoGestionUrl(string $action, int $torneoId, array $extra = []): string {
+        return self::url('index.php', array_merge([
+            'page' => 'torneo_gestion',
+            'action' => $action,
+            'torneo_id' => $torneoId,
+        ], $extra));
     }
     
     /**
@@ -174,6 +244,36 @@ class AppHelpers {
     public static function redirectToDashboard(string $page = 'home', array $params = []): void {
         self::redirect(self::dashboard($page, $params));
     }
+
+    /**
+     * Redirige al origen (política: siempre regresar al origen salvo navegación expedita).
+     * Usa return_to o from (POST/GET); si no hay, usa referrer mismo-origen; si no, fallback.
+     */
+    public static function redirectToOrigin(string $fallbackPage = 'home', array $fallbackParams = []): void {
+        $origin = $_POST['return_to'] ?? $_GET['return_to'] ?? $_GET['from'] ?? '';
+        if ($origin !== '') {
+            $decoded = rawurldecode($origin);
+            $safe = (strpos($decoded, 'http') !== 0);
+            if (!$safe && isset($_SERVER['HTTP_HOST'])) {
+                $host = parse_url($decoded, PHP_URL_HOST);
+                $safe = ($host === null || $host === $_SERVER['HTTP_HOST']);
+            }
+            if ($safe) {
+                self::redirect($decoded);
+                return;
+            }
+        }
+        $ref = $_SERVER['HTTP_REFERER'] ?? '';
+        if ($ref !== '' && strpos($ref, 'http') === 0) {
+            $refHost = parse_url($ref, PHP_URL_HOST);
+            $curHost = $_SERVER['HTTP_HOST'] ?? '';
+            if ($refHost === $curHost) {
+                self::redirect($ref);
+                return;
+            }
+        }
+        self::redirectToDashboard($fallbackPage, $fallbackParams);
+    }
     
     /**
      * Obtiene informaci�n del entorno para debugging
@@ -189,11 +289,15 @@ class AppHelpers {
     }
     
     /**
-     * Obtiene la URL del logo principal (logo4.png en lib/Assets).
-     * Se sirve vía view_image.php porque lib/ está fuera de public/.
+     * Obtiene la URL del logo principal.
+     * Prioridad: public/assets/logo.png (estático) si existe; si no, view_image.php con lib/Assets/mislogos/logo4.png.
      */
     public static function getAppLogo(): string {
-        return self::getPublicUrl() . '/view_image.php?path=' . rawurlencode('lib/Assets/mislogos/logo4.png');
+        $publicLogo = __DIR__ . '/../public/assets/logo.png';
+        if (is_file($publicLogo)) {
+            return rtrim(self::getPublicUrl(), '/') . '/assets/logo.png';
+        }
+        return rtrim(self::getPublicUrl(), '/') . '/view_image.php?path=' . rawurlencode('lib/Assets/mislogos/logo4.png');
     }
     
     /**
@@ -211,11 +315,10 @@ class AppHelpers {
     }
 
     /**
-     * URL centralizada para mostrar cualquier imagen (logos, fotos, etc.).
-     * Usa view_image.php para servir la imagen de forma segura; la URL es relativa
-     * al documento actual, así que funciona con cualquier base (public/, mistorneos/public/, etc.).
-     * @param string|null $path Ruta relativa al proyecto, ej: upload/logos/logo_1.jpg
-     * @return string URL para usar en src="..." o string vacío si no hay path
+     * URL absoluta para cualquier imagen (logos, fotos, etc.) en todas las pantallas.
+     * Usa view_image.php; la URL es absoluta para que funcione con cualquier subpath (/pruebas/public/, /mistorneos_beta/public/, etc.).
+     * @param string|null $path Ruta relativa al proyecto, ej: upload/logos/logo_1.jpg o lib/Assets/mislogos/logo4.png
+     * @return string URL completa para src="..." o string vacío si no hay path
      */
     public static function imageUrl(?string $path): string {
         if ($path === null || $path === '') {
@@ -225,7 +328,7 @@ class AppHelpers {
             return $path;
         }
         $path = ltrim($path, '/\\');
-        return 'view_image.php?path=' . rawurlencode($path);
+        return rtrim(self::getPublicUrl(), '/') . '/view_image.php?path=' . rawurlencode($path);
     }
 }
 

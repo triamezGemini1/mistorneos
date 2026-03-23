@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 /**
  * Diagnóstico de conexión a Base de Datos
  * Acceder: https://laestaciondeldominohoy.com/mistorneos/public/diagnostico_db.php

@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 /**
  * Devuelve el número de registros pendientes de sincronizar (sync_status = 0).
  * Uso: el indicador de estado y el script de sincronización en segundo plano.

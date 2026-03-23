@@ -1,11 +1,14 @@
-<?php
+﻿<?php
+require_once __DIR__ . '/../config/session_start_early.php';
 /**
- * Consulta Pública de Información de Torneo
- * Permite a los jugadores consultar toda la información relacionada con su participación
+ * Consulta de Información de Torneo
+ * Patrón en bloque: db_config → auth_service → requireAuth. Interfaz: header/footer unificados.
  */
 
 require_once __DIR__ . '/../config/bootstrap.php';
-require_once __DIR__ . '/../config/db.php';
+require_once __DIR__ . '/../config/db_config.php';
+require_once __DIR__ . '/../config/auth_service.php';
+AuthService::requireAuth();
 
 $pdo = DB::pdo();
 $base_url = app_base_url();
@@ -60,7 +63,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['buscar'])) {
                     SELECT i.*, c.nombre as club_nombre, u.uuid as identificador_unico
                     FROM inscripciones i
                     LEFT JOIN clubes c ON i.club_id = c.id
-                    LEFT JOIN users u ON i.cedula = u.cedula AND u.role = 'usuario'
+                    LEFT JOIN usuarios u ON i.cedula = u.cedula AND u.role = 'usuario'
                     WHERE i.torneo_id = ? AND i.cedula = ? AND i.estatus = 1
                     LIMIT 1
                 ");
@@ -106,15 +109,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['buscar'])) {
 
 $modalidades = [1 => 'Individual', 2 => 'Parejas', 3 => 'Equipos'];
 $clases = [1 => 'Abierto', 2 => 'Por Categorías'];
-?>
 
+$header_title = 'Consulta de Torneo - La Estación del Dominó';
+?>
 <!DOCTYPE html>
 <html lang="es">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes">
-    <meta name="theme-color" content="#1a365d">
-    <title>Consulta de Torneo - La Estación del Dominó</title>
+<?php include_once __DIR__ . '/../includes/header.php'; ?>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
@@ -576,5 +576,4 @@ $clases = [1 => 'Abierto', 2 => 'Por Categorías'];
         }
     }
     </script>
-</body>
-</html>
+<?php include_once __DIR__ . '/../includes/footer.php'; ?>

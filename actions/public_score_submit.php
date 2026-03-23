@@ -258,6 +258,39 @@ try {
 
     $pdo->commit();
 
+    // Notificar a los 4 jugadores de la mesa (Web + Telegram) con enlace a la SPA de perfil
+    try {
+        require_once __DIR__ . '/../lib/app_helpers.php';
+        require_once __DIR__ . '/../lib/NotificationManager.php';
+        $hasTg = $pdo->query("SHOW COLUMNS FROM usuarios LIKE 'telegram_chat_id'")->rowCount() > 0;
+        $stmt = $pdo->prepare("
+            SELECT pr.id_usuario, u.nombre" . ($hasTg ? ", u.telegram_chat_id" : "") . "
+            FROM partiresul pr
+            INNER JOIN usuarios u ON u.id = pr.id_usuario
+            WHERE pr.id_torneo = ? AND pr.partida = ? AND pr.mesa = ?
+            ORDER BY pr.secuencia
+        ");
+        $stmt->execute([$torneo_id, $ronda, $mesa_id]);
+        $jugadores = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        $urlPerfil = rtrim(\AppHelpers::getPublicUrl(), '/') . '/perfil_jugador.php?torneo_id=' . $torneo_id;
+        $mensaje = 'Resultados de tu mesa registrados. Ronda ' . $ronda . ', Mesa ' . $mesa_id . '. Revisa tu perfil en el torneo.';
+        if (count($jugadores) > 0) {
+            $nm = new NotificationManager($pdo);
+            $items = [];
+            foreach ($jugadores as $row) {
+                $items[] = [
+                    'id' => (int)$row['id_usuario'],
+                    'telegram_chat_id' => ($hasTg && !empty(trim((string)($row['telegram_chat_id'] ?? '')))) ? trim((string)$row['telegram_chat_id']) : null,
+                    'mensaje' => $mensaje,
+                    'url_destino' => $urlPerfil,
+                ];
+            }
+            $nm->programarMasivoPersonalizado($items);
+        }
+    } catch (Exception $e) {
+        error_log('public_score_submit notificaciones: ' . $e->getMessage());
+    }
+
     echo json_encode([
         'success' => true,
         'message' => $estatus === 'pendiente_verificacion'

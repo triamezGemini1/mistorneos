@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 /**
  * Cerrar sesión Desktop: limpia sesión y cookie y redirige al login.
  */

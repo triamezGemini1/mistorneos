@@ -441,7 +441,7 @@ class MesaAsignacionEquiposService
         $sql = "SELECT i.id as id_inscrito, i.id_usuario, i.codigo_equipo, 
                        u.cedula, u.nombre, u.id as usuario_id,
                        i.puntos, i.ganados, i.perdidos, i.efectividad, i.posicion,
-                       i.gff, i.sancion, i.tarjeta
+                       (SELECT COUNT(*) FROM partiresul pr_gff WHERE pr_gff.id_usuario = i.id_usuario AND pr_gff.id_torneo = i.torneo_id AND pr_gff.ff = 1) AS gff, i.sancion, i.tarjeta
                 FROM inscritos i
                 INNER JOIN usuarios u ON i.id_usuario = u.id
                 WHERE i.torneo_id = ? AND i.codigo_equipo = ? AND i.estatus != 4" . $this->whereEntidad('i')['sql'] . "
@@ -489,7 +489,7 @@ class MesaAsignacionEquiposService
         $sql = "SELECT i.id as id_inscrito, i.id_usuario, i.codigo_equipo, 
                        u.cedula, u.nombre, u.id as usuario_id,
                        i.puntos, i.ganados, i.perdidos, i.efectividad, i.posicion,
-                       i.gff, i.sancion, i.tarjeta
+                       (SELECT COUNT(*) FROM partiresul pr_gff WHERE pr_gff.id_usuario = i.id_usuario AND pr_gff.id_torneo = i.torneo_id AND pr_gff.ff = 1) AS gff, i.sancion, i.tarjeta
                 FROM inscritos i
                 INNER JOIN usuarios u ON i.id_usuario = u.id
                 WHERE i.torneo_id = ? AND i.codigo_equipo = ? AND i.estatus != 4" . $this->whereEntidad('i')['sql'] . "

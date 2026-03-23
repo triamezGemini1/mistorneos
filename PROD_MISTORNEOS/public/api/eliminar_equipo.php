@@ -44,11 +44,10 @@ try {
     // Esto permite retirar equipos completos o incompletos
     $codigo_equipo = $equipo['codigo_equipo'] ?? null;
     if (!empty($codigo_equipo)) {
-        // Liberar jugadores del equipo (poner codigo_equipo a NULL)
-        // Esto permite que los jugadores queden disponibles para otros equipos
+        // Liberar jugadores (codigo_equipo NOT NULL en BD → cadena vacía = sin equipo)
         $stmt = $pdo->prepare("
             UPDATE inscritos 
-            SET codigo_equipo = NULL 
+            SET codigo_equipo = ''
             WHERE torneo_id = ? AND codigo_equipo = ? AND estatus != 'retirado'
         ");
         $stmt->execute([$equipo['id_torneo'], $codigo_equipo]);

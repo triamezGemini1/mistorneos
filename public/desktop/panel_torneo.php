@@ -169,6 +169,7 @@ require_once __DIR__ . '/desktop_layout.php';
                     <h3 class="h6 mb-0"><i class="fas fa-table me-2"></i>Gestión de Mesas</h3>
                 </div>
                 <div class="card-body">
+                    <a href="../index.php?page=invitacion_clubes&torneo_id=<?= $torneo_id ?>" class="btn btn-info panel-torneo-btn"><i class="fas fa-paper-plane me-1"></i>Invitar Clubes</a>
                     <?php if ($inscripciones_bloqueado): ?>
                     <button type="button" disabled class="btn btn-secondary panel-torneo-btn"><i class="fas fa-lock me-1"></i>Inscripciones (Cerrado)</button>
                     <?php else: ?>
@@ -230,6 +231,7 @@ require_once __DIR__ . '/desktop_layout.php';
                 <div class="card-body">
                     <a href="posiciones.php?torneo_id=<?= $torneo_id ?>" class="btn panel-torneo-btn" style="background:#6f42c1;color:white;"><i class="fas fa-list-ol me-1"></i>Resultados</a>
                     <a href="resultados_por_club.php?torneo_id=<?= $torneo_id ?>" class="btn btn-success panel-torneo-btn"><i class="fas fa-building me-1"></i>Resultados Clubes</a>
+                    <a href="../../index.php?page=torneo_gestion&action=resultados_reportes&torneo_id=<?= $torneo_id ?>" class="btn btn-secondary panel-torneo-btn" title="Abre la web (sesión requerida)"><i class="fas fa-file-alt me-1"></i>Reportes PDF/Excel (web)</a>
                     <a href="podios.php?torneo_id=<?= $torneo_id ?>" class="btn btn-warning panel-torneo-btn"><i class="fas fa-medal me-1"></i>Podios</a>
                     <hr class="my-2">
                     <p class="text-muted small mb-0">Finalizar torneo</p>

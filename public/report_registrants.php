@@ -1,14 +1,14 @@
-<?php
+﻿<?php
+require_once __DIR__ . '/../config/session_start_early.php';
 /**
  * Reporte de Inscritos en PDF
- * Genera un reporte completo de los jugadores inscritos
+ * Patrón en bloque: conexión única → seguridad → validación inmediata.
  */
-
-
-
 require_once __DIR__ . '/../config/bootstrap.php';
+require_once __DIR__ . '/../config/db_config.php';
+require_once __DIR__ . '/../config/auth_service.php';
 require_once __DIR__ . '/../config/auth.php';
-require_once __DIR__ . '/../config/db.php';
+AuthService::requireAuth();
 require_once __DIR__ . '/../lib/report_generator.php';
 
 Auth::requireRole(['admin_general', 'admin_torneo', 'admin_club']);

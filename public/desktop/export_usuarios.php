@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 /**
  * Guardar Cambios: envía los estados is_active de los administradores (sync_status = 0) al servidor remoto.
  * Tras éxito redirige a usuarios.php. Así el bloqueo es efectivo en la web de inmediato.

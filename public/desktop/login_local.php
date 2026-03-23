@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 /**
  * Login local (Desktop): valida contra SQLite (mistorneos_local.db).
  * Incluye conexión centralizada (db_bridge). Al iniciar sesión define el entidad_id en sesión

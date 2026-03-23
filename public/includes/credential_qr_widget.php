@@ -1,4 +1,4 @@
-
+﻿
 <?php
 /**
  * Widget de Consulta de Credencial con QR Code

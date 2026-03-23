@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 /**
  * Layout desktop: sidebar + área principal. Definir $pageTitle antes de incluir.
  * Mobile-First: sidebar hamburger en móvil, fija en desktop.

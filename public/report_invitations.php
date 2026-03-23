@@ -1,17 +1,16 @@
-<?php
+﻿<?php
+require_once __DIR__ . '/../config/session_start_early.php';
 /**
  * Reporte de Invitaciones en PDF
- * Genera un reporte completo de las invitaciones enviadas
+ * Patrón en bloque: db_config → auth_service → requireAuth. Solo genera PDF (sin HTML).
  */
-
-
-
 require_once __DIR__ . '/../config/bootstrap.php';
+require_once __DIR__ . '/../config/db_config.php';
+require_once __DIR__ . '/../config/auth_service.php';
 require_once __DIR__ . '/../config/auth.php';
-require_once __DIR__ . '/../config/db.php';
-require_once __DIR__ . '/../lib/report_generator.php';
-
+AuthService::requireAuth();
 Auth::requireRole(['admin_general', 'admin_torneo']);
+require_once __DIR__ . '/../lib/report_generator.php';
 
 try {
     $pdo = DB::pdo();

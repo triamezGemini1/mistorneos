@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 /**
  * Componente Preguntas Frecuentes - Acordeón con HTML5 details/summary
  * Variables globales disponibles: $user, app_base_url()

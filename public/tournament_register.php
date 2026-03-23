@@ -1,11 +1,11 @@
-<?php
+﻿<?php
 /**
  * Página Pública de Inscripción en Torneo
  * Permite a usuarios registrados inscribirse en un torneo
  */
 
 require_once __DIR__ . '/../config/bootstrap.php';
-require_once __DIR__ . '/../config/db.php';
+require_once __DIR__ . '/../config/db_config.php';
 require_once __DIR__ . '/../config/auth.php';
 require_once __DIR__ . '/../config/csrf.php';
 
@@ -35,7 +35,7 @@ if (!$torneo) {
 
 // Si el torneo ya finalizó, redirigir a resultados
 if ($torneo['fechator'] && strtotime($torneo['fechator']) < strtotime('today')) {
-    $resultados_url = app_base_url() . '/public/resultados_detalle.php?torneo_id=' . $torneo_id . '&msg=' . urlencode('Este torneo ha finalizado. Consulta los resultados oficiales aquí.');
+    $resultados_url = app_base_url() . '/public/evento_resultados.php?torneo_id=' . $torneo_id . '&msg=' . urlencode('Este torneo ha finalizado. Consulta los resultados oficiales aquí.');
     header('Location: ' . $resultados_url);
     exit;
 }
@@ -234,6 +234,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                 'inscrito_por' => $nuevo_user_id,
                 'numero' => 0
             ]);
+            if (file_exists(__DIR__ . '/../lib/UserActivationHelper.php')) {
+                require_once __DIR__ . '/../lib/UserActivationHelper.php';
+                UserActivationHelper::activateUser($pdo, $nuevo_user_id);
+            }
             $pdo->commit();
             RateLimiter::recordSubmit('tournament_register_new');
             $success_message = 'Te has registrado al torneo ' . htmlspecialchars($torneo['nombre']) . '. Debes formalizar tu inscripción haciendo el pago correspondiente a través de la notificación de pagos o al presentarte al evento.';
@@ -307,7 +311,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
             'inscrito_por' => $usuario['id'],
             'numero' => 0
         ]);
-        
+        if (file_exists(__DIR__ . '/../lib/UserActivationHelper.php')) {
+            require_once __DIR__ . '/../lib/UserActivationHelper.php';
+            UserActivationHelper::activateUser($pdo, (int)$usuario['id']);
+        }
         // Generar notificación de pago si el torneo tiene costo
         if ($torneo['costo'] > 0) {
             // Crear registro de pago pendiente

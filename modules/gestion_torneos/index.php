@@ -34,7 +34,7 @@ $panel_sep = $use_standalone_list ? '?' : '&';
                     <p class="text-muted mb-0">Selecciona un torneo para administrar rondas, mesas, resultados y posiciones.</p>
                 </div>
                 <div class="mt-2 mt-md-0 d-flex flex-wrap gap-2 align-items-center">
-                    <a href="index.php?page=tournaments" class="btn btn-outline-primary">
+                    <a href="index.php?page=torneo_gestion&action=index" class="btn btn-outline-primary">
                         <i class="fas fa-eye me-1"></i>Ver y Editar Torneos
                     </a>
                     <a href="index.php?page=tournaments&action=new" class="btn btn-success">
@@ -134,8 +134,8 @@ $panel_sep = $use_standalone_list ? '?' : '&';
                                 <td class="text-center"><?= (int)($t['ultima_ronda'] ?? 0) ?> / <?= (int)($t['rondas'] ?? 0) ?></td>
                                 <td>
                                     <div class="btn-group btn-group-sm">
-                                        <a href="index.php?page=tournaments&action=view&id=<?= (int)$t['id'] ?>" class="btn btn-outline-info" title="Ver">Ver</a>
-                                        <a href="index.php?page=tournaments&action=edit&id=<?= (int)$t['id'] ?>" class="btn btn-outline-primary" title="Editar">Editar</a>
+                                        <a href="index.php?page=torneo_gestion&action=view&id=<?= (int)$t['id'] ?>" class="btn btn-outline-info" title="Ver">Ver</a>
+                                        <a href="index.php?page=torneo_gestion&action=edit&id=<?= (int)$t['id'] ?>" class="btn btn-outline-primary" title="Editar">Editar</a>
                                         <a href="<?= htmlspecialchars($base_url_panel . $panel_sep . 'action=panel&torneo_id=' . (int)$t['id']) ?>" class="btn btn-outline-success">Panel</a>
                                         <?php
                                         $notif_url = $is_admin_general

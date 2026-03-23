@@ -45,6 +45,12 @@ const LandingContent = {
         const commentErrors = ref([]);
         const commentForm = ref({ tipo: 'comentario', contenido: '', calificacion: null });
 
+        // Logos de clientes desde carpeta de logos de clubes (upload/logos), repartidos en dos filas
+        const logosClientes = computed(() => Array.isArray(props.data?.logos_clientes) ? props.data.logos_clientes : []);
+        const mitadLogos = computed(() => Math.ceil(logosClientes.value.length / 2));
+        const logosFila1 = computed(() => logosClientes.value.slice(0, mitadLogos.value));
+        const logosFila2 = computed(() => logosClientes.value.slice(mitadLogos.value));
+
         const eventosPorFecha = computed(() => props.data?.eventos_por_fecha || {});
         const hoyStr = new Date().toISOString().slice(0, 10);
         const calendarioFuturo = computed(() => {
@@ -91,7 +97,7 @@ const LandingContent = {
             html += `</div>`;
 
             if (esPasado) {
-                html += `<a href="${base}resultados_detalle.php?torneo_id=${ev.id}" class="block w-full px-4 py-3 bg-gradient-to-r from-emerald-500 to-emerald-600 text-white font-bold rounded-lg hover:from-emerald-600 hover:to-emerald-700 transition-all text-center shadow-lg"><i class="fas fa-trophy mr-2"></i>Ver Resultados</a>`;
+                html += `<a href="${base}evento_resultados.php?torneo_id=${ev.id}" class="block w-full px-4 py-3 bg-gradient-to-r from-emerald-500 to-emerald-600 text-white font-bold rounded-lg hover:from-emerald-600 hover:to-emerald-700 transition-all text-center shadow-lg"><i class="fas fa-trophy mr-2"></i>Ver Resultados</a>`;
             } else if (permiteOnline && !esHoyEv) {
                 const urlInsc = esMasivo ? `${base}inscribir_evento_masivo.php?torneo_id=${ev.id}` : `${base}tournament_register.php?torneo_id=${ev.id}`;
                 html += `<a href="${urlInsc}" class="block w-full px-4 py-3 bg-gradient-to-r ${btnColor} font-bold rounded-lg hover:from-yellow-500 hover:to-orange-600 transition-all text-center shadow-lg hover:shadow-xl transform hover:scale-105"><i class="fas fa-mobile-alt mr-2"></i>Inscribirme Ahora</a>`;
@@ -204,6 +210,8 @@ const LandingContent = {
             commentSending,
             commentSuccess,
             commentErrors,
+            logosFila1,
+            logosFila2,
             scrollToSection,
             renderTarjetaEvento,
             viewEventPhotos,
@@ -249,8 +257,8 @@ createApp({
         const logoUrl = ref(window.APP_CONFIG?.logoUrl || '');
         const effectiveLogoUrl = computed(() => {
             if (logoUrl.value) return logoUrl.value;
-            const b = baseUrl.value || '';
-            return b ? b.replace(/\/public\/?$/, '') + '/lib/Assets/mislogos/logo4.png' : '';
+            const b = (baseUrl.value || '').replace(/\/$/, '');
+            return b ? b + '/view_image.php?path=' + encodeURIComponent('lib/Assets/mislogos/logo4.png') : '';
         });
 
         onMounted(() => {

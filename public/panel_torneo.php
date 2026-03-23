@@ -1,20 +1,17 @@
-<?php
+﻿<?php
+require_once __DIR__ . '/../config/session_start_early.php';
 /**
- * Página standalone del Panel de Control del Torneo.
- * Un solo contenedor: botón Volver + contenido del panel (sin menú lateral, sin duplicación).
+ * Panel de Control del Torneo. Patrón en bloque: db_config → auth_service → requireAuth.
  */
 require_once __DIR__ . '/../config/bootstrap.php';
 require_once __DIR__ . '/../config/csrf.php';
-require_once __DIR__ . '/../config/db.php';
+require_once __DIR__ . '/../config/db_config.php';
+require_once __DIR__ . '/../config/auth_service.php';
 require_once __DIR__ . '/../config/auth.php';
 require_once __DIR__ . '/../lib/app_helpers.php';
-
-$user = Auth::user();
-if (!$user) {
-    header('Location: login.php');
-    exit;
-}
+AuthService::requireAuth();
 Auth::requireRole(['admin_general', 'admin_torneo', 'admin_club']);
+$user = Auth::user();
 
 $torneo_id = isset($_GET['torneo_id']) ? (int)$_GET['torneo_id'] : 0;
 
@@ -65,6 +62,8 @@ $org_logo_url = $org_logo ? AppHelpers::url('view_image.php', ['path' => $org_lo
     <link rel="stylesheet" href="assets/dashboard.css">
     <style>
         html, body { height: 100%; margin: 0; overflow: hidden; }
+        /* Panel de Control de Torneos: +1pt en todo el contenido */
+        body.panel-torneo-page { font-size: 1.083rem; }
         .panel-contenedor {
             overflow: hidden; display: flex; flex-direction: column;
             height: 100vh; box-sizing: border-box;
@@ -74,7 +73,7 @@ $org_logo_url = $org_logo ? AppHelpers::url('view_image.php', ['path' => $org_lo
         }
     </style>
 </head>
-<body>
+<body class="panel-torneo-page">
     <main class="panel-contenedor" style="width:90%;max-width:100%;margin:0 auto;background:#005c44;padding:0.85rem;">
         <div class="d-flex justify-content-between align-items-center mb-2 flex-shrink-0 gap-3">
             <?php if ($org_logo_url): ?>

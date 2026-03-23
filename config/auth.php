@@ -12,13 +12,15 @@ class Auth {
         'id' => $user['id'],
         'username' => $user['username'],
         'role' => $user['role'],
+        'role_original' => $user['role'],
         'email' => $user['email'],
         'uuid' => $user['uuid'],
         'photo_path' => $user['photo_path'],
         'club_id' => $user['club_id'],
         'entidad' => isset($user['entidad']) ? (int)$user['entidad'] : 0
       ];
-      session_regenerate_id(true);
+      // No regenerar ID aquí: el navegador ya envió una cookie (session_id); si regeneramos,
+      // la nueva cookie no llega a la siguiente petición en entornos con subcarpeta y se pierde la sesión.
       return true;
     }
     return false;
@@ -38,26 +40,19 @@ class Auth {
     if (!headers_sent()) {
       $params = session_get_cookie_params();
       
-      // Eliminar la cookie de sesi�n principal
-      setcookie(session_name(), '', time() - 42000,
-        $params["path"], $params["domain"],
-        $params["secure"], $params["httponly"]
-      );
-      
-      // Eliminar otras cookies relacionadas con la sesi�n si existen
-      if (isset($_COOKIE[session_name()])) {
-        unset($_COOKIE[session_name()]);
+      $name = session_name();
+      $expire = time() - 42000;
+      setcookie($name, '', $expire, $params["path"], $params["domain"], $params["secure"], $params["httponly"]);
+      // Eliminar también cookie con path=/ por si la sesión se inició con session_start_early (index.php)
+      if (defined('URL_BASE') && URL_BASE !== '' && URL_BASE !== '/') {
+        setcookie($name, '', $expire, '/', $params["domain"], $params["secure"], $params["httponly"]);
       }
-      
-      // Limpiar headers adicionales para seguridad
-      header_remove('Set-Cookie');
     }
-    
-    // Limpiar array de cookies
+
     if (isset($_COOKIE)) {
-      foreach ($_COOKIE as $name => $value) {
-        if (strpos($name, session_name()) === 0) {
-          unset($_COOKIE[$name]);
+      foreach (array_keys($_COOKIE) as $cname) {
+        if ($cname === session_name() || strpos($cname, session_name()) === 0) {
+          unset($_COOKIE[$cname]);
         }
       }
     }
@@ -77,10 +72,26 @@ class Auth {
 
   public static function user(): ?array {
     $u = $_SESSION['user'] ?? null;
+    if (!$u || !is_array($u)) {
+      return $u;
+    }
+    if (!isset($u['role_original']) || $u['role_original'] === '') {
+      $u['role_original'] = $u['role'] ?? '';
+    }
+    // Switch de rol: solo permitido cuando el rol original es admin_general
+    if (($u['role_original'] ?? '') === 'admin_general' && isset($_SESSION['role_switch_mode'])) {
+      $mode = (int)$_SESSION['role_switch_mode'];
+      $map = [0 => 'admin_general', 1 => 'admin_club', 2 => 'admin_torneo', 3 => 'operador', 4 => 'usuario'];
+      if (isset($map[$mode])) {
+        $u['role'] = $map[$mode];
+        $u['role_switch_mode'] = $mode;
+      }
+    }
     if ($u !== null && !isset($u['id']) && isset($u['user_id'])) {
       $u['id'] = $u['user_id'];
       $_SESSION['user'] = $u;
     }
+    $_SESSION['user'] = $u;
     return $u;
   }
 
@@ -89,17 +100,49 @@ class Auth {
     if (!$u || !in_array($u['role'], $roles, true)) {
       // Redirigir a una p�gina de error en lugar de establecer c�digo de respuesta
       if (!headers_sent()) {
-        header('Location: ' . app_base_url() . '/public/access_denied.php');
+        $base = class_exists('AppHelpers') && method_exists('AppHelpers', 'getRequestEntryUrl') ? AppHelpers::getRequestEntryUrl() : rtrim(app_base_url(), '/') . '/public';
+        header('Location: ' . $base . '/access_denied.php');
         exit;
       } else {
         // Si los headers ya se enviaron, mostrar mensaje de error
         echo '<div class="alert alert-danger text-center mt-4">';
         echo '<h4>Acceso Denegado</h4>';
         echo '<p>No tienes permisos para acceder a esta secci�n.</p>';
-        echo '<a href="' . app_base_url() . '/public/index.php?page=registrants" class="btn btn-primary">Ir a Inscripciones</a>';
+        $base = class_exists('AppHelpers') && method_exists('AppHelpers', 'getRequestEntryUrl') ? AppHelpers::getRequestEntryUrl() : rtrim(app_base_url(), '/') . '/public';
+        echo '<a href="' . $base . '/index.php?page=registrants" class="btn btn-primary">Ir a Inscripciones</a>';
         echo '</div>';
         exit;
       }
+    }
+  }
+
+  /**
+   * Igual que requireRole pero devuelve JSON (para fetch/XHR) en lugar de redirigir a HTML.
+   * Evita el mensaje genérico "Error de conexión" cuando la sesión expiró o el rol no aplica.
+   */
+  public static function requireRoleJson(array $roles): void {
+    $u = self::user();
+    if (!$u) {
+      if (!headers_sent()) {
+        header('Content-Type: application/json; charset=utf-8');
+        http_response_code(401);
+      }
+      echo json_encode([
+        'success' => false,
+        'error' => 'Sesión expirada o no válida. Actualice la página e inicie sesión de nuevo.',
+      ], JSON_UNESCAPED_UNICODE);
+      exit;
+    }
+    if (!in_array($u['role'], $roles, true)) {
+      if (!headers_sent()) {
+        header('Content-Type: application/json; charset=utf-8');
+        http_response_code(403);
+      }
+      echo json_encode([
+        'success' => false,
+        'error' => 'No tiene permisos para esta acción. Se requiere administrador (general, torneo u organización).',
+      ], JSON_UNESCAPED_UNICODE);
+      exit;
     }
   }
 
@@ -268,6 +311,63 @@ class Auth {
   }
 
   /**
+   * Obtiene el ID de la organización que gestiona el torneo (todos los procesos son por organización).
+   * club_responsable puede ser ID de organización o ID de club; si es club se resuelve organizacion_id.
+   * @param int $tournament_id
+   * @return int|null
+   */
+  public static function getTournamentOrganizacionId(int $tournament_id): ?int {
+    if ($tournament_id <= 0) return null;
+    try {
+      $stmt = DB::pdo()->prepare("SELECT club_responsable FROM tournaments WHERE id = ? LIMIT 1");
+      $stmt->execute([$tournament_id]);
+      $row = $stmt->fetch(PDO::FETCH_ASSOC);
+      if (!$row || empty($row['club_responsable'])) return null;
+      $resp = (int)$row['club_responsable'];
+      if ($resp <= 0) return null;
+      // ¿Es una organización? (existe en organizaciones)
+      $stmt2 = DB::pdo()->prepare("SELECT id FROM organizaciones WHERE id = ? AND estatus = 1 LIMIT 1");
+      $stmt2->execute([$resp]);
+      if ($stmt2->fetch()) return $resp;
+      // Es un club: obtener organizacion_id del club
+      $stmt3 = DB::pdo()->prepare("SELECT organizacion_id FROM clubes WHERE id = ? LIMIT 1");
+      $stmt3->execute([$resp]);
+      $org = $stmt3->fetchColumn();
+      return $org !== false && $org !== null ? (int)$org : null;
+    } catch (Exception $e) {
+      return null;
+    }
+  }
+
+  /**
+   * Indica si el usuario actual pertenece a la organización (los procesos se administran por organización).
+   * True si: es admin de esa org, o su club pertenece a esa org, o es admin_club de esa org.
+   * @param int $org_id
+   * @return bool
+   */
+  public static function userIsInOrganizacion(int $org_id): bool {
+    $u = self::user();
+    if (!$u || $org_id <= 0) return false;
+    if (self::isAdminGeneral()) return true;
+    if (self::getUserOrganizacionId() === $org_id) return true;
+    // Usuario es responsable de la organización (admin_user_id) aunque no tenga rol admin_club
+    try {
+      $stmt = DB::pdo()->prepare("SELECT 1 FROM organizaciones WHERE id = ? AND admin_user_id = ? AND estatus = 1 LIMIT 1");
+      $stmt->execute([$org_id, self::id()]);
+      if ($stmt->fetch()) return true;
+    } catch (Exception $e) { /* seguir con club */ }
+    $club_id = isset($u['club_id']) ? (int)$u['club_id'] : 0;
+    if ($club_id <= 0) return false;
+    try {
+      $stmt = DB::pdo()->prepare("SELECT 1 FROM clubes WHERE id = ? AND organizacion_id = ? AND estatus = 1 LIMIT 1");
+      $stmt->execute([$club_id, $org_id]);
+      return $stmt->fetch() !== false;
+    } catch (Exception $e) {
+      return false;
+    }
+  }
+
+  /**
    * Verifica si un torneo pertenece al club del admin_torneo o admin_club
    * Para admin_club, verifica por organización (no requiere club_id)
    * @param int $tournament_id
@@ -281,7 +381,7 @@ class Auth {
       return true;
     }
     
-    // Admin club: verifica por organización (club_responsable = ID de organización)
+    // Admin club: verifica por organización (club_responsable = ID de organización) o por club de la organización
     if (self::isAdminClub()) {
       $org_id = self::getUserOrganizacionId();
       
@@ -290,7 +390,6 @@ class Auth {
       }
       
       try {
-        // club_responsable ahora contiene el ID de la organización
         $stmt = DB::pdo()->prepare("SELECT club_responsable FROM tournaments WHERE id = ?");
         $stmt->execute([$tournament_id]);
         $tournament = $stmt->fetch();
@@ -299,7 +398,15 @@ class Auth {
           return false;
         }
         
-        return $tournament['club_responsable'] == $org_id;
+        $resp = (int)($tournament['club_responsable'] ?? 0);
+        if ($resp <= 0) return false;
+        // Directo: el torneo está a cargo de la organización del usuario
+        if ($resp == $org_id) return true;
+        // Legacy: club_responsable puede ser un club_id; verificar si ese club pertenece a la org del usuario
+        $stmt2 = DB::pdo()->prepare("SELECT 1 FROM clubes WHERE id = ? AND organizacion_id = ? AND estatus = 1 LIMIT 1");
+        $stmt2->execute([$resp, $org_id]);
+        if ($stmt2->fetch()) return true;
+        return false;
       } catch (Exception $e) {
         return false;
       }

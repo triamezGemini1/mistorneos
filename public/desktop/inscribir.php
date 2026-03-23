@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 /**
  * Inscripción en sitio (Desktop).
  * Un clic en Disponibles = inscribir y confirmar (pasa a Inscritos).

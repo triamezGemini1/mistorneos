@@ -180,11 +180,39 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
     
     switch ($post_action) {
+        case 'guardar_equipo_sitio':
+            $tid = (int)($_GET['torneo_id'] ?? $_POST['torneo_id'] ?? 0);
+            if ($tid <= 0) {
+                header('Content-Type: application/json; charset=utf-8');
+                echo json_encode(['success' => false, 'message' => 'Torneo no especificado'], JSON_UNESCAPED_UNICODE);
+                exit;
+            }
+            verificarPermisosTorneo($tid, $user_id, $is_admin_general);
+            require_once __DIR__ . '/../lib/GuardarEquipoSitioService.php';
+            $input = $_POST;
+            if ((int)($input['torneo_id'] ?? 0) !== $tid) {
+                header('Content-Type: application/json; charset=utf-8');
+                echo json_encode(['success' => false, 'message' => 'torneo_id no coincide'], JSON_UNESCAPED_UNICODE);
+                exit;
+            }
+            error_log('=== guardar_equipo_sitio POST torneo_gestion (index/admin, sesión OK) ===');
+            header('Content-Type: application/json; charset=utf-8');
+            try {
+                $pdo = DB::pdo();
+                $out = GuardarEquipoSitioService::ejecutar($pdo, $input, Auth::id() ?: null);
+                echo json_encode($out, JSON_UNESCAPED_UNICODE);
+            } catch (Throwable $e) {
+                http_response_code(500);
+                error_log('guardar_equipo_sitio: ' . $e->getMessage());
+                echo json_encode(['success' => false, 'message' => 'Error al guardar: ' . $e->getMessage()], JSON_UNESCAPED_UNICODE);
+            }
+            exit;
+
         case 'generar_ronda':
             $torneo_id = (int)($_POST['torneo_id'] ?? 0);
             generarRonda($torneo_id, $user_id, $is_admin_general);
             break;
-            
+
         case 'eliminar_ultima_ronda':
             $torneo_id = (int)($_POST['torneo_id'] ?? 0);
             eliminarUltimaRonda($torneo_id, $user_id, $is_admin_general);
@@ -2059,7 +2087,7 @@ function obtenerDatosPanelEquipos($torneo_id) {
             LEFT JOIN inscritos ins ON ins.id_usuario = u.id AND ins.torneo_id = ? AND " . InscritosHelper::sqlWhereSoloConfirmadoConAlias('ins') . "
             WHERE u.role = 'usuario' 
               AND u.status = 0
-              AND (ins.id IS NULL OR ins.codigo_equipo IS NULL)
+              AND (ins.id IS NULL OR ins.codigo_equipo IS NULL OR ins.codigo_equipo = '')
         ");
         $stmt->execute([$torneo_id]);
         $total_jugadores_disponibles = (int)$stmt->fetchColumn();
@@ -2082,7 +2110,7 @@ function obtenerDatosPanelEquipos($torneo_id) {
                 WHERE u.role = 'usuario' 
                   AND u.status = 0
                   AND u.club_id IN ({$placeholders})
-                  AND (ins.id IS NULL OR ins.codigo_equipo IS NULL)
+                  AND (ins.id IS NULL OR ins.codigo_equipo IS NULL OR ins.codigo_equipo = '')
             ");
             $stmt->execute(array_merge([$torneo_id], $clubes_ids));
             $total_jugadores_disponibles = (int)$stmt->fetchColumn();
@@ -2282,7 +2310,7 @@ function obtenerDatosInscribirEquipoSitio($torneo_id) {
             LEFT JOIN inscritos ins ON ins.id_usuario = u.id AND ins.torneo_id = ? AND " . InscritosHelper::sqlWhereSoloConfirmadoConAlias('ins') . "
             WHERE u.role = 'usuario' 
               AND u.status = 0
-              AND (ins.id IS NULL OR ins.codigo_equipo IS NULL)
+              AND (ins.id IS NULL OR ins.codigo_equipo IS NULL OR ins.codigo_equipo = '')
             ORDER BY COALESCE(u.nombre, u.username) ASC
         ");
         $stmt->execute([$torneo_id]);
@@ -2308,7 +2336,7 @@ function obtenerDatosInscribirEquipoSitio($torneo_id) {
                 WHERE u.role = 'usuario' 
                   AND u.status = 0
                   AND u.club_id IN ({$placeholders})
-                  AND (ins.id IS NULL OR ins.codigo_equipo IS NULL)
+                  AND (ins.id IS NULL OR ins.codigo_equipo IS NULL OR ins.codigo_equipo = '')
                 ORDER BY COALESCE(u.nombre, u.username) ASC
             ");
             $stmt->execute(array_merge([$torneo_id], $clubes_ids));
@@ -2323,24 +2351,32 @@ function obtenerDatosInscribirEquipoSitio($torneo_id) {
     }
     unset($jugador);
     
-    // Obtener clubes disponibles para el formulario
+    $org_torneo_id = Auth::getTournamentOrganizacionId($torneo_id);
     $clubes_disponibles = [];
-    if ($is_admin_general) {
+    $where_club_activo = "(c.estatus = 1 OR c.estatus = '1' OR c.estatus = 'activo')";
+    if ($org_torneo_id) {
+        $stmt = $pdo->prepare("SELECT c.id, c.nombre FROM clubes c WHERE c.organizacion_id = ? AND {$where_club_activo} ORDER BY c.nombre ASC");
+        $stmt->execute([$org_torneo_id]);
+        $clubes_disponibles = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    } elseif ($is_admin_general) {
         $stmt = $pdo->query("SELECT id, nombre FROM clubes WHERE (estatus = 1 OR estatus = '1' OR estatus = 'activo') ORDER BY nombre ASC");
         $clubes_disponibles = $stmt->fetchAll(PDO::FETCH_ASSOC);
-    } else if ($user_club_id) {
-        if ($is_admin_club) {
+    } elseif ($user_club_id) {
+        $stmt = $pdo->prepare('SELECT organizacion_id FROM clubes WHERE id = ? LIMIT 1');
+        $stmt->execute([$user_club_id]);
+        $org_usuario = $stmt->fetchColumn();
+        if ($org_usuario) {
+            $stmt = $pdo->prepare("SELECT c.id, c.nombre FROM clubes c WHERE c.organizacion_id = ? AND {$where_club_activo} ORDER BY c.nombre ASC");
+            $stmt->execute([(int)$org_usuario]);
+            $clubes_disponibles = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        }
+        if (empty($clubes_disponibles) && $is_admin_club) {
             $clubes_disponibles = ClubHelper::getClubesSupervisedWithData($user_club_id);
-            $club_ids = array_column($clubes_disponibles, 'id');
-            if (!in_array($user_club_id, $club_ids)) {
-                $stmt = $pdo->prepare("SELECT id, nombre FROM clubes WHERE id = ? AND (estatus = 1 OR estatus = '1' OR estatus = 'activo')");
-                $stmt->execute([$user_club_id]);
-                $club = $stmt->fetch(PDO::FETCH_ASSOC);
-                if ($club) {
-                    array_unshift($clubes_disponibles, $club);
-                }
-            }
-        } else {
+            $clubes_disponibles = array_map(static function ($r) {
+                return ['id' => (int)($r['id'] ?? 0), 'nombre' => (string)($r['nombre'] ?? '')];
+            }, $clubes_disponibles);
+        }
+        if (empty($clubes_disponibles) && $user_club_id) {
             $stmt = $pdo->prepare("SELECT id, nombre FROM clubes WHERE id = ? AND (estatus = 1 OR estatus = '1' OR estatus = 'activo')");
             $stmt->execute([$user_club_id]);
             $club = $stmt->fetch(PDO::FETCH_ASSOC);
@@ -2349,18 +2385,72 @@ function obtenerDatosInscribirEquipoSitio($torneo_id) {
             }
         }
     }
-    
-    // Obtener equipos registrados del torneo (solo código, club y nombre)
     $stmt = $pdo->prepare("
-        SELECT e.id, e.codigo_equipo, e.nombre_equipo, e.id_club, c.nombre as nombre_club
+        SELECT e.id, e.codigo_equipo, e.nombre_equipo, e.id_club AS id_club,
+               COALESCE(NULLIF(TRIM(c.nombre), ''), CONCAT('Club #', e.id_club)) AS nombre_club
         FROM equipos e
-        LEFT JOIN clubes c ON e.id_club = c.id
+        LEFT JOIN clubes c ON c.id = e.id_club
         WHERE e.id_torneo = ?
         ORDER BY e.codigo_equipo ASC, e.nombre_equipo ASC
     ");
     $stmt->execute([$torneo_id]);
     $equipos_registrados = $stmt->fetchAll(PDO::FETCH_ASSOC);
-    
+    foreach ($equipos_registrados as &$eq0) {
+        $eq0['id_club'] = (int)($eq0['id_club'] ?? 0);
+    }
+    unset($eq0);
+    $ids_select = array_map('intval', array_column($clubes_disponibles, 'id'));
+    foreach ($equipos_registrados as $eqm) {
+        $cid = (int)($eqm['id_club'] ?? 0);
+        if ($cid <= 0 || in_array($cid, $ids_select, true)) {
+            continue;
+        }
+        $stmt = $pdo->prepare('SELECT id, nombre FROM clubes WHERE id = ? LIMIT 1');
+        $stmt->execute([$cid]);
+        $fila = $stmt->fetch(PDO::FETCH_ASSOC);
+        if ($fila) {
+            $clubes_disponibles[] = ['id' => (int)$fila['id'], 'nombre' => $fila['nombre'] . ' (equipo)'];
+            $ids_select[] = $cid;
+        }
+    }
+    usort($clubes_disponibles, static function ($a, $b) {
+        return strcasecmp((string)($a['nombre'] ?? ''), (string)($b['nombre'] ?? ''));
+    });
+    $por_codigo = [];
+    $codigos_eq = [];
+    foreach ($equipos_registrados as $eq) {
+        $c = trim((string)($eq['codigo_equipo'] ?? ''));
+        if ($c !== '') {
+            $codigos_eq[$c] = true;
+        }
+    }
+    $codigos_list = array_keys($codigos_eq);
+    if ($codigos_list !== []) {
+        $ph = implode(',', array_fill(0, count($codigos_list), '?'));
+        $stj = $pdo->prepare("
+            SELECT i.codigo_equipo, i.id AS id_inscrito, i.id_usuario, u.cedula,
+                   COALESCE(NULLIF(TRIM(u.nombre), ''), u.username) AS nombre
+            FROM inscritos i INNER JOIN usuarios u ON u.id = i.id_usuario
+            WHERE i.torneo_id = ? AND i.codigo_equipo IN ($ph)
+              AND (i.estatus IS NULL OR i.estatus = '' OR i.estatus NOT IN ('retirado', 4))
+            ORDER BY i.codigo_equipo ASC, nombre ASC
+        ");
+        $stj->execute(array_merge([$torneo_id], $codigos_list));
+        foreach ($stj->fetchAll(PDO::FETCH_ASSOC) as $row) {
+            $ck = (string)($row['codigo_equipo'] ?? '');
+            if ($ck === '') {
+                continue;
+            }
+            unset($row['codigo_equipo']);
+            $por_codigo[$ck][] = $row;
+        }
+    }
+    foreach ($equipos_registrados as &$eq) {
+        $c = trim((string)($eq['codigo_equipo'] ?? ''));
+        $eq['jugadores'] = ($c !== '' && isset($por_codigo[$c])) ? $por_codigo[$c] : [];
+    }
+    unset($eq);
+
     return [
         'torneo' => $torneo,
         'jugadores_disponibles' => $jugadores_disponibles,
@@ -4079,6 +4169,27 @@ function guardarResultados($user_id, $is_admin_general) {
                 break;
             }
         }
+
+        // Empate en tranque: Mano Nula (0 puntos a ambos, 0 efectividad).
+        // Solo aplica cuando no hay forfait ni tarjeta grave.
+        $esEmpateManoNula = false;
+        if (!$hayForfaitEnMesa && !$hayTarjetaGraveEnMesa) {
+            $puntosParejaA = null;
+            $puntosParejaB = null;
+            foreach ($datosJugadores as $jugador) {
+                $sec = (int)($jugador['secuencia'] ?? 0);
+                $r1 = (int)($jugador['resultado1'] ?? 0);
+                if (($sec === 1 || $sec === 2) && $puntosParejaA === null) {
+                    $puntosParejaA = $r1;
+                }
+                if (($sec === 3 || $sec === 4) && $puntosParejaB === null) {
+                    $puntosParejaB = $r1;
+                }
+            }
+            if ($puntosParejaA !== null && $puntosParejaB !== null && $puntosParejaA > 0 && $puntosParejaA === $puntosParejaB) {
+                $esEmpateManoNula = true;
+            }
+        }
         
         // Segunda pasada: calcular efectividad considerando sanciones
         foreach ($datosJugadores as $jugador) {
@@ -4096,8 +4207,14 @@ function guardarResultados($user_id, $is_admin_general) {
             $esParejaA = $jugador['esParejaA'];
             
             // Calcular efectividad según el caso
+            // PRIORIDAD 0: Mano Nula (empate en tranque)
+            if ($esEmpateManoNula) {
+                $efectividad = 0;
+                $resultado1 = 0;
+                $resultado2 = 0;
+            }
             // PRIORIDAD 1: Si hay forfait en la mesa, usar lógica especial de forfait
-            if ($hayForfaitEnMesa) {
+            elseif ($hayForfaitEnMesa) {
                 $calculoForfait = calcularEfectividadForfait($ff == 1, $puntosTorneo);
                 $efectividad = $calculoForfait['efectividad'];
                 // También actualizar resultado1 y resultado2 según el cálculo de forfait
@@ -4194,6 +4311,9 @@ function guardarResultados($user_id, $is_admin_general) {
         if (!empty($observaciones)) {
             $stmt = $pdo->prepare("UPDATE partiresul SET observaciones = ? WHERE id_torneo = ? AND partida = ? AND mesa = ?");
             $stmt->execute([$observaciones, $torneo_id, $ronda, $mesa]);
+        }
+        if ($esEmpateManoNula) {
+            $_SESSION['info'] = 'Empate en tranque registrado como Mano Nula: 0 puntos para ambas parejas.';
         }
         
         $pdo->commit();
@@ -5224,6 +5344,13 @@ function ejecutarReasignacion($torneo_id, $ronda, $mesa, $user_id, $is_admin_gen
         }
         
         $pdo = DB::pdo();
+        $stmtTorneo = $pdo->prepare("SELECT modalidad FROM tournaments WHERE id = ? LIMIT 1");
+        $stmtTorneo->execute([$torneo_id]);
+        $modalidad = (int)($stmtTorneo->fetchColumn() ?: 0);
+        $esParejasFijas = ($modalidad === 4);
+        if ($esParejasFijas && !in_array($opcion, [5, 6], true)) {
+            throw new Exception('En Parejas Fijas solo se permiten movimientos en bloque de pareja (opciones 5 o 6).');
+        }
         
         // Obtener jugadores actuales de la mesa
         $stmt = $pdo->prepare("SELECT * FROM partiresul 

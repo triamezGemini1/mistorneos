@@ -42,7 +42,7 @@ $actual = $filtro_torneos ? ($titulos[$filtro_torneos] ?? null) : ['titulo' => '
         <p class="text-muted mb-0"><?php echo htmlspecialchars($actual['texto']); ?></p>
     </div>
     <div class="d-flex gap-2">
-        <a href="index.php?page=tournaments" class="btn btn-outline-primary btn-lg shadow-sm">
+        <a href="index.php?page=torneo_gestion&action=index" class="btn btn-outline-primary btn-lg shadow-sm">
             <i class="fas fa-list me-2"></i>Ver y Editar Torneos
         </a>
         <a href="index.php?page=tournaments&action=new" class="btn btn-success btn-lg shadow-sm">
@@ -113,8 +113,8 @@ $actual = $filtro_torneos ? ($titulos[$filtro_torneos] ?? null) : ['titulo' => '
                             <td class="text-center"><?= (int)($t['ultima_ronda'] ?? 0) ?> / <?= (int)($t['rondas'] ?? 0) ?></td>
                             <td>
                                 <div class="btn-group btn-group-sm">
-                                    <a href="index.php?page=tournaments&action=view&id=<?= (int)$t['id'] ?>" class="btn btn-outline-info" title="Ver">Ver</a>
-                                    <a href="index.php?page=tournaments&action=edit&id=<?= (int)$t['id'] ?>" class="btn btn-outline-primary" title="Editar">Editar</a>
+                                    <a href="index.php?page=torneo_gestion&action=view&id=<?= (int)$t['id'] ?>" class="btn btn-outline-info" title="Ver">Ver</a>
+                                    <a href="index.php?page=torneo_gestion&action=edit&id=<?= (int)$t['id'] ?>" class="btn btn-outline-primary" title="Editar">Editar</a>
                                     <a href="<?= htmlspecialchars($base_url . ($use_standalone ? '?' : '&') . 'action=panel&torneo_id=' . (int)$t['id']) ?>" class="btn btn-outline-success">Panel</a>
                                     <?php
                                     $notif_url = $is_admin_general

@@ -6,7 +6,7 @@
  */
 
 require_once __DIR__ . '/../../config/bootstrap.php';
-require_once __DIR__ . '/../../config/db.php';
+require_once __DIR__ . '/../../config/db_config.php';
 require_once __DIR__ . '/../../config/auth.php';
 require_once __DIR__ . '/../../config/csrf.php';
 require_once __DIR__ . '/../../lib/app_helpers.php';
@@ -22,8 +22,75 @@ if ($_SERVER['REQUEST_METHOD'] !== 'GET') {
     exit;
 }
 
-$baseUrl = rtrim(app_base_url(), '/') . '/public/';
+// URL base absoluta (misma que la web) para que logos e imágenes carguen en cualquier entorno
+$baseUrl = rtrim(class_exists('AppHelpers') ? AppHelpers::getPublicUrl() : (rtrim(app_base_url(), '/') . '/public'), '/') . '/';
 $entidadParam = isset($_GET['entidad']) ? (int)$_GET['entidad'] : 0;
+
+/** TTL caché landing (segundos): TTFB bajo en calientes */
+const LANDING_DATA_CACHE_TTL = 90;
+
+/**
+ * Clave de caché estable por entidad + usuario (la respuesta depende de ambos).
+ */
+function landingDataCacheKey(int $entidadParam): string
+{
+    $uid = 0;
+    try {
+        $uid = (int)(Auth::id() ?: 0);
+    } catch (Throwable $e) {
+        $uid = 0;
+    }
+    $role = '';
+    try {
+        $u = Auth::user();
+        $role = (string)($u['role'] ?? '');
+    } catch (Throwable $e) {
+    }
+
+    return 'landing_data_v1_' . hash('sha256', json_encode([$entidadParam, $uid, $role]));
+}
+
+function landingDataCacheGet(string $key): ?array
+{
+    if (function_exists('apcu_fetch')) {
+        $v = apcu_fetch($key);
+        if (is_array($v) && isset($v['exp'], $v['payload']) && $v['exp'] >= time()) {
+            return $v['payload'];
+        }
+    }
+    $dir = dirname(__DIR__, 2) . DIRECTORY_SEPARATOR . 'storage' . DIRECTORY_SEPARATOR . 'cache';
+    if (!is_dir($dir)) {
+        @mkdir($dir, 0755, true);
+    }
+    $file = $dir . DIRECTORY_SEPARATOR . $key . '.json';
+    if (!is_readable($file)) {
+        return null;
+    }
+    $raw = @file_get_contents($file);
+    if ($raw === false || $raw === '') {
+        return null;
+    }
+    $meta = json_decode($raw, true);
+    if (!is_array($meta) || !isset($meta['exp'], $meta['payload']) || $meta['exp'] < time()) {
+        return null;
+    }
+
+    return $meta['payload'];
+}
+
+function landingDataCacheSet(string $key, array $payload): void
+{
+    $wrapped = ['exp' => time() + LANDING_DATA_CACHE_TTL, 'payload' => $payload];
+    if (function_exists('apcu_store')) {
+        @apcu_store($key, $wrapped, LANDING_DATA_CACHE_TTL + 5);
+    }
+    $dir = dirname(__DIR__, 2) . DIRECTORY_SEPARATOR . 'storage' . DIRECTORY_SEPARATOR . 'cache';
+    if (!is_dir($dir)) {
+        @mkdir($dir, 0755, true);
+    }
+    $file = $dir . DIRECTORY_SEPARATOR . $key . '.json';
+    @file_put_contents($file, json_encode($wrapped), LOCK_EX);
+}
 
 function getAficheUrlApi($torneo, $baseUrl) {
     if (!empty($torneo['afiche'])) {
@@ -35,6 +102,9 @@ function getAficheUrlApi($torneo, $baseUrl) {
 
 function getLogoOrganizacionUrlApi($evento, $baseUrl) {
     if (!empty($evento['organizacion_logo'])) {
+        if (class_exists('AppHelpers')) {
+            return AppHelpers::imageUrl($evento['organizacion_logo']);
+        }
         return $baseUrl . 'view_image.php?path=' . rawurlencode($evento['organizacion_logo']);
     }
     return null;
@@ -59,6 +129,24 @@ function enriquecerEvento(&$ev, $baseUrl) {
 try {
     $pdo = DB::pdo();
     $user = Auth::user();
+    $skipCache = isset($_GET['nocache']) && $_GET['nocache'] === '1';
+
+    if (!$skipCache) {
+        $cacheKey = landingDataCacheKey($entidadParam);
+        $cachedPayload = landingDataCacheGet($cacheKey);
+        if (is_array($cachedPayload)) {
+            $cachedPayload['csrf_token'] = CSRF::token();
+            $cachedPayload['user'] = $user ? [
+                'id' => Auth::id() ?: null,
+                'nombre' => $user['nombre'] ?? $user['username'] ?? '',
+                'username' => $user['username'] ?? '',
+            ] : null;
+            header('X-Landing-Cache: HIT');
+            echo json_encode($cachedPayload, JSON_UNESCAPED_UNICODE);
+            exit;
+        }
+    }
+
     $service = new LandingDataService($pdo);
 
     // Eventos realizados (LandingDataService)
@@ -160,9 +248,80 @@ try {
         ")->fetchAll(PDO::FETCH_ASSOC);
     } catch (Exception $e) {}
 
+    // Logos de clientes: desde clubes + upload/logos (fallback) + upload/logos_clientes/
+    // Incluir 'url' absoluta para que el frontend muestre la imagen sin depender de baseUrl
+    $logos_clientes = [];
+    try {
+        $stmt = $pdo->prepare("SELECT id, nombre, logo FROM clubes WHERE logo IS NOT NULL AND logo != '' AND (estatus = 1 OR estatus = '1') ORDER BY nombre ASC");
+        $stmt->execute();
+        while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
+            $path = trim((string)($row['logo'] ?? ''));
+            if ($path !== '') {
+                $url = class_exists('AppHelpers') ? AppHelpers::imageUrl($path) : ($baseUrl . 'view_image.php?path=' . rawurlencode($path));
+                $logos_clientes[] = ['nombre' => $row['nombre'] ?? 'Club', 'path' => $path, 'url' => $url];
+            }
+        }
+    } catch (Exception $e) {}
+    if (empty($logos_clientes)) {
+        $upload_logos_dir = dirname(__DIR__, 2) . DIRECTORY_SEPARATOR . 'upload' . DIRECTORY_SEPARATOR . 'logos';
+        $extensions = ['png', 'jpg', 'jpeg', 'gif', 'webp', 'svg'];
+        if (is_dir($upload_logos_dir)) {
+            foreach (new DirectoryIterator($upload_logos_dir) as $f) {
+                if ($f->isDot() || !$f->isFile()) continue;
+                $ext = strtolower($f->getExtension());
+                if (in_array($ext, $extensions, true)) {
+                    $path = 'upload/logos/' . $f->getFilename();
+                    $url = class_exists('AppHelpers') ? AppHelpers::imageUrl($path) : ($baseUrl . 'view_image.php?path=' . rawurlencode($path));
+                    $logos_clientes[] = ['nombre' => pathinfo($f->getFilename(), PATHINFO_FILENAME), 'path' => $path, 'url' => $url];
+                }
+            }
+        }
+    }
+    $logos_clientes_dir = dirname(__DIR__, 2) . DIRECTORY_SEPARATOR . 'upload' . DIRECTORY_SEPARATOR . 'logos_clientes';
+    if (is_dir($logos_clientes_dir)) {
+        foreach (new DirectoryIterator($logos_clientes_dir) as $f) {
+            if ($f->isDot() || !$f->isFile()) continue;
+            $ext = strtolower($f->getExtension());
+            if (in_array($ext, ['png', 'jpg', 'jpeg', 'gif', 'webp', 'svg'], true)) {
+                $path = 'upload/logos_clientes/' . $f->getFilename();
+                $url = class_exists('AppHelpers') ? AppHelpers::imageUrl($path) : ($baseUrl . 'view_image.php?path=' . rawurlencode($path));
+                $logos_clientes[] = ['nombre' => pathinfo($f->getFilename(), PATHINFO_FILENAME), 'path' => $path, 'url' => $url];
+            }
+        }
+    }
+
+    // Documentos oficiales de dominó (upload/documentos_oficiales/)
+    $documentos_oficiales = [];
+    $doc_dir = dirname(__DIR__, 2) . DIRECTORY_SEPARATOR . 'upload' . DIRECTORY_SEPARATOR . 'documentos_oficiales';
+    $doc_extensions = ['pdf', 'doc', 'docx'];
+    if (is_dir($doc_dir)) {
+        foreach (new DirectoryIterator($doc_dir) as $f) {
+            if ($f->isDot() || !$f->isFile()) continue;
+            $ext = strtolower($f->getExtension());
+            if (in_array($ext, $doc_extensions, true)) {
+                $nombre = pathinfo($f->getFilename(), PATHINFO_FILENAME);
+                $path_rel = 'upload/documentos_oficiales/' . $f->getFilename();
+                $documentos_oficiales[] = ['titulo' => $nombre, 'path' => $path_rel, 'archivo' => $f->getFilename()];
+            }
+        }
+    }
+
+    $invitaciones_fvd = [];
+    $inv_dir = dirname(__DIR__, 2) . DIRECTORY_SEPARATOR . 'upload' . DIRECTORY_SEPARATOR . 'invitaciones_fvd';
+    $inv_extensions = ['pdf', 'png', 'jpg', 'jpeg', 'doc', 'docx'];
+    if (is_dir($inv_dir)) {
+        foreach (new DirectoryIterator($inv_dir) as $f) {
+            if ($f->isDot() || !$f->isFile()) continue;
+            $ext = strtolower($f->getExtension());
+            if (in_array($ext, $inv_extensions, true)) {
+                $invitaciones_fvd[] = ['titulo' => pathinfo($f->getFilename(), PATHINFO_FILENAME), 'path' => 'upload/invitaciones_fvd/' . $f->getFilename()];
+            }
+        }
+    }
+
     $csrf_token = CSRF::token();
 
-    echo json_encode([
+    $response = [
         'success' => true,
         'base_url' => $baseUrl,
         'user' => $user ? [
@@ -183,7 +342,20 @@ try {
         'entidad_seleccionada' => $entidadParam,
         'filtro_aplicado_entidad' => $filtro_aplicado_entidad,
         'entidad_nombre_usuario' => $entidad_nombre_usuario,
-    ], JSON_UNESCAPED_UNICODE);
+        'logos_clientes' => $logos_clientes,
+        'documentos_oficiales' => $documentos_oficiales,
+        'invitaciones_fvd' => $invitaciones_fvd,
+    ];
+
+    if (!$skipCache) {
+        $toStore = $response;
+        $toStore['csrf_token'] = '';
+        $toStore['user'] = null;
+        landingDataCacheSet(landingDataCacheKey($entidadParam), $toStore);
+    }
+
+    header('X-Landing-Cache: MISS');
+    echo json_encode($response, JSON_UNESCAPED_UNICODE);
 
 } catch (Exception $e) {
     error_log("API landing_data: " . $e->getMessage());

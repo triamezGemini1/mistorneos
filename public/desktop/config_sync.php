@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 /**
  * Configuración para sincronización Web ↔ Desktop (ruta desktop, sin public).
  * SYNC_API_KEY debe coincidir con el .env del proyecto.

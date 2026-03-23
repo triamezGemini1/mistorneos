@@ -31,9 +31,7 @@ $page_title = 'Organizaciones por entidad';
                     <ul class="list-group list-group-flush">
                         <?php foreach ($organizaciones as $org): ?>
                             <?php
-                            $logo_url = $org['logo']
-                                ? AppHelpers::url('view_image.php', ['path' => $org['logo']])
-                                : AppHelpers::url('view_image.php', ['path' => 'lib/Assets/mislogos/logo4.png']);
+                            $logo_url = !empty($org['logo']) ? AppHelpers::imageUrl($org['logo']) : AppHelpers::getAppLogo();
                             ?>
                             <li class="list-group-item list-group-item-action d-flex align-items-center">
                                 <img src="<?= htmlspecialchars($logo_url) ?>" alt="" class="rounded me-3" style="width: 48px; height: 48px; object-fit: cover;">

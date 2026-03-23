@@ -22,7 +22,7 @@ try {
     $pdo = DB::pdo();
     
     // Eliminar
-    $stmt = $pdo->prepare("DELETE FROM invitations WHERE id = ?");
+    $stmt = $pdo->prepare("DELETE FROM " . TABLE_INVITATIONS . " WHERE id = ?");
     
     if ($stmt->execute([$id])) {
         header("Location: index.php?msg=" . urlencode("Invitación eliminada exitosamente"));

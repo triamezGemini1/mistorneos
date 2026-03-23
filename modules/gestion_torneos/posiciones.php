@@ -46,6 +46,20 @@ $base_url = $use_standalone ? $script_actual : 'index.php?page=torneo_gestion';
             <a href="<?php echo htmlspecialchars($urlVolver); ?>" class="btn btn-secondary">
                 <i class="fas fa-arrow-left mr-2"></i> <?php echo htmlspecialchars($labelVolver); ?>
             </a>
+            <?php if (class_exists('AppHelpers')): $tid = (int)($torneo['id'] ?? 0);
+                $u = static function (string $a, array $x = []) use ($tid) {
+                    return AppHelpers::url('index.php', array_merge(['page' => 'torneo_gestion', 'action' => $a, 'torneo_id' => $tid], $x));
+                }; ?>
+            <a href="<?php echo htmlspecialchars(AppHelpers::url('export_resultados_pdf.php', ['torneo_id' => $tid, 'tipo' => 'posiciones'])); ?>" target="_blank" rel="noopener" class="btn btn-danger text-dark fw-bold border border-dark">
+                <i class="fas fa-file-pdf mr-1"></i> PDF posiciones
+            </a>
+            <a href="<?php echo htmlspecialchars($u('resultados_reportes_print', ['tipo' => 'posiciones'])); ?>" target="_blank" rel="noopener" class="btn btn-warning text-dark fw-bold border border-dark">
+                <i class="fas fa-print mr-1"></i> Imprimir / vista
+            </a>
+            <a href="<?php echo htmlspecialchars($u('resultados_reportes')); ?>" class="btn btn-outline-secondary fw-bold">
+                <i class="fas fa-file-alt mr-1"></i> Todos los reportes
+            </a>
+            <?php endif; ?>
         </div>
     </div>
 <?php else: ?>
@@ -60,6 +74,14 @@ $base_url = $use_standalone ? $script_actual : 'index.php?page=torneo_gestion';
     <a href="<?php echo $base_url . ($use_standalone ? '?' : '&'); ?>action=panel&torneo_id=<?php echo $torneo['id']; ?>" class="btn btn-primary btn-sm flex-shrink-0">
         <i class="fas fa-arrow-left me-1"></i> Volver al Panel de Control
     </a>
+    <?php if (class_exists('AppHelpers')): $tid = (int)($torneo['id'] ?? 0);
+        $u2 = static function (string $a, array $x = []) use ($tid) {
+            return AppHelpers::url('index.php', array_merge(['page' => 'torneo_gestion', 'action' => $a, 'torneo_id' => $tid], $x));
+        }; ?>
+    <a href="<?php echo htmlspecialchars(AppHelpers::url('export_resultados_pdf.php', ['torneo_id' => $tid, 'tipo' => 'posiciones'])); ?>" target="_blank" rel="noopener" class="btn btn-sm btn-danger text-dark fw-bold border border-dark">PDF</a>
+    <a href="<?php echo htmlspecialchars($u2('resultados_reportes_print', ['tipo' => 'posiciones'])); ?>" target="_blank" rel="noopener" class="btn btn-sm btn-warning text-dark fw-bold">Imprimir</a>
+    <a href="<?php echo htmlspecialchars($u2('resultados_reportes')); ?>" class="btn btn-sm btn-outline-secondary fw-bold">Reportes</a>
+    <?php endif; ?>
 </div>
 <?php endif; ?>
 
@@ -177,7 +199,7 @@ $base_url = $use_standalone ? $script_actual : 'index.php?page=torneo_gestion';
                                             </td>
                                             <td><?php echo (int)($pos['efectividad'] ?? 0); ?></td>
                                             <td><strong><?php echo (int)($pos['puntos'] ?? 0); ?></strong></td>
-                                            <td><strong class="text-primary"><?php echo (int)($pos['ptosrnk'] ?? 0); ?></strong></td>
+                                            <td><strong class="text-primary"><?php echo $es_retirado ? '—' : (int)($pos['ptosrnk'] ?? 0); ?></strong></td>
                                             <td>
                                                 <?php 
                                                 $sancion = (int)($pos['sancion'] ?? 0);

@@ -2,12 +2,19 @@
 /**
  * API: Obtener datos de un equipo con sus jugadores
  */
+ob_start();
+require_once __DIR__ . '/../../config/session_start_early.php';
 require_once __DIR__ . '/../../config/bootstrap.php';
-require_once __DIR__ . '/../../config/db.php';
+require_once __DIR__ . '/../../config/db_config.php';
 require_once __DIR__ . '/../../config/auth.php';
 require_once __DIR__ . '/../../lib/EquiposHelper.php';
 
-header('Content-Type: application/json');
+if (ob_get_level()) {
+    ob_clean();
+}
+header('Content-Type: application/json; charset=utf-8');
+
+Auth::requireRole(['admin_general', 'admin_torneo', 'admin_club']);
 
 try {
     $equipo_id = (int)($_GET['id'] ?? 0);

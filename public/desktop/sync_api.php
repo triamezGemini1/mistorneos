@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 /**
  * API de sincronización de jugadores (Offline-First). Ubicación: desktop/
  */

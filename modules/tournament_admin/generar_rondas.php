@@ -66,13 +66,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['generar_ronda'])) {
                             registrado_por, registrado
                         ) VALUES (?, ?, ?, ?, ?, 0, 0, 0, 0, ?, 0)
                     ");
+                    $registrado_por = (int)(Auth::id() ?? 0) ?: 1;
                     $stmt->execute([
                         $torneo_id,
                         $numero_ronda,
                         $mesa_actual,
                         $secuencia,
                         $inscrito['id_usuario'],
-                        Auth::user()['id']
+                        $registrado_por
                     ]);
                     
                     $secuencia++;

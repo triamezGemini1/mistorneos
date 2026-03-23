@@ -55,7 +55,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         $hash = password_hash($new_password, PASSWORD_DEFAULT);
         $upd = $pdo->prepare("UPDATE usuarios SET password_hash = ?, recovery_token = NULL WHERE id = ?");
-        $upd->execute([$hash, Auth::id()]);
+        $upd->execute([$hash, (int)$user['id']]);
 
         // Redirigir al login con indicador de éxito
         $redirectUrl = AppHelpers::url('login.php?reset=1');

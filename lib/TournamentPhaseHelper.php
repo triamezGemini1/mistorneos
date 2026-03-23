@@ -95,8 +95,10 @@ class TournamentPhaseHelper
                 'revisar_inscripciones',
                 'inscribir_sitio',
                 'invitar_whatsapp',
+                'activar_participantes',
             ],
             self::FASE_PREPARACION => [
+                'activar_participantes',
                 'generar_rondas',
                 'eliminar_ronda',
                 'tabla_asignacion',
@@ -124,7 +126,7 @@ class TournamentPhaseHelper
      */
     public static function getHerramientasGlobales(): array
     {
-        return ['mostrar_resultados', 'galeria_fotos', 'generar_qr_general', 'generar_qr_personal'];
+        return ['activar_participantes', 'mostrar_resultados', 'galeria_fotos', 'generar_qr', 'generar_qr_general', 'generar_qr_personal'];
     }
 
     /**

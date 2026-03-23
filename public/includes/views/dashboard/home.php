@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 /**
  * Vista principal del Dashboard
  * Solo presenta datos; las variables vienen del router (DashboardData::loadAll)

@@ -1,11 +1,11 @@
-<?php
+﻿<?php
 /**
  * Inscripción Pública para Eventos Masivos
  * Permite a cualquier usuario inscribirse en eventos masivos desde su dispositivo móvil
  */
 
 require_once __DIR__ . '/../config/bootstrap.php';
-require_once __DIR__ . '/../config/db.php';
+require_once __DIR__ . '/../config/db_config.php';
 require_once __DIR__ . '/../config/csrf.php';
 require_once __DIR__ . '/../lib/app_helpers.php';
 require_once __DIR__ . '/../lib/security.php';
@@ -50,7 +50,7 @@ if ($torneo_id > 0) {
             $error = 'Las inscripciones en línea están deshabilitadas el día del torneo. Los interesados deben inscribirse antes o presentarse al sitio del evento para formalizar su participación.';
         } elseif (strtotime($torneo['fechator']) < strtotime('today')) {
             // Torneo ya finalizado: redirigir a resultados con mensaje informativo
-            $resultados_url = app_base_url() . '/public/resultados_detalle.php?torneo_id=' . $torneo_id . '&msg=' . urlencode('Este torneo ha finalizado. Consulta los resultados oficiales aquí.');
+            $resultados_url = app_base_url() . '/public/evento_resultados.php?torneo_id=' . $torneo_id . '&msg=' . urlencode('Este torneo ha finalizado. Consulta los resultados oficiales aquí.');
             header('Location: ' . $resultados_url);
             exit;
         } elseif ((int)($torneo['permite_inscripcion_linea'] ?? 1) !== 1) {
@@ -209,7 +209,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $torneo) {
                 'inscrito_por' => null,
                 'numero' => 0
             ]);
-            
+            if (file_exists(__DIR__ . '/../lib/UserActivationHelper.php')) {
+                require_once __DIR__ . '/../lib/UserActivationHelper.php';
+                UserActivationHelper::activateUser($pdo, $id_usuario);
+            }
             $pdo->commit();
             
             // Enviar notificación por WhatsApp si es nuevo usuario

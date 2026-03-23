@@ -10,12 +10,17 @@
 
 $pdo = DB::pdo();
 $base_url = app_base_url();
+$script = $_SERVER['SCRIPT_NAME'] ?? 'index.php';
+$base_url = ((!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http') . '://' . ($_SERVER['HTTP_HOST'] ?? '') . dirname($script);
+$url_panel = rtrim($base_url, '/') . '/' . basename($script) . '?page=torneo_gestion&action=panel&torneo_id=' . (int)$torneo_id;
 
-// URL base para la información del torneo
+// URL principal para jugadores: acceso por cédula (recomendado para QR del torneo)
+$perfil_jugador_url = $base_url . '/public/perfil_jugador.php?torneo_id=' . $torneo_id;
 $torneo_info_url = $base_url . '/public/torneo_info.php?torneo_id=' . $torneo_id;
 
 // URLs específicas para cada sección
 $urls = [
+    'perfil_jugador' => $perfil_jugador_url,
     'general' => $torneo_info_url . '&seccion=general',
     'incidencias' => $torneo_info_url . '&seccion=incidencias',
     'listado' => $torneo_info_url . '&seccion=listado'
@@ -32,12 +37,24 @@ function generarQRUrl($data, $size = 300) {
     ]);
 }
 ?>
-<div class="card">
-    <div class="card-header bg-primary text-white">
-        <h5 class="mb-0">
-            <i class="fas fa-qrcode me-2"></i>Generar Códigos QR para Acceso Público
-        </h5>
-    </div>
+<style>
+@media print {
+    body * { visibility: hidden; }
+    #qr-torneo-print-area, #qr-torneo-print-area * { visibility: visible; }
+    #qr-torneo-print-area { position: absolute; left: 0; top: 0; width: 100%; }
+    .no-print { display: none !important; }
+    .admin-menu, .navbar, .btn, .breadcrumb { display: none !important; }
+}
+</style>
+<div class="mb-3 no-print d-flex align-items-center gap-2">
+    <a href="<?= htmlspecialchars($url_panel) ?>" class="btn btn-primary">
+        <i class="fas fa-arrow-left me-1"></i>Volver al panel
+    </a>
+    <button type="button" class="btn btn-outline-secondary" onclick="window.print();" title="Imprimir códigos QR">
+        <i class="fas fa-print me-1"></i>Imprimir
+    </button>
+</div>
+<div id="qr-torneo-print-area" class="card">
     <div class="card-body">
         <div class="alert alert-info">
             <i class="fas fa-info-circle me-2"></i>
@@ -45,12 +62,46 @@ function generarQRUrl($data, $size = 300) {
         </div>
         
         <div class="row g-4">
+            <!-- QR Acceso jugador por cédula (recomendado para imprimir en el evento) -->
+            <div class="col-md-6 col-lg-4">
+                <div class="card h-100 border-success">
+                    <div class="card-header bg-success text-white text-center">
+                        <h6 class="mb-0">
+                            <i class="fas fa-user-check me-2"></i>Acceso jugador (cédula)
+                        </h6>
+                    </div>
+                    <div class="card-body text-center">
+                        <img src="<?= htmlspecialchars(generarQRUrl($urls['perfil_jugador'], 200)) ?>" 
+                             alt="QR Acceso jugador por cédula" 
+                             class="img-fluid mb-3 border rounded p-2 bg-white">
+                        <p class="small text-muted mb-2">
+                            <strong>Recomendado.</strong> Jugadores escanean, ingresan cédula y ven su información, mesas, resumen y resultados.
+                        </p>
+                        <div class="d-grid gap-2">
+                            <a href="<?= htmlspecialchars($urls['perfil_jugador']) ?>" 
+                               class="btn btn-sm btn-success">
+                                <i class="fas fa-external-link-alt me-1"></i>Ver Página
+                            </a>
+                            <button type="button" 
+                                    class="btn btn-sm btn-outline-success"
+                                    onclick="descargarQR('<?= htmlspecialchars(generarQRUrl($urls['perfil_jugador'], 500)) ?>', 'qr_acceso_jugador_torneo_<?= $torneo_id ?>.png')">
+                                <i class="fas fa-download me-1"></i>Descargar QR
+                            </button>
+                            <button type="button" 
+                                    class="btn btn-sm btn-outline-secondary"
+                                    onclick="copiarEnlace('<?= htmlspecialchars($urls['perfil_jugador']) ?>')">
+                                <i class="fas fa-copy me-1"></i>Copiar Enlace
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
             <!-- QR General -->
             <div class="col-md-6 col-lg-4">
                 <div class="card h-100 border-primary">
                     <div class="card-header bg-primary text-white text-center">
                         <h6 class="mb-0">
-                            <i class="fas fa-list me-2"></i>Acceso General
+                            <i class="fas fa-list me-2"></i>Listado general
                         </h6>
                     </div>
                     <div class="card-body text-center">
@@ -232,6 +283,20 @@ function generarQRUrl($data, $size = 300) {
                         </div>
                     </div>
                 </div>
+            </div>
+        </div>
+        
+        <!-- Imprimir en lote: tarjetas personales (solo datos, sin QR) -->
+        <div class="card mt-4 no-print">
+            <div class="card-header bg-success text-white">
+                <h6 class="mb-0"><i class="fas fa-id-card me-2"></i>Tarjetas personales (identificación)</h6>
+            </div>
+            <div class="card-body">
+                <p class="text-muted small mb-2">Imprima en lote una tarjeta 4×4 cm por jugador confirmado con: nombre, cédula e ID del torneo (sin QR). También disponible en el menú: <strong>Identificación de jugadores</strong>.</p>
+                <a href="index.php?page=tournament_admin&torneo_id=<?= (int)$torneo_id ?>&action=imprimir_qr_lote" 
+                   class="btn btn-success" target="_blank" rel="noopener">
+                    <i class="fas fa-print me-1"></i>Imprimir tarjetas personales (solo datos)
+                </a>
             </div>
         </div>
         

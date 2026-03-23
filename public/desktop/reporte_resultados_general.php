@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 /**
  * Reporte general de resultados (Desktop).
  * Participantes con club y enlace a resumen; detalle de partidas con GFF, bye, tarjeta, sanción, observaciones.

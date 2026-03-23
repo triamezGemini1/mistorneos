@@ -252,7 +252,17 @@ class InscritosHelper {
         $numero = isset($datos['numero']) && $datos['numero'] !== null ? (int)$datos['numero'] : 0;
         // clasiequi: Clasificación de equipo (INT), valor por defecto 0
         $clasiequi = isset($datos['clasiequi']) && $datos['clasiequi'] !== null ? (int)$datos['clasiequi'] : 0;
-        $codigo_equipo = !empty($datos['codigo_equipo']) ? trim($datos['codigo_equipo']) : null;
+        /* Individual en sitio no trae equipo: la columna suele ser NOT NULL → placeholder reservado (no es un equipo real) */
+        $codigo_equipo = isset($datos['codigo_equipo']) ? trim((string)$datos['codigo_equipo']) : '';
+        if ($codigo_equipo === '') {
+            $codigo_equipo = '000-000';
+        }
+        // nacionalidad y cedula en inscritos (obligatorios para búsqueda NIVEL 1)
+        $nacionalidad_inscrito = isset($datos['nacionalidad']) ? strtoupper(trim((string)$datos['nacionalidad'])) : 'V';
+        if (!in_array($nacionalidad_inscrito, ['V', 'E', 'J', 'P'], true)) {
+            $nacionalidad_inscrito = 'V';
+        }
+        $cedula_inscrito = isset($datos['cedula']) ? preg_replace('/\D/', '', (string)$datos['cedula']) : '';
         
         // Verificar que no esté ya inscrito (excluir retirados)
         $stmt = $pdo->prepare("SELECT id FROM inscritos WHERE id_usuario = ? AND torneo_id = ? AND " . self::SQL_WHERE_NO_RETIRADO);
@@ -261,36 +271,127 @@ class InscritosHelper {
             throw new Exception('Este usuario ya está inscrito en el torneo');
         }
         
-        // Insertar con TODOS los campos necesarios para evitar errores de constraint
-        // Incluir todos los campos posibles con valores por defecto seguros
-        $stmt = $pdo->prepare("
-            INSERT INTO inscritos (
-                id_usuario, torneo_id, id_club, estatus, inscrito_por, fecha_inscripcion,
-                posicion, ganados, perdidos, efectividad, puntos, ptosrnk, 
-                sancion, chancletas, zapatos, tarjeta, numero, clasiequi" . 
-                ($codigo_equipo !== null ? ", codigo_equipo" : "") . "
-            ) VALUES (?, ?, ?, ?, ?, NOW(), 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, ?, ?" .
-                ($codigo_equipo !== null ? ", ?" : "") . "
-            )
-        ");
-        
-        // Persistir estatus como entero (compatible con columna INT en producción)
-        $estatus_for_db = self::getEstatusNumero($estatus);
-        $params = [$id_usuario, $torneo_id, $id_club, $estatus_for_db, $inscrito_por, $numero, $clasiequi];
-        if ($codigo_equipo !== null) {
-            $params[] = $codigo_equipo;
+        // estatus siempre numérico (1 = confirmado)
+        $estatus_for_db = is_numeric($estatus) && isset(self::ESTATUS_MAP[(int)$estatus])
+            ? (int)$estatus
+            : (int) self::getEstatusNumero(is_string($estatus) ? $estatus : 'confirmado');
+
+        // INSERT alineado al esquema real (evita 1136 si faltan/sobran columnas vs VALUES fijos)
+        $colNames = $pdo->query('SHOW COLUMNS FROM inscritos')->fetchAll(PDO::FETCH_COLUMN);
+        $have = [];
+        foreach ($colNames as $c) {
+            $have[strtolower((string)$c)] = $c;
         }
-        
+        $H = static function (string $n) use ($have): bool {
+            return isset($have[strtolower($n)]);
+        };
+        $insertCols = [];
+        $insertVals = [];
+        $params = [];
+        $push = static function (string $col, string $sql, $param = null) use (&$insertCols, &$insertVals, &$params, $have): void {
+            $k = strtolower($col);
+            if (!isset($have[$k])) {
+                return;
+            }
+            $insertCols[] = '`' . str_replace('`', '``', $have[$k]) . '`';
+            $insertVals[] = $sql;
+            if ($sql === '?') {
+                $params[] = $param;
+            }
+        };
+        /* Orden alineado a esquemas habituales: nac/cédula, usuario/torneo/club/código, stats, fecha, inscrito, número, notas, clasiequi, estatus */
+        if ($H('nacionalidad')) {
+            $push('nacionalidad', '?', $nacionalidad_inscrito);
+        }
+        if ($H('cedula')) {
+            $push('cedula', '?', $cedula_inscrito);
+        }
+        $push('id_usuario', '?', $id_usuario);
+        $push('torneo_id', '?', $torneo_id);
+        if ($H('id_club')) {
+            $push('id_club', '?', $id_club);
+        }
+        if ($H('codigo_equipo')) {
+            $push('codigo_equipo', '?', $codigo_equipo);
+        }
+        foreach (['posicion', 'ganados', 'perdidos', 'efectividad', 'puntos', 'ptosrnk', 'sancion', 'chancletas', 'zapatos', 'tarjeta'] as $c) {
+            if ($H($c)) {
+                $insertCols[] = '`' . $have[strtolower($c)] . '`';
+                $insertVals[] = '0';
+            }
+        }
+        if ($H('fecha_inscripcion')) {
+            $insertCols[] = '`' . $have['fecha_inscripcion'] . '`';
+            $insertVals[] = 'NOW()';
+        }
+        if ($H('inscrito_por')) {
+            $push('inscrito_por', '?', $inscrito_por);
+        }
+        if ($H('numero')) {
+            $push('numero', '?', $numero);
+        }
+        if ($H('notas')) {
+            $push('notas', '?', '');
+        }
+        if ($H('clasiequi')) {
+            $push('clasiequi', '?', $clasiequi);
+        }
+        $push('estatus', '?', $estatus_for_db);
+        if ($H('entidad_id')) {
+            $ent = 0;
+            if (class_exists('DB', false) && method_exists('DB', 'getEntidadId')) {
+                $ent = (int) DB::getEntidadId();
+            } elseif (defined('DESKTOP_ENTIDAD_ID')) {
+                $ent = (int) constant('DESKTOP_ENTIDAD_ID');
+            }
+            if ($ent > 0) {
+                $push('entidad_id', '?', $ent);
+            }
+        }
+        if ($insertCols === []) {
+            throw new Exception('Tabla inscritos sin columnas reconocidas');
+        }
+        if (count($insertCols) !== count($insertVals)) {
+            throw new Exception('INSERT inscritos: columnas=' . count($insertCols) . ' valores=' . count($insertVals) . ' (error interno; avisar soporte)');
+        }
+        if (count($params) !== substr_count(implode(',', $insertVals), '?')) {
+            throw new Exception('INSERT inscritos: placeholders no coinciden con parámetros');
+        }
+        $sql = 'INSERT INTO inscritos (' . implode(', ', $insertCols) . ') VALUES (' . implode(', ', $insertVals) . ')';
+        $stmt = $pdo->prepare($sql);
         $resultado = $stmt->execute($params);
         
         if (!$resultado) {
             $error_info = $stmt->errorInfo();
-            throw new Exception('Error al insertar la inscripción: ' . ($error_info[2] ?? 'Error desconocido'));
+            $driverMsg = $error_info[2] ?? 'Error desconocido';
+            throw new Exception('Error al insertar la inscripción. Columna estatus: valor enviado=' . var_export($estatus_for_db, true) . ' (tipo ' . gettype($estatus_for_db) . '). SQL: ' . $driverMsg);
         }
         
         return (int)$pdo->lastInsertId();
     }
     
+    /**
+     * Obtiene el código de equipo para inscripción en sitio en torneo individual o parejas.
+     * Formato: código club (2 dígitos) + '-' + consecutivo por club en el torneo (3 dígitos).
+     * Ejemplo: club id=2 con 4 jugadores ya inscritos → "02-005" para el quinto.
+     *
+     * @param \PDO $pdo Conexión a la base de datos
+     * @param int $torneo_id ID del torneo
+     * @param int|null $id_club ID del club (si null se devuelve '000-000')
+     * @param int $modalidad Modalidad del torneo (1=individual, 2=parejas; otro valor devuelve '000-000')
+     * @return string Código equipo ej. "02-001" o "000-000"
+     */
+    public static function codigoEquipoParaInscripcionSitioIndividual(PDO $pdo, int $torneo_id, ?int $id_club, int $modalidad): string {
+        if (!$id_club || ($modalidad !== 1 && $modalidad !== 2)) {
+            return '000-000';
+        }
+        $codigo_club = str_pad((string)$id_club, 2, '0', STR_PAD_LEFT);
+        $stmt = $pdo->prepare("SELECT COUNT(*) FROM inscritos WHERE torneo_id = ? AND id_club = ? AND estatus != 4");
+        $stmt->execute([$torneo_id, $id_club]);
+        $consecutivo = (int)$stmt->fetchColumn() + 1;
+        return $codigo_club . '-' . str_pad((string)$consecutivo, 3, '0', STR_PAD_LEFT);
+    }
+
     /**
      * Verifica si un usuario puede inscribirse en línea en eventos masivos (es_evento_masivo = 2)
      * 

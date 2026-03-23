@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 /**
  * Asigna UUID en la base remota (MySQL del servidor) a usuarios que no lo tienen.
  * Una sola ejecución: abre en el navegador con tu API key y se actualiza la BD.
@@ -18,7 +18,7 @@ if (!is_file($baseDir . '/config/bootstrap.php')) {
     exit;
 }
 require_once $baseDir . '/config/bootstrap.php';
-require_once $baseDir . '/config/db.php';
+require_once $baseDir . '/config/db_config.php';
 
 $apiKey = $_SERVER['HTTP_X_API_KEY'] ?? $_GET['api_key'] ?? '';
 $expectedKey = class_exists('Env') ? (Env::get('SYNC_API_KEY') ?: Env::get('API_KEY')) : '';

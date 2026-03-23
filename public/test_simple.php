@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 /**
  * Test ultra simple - sin dependencias
  */

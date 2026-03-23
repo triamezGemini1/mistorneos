@@ -17,14 +17,16 @@ $organizacion_id = isset($_GET['id']) ? (int)$_GET['id'] : null;
 $club_id = isset($_GET['club_id']) ? (int)$_GET['club_id'] : null;
 $entidad_id = isset($_GET['entidad_id']) ? (int)$_GET['entidad_id'] : null;
 
-// Admin organización: si entran sin id, redirigir a su organización
+// Admin organización sin id: index.php redirige ANTES del layout. Si llegamos aquí, fallback con meta refresh si headers ya enviados.
 if (!$is_admin_general && !$organizacion_id) {
     $org_id = Auth::getUserOrganizacionId();
-    if ($org_id) {
-        header('Location: index.php?page=organizaciones&id=' . $org_id);
+    $base = (defined('URL_BASE') && URL_BASE !== '') ? rtrim(URL_BASE, '/') . '/' : '';
+    $target = $base . 'index.php?page=' . ($org_id ? 'organizaciones&id=' . (int)$org_id : 'mi_organizacion');
+    if (!headers_sent()) {
+        header('Location: ' . $target);
         exit;
     }
-    header('Location: index.php?page=mi_organizacion');
+    echo '<meta http-equiv="refresh" content="0;url=' . htmlspecialchars($target) . '"><p>Redirigiendo...</p>';
     exit;
 }
 
@@ -105,9 +107,9 @@ if ($organizacion_id) {
         }
     }
     if (!$organizacion) {
-        header('Location: index.php?page=organizaciones');
-        exit;
+        $organizacion_id = null;
     }
+    if ($organizacion) {
     $stmt = $pdo->prepare("
         SELECT c.id, c.nombre, c.delegado, c.telefono, c.direccion, c.estatus,
                COUNT(DISTINCT u.id) as total_afiliados,
@@ -135,6 +137,7 @@ if ($organizacion_id) {
     }
     include __DIR__ . '/organizaciones/org_detail.php';
     return;
+    }
 }
 
 // ---------- Vista: Listado de organizaciones de una entidad (entidad_id) ----------

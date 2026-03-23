@@ -3,10 +3,9 @@ if (!defined('APP_BOOTSTRAPPED')) {
     define('APP_BOOTSTRAPPED', true);
 }
 
-// Nota: El autoloader de Composer debe regenerarse con 'composer dump-autoload'
-// if (file_exists(__DIR__ . '/../vendor/autoload.php')) {
-//     require_once __DIR__ . '/../vendor/autoload.php';
-// }
+// Autoloader de Composer — misma lógica que raíz
+require_once __DIR__ . '/../lib/composer_autoload.php';
+mistorneos_load_composer_autoload();
 
 // Cargar clase Env para variables de entorno
 require_once __DIR__ . '/../lib/Env.php';

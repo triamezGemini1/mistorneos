@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 /**
  * Paso 4: Cuadrícula de asignaciones por ID (Desktop).
  * Tabla ordenada por id_usuario ASC para localizar jugadores rápido. 22 filas x 9 segmentos (ID + MESA+letra).

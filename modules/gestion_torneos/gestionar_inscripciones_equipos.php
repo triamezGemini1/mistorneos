@@ -8,6 +8,12 @@ $script_actual = basename($_SERVER['PHP_SELF'] ?? '');
 $use_standalone = in_array($script_actual, ['admin_torneo.php', 'panel_torneo.php']);
 $base_url = $use_standalone ? $script_actual : 'index.php?page=torneo_gestion';
 
+// Modalidad 2 = Parejas (mismo flujo que equipos; 2 jugadores, nombre opcional)
+$es_parejas = !empty($es_parejas);
+$jugadores_por_equipo = isset($jugadores_por_equipo) ? (int)$jugadores_por_equipo : 4;
+$etiqueta_equipo = $es_parejas ? 'Pareja' : 'Equipo';
+$etiqueta_equipos = $es_parejas ? 'Parejas' : 'Equipos';
+
 // Obtener CSRF token
 require_once __DIR__ . '/../../config/csrf.php';
 $csrf_token = class_exists('CSRF') ? CSRF::token() : '';
@@ -173,7 +179,7 @@ $csrf_token = class_exists('CSRF') ? CSRF::token() : '';
             <div class="d-flex justify-content-between align-items-center flex-wrap">
                 <div>
                     <h2 class="h4 mb-1">
-                        <i class="fas fa-clipboard-list text-primary me-2"></i>Gestionar Inscripciones de Equipos
+                        <i class="fas fa-clipboard-list text-primary me-2"></i>Gestionar Inscripciones de <?php echo $etiqueta_equipos; ?>
                     </h2>
                     <p class="text-muted mb-0">
                         <i class="fas fa-trophy me-1"></i><?php echo htmlspecialchars($torneo['nombre']); ?>
@@ -182,8 +188,14 @@ $csrf_token = class_exists('CSRF') ? CSRF::token() : '';
                 <div class="d-flex gap-2 mt-2 mt-md-0">
                     <a href="<?php echo $base_url . ($use_standalone ? '?' : '&'); ?>action=inscribir_equipo_sitio&torneo_id=<?php echo $torneo['id']; ?>" 
                        class="btn btn-primary btn-sm">
-                        <i class="fas fa-plus me-1"></i>Inscribir Equipo
+                        <i class="fas fa-plus me-1"></i>Inscribir <?php echo $etiqueta_equipo; ?>
                     </a>
+                    <?php if (!$es_parejas): ?>
+                    <a href="<?php echo $base_url . ($use_standalone ? '?' : '&'); ?>action=carga_masiva_equipos_sitio&torneo_id=<?php echo $torneo['id']; ?>" 
+                       class="btn btn-outline-primary btn-sm">
+                        <i class="fas fa-file-upload me-1"></i>Carga masiva
+                    </a>
+                    <?php endif; ?>
                     <a href="<?php echo $base_url . ($use_standalone ? '?' : '&'); ?>action=panel&torneo_id=<?php echo $torneo['id']; ?>" 
                        class="btn btn-secondary btn-sm">
                         <i class="fas fa-arrow-left me-1"></i>Retornar al Panel
@@ -198,10 +210,10 @@ $csrf_token = class_exists('CSRF') ? CSRF::token() : '';
         <div class="card border-0 shadow-sm">
             <div class="card-body text-center py-5">
                 <i class="fas fa-users-slash fa-3x text-muted mb-3 opacity-50"></i>
-                <p class="text-muted mb-0">No hay equipos inscritos</p>
+                <p class="text-muted mb-0">No hay <?php echo strtolower($etiqueta_equipos); ?> inscrit<?php echo $es_parejas ? 'as' : 'os'; ?></p>
                 <a href="<?php echo $base_url . ($use_standalone ? '?' : '&'); ?>action=inscribir_equipo_sitio&torneo_id=<?php echo $torneo['id']; ?>" 
                    class="btn btn-primary mt-3">
-                    <i class="fas fa-plus me-1"></i>Inscribir Primer Equipo
+                    <i class="fas fa-plus me-1"></i>Inscribir <?php echo $es_parejas ? 'primera' : 'primer'; ?> <?php echo strtolower($etiqueta_equipo); ?>
                 </a>
             </div>
         </div>
@@ -219,7 +231,7 @@ $csrf_token = class_exists('CSRF') ? CSRF::token() : '';
                     <div>
                         <i class="fas fa-building me-2"></i>
                         <?php echo $club_nombre; ?>
-                        <span class="badge bg-light text-dark ms-2"><?php echo $total_equipos_club; ?> equipo(s)</span>
+                        <span class="badge bg-light text-dark ms-2"><?php echo $total_equipos_club; ?> <?php echo strtolower($etiqueta_equipos); ?></span>
                     </div>
                 </div>
 
@@ -230,6 +242,15 @@ $csrf_token = class_exists('CSRF') ? CSRF::token() : '';
                     $codigo_equipo = htmlspecialchars($equipo['codigo_equipo'] ?? '');
                     $nombre_equipo = htmlspecialchars($equipo['nombre_equipo'] ?? '');
                     $jugadores = $equipo['jugadores'] ?? [];
+                    $pareja_display = '';
+                    if ($es_parejas && !empty($jugadores)) {
+                        $nombresPareja = array_values(array_filter(array_map(static function ($j) {
+                            return trim((string)($j['nombre'] ?? ''));
+                        }, $jugadores)));
+                        if (!empty($nombresPareja)) {
+                            $pareja_display = implode(' / ', array_slice($nombresPareja, 0, 2));
+                        }
+                    }
                     $total_jugadores = count($jugadores);
                     $jugadores_requeridos = $jugadores_por_equipo;
                     $es_completo = $total_jugadores >= $jugadores_requeridos;
@@ -244,6 +265,11 @@ $csrf_token = class_exists('CSRF') ? CSRF::token() : '';
                                         <span class="equipo-codigo"><?php echo $codigo_equipo; ?></span>
                                         <span class="equipo-nombre"><?php echo $nombre_equipo; ?></span>
                                     </div>
+                                    <?php if ($es_parejas && $pareja_display !== ''): ?>
+                                        <div class="text-muted small mt-1">
+                                            <i class="fas fa-user-friends me-1"></i><?php echo htmlspecialchars($pareja_display); ?>
+                                        </div>
+                                    <?php endif; ?>
                                 </div>
                             </div>
                             <div class="equipo-actions">
@@ -266,7 +292,7 @@ $csrf_token = class_exists('CSRF') ? CSRF::token() : '';
                                 
                                 <button class="btn btn-sm btn-danger" 
                                         onclick="retirarEquipo(<?php echo $equipo_id; ?>, '<?php echo htmlspecialchars($nombre_equipo, ENT_QUOTES); ?>')"
-                                        title="Retirar Equipo">
+                                        title="Retirar <?php echo $etiqueta_equipo; ?>">
                                     <i class="fas fa-times"></i> Retirar
                                 </button>
                             </div>
@@ -276,7 +302,7 @@ $csrf_token = class_exists('CSRF') ? CSRF::token() : '';
                         <?php if (!empty($jugadores)): ?>
                             <div class="jugadores-list" id="jugadores-<?php echo $equipo_id; ?>">
                                 <div class="mb-2 fw-semibold text-muted" style="font-size: 0.9rem;">
-                                    <i class="fas fa-users me-1"></i>Jugadores del Equipo:
+                                    <i class="fas fa-users me-1"></i>Jugadores de la <?php echo $etiqueta_equipo; ?>:
                                 </div>
                                 <?php foreach ($jugadores as $jugador): ?>
                                     <div class="jugador-item">
@@ -318,16 +344,16 @@ function toggleJugadores(equipoId) {
 
 async function retirarEquipo(equipoId, nombreEquipo) {
     const result = await Swal.fire({
-        title: '¿Retirar equipo?',
+        title: '¿Retirar <?php echo strtolower($etiqueta_equipo); ?>?',
         html: `
             <div class="text-left">
-                <p>¿Está seguro de retirar el equipo <strong>${nombreEquipo}</strong> del torneo?</p>
+                <p>¿Está seguro de retirar la <?php echo strtolower($etiqueta_equipo); ?> <strong>${nombreEquipo}</strong> del torneo?</p>
                 <div class="alert alert-warning mt-3 mb-0">
                     <i class="fas fa-exclamation-triangle me-2"></i>
                     <strong>Advertencia:</strong> Esta acción:
                     <ul class="mt-2 mb-0">
-                        <li>Eliminará el equipo del torneo</li>
-                        <li>Liberará a los jugadores del equipo (quedarán disponibles para otros equipos)</li>
+                        <li>Eliminará la <?php echo strtolower($etiqueta_equipo); ?> del torneo</li>
+                        <li>Liberará a los jugadores (quedarán disponibles para otras <?php echo strtolower($etiqueta_equipos); ?>)</li>
                         <li>No se pueden deshacer los cambios una vez confirmado</li>
                     </ul>
                 </div>
@@ -335,7 +361,7 @@ async function retirarEquipo(equipoId, nombreEquipo) {
         `,
         icon: 'warning',
         showCancelButton: true,
-        confirmButtonText: '<i class="fas fa-check me-1"></i> Sí, retirar equipo',
+        confirmButtonText: '<i class="fas fa-check me-1"></i> Sí, retirar <?php echo strtolower($etiqueta_equipo); ?>',
         cancelButtonText: '<i class="fas fa-times me-1"></i> Cancelar',
         confirmButtonColor: '#dc3545',
         cancelButtonColor: '#6c757d',
@@ -346,7 +372,7 @@ async function retirarEquipo(equipoId, nombreEquipo) {
         try {
             // Mostrar loading
             Swal.fire({
-                title: 'Retirando equipo...',
+                title: 'Retirando <?php echo strtolower($etiqueta_equipo); ?>...',
                 allowOutsideClick: false,
                 didOpen: () => {
                     Swal.showLoading();
@@ -368,8 +394,8 @@ async function retirarEquipo(equipoId, nombreEquipo) {
             if (data.success) {
                 Swal.fire({
                     icon: 'success',
-                    title: 'Equipo retirado',
-                    text: data.message || 'El equipo ha sido retirado exitosamente del torneo',
+                    title: '<?php echo $etiqueta_equipo; ?> retirada',
+                    text: data.message || 'La <?php echo strtolower($etiqueta_equipo); ?> ha sido retirada del torneo',
                     confirmButtonText: 'Aceptar'
                 }).then(() => {
                     // Remover la fila del equipo de la vista
@@ -390,8 +416,8 @@ async function retirarEquipo(equipoId, nombreEquipo) {
             } else {
                 Swal.fire({
                     icon: 'error',
-                    title: 'Error al retirar equipo',
-                    text: data.message || 'No se pudo retirar el equipo',
+                    title: 'Error al retirar <?php echo strtolower($etiqueta_equipo); ?>',
+                    text: data.message || 'No se pudo retirar la <?php echo strtolower($etiqueta_equipo); ?>',
                     confirmButtonText: 'Aceptar'
                 });
             }
@@ -400,7 +426,7 @@ async function retirarEquipo(equipoId, nombreEquipo) {
             Swal.fire({
                 icon: 'error',
                 title: 'Error',
-                text: 'Ocurrió un error al intentar retirar el equipo. Por favor, intente nuevamente.',
+                text: 'Ocurrió un error al intentar retirar la <?php echo strtolower($etiqueta_equipo); ?>. Por favor, intente nuevamente.',
                 confirmButtonText: 'Aceptar'
             });
         }

@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 /**
  * Guarda el contexto de la sesión del usuario que inició sesión con internet
  * (organización/club/entidad) para pre-seleccionar en registro offline.

@@ -441,8 +441,6 @@ class StatisticsHelper {
             ");
             $admin_list = $stmt->fetchAll(PDO::FETCH_ASSOC);
             
-            error_log("Total admin_club encontrados (pending + approved): " . count($admin_list));
-            
             foreach ($admin_list as $admin) {
                 $admin_user_id = (int)($admin['admin_id'] ?? 0);
                 $club_id = (int)($admin['club_principal_id'] ?? 0);
@@ -461,7 +459,6 @@ class StatisticsHelper {
                     }
                     
                     if (empty($supervised_club_ids)) {
-                        error_log("Admin " . ($admin['admin_id'] ?? 'N/A') . " no tiene clubes asignados");
                         $admins[] = [
                             'admin_id' => $admin['admin_id'],
                             'admin_nombre' => $admin['admin_nombre'],

@@ -13,5 +13,5 @@ $META_AUTHOR = 'La Estación del Dominó';
 $META_OG_TITLE = 'La Estación del Dominó - Sistema de Gestión de Torneos';
 $META_OG_DESCRIPTION = 'Plataforma integral para la gestión de torneos de dominó en Venezuela. Participa en eventos, consulta resultados y únete a nuestra comunidad.';
 $SITE_EMAIL = 'info@laestaciondeldomino.com';
-$SITE_URL = rtrim(app_base_url(), '/') . '/public/landing.php';
-$OG_IMAGE = rtrim(app_base_url(), '/') . '/lib/Assets/mislogos/logo4.png';
+$SITE_URL = rtrim(app_base_url(), '/') . '/public/landing-spa.php';
+$OG_IMAGE = class_exists('AppHelpers') ? AppHelpers::getAppLogo() : (rtrim(app_base_url(), '/') . '/public/view_image.php?path=' . rawurlencode('lib/Assets/mislogos/logo4.png'));

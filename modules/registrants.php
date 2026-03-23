@@ -530,11 +530,12 @@ if (isset($_GET['ajax']) && $_GET['ajax'] === 'deuda') {
                         </a>
                         <?php endif; ?>
                         <a href="index.php?page=registrants_report<?= !empty($filter_torneo) ? '&filter_torneo=' . (int)$filter_torneo : '' ?><?= !empty($filter_clubs) ? '&' . http_build_query(['filter_clubs' => $filter_clubs]) : '' ?>" 
-                           class="btn btn-info me-2">
+                               class="btn btn-info me-2">
                             <i class="fas fa-file-alt me-2"></i>Reportes
                         </a>
-                        <a href="index.php?page=registrants&action=new&torneo_id=<?= (int)($filter_torneo ?? 0) ?><?= $return_to !== 'index' ? '&return_to=' . urlencode($return_to) : '' ?>" class="btn btn-primary">
-                            <i class="fas fa-plus me-2"></i>Nuevo Inscrito
+                        <a href="index.php?page=registrants_report_retirados<?= !empty($filter_torneo) ? '&filter_torneo=' . (int)$filter_torneo : '' ?><?= !empty($filter_clubs) ? '&' . http_build_query(['filter_clubs' => $filter_clubs]) : '' ?>" 
+                               class="btn btn-warning text-dark me-2">
+                            <i class="fas fa-user-minus me-2"></i>Reporte Retirados
                         </a>
                     <?php endif; ?>
                 </div>
@@ -762,6 +763,20 @@ if (isset($_GET['ajax']) && $_GET['ajax'] === 'deuda') {
                                class="btn btn-primary">
                                 <i class="fas fa-file-alt me-2"></i>Ir a Reportes
                             </a>
+                            <?php
+                            // Sustituir jugador retirado: solo cuando torneo iniciado y no es modalidad equipos
+                            $modalidad_sust = 0;
+                            if (!empty($filter_torneo)) {
+                                $st = DB::pdo()->prepare("SELECT modalidad FROM tournaments WHERE id = ?");
+                                $st->execute([(int)$filter_torneo]);
+                                $modalidad_sust = (int)($st->fetchColumn() ?? 0);
+                            }
+                            if (!empty($torneo_iniciado) && $torneo_iniciado && $modalidad_sust !== 3): ?>
+                            <a href="index.php?page=torneo_gestion&action=sustituir_jugador&torneo_id=<?= (int)$filter_torneo ?>" 
+                               class="btn btn-warning">
+                                <i class="fas fa-user-exchange me-2"></i>Sustituir jugador retirado
+                            </a>
+                            <?php endif; ?>
                             <?php else: ?>
                             <button type="button" class="btn btn-primary" disabled title="Primero debe seleccionar un torneo">
                                 <i class="fas fa-file-alt me-2"></i>Ir a Reportes
@@ -902,7 +917,6 @@ if (isset($_GET['ajax']) && $_GET['ajax'] === 'deuda') {
                         No hay inscritos que coincidan con los filtros seleccionados.
                     <?php else: ?>
                         No hay inscritos registrados en este torneo.
-                        <a href="index.php?page=registrants&action=new" class="alert-link">Crear el primer inscrito</a>
                     <?php endif; ?>
                 </div>
             <?php else: 
@@ -1084,17 +1098,13 @@ if (isset($_GET['ajax']) && $_GET['ajax'] === 'deuda') {
                                     </td>
                                     <td class="text-center">
                                         <?php
-                                        // Confirmar / Retirar (mientras el torneo no esté cerrado)
-                                        if (!empty($torneo_cerrado_reg)) {
-                                            $puede_confirmar_retirar = false;
-                                        } else {
-                                            $puede_confirmar_retirar = true;
-                                        }
+                                        // Confirmar: solo si el torneo no está cerrado. Retirar: siempre permitido durante el torneo.
+                                        $puede_confirmar = empty($torneo_cerrado_reg);
+                                        $puede_retirar = true; // Retirar jugadores habilitado durante todo el torneo (no eliminar, solo retirar)
                                         $es_confirmado = ($est_num === 1 || $est === 'confirmado' || $est === 'solvente');
                                         $es_retirado = ($est_num === 4 || $est === 'retirado');
                                         $csrf_val = class_exists('CSRF') ? CSRF::token() : '';
-                                        if ($puede_confirmar_retirar): ?>
-                                            <?php if (!$es_confirmado): ?>
+                                        if ($puede_confirmar && !$es_confirmado): ?>
                                             <form method="post" action="" class="d-inline">
                                                 <input type="hidden" name="action" value="cambiar_estatus_inscrito">
                                                 <input type="hidden" name="torneo_id" value="<?= (int)$filter_torneo ?>">
@@ -1104,8 +1114,8 @@ if (isset($_GET['ajax']) && $_GET['ajax'] === 'deuda') {
                                                 <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrf_val) ?>">
                                                 <button type="submit" class="btn btn-sm btn-success" title="Confirmar">Confirmar</button>
                                             </form>
-                                            <?php endif; ?>
-                                            <?php if (!$es_retirado): ?>
+                                        <?php endif; ?>
+                                        <?php if ($puede_retirar && !$es_retirado): ?>
                                             <form method="post" action="" class="d-inline">
                                                 <input type="hidden" name="action" value="cambiar_estatus_inscrito">
                                                 <input type="hidden" name="torneo_id" value="<?= (int)$filter_torneo ?>">
@@ -1115,14 +1125,18 @@ if (isset($_GET['ajax']) && $_GET['ajax'] === 'deuda') {
                                                 <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrf_val) ?>">
                                                 <button type="submit" class="btn btn-sm btn-outline-danger" title="Retirar">Retirar</button>
                                             </form>
-                                            <?php endif; ?>
                                         <?php endif; ?>
                                         <?php
                                         // Verificar si el admin_torneo tiene permisos sobre este inscrito
                                         $puede_editar = true;
                                         $puede_eliminar = true;
                                         $razon_bloqueado = '';
-                                        
+                                        // Durante torneo cerrado no se permite eliminar ni editar, solo retirar
+                                        if (!empty($torneo_cerrado_reg)) {
+                                            $puede_editar = false;
+                                            $puede_eliminar = false;
+                                            $razon_bloqueado = $razon_bloqueado ?: 'Torneo cerrado: solo puede retirar jugadores, no eliminar ni editar';
+                                        }
                                         if ($is_admin_torneo) {
                                             // Debug: mostrar valores comparados
                                             $debug_info = sprintf(
