@@ -252,15 +252,23 @@ try {
         
         try {
             $database = new PersonaDatabase();
-            $result = $database->searchPersonaById($nacionalidad, $cedula_externa);
-            
-            if (isset($result['encontrado']) && $result['encontrado'] && isset($result['persona'])) {
+            $nacPrimera = strtoupper($nacionalidad);
+            $nacionalidadesIntento = [$nacPrimera];
+            if ($nacPrimera === 'V') {
+                $nacionalidadesIntento[] = 'E';
+            }
+            $nacionalidadesIntento = array_values(array_unique($nacionalidadesIntento));
+
+            foreach ($nacionalidadesIntento as $nacTry) {
+                $result = $database->searchPersonaById($nacTry, $cedula_externa);
+                if (!isset($result['encontrado']) || !$result['encontrado'] || !isset($result['persona'])) {
+                    continue;
+                }
                 $persona = $result['persona'];
-                // Cedula solo numérica; nacionalidad en campo específico (no concatenar)
                 $cedulaNum = isset($persona['cedula']) ? preg_replace('/\D/', '', $persona['cedula']) : $cedula_externa;
-                $nac = $persona['nacionalidad'] ?? $nacionalidad;
-                if (!in_array(strtoupper($nac), ['V', 'E', 'J', 'P'])) {
-                    $nac = $nacionalidad;
+                $nac = $persona['nacionalidad'] ?? $nacTry;
+                if (!in_array(strtoupper($nac), ['V', 'E', 'J', 'P'], true)) {
+                    $nac = $nacTry;
                 }
                 echo json_encode([
                     'success' => true,

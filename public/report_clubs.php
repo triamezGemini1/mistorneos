@@ -1,4 +1,5 @@
-<?php
+﻿<?php
+require_once __DIR__ . '/../config/session_start_early.php';
 /**
  * Reporte de Clubes en PDF - Versi�n P�blica
  * Accesible directamente desde: public/report_clubs.php

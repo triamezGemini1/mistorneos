@@ -12,6 +12,7 @@ class Auth {
         'id' => $user['id'],
         'username' => $user['username'],
         'role' => $user['role'],
+        'role_original' => $user['role'],
         'email' => $user['email'],
         'uuid' => $user['uuid'],
         'photo_path' => $user['photo_path'],
@@ -71,10 +72,26 @@ class Auth {
 
   public static function user(): ?array {
     $u = $_SESSION['user'] ?? null;
+    if (!$u || !is_array($u)) {
+      return $u;
+    }
+    if (!isset($u['role_original']) || $u['role_original'] === '') {
+      $u['role_original'] = $u['role'] ?? '';
+    }
+    // Switch de rol: solo permitido cuando el rol original es admin_general
+    if (($u['role_original'] ?? '') === 'admin_general' && isset($_SESSION['role_switch_mode'])) {
+      $mode = (int)$_SESSION['role_switch_mode'];
+      $map = [0 => 'admin_general', 1 => 'admin_club', 2 => 'admin_torneo', 3 => 'operador', 4 => 'usuario'];
+      if (isset($map[$mode])) {
+        $u['role'] = $map[$mode];
+        $u['role_switch_mode'] = $mode;
+      }
+    }
     if ($u !== null && !isset($u['id']) && isset($u['user_id'])) {
       $u['id'] = $u['user_id'];
       $_SESSION['user'] = $u;
     }
+    $_SESSION['user'] = $u;
     return $u;
   }
 
@@ -96,6 +113,36 @@ class Auth {
         echo '</div>';
         exit;
       }
+    }
+  }
+
+  /**
+   * Igual que requireRole pero devuelve JSON (para fetch/XHR) en lugar de redirigir a HTML.
+   * Evita el mensaje genérico "Error de conexión" cuando la sesión expiró o el rol no aplica.
+   */
+  public static function requireRoleJson(array $roles): void {
+    $u = self::user();
+    if (!$u) {
+      if (!headers_sent()) {
+        header('Content-Type: application/json; charset=utf-8');
+        http_response_code(401);
+      }
+      echo json_encode([
+        'success' => false,
+        'error' => 'Sesión expirada o no válida. Actualice la página e inicie sesión de nuevo.',
+      ], JSON_UNESCAPED_UNICODE);
+      exit;
+    }
+    if (!in_array($u['role'], $roles, true)) {
+      if (!headers_sent()) {
+        header('Content-Type: application/json; charset=utf-8');
+        http_response_code(403);
+      }
+      echo json_encode([
+        'success' => false,
+        'error' => 'No tiene permisos para esta acción. Se requiere administrador (general, torneo u organización).',
+      ], JSON_UNESCAPED_UNICODE);
+      exit;
     }
   }
 

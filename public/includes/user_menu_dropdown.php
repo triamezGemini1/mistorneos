@@ -22,6 +22,17 @@ $url_profile = $base ? $base . '/profile.php' : 'profile.php';
 $url_change_password = class_exists('AppHelpers') ? AppHelpers::dashboard('users/change_password') : ($base ? $base . '/index.php?page=users/change_password' : 'index.php?page=users/change_password');
 $url_logout = $base ? $base . '/logout.php' : 'logout.php';
 $url_mi_organizacion = class_exists('AppHelpers') ? AppHelpers::dashboard('mi_organizacion') : 'index.php?page=mi_organizacion';
+$url_switch_role = $base ? $base . '/switch_role.php' : 'switch_role.php';
+$role_original = (string)($user['role_original'] ?? $user['role'] ?? '');
+$role_mode_actual = (int)($user['role_switch_mode'] ?? (($user['role'] ?? '') === 'admin_general' ? 0 : 0));
+$role_labels = [
+  0 => '0 - Admin General',
+  1 => '1 - Admin Organización',
+  2 => '2 - Admin Torneo',
+  3 => '3 - Operador',
+  4 => '4 - Usuario Común',
+];
+$current_uri = $_SERVER['REQUEST_URI'] ?? 'index.php?page=home';
 ?>
 <!-- Menú usuario: centralizado para que todas las opciones (incl. logout) estén siempre disponibles -->
 <div class="dropdown" id="user-menu-dropdown" data-bs-boundary="viewport">
@@ -30,7 +41,26 @@ $url_mi_organizacion = class_exists('AppHelpers') ? AppHelpers::dashboard('mi_or
     <?= htmlspecialchars($user['username'] ?? 'Usuario') ?>
   </button>
   <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userMenuButton">
-    <li><span class="dropdown-item-text text-muted">Rol: <?= htmlspecialchars($user['role'] ?? '') ?></span></li>
+    <li><span class="dropdown-item-text text-muted">Rol activo: <?= htmlspecialchars($user['role'] ?? '') ?></span></li>
+    <?php if ($role_original === 'admin_general'): ?>
+    <li><span class="dropdown-item-text text-muted">Rol base: admin_general</span></li>
+    <li><hr class="dropdown-divider"></li>
+    <li class="px-3 py-2">
+      <form method="POST" action="<?= htmlspecialchars($url_switch_role) ?>">
+        <input type="hidden" name="csrf_token" value="<?= htmlspecialchars(CSRF::token()) ?>">
+        <input type="hidden" name="return_to" value="<?= htmlspecialchars($current_uri) ?>">
+        <label class="form-label small text-muted mb-1">Switch perfil operativo</label>
+        <div class="d-flex gap-2">
+          <select class="form-select form-select-sm" name="role_mode">
+            <?php foreach ($role_labels as $k => $lbl): ?>
+              <option value="<?= (int)$k ?>" <?= $role_mode_actual === (int)$k ? 'selected' : '' ?>><?= htmlspecialchars($lbl) ?></option>
+            <?php endforeach; ?>
+          </select>
+          <button type="submit" class="btn btn-sm btn-outline-primary">Aplicar</button>
+        </div>
+      </form>
+    </li>
+    <?php endif; ?>
     <?php if (($user['role'] ?? '') === 'admin_club'): ?>
     <li><a class="dropdown-item" href="<?= htmlspecialchars($url_mi_organizacion) ?>"><i class="fas fa-building me-2"></i>Perfil de la organización</a></li>
     <?php endif; ?>

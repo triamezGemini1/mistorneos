@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 declare(strict_types=1);
 
 /**
@@ -7,6 +7,7 @@ declare(strict_types=1);
  * action=importar: procesa en lotes, devuelve estadísticas y CSV de errores (base64) si aplica.
  */
 
+require_once __DIR__ . '/../../config/session_start_early.php';
 require_once __DIR__ . '/../../config/bootstrap.php';
 require_once __DIR__ . '/../../config/db_config.php';
 require_once __DIR__ . '/../../config/csrf.php';
@@ -15,7 +16,7 @@ require_once __DIR__ . '/../../lib/ImportacionMasivaService.php';
 
 header('Content-Type: application/json; charset=utf-8');
 
-Auth::requireRole(['admin_general', 'admin_torneo', 'admin_club']);
+Auth::requireRoleJson(['admin_general', 'admin_torneo', 'admin_club']);
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     echo json_encode(['success' => false, 'error' => 'Método no permitido']);

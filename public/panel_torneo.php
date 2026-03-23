@@ -1,4 +1,5 @@
-<?php
+﻿<?php
+require_once __DIR__ . '/../config/session_start_early.php';
 /**
  * Panel de Control del Torneo. Patrón en bloque: db_config → auth_service → requireAuth.
  */

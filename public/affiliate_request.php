@@ -2,15 +2,82 @@
 require_once __DIR__ . '/../config/bootstrap.php';
 require_once __DIR__ . '/../config/db_config.php';
 require_once __DIR__ . '/../config/csrf.php';
-
-// Si ya está logueado, redirigir
-if (isset($_SESSION['user'])) {
-    header('Location: index.php');
-    exit;
-}
+require_once __DIR__ . '/../config/auth.php';
 
 $pdo = DB::pdo();
 $base_url = app_base_url();
+$logged_user = Auth::user();
+$logged_user_id = (int)($logged_user['id'] ?? 0);
+
+/**
+ * Verifica si un usuario ya es admin de una organización activa.
+ */
+function usuarioTieneOrganizacionActiva(PDO $pdo, int $userId): bool {
+    if ($userId <= 0) {
+        return false;
+    }
+    try {
+        $stmt = $pdo->prepare("SELECT id FROM organizaciones WHERE admin_user_id = ? AND estatus = 1 LIMIT 1");
+        $stmt->execute([$userId]);
+        return (bool)$stmt->fetch(PDO::FETCH_ASSOC);
+    } catch (Exception $e) {
+        return false;
+    }
+}
+
+/**
+ * Crea notificación web para admin_general sobre solicitudes de afiliación.
+ * Incluye admins con status 0/1/'approved'/NULL por compatibilidad histórica.
+ */
+function notificarAdminsSolicitudAfiliacion(PDO $pdo, string $baseUrl, string $nombre, string $clubNombre, string $cedula = '', bool $recordatorio = false): void {
+    try {
+        $stmt_admin = $pdo->prepare("
+            SELECT id
+            FROM usuarios
+            WHERE role = 'admin_general'
+              AND (status IN (0, 1, '0', '1', 'approved') OR status IS NULL)
+        ");
+        $stmt_admin->execute();
+        $admins = $stmt_admin->fetchAll(PDO::FETCH_ASSOC);
+        if (empty($admins)) {
+            // Fallback: notificar a todos los admin_general aunque el status no cumpla el filtro histórico.
+            $stmt_admin = $pdo->prepare("SELECT id FROM usuarios WHERE role = 'admin_general'");
+            $stmt_admin->execute();
+            $admins = $stmt_admin->fetchAll(PDO::FETCH_ASSOC);
+        }
+        if (empty($admins)) {
+            return;
+        }
+
+        $app_url = rtrim($_ENV['APP_URL'] ?? $baseUrl, '/');
+        $url_solicitudes = $app_url . '/index.php?page=affiliate_requests&filter=pendiente';
+        $prefijo = $recordatorio ? 'Recordatorio: ' : 'Nueva ';
+        $mensaje = $prefijo . "solicitud de afiliación de " . ($nombre ?: 'N/A') . " (" . ($clubNombre ?: '') . "). Revisar en Solicitudes de Afiliación.";
+        $has_datos_json = $pdo->query("SHOW COLUMNS FROM notifications_queue LIKE 'datos_json'")->rowCount() > 0;
+
+        foreach ($admins as $admin) {
+            $uid = (int)($admin['id'] ?? 0);
+            if ($uid <= 0) {
+                continue;
+            }
+            if ($has_datos_json) {
+                $pdo->prepare("INSERT INTO notifications_queue (usuario_id, canal, mensaje, url_destino, datos_json) VALUES (?, 'web', ?, ?, ?)")
+                    ->execute([$uid, $mensaje, $url_solicitudes, json_encode([
+                        'tipo' => 'solicitud_afiliacion',
+                        'nombre' => $nombre ?: '',
+                        'club' => $clubNombre ?: '',
+                        'cedula' => $cedula ?: '',
+                        'recordatorio' => $recordatorio ? 1 : 0,
+                    ])]);
+            } else {
+                $pdo->prepare("INSERT INTO notifications_queue (usuario_id, canal, mensaje, url_destino) VALUES (?, 'web', ?, ?)")
+                    ->execute([$uid, $mensaje, $url_solicitudes]);
+            }
+        }
+    } catch (Exception $e) {
+        error_log("Error notificando solicitud afiliación a admin: " . $e->getMessage());
+    }
+}
 
 /**
  * Carga opciones de entidad (codigo, nombre) de forma resiliente.
@@ -234,6 +301,15 @@ try {
 $error = '';
 $success = '';
 $tipo_solicitud = isset($_GET['tipo']) && in_array($_GET['tipo'], ['asociacion', 'particular'], true) ? $_GET['tipo'] : null;
+$bloqueo_admin_club = false;
+
+if ($logged_user_id > 0) {
+    $rol_logueado = (string)($logged_user['role'] ?? '');
+    if ($rol_logueado === 'admin_club' && usuarioTieneOrganizacionActiva($pdo, $logged_user_id)) {
+        $bloqueo_admin_club = true;
+        $error = 'Ya está registrado con una organización y no puede crear otra.';
+    }
+}
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     CSRF::validate();
@@ -323,15 +399,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $cedula_externa = $cedula_externa ?: $cedula;
     $usuario_existente = null;
     try {
-        $stmt = $pdo->prepare("SELECT id, nombre, username, email, celular, fechnac FROM usuarios WHERE cedula = ? OR cedula = ?");
-        $stmt->execute([$cedula, $cedula_externa]);
+        if ($logged_user_id > 0) {
+            $stmt = $pdo->prepare("SELECT id, nombre, username, email, celular, fechnac, cedula, role FROM usuarios WHERE id = ? LIMIT 1");
+            $stmt->execute([$logged_user_id]);
+        } else {
+            $stmt = $pdo->prepare("SELECT id, nombre, username, email, celular, fechnac, cedula, role FROM usuarios WHERE cedula = ? OR cedula = ?");
+            $stmt->execute([$cedula, $cedula_externa]);
+        }
         $usuario_existente = $stmt->fetch(PDO::FETCH_ASSOC);
     } catch (Exception $e) {}
 
     $es_usuario_registrado = !empty($usuario_existente);
 
     // Validaciones: nacionalidad debe venir de la consulta por cédula (campo oculto rellenado por la API)
-    if ($nacionalidad === '') {
+    if ($bloqueo_admin_club) {
+        $error = 'Ya está registrado con una organización y no puede crear otra.';
+    } elseif ($nacionalidad === '') {
         $error = 'Debe buscar su cédula para cargar sus datos. La nacionalidad se obtiene de la consulta al sistema.';
     } elseif (empty($cedula) || empty($nombre)) {
         $error = 'Todos los campos marcados con * son requeridos';
@@ -380,6 +463,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if ($stmt->fetch()) {
             $error = 'El nombre de usuario ya está en uso por otra cuenta';
         }
+    } elseif ($es_usuario_registrado && (($usuario_existente['role'] ?? '') === 'admin_club') && usuarioTieneOrganizacionActiva($pdo, (int)$usuario_existente['id'])) {
+        // Regla de negocio: un admin de organización con organización activa no puede registrar otra
+        $error = 'Ya está registrado con una organización y no puede crear otra.';
     } elseif (!empty($email) && !filter_var($email, FILTER_VALIDATE_EMAIL)) {
         $error = 'El email no es válido';
     }
@@ -393,6 +479,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $stmt->execute($params_dup);
             if ($stmt->fetch()) {
                 $error = 'Ya tienes una solicitud de afiliación pendiente de revisión';
+                // Si ya existe pendiente, enviar recordatorio al admin_general para asegurar visibilidad.
+                notificarAdminsSolicitudAfiliacion($pdo, $base_url, $nombre, $club_nombre, $cedula, true);
             }
         } catch (Exception $e) {}
 
@@ -495,23 +583,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 
                 // Notificar a admin_general sobre la nueva solicitud (campanita web + email)
                 try {
-                    require_once __DIR__ . '/../config/auth.php';
-                    $stmt_admin = $pdo->prepare("SELECT id FROM usuarios WHERE role = 'admin_general' AND (status = 1 OR status = 'approved' OR status IS NULL)");
+                    notificarAdminsSolicitudAfiliacion($pdo, $base_url, $nombre, $club_nombre, $cedula, false);
+                    $stmt_admin = $pdo->prepare("
+                        SELECT id
+                        FROM usuarios
+                        WHERE role = 'admin_general'
+                          AND (status IN (0, 1, '0', '1', 'approved') OR status IS NULL)
+                    ");
                     $stmt_admin->execute();
                     $admins = $stmt_admin->fetchAll(PDO::FETCH_ASSOC);
-                    $app_url = rtrim($_ENV['APP_URL'] ?? $base_url, '/');
-                    $url_solicitudes = $app_url . '/index.php?page=affiliate_requests&filter=pendiente';
-                    $mensaje = "Nueva solicitud de afiliación de " . ($nombre ?? 'N/A') . " (" . ($club_nombre ?? '') . "). Revisar en Solicitudes de Afiliación.";
-                    $has_datos_json = $pdo->query("SHOW COLUMNS FROM notifications_queue LIKE 'datos_json'")->rowCount() > 0;
-                    foreach ($admins as $admin) {
-                        $uid = (int)$admin['id'];
-                        if ($has_datos_json) {
-                            $pdo->prepare("INSERT INTO notifications_queue (usuario_id, canal, mensaje, url_destino, datos_json) VALUES (?, 'web', ?, ?, ?)")
-                                ->execute([$uid, $mensaje, $url_solicitudes, json_encode(['tipo' => 'solicitud_afiliacion', 'nombre' => $nombre ?? '', 'club' => $club_nombre ?? ''])]);
-                        } else {
-                            $pdo->prepare("INSERT INTO notifications_queue (usuario_id, canal, mensaje, url_destino) VALUES (?, 'web', ?, ?)")
-                                ->execute([$uid, $mensaje, $url_solicitudes]);
-                        }
+                    if (empty($admins)) {
+                        $stmt_admin = $pdo->prepare("SELECT id FROM usuarios WHERE role = 'admin_general'");
+                        $stmt_admin->execute();
+                        $admins = $stmt_admin->fetchAll(PDO::FETCH_ASSOC);
                     }
                     // Email a admin_general (siempre intentar envío por correo, no solo web)
                     if (!empty($admins)) {
@@ -687,6 +771,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         <div class="info-box">
                             <i class="fas fa-info-circle text-warning me-2"></i>
                             <strong>Información:</strong> <?= $tipo_solicitud === 'asociacion' ? 'Seleccione su asociación y complete sus datos. Al aprobarse quedará asignado como responsable de esa asociación.' : 'Al afiliarte podrás crear tus propios clubes, organizar torneos e invitar jugadores. Tu solicitud será revisada por el administrador del sistema.' ?>
+                        </div>
+                        <div class="alert alert-light border mb-3">
+                            <i class="fas fa-shield-alt text-primary me-2"></i>
+                            <strong>Reglas del proceso:</strong>
+                            <ul class="mb-0 mt-2 ps-3">
+                                <li>Si ya tienes una cuenta registrada, puedes solicitar afiliación para asumir rol de administrador de organización.</li>
+                                <li>Si ya eres administrador de organización y tienes una organización activa asignada, no puedes crear otra organización con este formulario.</li>
+                            </ul>
                         </div>
                         
                         <?php if ($error): ?>

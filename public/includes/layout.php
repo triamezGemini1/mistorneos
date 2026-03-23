@@ -66,9 +66,14 @@ if (defined('URL_BASE') && URL_BASE !== '' && URL_BASE !== '/') {
 // Logo y nombre para el identificador del dashboard (organización cuando no es admin_general)
 $dashboard_org = Auth::getDashboardOrganizacion();
 
-// Contar solicitudes pendientes (solo para admin_general)
+// Rol base real (útil cuando admin_general usa switch de perfil)
+$role_original_layout = (string)($user['role_original'] ?? $user['role'] ?? '');
+$role_activo_layout = (string)($user['role'] ?? '');
+$is_admin_general_base = ($role_original_layout === 'admin_general');
+
+// Contar solicitudes pendientes (visible para admin_general base, incluso en modo prueba)
 $solicitudes_pendientes = 0;
-if ($user['role'] === 'admin_general') {
+if ($is_admin_general_base) {
     try {
         $solicitudes_pendientes = DB::pdo()->query("SELECT COUNT(*) FROM solicitudes_afiliacion WHERE estatus = 'pendiente'")->fetchColumn();
     } catch (Exception $e) {
@@ -88,6 +93,22 @@ if (in_array($user['role'], ['admin_club', 'admin_general', 'admin_torneo'], tru
 }
 
 $header_title = $dashboard_org ? 'Dashboard - ' . htmlspecialchars($dashboard_org['nombre']) : 'Dashboard - La Estación del Dominó';
+$modo_prueba_activo = ($role_original_layout === 'admin_general' && $role_activo_layout !== 'admin_general');
+$role_human = [
+  'admin_general' => 'Admin General',
+  'admin_club' => 'Admin Organización',
+  'admin_torneo' => 'Admin Torneo',
+  'operador' => 'Operador',
+  'usuario' => 'Usuario Común',
+];
+$role_activo_human = $role_human[$role_activo_layout] ?? $role_activo_layout;
+$role_badge_class = [
+  'admin_club' => 'bg-primary text-white',
+  'admin_torneo' => 'bg-info text-dark',
+  'operador' => 'bg-danger text-white',
+  'usuario' => 'bg-success text-white',
+];
+$modo_prueba_badge_class = $role_badge_class[$role_activo_layout] ?? 'bg-warning text-dark';
 ?>
 <!DOCTYPE html>
 <html lang="es">
@@ -251,6 +272,12 @@ if ($from_url !== '') {
             <span class="nav-text">Cuentas Bancarias</span>
           </a>
         </li>
+        <li class="mb-2">
+          <a href="<?= htmlspecialchars($dashboard_href('bannerclock')) ?>" class="nav-link <?= $current_page === 'bannerclock' ? 'active' : '' ?>">
+            <i class="fas fa-bullhorn me-3"></i>
+            <span class="nav-text">Banner Reloj</span>
+          </a>
+        </li>
         <!-- Comentarios -->
         <li class="mb-2">
           <a href="<?= htmlspecialchars($dashboard_href('comments_public')) ?>" class="nav-link <?= $current_page === 'comments_public' ? 'active' : '' ?>">
@@ -375,6 +402,12 @@ if ($from_url !== '') {
           <a href="<?= htmlspecialchars($dashboard_href('torneo_gestion', ['action' => 'index'])) ?>" class="nav-link <?= ($current_page === 'torneo_gestion' && ($_GET['action'] ?? '') === 'index') ? 'active' : '' ?>">
             <i class="fas fa-trophy me-3"></i>
             <span class="nav-text">Torneos</span>
+          </a>
+        </li>
+        <li class="mb-2">
+          <a href="<?= htmlspecialchars($dashboard_href('bannerclock')) ?>" class="nav-link <?= $current_page === 'bannerclock' ? 'active' : '' ?>">
+            <i class="fas fa-bullhorn me-3"></i>
+            <span class="nav-text">Banner Reloj</span>
           </a>
         </li>
         <?php if (($user['role'] ?? '') === 'admin_general'): ?>
@@ -536,7 +569,7 @@ if ($from_url !== '') {
           </div>
           
           <div class="d-flex align-items-center">
-            <?php if ($user['role'] === 'admin_general' && $solicitudes_pendientes > 0): ?>
+            <?php if ($is_admin_general_base && $solicitudes_pendientes > 0): ?>
             <!-- Indicador de Solicitudes Pendientes -->
             <div class="me-3">
               <a href="<?= htmlspecialchars($dashboard_href('affiliate_requests')) ?>" class="btn btn-warning position-relative" title="Solicitudes de Afiliación Pendientes">
@@ -569,6 +602,12 @@ if ($from_url !== '') {
               <i class="fas fa-bell"></i>
               <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" id="campana-badge" style="display: none;">0</span>
             </a>
+
+            <?php if ($modo_prueba_activo): ?>
+            <span class="badge <?= htmlspecialchars($modo_prueba_badge_class) ?> me-2" title="Estás simulando permisos de otro perfil">
+              <i class="fas fa-vial me-1"></i>MODO PRUEBA: Actuando como <?= htmlspecialchars($role_activo_human) ?>
+            </span>
+            <?php endif; ?>
             
             <?php if ($user['role'] === 'admin_club'): ?>
             <!-- Perfil de la organización (solo admin_club) -->

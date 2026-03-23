@@ -1,4 +1,5 @@
-<?php
+﻿<?php
+require_once __DIR__ . '/../config/session_start_early.php';
 /**
  * Reportar Pago de Inscripción
  * Patrón en bloque: db_config → auth_service → requireAuth. Interfaz: header/footer unificados.

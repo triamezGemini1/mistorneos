@@ -178,7 +178,7 @@ if (!in_array($user['role'] ?? '', $allowed_roles, true)) {
 }
 
 // Redirigir usuarios normales al portal de jugador, salvo vistas permitidas (perfil, cambio contraseña, resumen/posiciones)
-if ($user['role'] === 'usuario') {
+if ($user['role'] === 'usuario' && (($user['role_original'] ?? '') !== 'admin_general')) {
     $page = $_GET['page'] ?? '';
     $action = $_GET['action'] ?? '';
     $torneo_id = (int)($_GET['torneo_id'] ?? 0);

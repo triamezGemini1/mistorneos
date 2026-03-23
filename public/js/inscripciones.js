@@ -95,7 +95,7 @@
         if (formEmail) formEmail.value = p.email || '';
     }
 
-    /** Limpia el formulario y deja foco en Nacionalidad para el siguiente jugador. */
+    /** Limpia el formulario y deja foco en Cédula para el siguiente jugador. */
     function limpiarBusquedaCedula() {
         var inputCedula = getCedulaField();
         var selectNac = getNacionalidadField();
@@ -108,7 +108,10 @@
         if (formNuevo) formNuevo.classList.add('d-none');
         limpiarMensajeForm();
         usuarioEncontrado = null;
-        if (selectNac) {
+        if (inputCedula) {
+            inputCedula.focus();
+            inputCedula.select();
+        } else if (selectNac) {
             selectNac.focus();
         }
     }
@@ -168,9 +171,15 @@
         var nac = (selectNac && selectNac.value) ? selectNac.value : 'V';
         var num = (inputCedula && inputCedula.value ? inputCedula.value : '').replace(/\D/g, '');
 
-        if (num.length < 4) return;
+        if (num.length < 4) {
+            isSearching = false;
+            busquedaEnCurso = false;
+            return;
+        }
         if (!BUSCAR_API) {
             console.warn('INSCRIPCIONES: falta BUSCAR_API en INSCRIPCIONES_CONFIG');
+            isSearching = false;
+            busquedaEnCurso = false;
             return;
         }
         if (!TORNEOS_ID || TORNEOS_ID === 0) {
@@ -183,6 +192,8 @@
             } else if (mensajeForm) {
                 mostrarMensajeForm('Indique el torneo. Acceda desde el panel del torneo.', 'warning');
             }
+            isSearching = false;
+            busquedaEnCurso = false;
             return;
         }
 
@@ -364,8 +375,6 @@
                             confirmButtonText: 'OK'
                         }).then(function () {
                             limpiarBusquedaCedula();
-                            var selNac = getNacionalidadField();
-                            if (selNac) selNac.focus();
                             if (typeof config.onInscritoExitoso === 'function') {
                                 config.onInscritoExitoso(data, usuarioEncontrado, clubId);
                             } else {
@@ -374,8 +383,6 @@
                         });
                     } else {
                         limpiarBusquedaCedula();
-                        var selNac = getNacionalidadField();
-                        if (selNac) selNac.focus();
                         if (typeof config.onInscritoExitoso === 'function') config.onInscritoExitoso(data, usuarioEncontrado, clubId);
                         else window.location.reload();
                     }
@@ -391,8 +398,6 @@
                             confirmButtonText: 'OK'
                         }).then(function () {
                             limpiarBusquedaCedula();
-                            var selNac = getNacionalidadField();
-                            if (selNac) selNac.focus();
                         });
                     } else if (typeof Swal !== 'undefined') {
                         Swal.fire({ icon: 'error', title: 'Error', text: data.error || 'No se pudo inscribir.' });
@@ -471,8 +476,6 @@
                             confirmButtonText: 'OK'
                         }).then(function () {
                             limpiarBusquedaCedula();
-                            var selNac = getNacionalidadField();
-                            if (selNac) selNac.focus();
                             if (typeof config.onRegistrarInscribirExitoso === 'function') {
                                 config.onRegistrarInscribirExitoso(data, nom, nac + ced, clubId);
                             } else {
@@ -481,8 +484,6 @@
                         });
                     } else {
                         limpiarBusquedaCedula();
-                        var selNac = getNacionalidadField();
-                        if (selNac) selNac.focus();
                         if (typeof config.onRegistrarInscribirExitoso === 'function') config.onRegistrarInscribirExitoso(data, nom, nac + ced, clubId);
                         else window.location.reload();
                     }
@@ -498,8 +499,6 @@
                             confirmButtonText: 'OK'
                         }).then(function () {
                             limpiarBusquedaCedula();
-                            var selNac = getNacionalidadField();
-                            if (selNac) selNac.focus();
                         });
                     } else if (typeof Swal !== 'undefined') {
                         Swal.fire({ icon: 'error', title: 'Error', text: data.error || 'No se pudo registrar.' });
@@ -536,18 +535,23 @@
     document.addEventListener('DOMContentLoaded', function () {
         cacheRefs();
         var elCedula = getCedulaField();
+        var elNac = getNacionalidadField();
+        function triggerBuscarPorEnter(e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                if (!formNuevo || formNuevo.classList.contains('d-none')) buscarJugador();
+            }
+        }
         if (elCedula) {
             elCedula.addEventListener('blur', function () {
                 if (!formNuevo || formNuevo.classList.contains('d-none')) {
                     buscarJugador();
                 }
             });
-            elCedula.addEventListener('keypress', function (e) {
-                if (e.key === 'Enter') {
-                    e.preventDefault();
-                    if (!formNuevo || formNuevo.classList.contains('d-none')) buscarJugador();
-                }
-            });
+            elCedula.addEventListener('keydown', triggerBuscarPorEnter);
+        }
+        if (elNac) {
+            elNac.addEventListener('keydown', triggerBuscarPorEnter);
         }
 
         var btnOtra = document.getElementById('btn_otra_busqueda_cedula');

@@ -276,169 +276,56 @@ tailwind.config = {
     </div>
     <?php endif; ?>
 
-    <!-- Botón Activar/Retornar Cronómetro (compacto) -->
+    <?php
+    $return_to_panel = $use_standalone
+        ? ($base_url . '?action=panel&torneo_id=' . (int)$torneo['id'])
+        : ('index.php?page=torneo_gestion&action=panel&torneo_id=' . (int)$torneo['id']);
+    $url_cronometro = $base_url
+        . ($use_standalone ? '?' : '&')
+        . 'action=cronometro&torneo_id=' . (int)$torneo['id']
+        . '&return_to=' . urlencode($return_to_panel);
+    ?>
+    <!-- Cronómetro en ventana independiente (no bloquea ni interfiere con el panel) -->
     <div class="mb-2 text-center">
-        <button type="button" id="btnCronometro"
+        <button type="button" id="btnCronometroVentana"
            class="d-inline-block font-bold py-2 px-5 rounded-lg text-lg transition-all transform shadow border-0" style="cursor: pointer;">
-            <i class="fas fa-clock mr-2"></i><span id="lblCronometro">ACTIVAR CRONÓMETRO DE RONDA</span>
+            <i class="fas fa-external-link-alt mr-2"></i><span>ABRIR CRONÓMETRO DE RONDA</span>
         </button>
-    </div>
-    
-    <?php $tiempo_ronda_min = (int)($torneo['tiempo'] ?? 35); if ($tiempo_ronda_min < 1) $tiempo_ronda_min = 35; ?>
-    <!-- Overlay Cronómetro - pantalla completa en la misma página (tiempo definido en el torneo) -->
-    <div id="cronometroOverlay" data-tiempo-minutos="<?php echo $tiempo_ronda_min; ?>">
-        <div class="cron-box">
-            <div class="cron-header">
-                <h1><i class="fas fa-clock me-2"></i>Cronómetro - <?= htmlspecialchars($torneo['nombre'] ?? 'Ronda') ?></h1>
-                <div style="display:flex;gap:0.5rem;align-items:center;">
-                    <button type="button" class="btn-retornar" onclick="ocultarCronometroOverlay()">
-                        <i class="fas fa-arrow-left me-1"></i> Retornar al Panel
-                    </button>
-                    <button type="button" class="btn-retornar" style="background:rgba(255,255,255,0.2)" onclick="toggleConfigCron()"><i class="fas fa-cog me-1"></i>Configurar</button>
-                </div>
-            </div>
-            <div id="configPanelCron">
-                <div class="config-grid">
-                    <div><label>Minutos</label><input type="number" id="configMinutosCron" min="1" max="99" value="<?php echo $tiempo_ronda_min; ?>"></div>
-                    <div><label>Segundos</label><input type="number" id="configSegundosCron" min="0" max="59" value="0"></div>
-                </div>
-                <button type="button" class="btn-retornar" style="width:100%;background:#22c55e" onclick="aplicarConfigCron()"><i class="fas fa-check me-1"></i>APLICAR</button>
-            </div>
-            <div class="cron-display">
-                <div id="tiempoDisplayCron"><?php echo str_pad((string)$tiempo_ronda_min, 2, '0', STR_PAD_LEFT); ?>:00</div>
-                <div id="estadoDisplayCron"><i class="fas fa-pause-circle me-1"></i>DETENIDO</div>
-                <div class="cron-controles">
-                    <button id="btnIniciarCron" onclick="iniciarCronometro()" title="Iniciar"><i class="fas fa-play"></i></button>
-                    <button id="btnDetenerCron" onclick="detenerCronometro()" title="Detener" disabled><i class="fas fa-stop"></i></button>
-                </div>
-            </div>
+        <?php
+        $u_banner = class_exists('Auth') ? Auth::user() : null;
+        $puede_admin_banner = is_array($u_banner) && in_array(($u_banner['role'] ?? ''), ['admin_general', 'admin_club'], true);
+        ?>
+        <?php if ($puede_admin_banner): ?>
+        <div class="mt-2">
+            <a href="index.php?page=bannerclock&torneo_id=<?php echo (int)$torneo['id']; ?>" class="inline-block text-sm text-indigo-200 hover:text-white underline">
+                <i class="fas fa-bullhorn mr-1"></i>Administrar banner del reloj
+            </a>
+        </div>
+        <?php endif; ?>
+        <div class="text-xs text-gray-300 mt-2">
+            Se abre en ventana nueva, redimensionable e independiente del panel.
         </div>
     </div>
-    
     <script>
     (function() {
-        var overlayEl = document.getElementById('cronometroOverlay');
-        var minutosTorneo = overlayEl ? (parseInt(overlayEl.getAttribute('data-tiempo-minutos'), 10) || 35) : 35;
-        if (minutosTorneo < 1) minutosTorneo = 35;
-        var tiempoRestante = minutosTorneo * 60, tiempoOriginal = minutosTorneo * 60, cronometroInterval = null;
-        var estaCorriendo = false, alarmaReproducida = false, alarmaRepetida = false;
-        var overlay = overlayEl;
-        var btnLbl = document.getElementById('lblCronometro');
-        
-        function formatear(s) { var m=Math.floor(s/60),se=s%60; return String(m).padStart(2,'0')+':'+String(se).padStart(2,'0'); }
-        function actualizarDisplayCron() {
-            var d=document.getElementById('tiempoDisplayCron'),e=document.getElementById('estadoDisplayCron');
-            if(!d||!e)return;
-            d.textContent=formatear(tiempoRestante);
-            d.style.color=tiempoRestante<=30?'#ef4444':tiempoRestante<=60?'#fbbf24':'white';
-            d.style.animation=tiempoRestante<=30?'cronPulse 1s infinite':'none';
-            e.innerHTML=estaCorriendo?'<i class="fas fa-play-circle me-1"></i>EN EJECUCIÓN':'<i class="fas fa-pause-circle me-1"></i>DETENIDO';
-            e.style.color=estaCorriendo?'#86efac':'rgba(255,255,255,0.9)';
-            if(btnLbl) btnLbl.textContent=estaCorriendo?'RETORNAR AL CRONÓMETRO':'ACTIVAR CRONÓMETRO DE RONDA';
-        }
-        function reproducirAlarma() {
-            try {
-                var ctx=new(window.AudioContext||window.webkitAudioContext)();
-                for(var i=0;i<5;i++) {
-                    var o=ctx.createOscillator(),g=ctx.createGain();
-                    o.connect(g);g.connect(ctx.destination);
-                    o.frequency.setValueAtTime(400,ctx.currentTime+i*0.8);
-                    o.frequency.exponentialRampToValueAtTime(800,ctx.currentTime+i*0.8+0.6);
-                    o.type='sine';
-                    g.gain.setValueAtTime(0,ctx.currentTime+i*0.8);
-                    g.gain.linearRampToValueAtTime(0.5,ctx.currentTime+i*0.8+0.1);
-                    g.gain.linearRampToValueAtTime(0,ctx.currentTime+i*0.8+0.6);
-                    o.start(ctx.currentTime+i*0.8);o.stop(ctx.currentTime+i*0.8+0.6);
-                }
-            } catch(err){if(navigator.vibrate)navigator.vibrate([300,100,300,100,300]);}
-        }
-        function reproducirAlarma2() {
-            try {
-                var ctx=new(window.AudioContext||window.webkitAudioContext)();
-                for(var i=0;i<3;i++) {
-                    var o=ctx.createOscillator(),g=ctx.createGain();
-                    o.connect(g);g.connect(ctx.destination);
-                    o.frequency.setValueAtTime(60,ctx.currentTime+i*1.2);
-                    o.frequency.exponentialRampToValueAtTime(120,ctx.currentTime+i*1.2+0.5);
-                    o.type='sawtooth';
-                    g.gain.setValueAtTime(0,ctx.currentTime+i*1.2);
-                    g.gain.linearRampToValueAtTime(0.6,ctx.currentTime+i*1.2+0.2);
-                    g.gain.linearRampToValueAtTime(0,ctx.currentTime+i*1.2+1);
-                    o.start(ctx.currentTime+i*1.2);o.stop(ctx.currentTime+i*1.2+1);
-                }
-            } catch(err){if(navigator.vibrate)navigator.vibrate([500,200,500]);}
-        }
-        window.iniciarCronometro=function(){
-            if(tiempoRestante<=0)tiempoRestante=tiempoOriginal;
-            estaCorriendo=true;alarmaReproducida=false;alarmaRepetida=false;
-            document.getElementById('btnIniciarCron').disabled=true;
-            document.getElementById('btnDetenerCron').disabled=false;
-            cronometroInterval=setInterval(function(){
-                tiempoRestante--;actualizarDisplayCron();
-                if(tiempoRestante<=0){
-                    clearInterval(cronometroInterval);cronometroInterval=null;
-                    estaCorriendo=false;
-                    document.getElementById('btnIniciarCron').disabled=false;
-                    document.getElementById('btnDetenerCron').disabled=true;
-                    if(!alarmaReproducida){reproducirAlarma();alarmaReproducida=true;setTimeout(function(){if(!alarmaRepetida){reproducirAlarma2();alarmaRepetida=true;}},180000);}
-                    actualizarDisplayCron();
-                }
-            },1000);
-            actualizarDisplayCron();
-        };
-        window.detenerCronometro=function(){
-            estaCorriendo=false;clearInterval(cronometroInterval);cronometroInterval=null;
-            document.getElementById('btnIniciarCron').disabled=false;
-            document.getElementById('btnDetenerCron').disabled=true;
-            actualizarDisplayCron();
-        };
-        window.toggleConfigCron=function(){
-            var p=document.getElementById('configPanelCron');
-            p.style.display=p.style.display==='none'?'block':'none';
-        };
-        window.aplicarConfigCron=function(){
-            var m=parseInt(document.getElementById('configMinutosCron').value)||minutosTorneo;
-            var s=parseInt(document.getElementById('configSegundosCron').value)||0;
-            tiempoRestante=m*60+s;tiempoOriginal=tiempoRestante;
-            if(!estaCorriendo)actualizarDisplayCron();
-            document.getElementById('configPanelCron').style.display='none';
-        };
-        window.ocultarCronometroOverlay=function(){
-            overlay.style.display='none';
-        };
-        var btnCron=document.getElementById('btnCronometro');
-        if(btnCron) btnCron.onclick=function(){
-            overlay.style.display='flex';
-        };
-        actualizarDisplayCron();
-        /* Arrastrar ventana del cronómetro por el encabezado (desvincular de la página) */
-        (function initDragCron() {
-            var header = overlayEl ? overlayEl.querySelector('.cron-header') : null;
-            if (!header) return;
-            var dragging = false, startX, startY, startLeft, startTop;
-            header.addEventListener('mousedown', function(e) {
-                if (e.target.closest('button')) return;
-                dragging = true;
-                var r = overlayEl.getBoundingClientRect();
-                startLeft = r.left;
-                startTop = r.top;
-                startX = e.clientX;
-                startY = e.clientY;
-                overlayEl.style.right = 'auto';
-                overlayEl.style.bottom = 'auto';
-                overlayEl.style.left = startLeft + 'px';
-                overlayEl.style.top = startTop + 'px';
-                e.preventDefault();
-            });
-            document.addEventListener('mousemove', function(e) {
-                if (!dragging) return;
-                var dx = e.clientX - startX, dy = e.clientY - startY;
-                overlayEl.style.left = (startLeft + dx) + 'px';
-                overlayEl.style.top = (startTop + dy) + 'px';
-                startLeft += dx; startTop += dy; startX = e.clientX; startY = e.clientY;
-            });
-            document.addEventListener('mouseup', function() { dragging = false; });
-        })();
+        var btnCron = document.getElementById('btnCronometroVentana');
+        if (!btnCron) return;
+        var urlCronometro = <?php echo json_encode($url_cronometro, JSON_UNESCAPED_SLASHES); ?>;
+        btnCron.addEventListener('click', function () {
+            var features = [
+                'popup=yes',
+                'width=1100',
+                'height=820',
+                'resizable=yes',
+                'scrollbars=yes'
+            ].join(',');
+            var win = window.open(urlCronometro, 'cronometro_torneo_<?php echo (int)$torneo['id']; ?>', features);
+            if (win) {
+                win.focus();
+            } else {
+                window.location.href = urlCronometro;
+            }
+        });
     })();
     </script>
     
@@ -754,11 +641,11 @@ tailwind.config = {
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Cerrar"></button>
             </div>
             <div class="modal-body">
-                <p class="text-muted small">Cargue un archivo <strong>Excel (.xls / 97-2003 o .xlsx)</strong> o CSV. Campos obligatorios: <strong>nacionalidad, cédula, nombre, club, organización</strong>. Si falta cualquiera, la fila se rechaza. Asigne cada columna al campo (entidad/organización se asocian a Organización).</p>
+                <p class="text-muted small">Cargue <strong>Excel</strong> (.xlsx, .xls, .xlsm) o <strong>CSV</strong>. En el servidor debe existir <code>vendor/</code> (ejecute <code>composer install</code> en la raíz del proyecto) para los formatos modernos de Excel. Campos obligatorios: <strong>nacionalidad, cédula, nombre, club, organización</strong>. Si falta cualquiera, la fila se rechaza. Si aparece sesión expirada, recargue la página (F5) antes de subir.</p>
                 <p class="small mb-2"><strong>Semáforo (tras Validar):</strong> <span class="badge" style="background:#3b82f6">Azul</span> Ya inscrito (omitir) · <span class="badge" style="background:#eab308;color:#000">Amarillo</span> Usuario existe (solo inscribir) · <span class="badge" style="background:#22c55e">Verde</span> Todo nuevo (crear e inscribir) · <span class="badge bg-danger">Rojo</span> Error de datos</p>
                 <div class="mb-3">
                     <label class="form-label">Archivo CSV</label>
-                    <input type="file" class="form-control" id="importMasivaFile" accept=".xls,.xlsx,.csv,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,text/csv">
+                    <input type="file" class="form-control" id="importMasivaFile" accept=".xls,.xlsx,.xlsm,.csv,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel.sheet.macroEnabled.12,text/csv">
                 </div>
                 <div id="importMasivaMapping" class="mb-3 d-none">
                     <h6 class="mb-2">Mapeo de columnas</h6>
@@ -1010,17 +897,35 @@ async function confirmarCierreTorneo(event) {
         return document.querySelector('input[name="csrf_token"]') && document.querySelector('input[name="csrf_token"]').value || '';
     }
 
+    /** URL absoluta a /public/api/... (evita fallos si <base> o la ruta relativa no coinciden). */
+    function apiPublicUrl(path) {
+        var p = (path || '').replace(/^\//, '');
+        var base = (typeof window.APP_BASE_URL === 'string' && window.APP_BASE_URL) ? window.APP_BASE_URL.replace(/\/$/, '') : '';
+        return base ? (base + '/' + p) : p;
+    }
+
+    function fetchJsonResponse(r) {
+        return r.text().then(function(text) {
+            try {
+                return JSON.parse(text);
+            } catch (e) {
+                var plain = (text || '').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+                throw new Error('HTTP ' + r.status + (plain ? ': ' + plain.slice(0, 220) : '') + ' (respuesta no JSON; revise sesión o tamaño del archivo).');
+            }
+        });
+    }
+
     document.getElementById('importMasivaFile').addEventListener('change', function(e) {
         const file = e.target.files[0];
         if (!file) return;
         var ext = (file.name.split('.').pop() || '').toLowerCase();
         document.getElementById('importMasivaLoading').classList.remove('d-none');
-        if (ext === 'xls' || ext === 'xlsx' || ext === 'csv') {
+        if (ext === 'xls' || ext === 'xlsx' || ext === 'xlsm' || ext === 'csv') {
             var fd = new FormData();
             fd.append('archivo', file);
             fd.append('csrf_token', getCsrfToken());
-            fetch('api/tournament_import_parse.php', { method: 'POST', body: fd })
-                .then(function(r) { return r.json(); })
+            fetch(apiPublicUrl('api/tournament_import_parse.php'), { method: 'POST', body: fd, credentials: 'same-origin' })
+                .then(fetchJsonResponse)
                 .then(function(data) {
                     document.getElementById('importMasivaLoading').classList.add('d-none');
                     if (!data.success) { alert(data.error || 'Error al leer el archivo'); return; }
@@ -1032,9 +937,9 @@ async function confirmarCierreTorneo(event) {
                     }
                     applyParsedData();
                 })
-                .catch(function() {
+                .catch(function(err) {
                     document.getElementById('importMasivaLoading').classList.add('d-none');
-                    alert('Error de conexión al procesar el archivo.');
+                    alert(err && err.message ? err.message : 'Error de conexión al procesar el archivo.');
                 });
         } else {
             var reader = new FileReader();
@@ -1135,8 +1040,8 @@ async function confirmarCierreTorneo(event) {
         fd.append('filas', JSON.stringify(filas));
         fd.append('csrf_token', getCsrfToken());
         document.getElementById('importMasivaLoading').classList.remove('d-none');
-        fetch('api/tournament_import_masivo.php', { method: 'POST', body: fd })
-            .then(function(r) { return r.json(); })
+        fetch(apiPublicUrl('api/tournament_import_masivo.php'), { method: 'POST', body: fd, credentials: 'same-origin' })
+            .then(fetchJsonResponse)
             .then(function(data) {
                 document.getElementById('importMasivaLoading').classList.add('d-none');
                 if (!data.success) { alert(data.error || 'Error al validar'); return; }
@@ -1151,7 +1056,10 @@ async function confirmarCierreTorneo(event) {
                     });
                 }
             })
-            .catch(function() { document.getElementById('importMasivaLoading').classList.add('d-none'); alert('Error de conexión'); });
+            .catch(function(err) {
+                document.getElementById('importMasivaLoading').classList.add('d-none');
+                alert(err && err.message ? err.message : 'Error de conexión');
+            });
     });
 
     document.getElementById('btnImportMasivaProcesar').addEventListener('click', function() {
@@ -1163,8 +1071,8 @@ async function confirmarCierreTorneo(event) {
         fd.append('filas', JSON.stringify(filas));
         fd.append('csrf_token', getCsrfToken());
         document.getElementById('importMasivaLoading').classList.remove('d-none');
-        fetch('api/tournament_import_masivo.php', { method: 'POST', body: fd })
-            .then(function(r) { return r.json(); })
+        fetch(apiPublicUrl('api/tournament_import_masivo.php'), { method: 'POST', body: fd, credentials: 'same-origin' })
+            .then(fetchJsonResponse)
             .then(function(data) {
                 document.getElementById('importMasivaLoading').classList.add('d-none');
                 if (!data.success) { alert(data.error || 'Error'); return; }
@@ -1195,7 +1103,10 @@ async function confirmarCierreTorneo(event) {
                     if (data.success && (data.procesados > 0 || data.omitidos > 0)) window.location.reload();
                 });
             })
-            .catch(function() { document.getElementById('importMasivaLoading').classList.add('d-none'); alert('Error de conexión'); });
+            .catch(function(err) {
+                document.getElementById('importMasivaLoading').classList.add('d-none');
+                alert(err && err.message ? err.message : 'Error de conexión');
+            });
     });
 
     if (window.location.hash === '#importacion-masiva') {

@@ -1,4 +1,5 @@
-<?php
+﻿<?php
+require_once __DIR__ . '/../config/session_start_early.php';
 /**
  * Página independiente del Administrador de Torneos
  * Patrón en bloque: conexión única → seguridad → validación inmediata → interfaz (layout incluye header).

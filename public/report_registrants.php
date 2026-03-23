@@ -1,4 +1,5 @@
-<?php
+﻿<?php
+require_once __DIR__ . '/../config/session_start_early.php';
 /**
  * Reporte de Inscritos en PDF
  * Patrón en bloque: conexión única → seguridad → validación inmediata.
