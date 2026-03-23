@@ -4,13 +4,53 @@ declare(strict_types=1);
 /**
  * API: Parsea archivo de importación (.xlsx, .xls, .xlsm, .csv).
  * Excel: PhpSpreadsheet (composer). CSV: nativo.
+ *
+ * El archivo subido se copia a storage/tmp/ con ruta absoluta (__DIR__) para evitar
+ * fallos con tmp de PHP en algunos hostings.
  */
+
+// 1. Definimos la raíz del proyecto subiendo 2 niveles desde public/api
+$baseDir = dirname(__DIR__, 2);
+
+// 2. Cargamos el autoload usando la ruta real del sistema
+$autoloadPath = $baseDir . '/vendor/autoload.php';
+
+if (file_exists($autoloadPath)) {
+    require_once $autoloadPath;
+} else {
+    header('Content-Type: application/json; charset=utf-8');
+    die(json_encode([
+        'error' => 'Error Crítico: No se encuentra el cargador de librerías.',
+        'ruta_buscada' => $autoloadPath,
+    ], JSON_UNESCAPED_UNICODE));
+}
+
+use PhpOffice\PhpSpreadsheet\IOFactory;
 
 require_once __DIR__ . '/../../config/session_start_early.php';
 require_once __DIR__ . '/../../config/bootstrap.php';
 require_once __DIR__ . '/../../config/db_config.php';
 require_once __DIR__ . '/../../config/csrf.php';
 require_once __DIR__ . '/../../config/auth.php';
+
+// Respuesta JSON ante error fatal (evita pantalla en blanco si hay fallo antes del try/catch)
+register_shutdown_function(static function (): void {
+    $e = error_get_last();
+    if ($e === null || !in_array($e['type'], [E_ERROR, E_PARSE, E_CORE_ERROR, E_COMPILE_ERROR], true)) {
+        return;
+    }
+    if (headers_sent()) {
+        return;
+    }
+    header('Content-Type: application/json; charset=utf-8');
+    echo json_encode([
+        'success' => false,
+        'error' => $e['message'],
+        'php_file' => $e['file'],
+        'php_line' => $e['line'],
+        'fatal' => true,
+    ], JSON_UNESCAPED_UNICODE);
+});
 
 header('Content-Type: application/json; charset=utf-8');
 
@@ -39,7 +79,7 @@ if (empty($_FILES['archivo']) || $_FILES['archivo']['error'] !== UPLOAD_ERR_OK) 
 }
 
 $file = $_FILES['archivo'];
-$tmpPath = $file['tmp_name'];
+$uploadTmp = $file['tmp_name'];
 $name = $file['name'];
 $ext = strtolower(pathinfo($name, PATHINFO_EXTENSION));
 
@@ -47,6 +87,29 @@ if (!in_array($ext, ['xls', 'xlsx', 'xlsm', 'csv'], true)) {
     echo json_encode(['success' => false, 'error' => 'Formato no soportado. Use Excel (.xls, .xlsx, .xlsm) o CSV.']);
     exit;
 }
+
+/** Ruta absoluta bajo public/api → ../../storage/tmp (no depende del cwd del servidor) */
+$storageTmp = __DIR__ . '/../../storage/tmp';
+if (!is_dir($storageTmp) && !@mkdir($storageTmp, 0755, true)) {
+    echo json_encode(['success' => false, 'error' => 'No se pudo crear el directorio temporal: ' . $storageTmp]);
+    exit;
+}
+$safeBase = preg_replace('/[^a-zA-Z0-9._-]/', '_', basename($name));
+if ($safeBase === '' || $safeBase === '_') {
+    $safeBase = 'upload.' . $ext;
+}
+$targetPath = $storageTmp . '/import_' . bin2hex(random_bytes(8)) . '_' . $safeBase;
+if (!is_uploaded_file($uploadTmp)) {
+    echo json_encode(['success' => false, 'error' => 'Archivo temporal de subida inválido.']);
+    exit;
+}
+if (!@move_uploaded_file($uploadTmp, $targetPath)) {
+    if (!@copy($uploadTmp, $targetPath)) {
+        echo json_encode(['success' => false, 'error' => 'No se pudo copiar el archivo a ' . $targetPath]);
+        exit;
+    }
+}
+$tmpPath = realpath($targetPath) ?: $targetPath;
 
 $asegurarUtf8 = static function ($v): string {
     if ($v === null || $v === '') {
@@ -88,7 +151,11 @@ function extract_headers_and_data_rows(array $allRows, callable $asegurarUtf8): 
         throw new RuntimeException('El archivo no contiene filas');
     }
     $headerRowIndex = null;
-    $headerKeywords = ['nacionalidad', 'cedula', 'cédula', 'nombre', 'club', 'organizacion', 'organización', 'sexo', 'telefono', 'email'];
+    $headerKeywords = [
+        'nacionalidad', 'cedula', 'cédula', 'nombre', 'nombres', 'club', 'organizacion', 'organización',
+        'sexo', 'telefono', 'teléfono', 'email', 'correo', 'pareja', 'compañero', 'compañera', 'nombre pareja',
+        'jugador', 'integrante', 'apellido', 'apellidos',
+    ];
     for ($r = 0, $max = min(4, count($allRows)); $r < $max; $r++) {
         $row = $allRows[$r];
         $cells = array_map(static function ($c) {
@@ -164,18 +231,33 @@ try {
             }
         }
     } elseif (in_array($ext, ['xlsx', 'xlsm', 'xls'], true)) {
-        $autoload = dirname(__DIR__, 2) . '/vendor/autoload.php';
-        if (is_readable($autoload)) {
-            require_once $autoload;
-            if (class_exists('\PhpOffice\PhpSpreadsheet\IOFactory')) {
-                $spreadsheet = \PhpOffice\PhpSpreadsheet\IOFactory::load($tmpPath);
+        // Importante: class_exists(..., true) o omitir el 2.º arg para permitir el autoload de Composer.
+        // Con false, PHP no invoca el autoloader y la clase parece "inexistente" aunque vendor esté bien.
+        $phpspreadsheetReady = class_exists(\PhpOffice\PhpSpreadsheet\IOFactory::class);
+
+        if (in_array($ext, ['xlsx', 'xlsm'], true)) {
+            if (!$phpspreadsheetReady) {
+                throw new RuntimeException(
+                    'PhpSpreadsheet no disponible. Ejecute composer install en: ' . $baseDir
+                );
+            }
+            $spreadsheet = IOFactory::load($tmpPath);
+            $sheet = $spreadsheet->getActiveSheet();
+            $allRows = $sheet->toArray(null, true, true, false);
+            if (!is_array($allRows)) {
+                $allRows = [];
+            }
+            [$headers, $rows] = extract_headers_and_data_rows($allRows, $asegurarUtf8);
+        } elseif ($ext === 'xls') {
+            if ($phpspreadsheetReady) {
+                $spreadsheet = IOFactory::load($tmpPath);
                 $sheet = $spreadsheet->getActiveSheet();
                 $allRows = $sheet->toArray(null, true, true, false);
                 if (!is_array($allRows)) {
                     $allRows = [];
                 }
                 [$headers, $rows] = extract_headers_and_data_rows($allRows, $asegurarUtf8);
-            } elseif ($ext === 'xls') {
+            } else {
                 require_once __DIR__ . '/../../libs/SimpleXLS.php';
                 $xls = SimpleXLS::parse($tmpPath);
                 if (!$xls) {
@@ -188,26 +270,7 @@ try {
                     throw new RuntimeException('El archivo no contiene filas');
                 }
                 [$headers, $rows] = extract_headers_and_data_rows($allRows, $asegurarUtf8);
-            } else {
-                throw new RuntimeException('Falta PhpSpreadsheet en este servidor. Ejecute: composer install (raíz del proyecto) para habilitar .xlsx/.xlsm');
             }
-        } elseif ($ext === 'xls') {
-            require_once __DIR__ . '/../../libs/SimpleXLS.php';
-            $xls = SimpleXLS::parse($tmpPath);
-            if (!$xls) {
-                $err = SimpleXLS::parseError();
-                throw new RuntimeException($err ?: 'Error al leer el archivo .xls');
-            }
-            $xls->setOutputEncoding('UTF-8');
-            $allRows = $xls->rows(0);
-            if (empty($allRows) || !is_array($allRows)) {
-                throw new RuntimeException('El archivo no contiene filas');
-            }
-            [$headers, $rows] = extract_headers_and_data_rows($allRows, $asegurarUtf8);
-        } else {
-            throw new RuntimeException(
-                'Para abrir archivos .xlsx / .xlsm instale las dependencias en el servidor: en la carpeta del proyecto ejecute composer install'
-            );
         }
     } else {
         echo json_encode(['success' => false, 'error' => 'Formato no reconocido']);
@@ -218,11 +281,27 @@ try {
         'success' => true,
         'headers' => $headers,
         'rows' => $rows,
-    ]);
+    ], JSON_UNESCAPED_UNICODE);
 } catch (Throwable $e) {
-    error_log('tournament_import_parse: ' . $e->getMessage());
-    echo json_encode([
+    error_log('tournament_import_parse: ' . $e->getMessage() . ' @ ' . $e->getFile() . ':' . $e->getLine());
+    if (!class_exists('Env', false) && is_readable(__DIR__ . '/../../lib/Env.php')) {
+        require_once __DIR__ . '/../../lib/Env.php';
+    }
+    $exposeTrace = class_exists('Env', false)
+        && (Env::bool('APP_DEBUG', false) || Env::bool('IMPORT_PARSE_EXPOSE_ERRORS', true));
+    $payload = [
         'success' => false,
-        'error' => 'Error al leer el archivo: ' . $e->getMessage(),
-    ]);
+        'error' => $e->getMessage(),
+        'php_file' => $e->getFile(),
+        'php_line' => $e->getLine(),
+        'error_class' => get_class($e),
+    ];
+    if ($exposeTrace) {
+        $payload['trace'] = $e->getTraceAsString();
+    }
+    echo json_encode($payload, JSON_UNESCAPED_UNICODE);
+} finally {
+    if (isset($targetPath) && is_string($targetPath) && $targetPath !== '' && is_file($targetPath)) {
+        @unlink($targetPath);
+    }
 }

@@ -374,12 +374,16 @@ tailwind.config = {
                                 <?php if ($es_modalidad_equipos_o_parejas): ?>
                                     <a href="<?php echo $base_url . ($use_standalone ? '?' : '&'); ?>action=gestionar_inscripciones_equipos&torneo_id=<?php echo $torneo['id']; ?>" class="tw-btn bg-blue-500 hover:bg-blue-600 text-white"><i class="fas fa-clipboard-list"></i> <?php echo $es_modalidad_parejas ? 'Gestionar Inscripciones (Parejas)' : 'Gestionar Inscripciones'; ?></a>
                                     <a href="<?php echo $base_url . ($use_standalone ? '?' : '&'); ?>action=inscribir_equipo_sitio&torneo_id=<?php echo $torneo['id']; ?>" class="tw-btn bg-amber-500 hover:bg-amber-600 text-white"><i class="fas fa-user-plus"></i> <?php echo $es_modalidad_parejas ? 'Inscribir pareja' : 'Inscribir en Sitio'; ?></a>
+                                    <?php if ($es_modalidad_parejas): ?>
+                                    <button type="button" class="tw-btn bg-indigo-500 hover:bg-indigo-600 text-white" data-bs-toggle="modal" data-bs-target="#modalImportacionMasiva" id="btnAbrirImportacionMasiva"><i class="fas fa-file-csv"></i> Importación masiva</button>
+                                    <?php endif; ?>
                                     <?php if ($es_modalidad_equipos): ?>
                                     <a href="<?php echo $base_url . ($use_standalone ? '?' : '&'); ?>action=carga_masiva_equipos_sitio&torneo_id=<?php echo $torneo['id']; ?>" class="tw-btn bg-amber-700 hover:bg-amber-800 text-white ml-1"><i class="fas fa-file-upload"></i> Carga masiva</a>
                                     <?php endif; ?>
                                 <?php elseif ($es_modalidad_parejas_fijas): ?>
                                     <a href="<?php echo $base_url . ($use_standalone ? '?' : '&'); ?>action=gestionar_inscripciones_parejas_fijas&torneo_id=<?php echo $torneo['id']; ?>" class="tw-btn bg-blue-500 hover:bg-blue-600 text-white"><i class="fas fa-clipboard-list"></i> Gestionar Inscripciones</a>
                                     <a href="<?php echo $base_url . ($use_standalone ? '?' : '&'); ?>action=inscribir_pareja_sitio&torneo_id=<?php echo $torneo['id']; ?>" class="tw-btn bg-amber-500 hover:bg-amber-600 text-white"><i class="fas fa-user-plus"></i> Inscribir Pareja en Sitio</a>
+                                    <button type="button" class="tw-btn bg-indigo-500 hover:bg-indigo-600 text-white" data-bs-toggle="modal" data-bs-target="#modalImportacionMasiva" id="btnAbrirImportacionMasiva"><i class="fas fa-file-csv"></i> Importación masiva</button>
                                 <?php else: ?>
                                     <a href="index.php?page=registrants&torneo_id=<?php echo $torneo['id']; ?><?php echo $use_standalone ? '&return_to=panel_torneo' : ''; ?>" class="tw-btn bg-blue-500 hover:bg-blue-600 text-white"><i class="fas fa-clipboard-list"></i> Gestionar Inscripciones</a>
                                     <a href="<?php echo $base_url . ($use_standalone ? '?' : '&'); ?>action=inscribir_sitio&torneo_id=<?php echo $torneo['id']; ?>" class="tw-btn bg-amber-500 hover:bg-amber-600 text-white"><i class="fas fa-user-check"></i> Inscripción en Sitio</a>
@@ -632,7 +636,15 @@ tailwind.config = {
 
 </div>
 
-<!-- Modal Importación Masiva (solo torneos individuales) -->
+<?php
+// Columnas del mapeo: en parejas / parejas fijas se añade "nombre_pareja" (opcional; si el Excel solo trae un nombre, déjelo vacío o mapee la misma columna dos veces según convenga).
+$campost_import_masiva = ['nacionalidad', 'cedula', 'nombre'];
+if ($es_modalidad_parejas || $es_modalidad_parejas_fijas) {
+    $campost_import_masiva[] = 'nombre_pareja';
+}
+$campost_import_masiva = array_merge($campost_import_masiva, ['sexo', 'fecha_nac', 'telefono', 'email', 'club', 'organizacion']);
+?>
+<!-- Modal Importación Masiva (individual: una fila por jugador; parejas: una fila por jugador, opcional columna compañero/a) -->
 <div class="modal fade" id="modalImportacionMasiva" tabindex="-1" aria-labelledby="modalImportacionMasivaLabel" aria-hidden="true">
     <div class="modal-dialog modal-xl modal-dialog-scrollable">
         <div class="modal-content">
@@ -641,7 +653,7 @@ tailwind.config = {
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Cerrar"></button>
             </div>
             <div class="modal-body">
-                <p class="text-muted small">Cargue <strong>Excel</strong> (.xlsx, .xls, .xlsm) o <strong>CSV</strong>. En el servidor debe existir <code>vendor/</code> (ejecute <code>composer install</code> en la raíz del proyecto) para los formatos modernos de Excel. Campos obligatorios: <strong>nacionalidad, cédula, nombre, club, organización</strong>. Si falta cualquiera, la fila se rechaza. Si aparece sesión expirada, recargue la página (F5) antes de subir.</p>
+                <p class="text-muted small">Cargue <strong>Excel</strong> (.xlsx, .xls, .xlsm) o <strong>CSV</strong>. En el servidor debe existir <code>vendor/</code> (ejecute <code>composer install</code> en la raíz del proyecto) para los formatos modernos de Excel. Cabeceras reconocidas (entre otras): <strong>Nacionalidad, Cédula/CEDULA, Nombre, Nombre pareja / Pareja / Compañero, Club, Organización</strong>. Obligatorios para importar: <strong>nacionalidad, cédula, nombre, club, organización</strong>. En torneos de <strong>parejas</strong>, si solo hay una columna de nombre, puede mapear solo <em>Nombre</em> y dejar <em>Nombre pareja</em> en «No usar» (cada fila = un jugador; la pareja se define después en el sistema). Si aparece sesión expirada, recargue (F5) antes de subir.</p>
                 <p class="small mb-2"><strong>Semáforo (tras Validar):</strong> <span class="badge" style="background:#3b82f6">Azul</span> Ya inscrito (omitir) · <span class="badge" style="background:#eab308;color:#000">Amarillo</span> Usuario existe (solo inscribir) · <span class="badge" style="background:#22c55e">Verde</span> Todo nuevo (crear e inscribir) · <span class="badge bg-danger">Rojo</span> Error de datos</p>
                 <div class="mb-3">
                     <label class="form-label">Archivo CSV</label>
@@ -827,14 +839,15 @@ async function confirmarCierreTorneo(event) {
 
 // --- Importación masiva ---
 (function() {
-    const CAMPOS = ['nacionalidad','cedula','nombre','sexo','fecha_nac','telefono','email','club','organizacion'];
-    const CAMPOS_LABEL = { organizacion: 'Organización' };
+    const CAMPOS = <?php echo json_encode($campost_import_masiva, JSON_UNESCAPED_UNICODE); ?>;
+    const CAMPOS_LABEL = { organizacion: 'Organización', nombre_pareja: 'Nombre pareja / compañero' };
     const COLORS = { omitir: '#3b82f6', inscribir: '#eab308', crear_inscribir: '#22c55e', error: '#ef4444' };
     const CAMPO_ALIASES = {
-        nombre: ['nombre', 'nombres y apellidos', 'nombres', 'nombres y apellido'],
-        cedula: ['cedula', 'cédula', 'cedula de identidad'],
+        nombre: ['nombre', 'nombres y apellidos', 'nombres', 'nombres y apellido', 'nombre completo', 'nombre y apellido', 'jugador 1', 'integrante 1'],
+        nombre_pareja: ['nombre pareja', 'pareja', 'compañero', 'compañera', 'jugador 2', 'integrante 2', 'nombre del compañero', 'nombre compañero'],
+        cedula: ['cedula', 'cédula', 'cedula de identidad', 'ci', 'documento'],
         organizacion: ['organizacion', 'organización', 'entidad', 'asociacion', 'asociación'],
-        club: ['club', 'club_nombre', 'club nombre']
+        club: ['club', 'club_nombre', 'club nombre', 'equipo']
     };
     let importMasivaHeaders = [];
     let importMasivaRows = [];
@@ -928,7 +941,15 @@ async function confirmarCierreTorneo(event) {
                 .then(fetchJsonResponse)
                 .then(function(data) {
                     document.getElementById('importMasivaLoading').classList.add('d-none');
-                    if (!data.success) { alert(data.error || 'Error al leer el archivo'); return; }
+                    if (!data.success) {
+                        var errMsg = data.error || 'Error al leer el archivo';
+                        if (data.php_file) errMsg += '\n\n' + data.php_file + ':' + (data.php_line || '');
+                        if (data.error_class) errMsg += '\n[' + data.error_class + ']';
+                        if (data.fatal) errMsg += '\n(Error fatal PHP)';
+                        if (data.trace) errMsg += '\n\n' + String(data.trace).slice(0, 2500);
+                        alert(errMsg);
+                        return;
+                    }
                     importMasivaHeaders = data.headers || [];
                     importMasivaRows = data.rows || [];
                     if (importMasivaHeaders.length === 0 || importMasivaRows.length === 0) {

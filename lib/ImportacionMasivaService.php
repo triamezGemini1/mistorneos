@@ -13,7 +13,6 @@ require_once __DIR__ . '/security.php';
 require_once __DIR__ . '/Repository/ClubRepository.php';
 
 use Lib\Repository\ClubRepository;
-use PDO;
 
 class ImportacionMasivaService
 {
