@@ -2,8 +2,8 @@
 
 declare(strict_types=1);
 
-require_once dirname(__DIR__, 2) . '/app/Core/MesaRepository.php';
-require_once dirname(__DIR__, 2) . '/app/Core/MesaAsignacionMatriz.php';
+require_once dirname(__DIR__) . '/mn_require_mesa_repository.php';
+mn_require_mesa_repository();
 require_once __DIR__ . '/MesaAsignacionRoundsTrait.php';
 require_once __DIR__ . '/MesaAsignacionQueueTrait.php';
 require_once __DIR__ . '/MesaAsignacionConflictos1Trait.php';

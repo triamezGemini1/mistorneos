@@ -13,7 +13,8 @@ declare(strict_types=1);
  * TorneoMesaAsignacionResolver exige la propiedad $repo.
  */
 
-require_once __DIR__ . '/../../app/Core/MesaRepository.php';
+require_once __DIR__ . '/mn_require_mesa_repository.php';
+mn_require_mesa_repository();
 require_once __DIR__ . '/MesaAsignacion/MesaAsignacionAlgorithm.php';
 
 class MesaAsignacionService
