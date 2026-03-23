@@ -459,6 +459,7 @@ function verificarMesaExiste($torneo_id, $ronda, $mesa) {
  * Genera una nueva ronda
  */
 function generarRonda($torneo_id, $user_id, $is_admin_general) {
+    $redirect = buildRedirectUrl('panel', ['torneo_id' => $torneo_id]);
     try {
         verificarPermisosTorneo($torneo_id, $user_id, $is_admin_general);
         
@@ -528,6 +529,7 @@ function generarRonda($torneo_id, $user_id, $is_admin_general) {
                 $mensaje .= ', ' . $resultado['jugadores_bye'] . ' jugadores BYE';
             }
             $_SESSION['success'] = $mensaje;
+            $redirect = buildRedirectUrl('cuadricula', ['torneo_id' => $torneo_id, 'ronda' => $proxima_ronda]);
 
             // Actualizar estadísticas de nuevo para incluir los BYE recién generados en inscritos
             try {
@@ -609,8 +611,7 @@ function generarRonda($torneo_id, $user_id, $is_admin_general) {
         $_SESSION['error'] = 'Error al generar ronda: ' . $e->getMessage();
     }
     
-    // header('Location: ' . buildRedirectUrl('panel', ['torneo_id' => $torneo_id]));
-    echo "<script>window.location.href='index.php?page=torneo_gestion';</script>";
+    echo "<script>window.location.href='" . htmlspecialchars($redirect, ENT_QUOTES, 'UTF-8') . "';</script>";
     exit;
 }
 /**
