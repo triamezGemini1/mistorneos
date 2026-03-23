@@ -705,6 +705,27 @@ class MesaAsignacionEquiposService
         return $mesa;
     }
 
+    private function resolveRegistradoPorUsuarioId(): int
+    {
+        if (session_status() === PHP_SESSION_ACTIVE) {
+            $admin = $_SESSION['admin_user'] ?? null;
+            if (is_array($admin) && !empty($admin['id'])) {
+                return max(1, (int) $admin['id']);
+            }
+            $user = $_SESSION['user'] ?? null;
+            if (is_array($user) && !empty($user['id'])) {
+                return max(1, (int) $user['id']);
+            }
+        }
+        if (class_exists('Auth') && method_exists('Auth', 'id')) {
+            $id = (int) Auth::id();
+
+            return $id > 0 ? $id : 1;
+        }
+
+        return 1;
+    }
+
     /**
      * Guarda la asignación de mesas en la base de datos
      */
@@ -717,11 +738,11 @@ class MesaAsignacionEquiposService
             $stmt = $this->pdo->prepare("DELETE FROM partiresul WHERE id_torneo = ? AND partida = ?");
             $stmt->execute([$torneoId, $ronda]);
 
+            $registrado_por = $this->resolveRegistradoPorUsuarioId();
             $numeroMesa = 1;
             foreach ($mesas as $mesa) {
                 $secuencia = 1;
                 foreach ($mesa as $jugador) {
-                    $registrado_por = (class_exists('Auth') && method_exists('Auth', 'id')) ? ((int)Auth::id() ?: 1) : 1;
                     $sql = "INSERT INTO partiresul 
                             (id_torneo, id_usuario, partida, mesa, secuencia, fecha_partida, registrado, registrado_por,
                              resultado1, resultado2, efectividad, ff)

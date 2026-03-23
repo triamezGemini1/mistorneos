@@ -5,7 +5,7 @@ declare(strict_types=1);
 /**
  * Escrituras partiresul / historial_parejas (usado por MesaRepository).
  *
- * Copia espejo de app/Core/MesaRepositoryPersistTrait.php para despliegues sin carpeta app/.
+ * Fuente única: app/Core/MesaRepository.php carga este archivo (no el duplicado bajo app/Core/).
  */
 trait MesaRepositoryPersistTrait
 {

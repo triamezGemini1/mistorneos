@@ -846,9 +846,9 @@ class MesaAsignacionParejasFijasService
         }
         $this->pdo->prepare("
             UPDATE partiresul
-            SET resultado1 = ?, resultado2 = 0, efectividad = ?, registrado = 1
+            SET resultado1 = ?, resultado2 = 0, efectividad = ?, registrado = 1, registrado_por = ?
             WHERE id_torneo = ? AND partida = ? AND mesa = 0
-        ")->execute([$puntosTorneo, $efectividadBye, $torneoId, $ronda]);
+        ")->execute([$puntosTorneo, $efectividadBye, $registrado_por, $torneoId, $ronda]);
     }
 
     public function obtenerUltimaRonda(int $torneoId): int

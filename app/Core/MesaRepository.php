@@ -4,7 +4,8 @@ declare(strict_types=1);
 
 require_once dirname(__DIR__, 2) . '/lib/InscritosHelper.php';
 require_once __DIR__ . '/MesaAsignacionMatriz.php';
-require_once __DIR__ . '/MesaRepositoryPersistTrait.php';
+// Trait único en lib/Core (evita INSERT antiguos si app/Core/MesaRepositoryPersistTrait.php no se sube al servidor).
+require_once dirname(__DIR__, 2) . '/lib/Core/MesaRepositoryPersistTrait.php';
 
 /**
  * Persistencia y lecturas para asignación de mesas (partiresul, historial_parejas, inscritos).
