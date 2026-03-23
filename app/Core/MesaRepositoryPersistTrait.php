@@ -7,6 +7,24 @@ declare(strict_types=1);
  */
 trait MesaRepositoryPersistTrait
 {
+    /** Usuario que genera la ronda (panel admin o sesión atleta); fallback 1 si no hay sesión. */
+    private function mesaRegistradoPorUsuarioId(): int
+    {
+        if (session_status() !== PHP_SESSION_ACTIVE) {
+            return 1;
+        }
+        $admin = $_SESSION['admin_user'] ?? null;
+        if (is_array($admin) && !empty($admin['id'])) {
+            return max(1, (int) $admin['id']);
+        }
+        $user = $_SESSION['user'] ?? null;
+        if (is_array($user) && !empty($user['id'])) {
+            return max(1, (int) $user['id']);
+        }
+
+        return 1;
+    }
+
     /**
      * @param list<list<array<string, mixed>>> $mesas
      */
@@ -25,6 +43,7 @@ trait MesaRepositoryPersistTrait
             }
 
             $fechaPartida = $this->fechaPartidaAhora();
+            $registradoPor = $this->mesaRegistradoPorUsuarioId();
             $numeroMesa = 1;
             foreach ($mesas as $mesa) {
                 $secuencia = 1;
@@ -34,10 +53,10 @@ trait MesaRepositoryPersistTrait
                         continue;
                     }
                     $sql = 'INSERT INTO partiresul
-                            (id_torneo, id_usuario, partida, mesa, secuencia, fecha_partida, registrado)
-                            VALUES (?, ?, ?, ?, ?, ?, 0)';
+                            (id_torneo, id_usuario, partida, mesa, secuencia, fecha_partida, registrado, registrado_por)
+                            VALUES (?, ?, ?, ?, ?, ?, 0, ?)';
                     $stmt = $this->pdo->prepare($sql);
-                    $stmt->execute([$torneoId, $idUsuario, $ronda, $numeroMesa, $secuencia, $fechaPartida]);
+                    $stmt->execute([$torneoId, $idUsuario, $ronda, $numeroMesa, $secuencia, $fechaPartida, $registradoPor]);
                     $secuencia++;
                 }
                 $numeroMesa++;
@@ -131,27 +150,28 @@ trait MesaRepositoryPersistTrait
         } catch (Exception $e) {
         }
         $efectividadBye = (int) round($puntosTorneo * 0.5);
+        $registradoPor = $this->mesaRegistradoPorUsuarioId();
 
         $this->pdo->prepare('DELETE FROM partiresul WHERE id_torneo = ? AND partida = ? AND mesa = 0')
             ->execute([$torneoId, $ronda]);
         $fechaPartida = $this->fechaPartidaAhora();
         $stmt = $this->pdo->prepare(
-            'INSERT INTO partiresul (id_torneo, id_usuario, partida, mesa, secuencia, fecha_partida, registrado)
-            VALUES (?, ?, ?, 0, 1, ?, 0)'
+            'INSERT INTO partiresul (id_torneo, id_usuario, partida, mesa, secuencia, fecha_partida, registrado, registrado_por)
+            VALUES (?, ?, ?, 0, 1, ?, 0, ?)'
         );
         foreach ($jugadoresBye as $jugador) {
             $idUsuario = (int) ($jugador['id_usuario'] ?? 0);
             if ($idUsuario <= 0) {
                 continue;
             }
-            $stmt->execute([$torneoId, $idUsuario, $ronda, $fechaPartida]);
+            $stmt->execute([$torneoId, $idUsuario, $ronda, $fechaPartida, $registradoPor]);
         }
 
         $this->pdo->prepare(
             'UPDATE partiresul
-            SET resultado1 = ?, resultado2 = 0, efectividad = ?, registrado = 1
+            SET resultado1 = ?, resultado2 = 0, efectividad = ?, registrado = 1, registrado_por = ?
             WHERE id_torneo = ? AND partida = ? AND mesa = 0'
-        )->execute([$puntosTorneo, $efectividadBye, $torneoId, $ronda]);
+        )->execute([$puntosTorneo, $efectividadBye, $registradoPor, $torneoId, $ronda]);
     }
 
     public function obtenerUltimaRonda(int $torneoId): int
