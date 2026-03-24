@@ -2,8 +2,7 @@ name: Despliegue de PRUEBAS (BETA)
 on:
   push:
     branches:
-      - develop # Se activa solo cuando trabajas en esta rama
-
+      - mistorneos_beta  # <--- Agrega esta línea
 jobs:
   FTP-Deploy-Action:
     name: FTP-Deploy-Action
