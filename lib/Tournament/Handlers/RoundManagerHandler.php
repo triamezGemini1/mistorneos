@@ -29,7 +29,7 @@ final class RoundManagerHandler
 
         $stmt = $pdo->prepare($sql);
         $stmt->execute([$torneoId, $ronda]);
-        $result = $stmt->fetch(PDO::FETCH_ASSOC);
+        $result = $stmt->fetch(\PDO::FETCH_ASSOC);
 
         return (int) ($result['mesas_incompletas'] ?? 0);
     }
@@ -82,7 +82,7 @@ final class RoundManagerHandler
             // Obtener torneo para verificar modalidad y nombre
             $stmt = $pdo->prepare('SELECT nombre, rondas, modalidad FROM tournaments WHERE id = ?');
             $stmt->execute([$torneoId]);
-            $torneo = $stmt->fetch(PDO::FETCH_ASSOC);
+            $torneo = $stmt->fetch(\PDO::FETCH_ASSOC);
             $total_rondas = (int) ($torneo['rondas'] ?? 0);
             $modalidad = (int) ($torneo['modalidad'] ?? 0);
 
@@ -189,7 +189,7 @@ final class RoundManagerHandler
                     WHERE i.torneo_id = ? AND " . InscritosHelper::sqlWhereSoloConfirmadoConAlias('i') . '
                 ');
                     $stmtJug->execute([$torneoId]);
-                    $jugadores = $stmtJug->fetchAll(PDO::FETCH_ASSOC);
+                    $jugadores = $stmtJug->fetchAll(\PDO::FETCH_ASSOC);
 
                     // Mesa y pareja para esta ronda (partiresul ya tiene la asignación recién generada)
                     $mesaPareja = [];
@@ -202,7 +202,7 @@ final class RoundManagerHandler
                     WHERE pr.id_torneo = ? AND pr.partida = ? AND pr.mesa > 0
                 ");
                     $stmtMesa->execute([$torneoId, $proxima_ronda]);
-                    while ($row = $stmtMesa->fetch(PDO::FETCH_ASSOC)) {
+                    while ($row = $stmtMesa->fetch(\PDO::FETCH_ASSOC)) {
                         $mesaPareja[(int) $row['id_usuario']] = [
                             'mesa' => (string) $row['mesa'],
                             'pareja_id' => (int) ($row['pareja_id'] ?? 0),
