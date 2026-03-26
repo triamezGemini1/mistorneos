@@ -13,6 +13,7 @@ require_once __DIR__ . '/../config/csrf.php';
 require_once __DIR__ . '/../lib/InscritosHelper.php';
 require_once __DIR__ . '/../config/MesaAsignacionService.php';
 require_once __DIR__ . '/../lib/Tournament/Handlers/TournamentActionHandler.php';
+require_once __DIR__ . '/../lib/Tournament/Handlers/RoundManagerHandler.php';
 
 $current_user = Auth::user();
 $user_role = $current_user['role'] ?? '';
@@ -1068,8 +1069,9 @@ function obtenerDatosPanel($torneo_id) {
     $total_mesas_ronda = 0;
     $ultima_ronda_tiene_resultados = false;
     if ($ultima_ronda > 0) {
-        $mesas_incompletas = contarMesasIncompletas($torneo_id, $ultima_ronda);
-        $puede_generar = $mesas_incompletas === 0;
+        $vm_panel = \Tournament\Handlers\RoundManagerHandler::verificarMesasPendientes($torneo_id);
+        $mesas_incompletas = $vm_panel['mesas_incompletas'];
+        $puede_generar = $vm_panel['puede_generar_ronda'];
         
         // Contar total de mesas de la última ronda
         $stmt = $pdo->prepare("SELECT COUNT(DISTINCT mesa) FROM partiresul WHERE id_torneo = ? AND partida = ? AND mesa > 0");
@@ -2132,8 +2134,9 @@ function obtenerDatosPanelEquipos($torneo_id) {
     $mesas_incompletas = 0;
     $total_mesas_ronda = 0;
     if ($ultima_ronda > 0) {
-        $mesas_incompletas = contarMesasIncompletas($torneo_id, $ultima_ronda);
-        $puede_generar = $mesas_incompletas === 0;
+        $vm_eq = \Tournament\Handlers\RoundManagerHandler::verificarMesasPendientes($torneo_id);
+        $mesas_incompletas = $vm_eq['mesas_incompletas'];
+        $puede_generar = $vm_eq['puede_generar_ronda'];
         
         // Contar total de mesas de la última ronda
         $stmt = $pdo->prepare("SELECT COUNT(DISTINCT mesa) FROM partiresul WHERE id_torneo = ? AND partida = ? AND mesa > 0");
@@ -2603,18 +2606,7 @@ function guardarInscripcionSitio($torneo_id, $user_id, $is_admin_general) {
  * Cuenta mesas incompletas de una ronda
  */
 function contarMesasIncompletas($torneo_id, $ronda) {
-    $pdo = DB::pdo();
-    
-    $sql = "SELECT COUNT(DISTINCT pr.mesa) as mesas_incompletas
-            FROM partiresul pr
-            WHERE pr.id_torneo = ? AND pr.partida = ? AND pr.mesa > 0
-            AND (pr.registrado = 0 OR pr.registrado IS NULL)";
-    
-    $stmt = $pdo->prepare($sql);
-    $stmt->execute([$torneo_id, $ronda]);
-    $result = $stmt->fetch(PDO::FETCH_ASSOC);
-    
-    return (int)($result['mesas_incompletas'] ?? 0);
+    return \Tournament\Handlers\RoundManagerHandler::contarMesasIncompletas((int) $torneo_id, (int) $ronda);
 }
 
 /**
@@ -3670,187 +3662,13 @@ function verificarActaRechazar($user_id, $is_admin_general) {
 function generarRonda($torneo_id, $user_id, $is_admin_general) {
     try {
         verificarPermisosTorneo($torneo_id, $user_id, $is_admin_general);
-        
-        $pdo = DB::pdo();
-        
-        // Solo estatus 1 (confirmado) cuentan para participar en el torneo
-        $stmt = $pdo->prepare("SELECT COUNT(*) FROM inscritos WHERE torneo_id = ? AND " . InscritosHelper::SQL_WHERE_SOLO_CONFIRMADO);
-        $stmt->execute([$torneo_id]);
-        $num_inscritos = (int)$stmt->fetchColumn();
-        if ($num_inscritos < 4) {
-            $_SESSION['error'] = 'No se puede generar ronda: se necesitan al menos 4 participantes inscritos y activos en el torneo. Actualmente hay ' . $num_inscritos . '.';
-            header('Location: ' . buildRedirectUrl('panel', ['torneo_id' => $torneo_id]));
-            exit;
-        }
-        
-        // Obtener torneo para verificar modalidad y nombre
-        $stmt = $pdo->prepare("SELECT nombre, rondas, modalidad FROM tournaments WHERE id = ?");
-        $stmt->execute([$torneo_id]);
-        $torneo = $stmt->fetch(PDO::FETCH_ASSOC);
-        $total_rondas = (int)($torneo['rondas'] ?? 0);
-        $modalidad = (int)($torneo['modalidad'] ?? 0);
-        
-        // Determinar qué servicio usar según modalidad (3 = Equipos)
-        $es_torneo_equipos = ($modalidad === 3);
-        
-        if ($es_torneo_equipos) {
-            require_once __DIR__ . '/../config/MesaAsignacionEquiposService.php';
-            $mesaService = new MesaAsignacionEquiposService();
-        } else {
-            require_once __DIR__ . '/../config/MesaAsignacionService.php';
-            $mesaService = new MesaAsignacionService();
-        }
-        
-        // Verificar que la última ronda esté completa
-        $ultima_ronda = $mesaService->obtenerUltimaRonda($torneo_id);
-        
-        if ($ultima_ronda > 0) {
-            $todas_completas = $mesaService->todasLasMesasCompletas($torneo_id, $ultima_ronda);
-            if (!$todas_completas) {
-                $mesas_incompletas = $mesaService->contarMesasIncompletas($torneo_id, $ultima_ronda);
-                $_SESSION['error'] = "No se puede generar una nueva ronda. Faltan resultados en {$mesas_incompletas} mesa(s) de la ronda {$ultima_ronda}";
-                header('Location: ' . buildRedirectUrl('panel', ['torneo_id' => $torneo_id]));
-                exit;
-            }
-        }
-        
-        // Actualizar estadísticas antes de generar nueva ronda
-        try {
-            actualizarEstadisticasInscritos($torneo_id);
-        } catch (Exception $e) {
-            $_SESSION['error'] = 'Error al actualizar estadísticas: ' . $e->getMessage();
-            header('Location: ' . buildRedirectUrl('panel', ['torneo_id' => $torneo_id]));
-            exit;
-        }
-        
-        $proxima_ronda = $ultima_ronda + 1;
-        $msg_no_presentes = '';
-        
-        // Antes de generar la 3.ª ronda: marcar como retirados a los no presentes (pendientes sin ninguna partida)
-        if ($proxima_ronda === 3) {
-            $marcados_retirados = marcarNoPresentesRetiradosAntesRonda3($torneo_id);
-            if ($marcados_retirados > 0) {
-                $msg_no_presentes = $marcados_retirados . ' inscrito(s) no presente(s) marcado(s) como retirado(s).';
-            }
-            // Revalidar que sigan habiendo al menos 4 confirmados tras retirar no presentes
-            $stmt = $pdo->prepare("SELECT COUNT(*) FROM inscritos WHERE torneo_id = ? AND " . InscritosHelper::SQL_WHERE_SOLO_CONFIRMADO);
-            $stmt->execute([$torneo_id]);
-            if ((int)$stmt->fetchColumn() < 4) {
-                $_SESSION['error'] = 'No se puede generar la ronda 3: tras marcar no presentes quedan menos de 4 participantes confirmados.';
-                header('Location: ' . buildRedirectUrl('panel', ['torneo_id' => $torneo_id]));
-                exit;
-            }
-        }
-        
-        // Obtener estrategia de asignación (para equipos puede ser: secuencial, intercalada_13_24, intercalada_14_23, por_rendimiento)
-        if ($es_torneo_equipos) {
-            $estrategia = $_POST['estrategia_asignacion'] ?? 'secuencial';
-        } else {
-            $estrategia = $_POST['estrategia_ronda2'] ?? 'separar';
-        }
-        
-        // Generar ronda usando el servicio apropiado
-        if ($es_torneo_equipos) {
-            $resultado = $mesaService->generarAsignacionRonda(
-                $torneo_id,
-                $proxima_ronda,
-                $total_rondas,
-                $estrategia
-            );
-        } else {
-            $resultado = $mesaService->generarAsignacionRonda(
-                $torneo_id,
-                $proxima_ronda,
-                $total_rondas,
-                $estrategia
-            );
-        }
-        
-        if ($resultado['success']) {
-            $mensaje = $resultado['message'];
-            if (isset($resultado['total_mesas'])) {
-                $mensaje .= ': ' . $resultado['total_mesas'] . ' mesas';
-            }
-            if (isset($resultado['total_equipos'])) {
-                $mensaje .= ', ' . $resultado['total_equipos'] . ' equipos';
-            }
-            if (isset($resultado['jugadores_bye']) && $resultado['jugadores_bye'] > 0) {
-                $mensaje .= ', ' . $resultado['jugadores_bye'] . ' jugadores BYE';
-            }
-            if ($msg_no_presentes !== '') {
-                $mensaje .= '. ' . $msg_no_presentes;
-            }
-            $_SESSION['success'] = $mensaje;
-
-            // Encolar notificaciones masivas (Telegram + campanita web) usando plantilla 'nueva_ronda'
-            try {
-                $stmtJug = $pdo->prepare("
-                    SELECT u.id, u.nombre, u.telegram_chat_id,
-                           COALESCE(i.posicion, 0) AS posicion, COALESCE(i.ganados, 0) AS ganados, COALESCE(i.perdidos, 0) AS perdidos,
-                           COALESCE(i.efectividad, 0) AS efectividad, COALESCE(i.puntos, 0) AS puntos
-                    FROM inscritos i
-                    INNER JOIN usuarios u ON i.id_usuario = u.id
-                    WHERE i.torneo_id = ? AND " . InscritosHelper::sqlWhereSoloConfirmadoConAlias('i') . "
-                ");
-                $stmtJug->execute([$torneo_id]);
-                $jugadores = $stmtJug->fetchAll(PDO::FETCH_ASSOC);
-
-                // Mesa y pareja para esta ronda (partiresul ya tiene la asignación recién generada)
-                $mesaPareja = [];
-                $stmtMesa = $pdo->prepare("
-                    SELECT pr.id_usuario, pr.mesa, pr_p.id_usuario AS pareja_id, u_pareja.nombre AS pareja_nombre
-                    FROM partiresul pr
-                    LEFT JOIN partiresul pr_p ON pr_p.id_torneo = pr.id_torneo AND pr_p.partida = pr.partida AND pr_p.mesa = pr.mesa
-                        AND pr_p.secuencia = CASE pr.secuencia WHEN 1 THEN 2 WHEN 2 THEN 1 WHEN 3 THEN 4 WHEN 4 THEN 3 END
-                    LEFT JOIN usuarios u_pareja ON u_pareja.id = pr_p.id_usuario
-                    WHERE pr.id_torneo = ? AND pr.partida = ? AND pr.mesa > 0
-                ");
-                $stmtMesa->execute([$torneo_id, $proxima_ronda]);
-                while ($row = $stmtMesa->fetch(PDO::FETCH_ASSOC)) {
-                    $mesaPareja[(int)$row['id_usuario']] = [
-                        'mesa' => (string)$row['mesa'],
-                        'pareja_id' => (int)($row['pareja_id'] ?? 0),
-                        'pareja' => trim((string)($row['pareja_nombre'] ?? '')) ?: '—',
-                    ];
-                }
-
-                require_once __DIR__ . '/../lib/app_helpers.php';
-                foreach ($jugadores as &$j) {
-                    $uid = (int)$j['id'];
-                    $j['mesa'] = $mesaPareja[$uid]['mesa'] ?? '—';
-                    $j['pareja_id'] = $mesaPareja[$uid]['pareja_id'] ?? 0;
-                    $j['pareja'] = $mesaPareja[$uid]['pareja'] ?? '—';
-                    $j['url_resumen'] = AppHelpers::url('index.php', ['page' => 'torneo_gestion', 'action' => 'resumen_individual', 'torneo_id' => $torneo_id, 'inscrito_id' => $uid, 'from' => 'notificaciones']);
-                    $j['url_clasificacion'] = AppHelpers::url('index.php', ['page' => 'torneo_gestion', 'action' => 'posiciones', 'torneo_id' => $torneo_id, 'from' => 'notificaciones']);
-                }
-                unset($j);
-
-                $titulo = $torneo['nombre'] ?? 'Torneo';
-                if (!empty($jugadores)) {
-                    require_once __DIR__ . '/../lib/NotificationManager.php';
-                    $nm = new NotificationManager($pdo);
-                    $nm->programarRondaMasiva($jugadores, $titulo, $proxima_ronda, null, 'nueva_ronda', $torneo_id);
-                }
-            } catch (Exception $e) {
-                error_log("Notificaciones ronda: " . $e->getMessage());
-            }
-        } else {
-            $_SESSION['error'] = $resultado['message'];
-        }
-        
+        \Tournament\Handlers\RoundManagerHandler::ejecutarGeneracionRonda((int) $torneo_id);
     } catch (Exception $e) {
-        error_log("Error al generar ronda: " . $e->getMessage() . "\n" . $e->getTraceAsString());
+        error_log('Error al generar ronda: ' . $e->getMessage() . "\n" . $e->getTraceAsString());
         $_SESSION['error'] = 'Error al generar ronda: ' . $e->getMessage();
-    }
-    
-    // Permanecer siempre en el panel: éxito o error. El usuario irá al formulario de resultados cuando lo requiera.
-    if (isset($torneo_id) && $torneo_id > 0) {
         header('Location: ' . buildRedirectUrl('panel', ['torneo_id' => $torneo_id]));
         exit;
     }
-    
-    header('Location: ' . buildRedirectUrl('panel', ['torneo_id' => $torneo_id]));
-    exit;
 }
 
 /**
