@@ -2570,135 +2570,29 @@ function obtenerDatosInscribirSitio($torneo_id, $user_id, $is_admin_general) {
 function guardarInscripcionSitio($torneo_id, $user_id, $is_admin_general) {
     try {
         verificarPermisosTorneo($torneo_id, $user_id, $is_admin_general);
-        
-        // Incluir helper de estatus
-        require_once __DIR__ . '/../lib/InscritosHelper.php';
-        
-        $pdo = DB::pdo();
-        $id_usuario = (int)($_POST['id_usuario'] ?? 0);
-        $cedula = trim($_POST['cedula'] ?? '');
-        $id_club = !empty($_POST['id_club']) ? (int)$_POST['id_club'] : null;
-        
-        // Inscripción en sitio o confirmada por otra vía: siempre confirmado
-        $estatus = 1; // confirmado
-        
-        $inscrito_por = $user_id;
-        
+
+        require_once __DIR__ . '/../lib/Tournament/Handlers/RegistrationHandler.php';
         $current_user = Auth::user();
         $user_club_id = $current_user['club_id'] ?? null;
-        
-        // Si se proporciona cédula pero no id_usuario, buscar el usuario
-        if (empty($id_usuario) && !empty($cedula)) {
-            $stmt = $pdo->prepare("SELECT id FROM usuarios WHERE cedula = ? AND status = 0");
-            $stmt->execute([$cedula]);
-            $usuario_encontrado = $stmt->fetch(PDO::FETCH_ASSOC);
-            
-            if ($usuario_encontrado) {
-                $id_usuario = (int)$usuario_encontrado['id'];
-            } else {
-                $_SESSION['error'] = 'No se encontró un usuario registrado con la cédula ' . htmlspecialchars($cedula) . '. Debe registrar al usuario primero.';
-                header('Location: ' . buildRedirectUrl('inscribir_sitio', ['torneo_id' => $torneo_id]));
-                exit;
-            }
-        }
-        
-        if ($id_usuario <= 0) {
-            $_SESSION['error'] = 'Debe seleccionar un usuario o proporcionar una cédula válida';
+
+        $r = \Tournament\Handlers\RegistrationHandler::registrarJugador([
+            'torneo_id' => (int) $torneo_id,
+            'actor_user_id' => (int) $user_id,
+            'actor_club_id' => $user_club_id,
+            'post' => $_POST,
+        ]);
+
+        if (!empty($r['ok'])) {
+            $_SESSION['success'] = $r['success_message'] ?? 'Jugador inscrito exitosamente';
             header('Location: ' . buildRedirectUrl('inscribir_sitio', ['torneo_id' => $torneo_id]));
             exit;
         }
-        
-        // Validar que el usuario tenga todos los campos obligatorios completos
-        $stmt = $pdo->prepare("SELECT nombre, cedula, sexo, email, username, entidad FROM usuarios WHERE id = ?");
-        $stmt->execute([$id_usuario]);
-        $usuario_datos = $stmt->fetch(PDO::FETCH_ASSOC);
-        
-        if (!$usuario_datos) {
-            $_SESSION['error'] = 'No se encontró el usuario seleccionado';
-            header('Location: ' . buildRedirectUrl('inscribir_sitio', ['torneo_id' => $torneo_id]));
-            exit;
-        }
-        
-        // Validar campos obligatorios
-        $campos_faltantes = [];
-        if (empty(trim($usuario_datos['nombre'] ?? ''))) {
-            $campos_faltantes[] = 'Nombre';
-        }
-        if (empty(trim($usuario_datos['cedula'] ?? ''))) {
-            $campos_faltantes[] = 'Cédula';
-        }
-        if (empty($usuario_datos['sexo'] ?? '')) {
-            $campos_faltantes[] = 'Sexo';
-        }
-        if (empty(trim($usuario_datos['email'] ?? ''))) {
-            $campos_faltantes[] = 'Email';
-        }
-        if (empty(trim($usuario_datos['username'] ?? ''))) {
-            $campos_faltantes[] = 'Username';
-        }
-        
-        if (!empty($campos_faltantes)) {
-            $campos_lista = implode(', ', $campos_faltantes);
-            $_SESSION['error'] = 'El usuario no puede ser inscrito porque faltan los siguientes campos obligatorios: ' . $campos_lista . '. Por favor complete la información del usuario antes de inscribirlo.';
-            header('Location: ' . buildRedirectUrl('inscribir_sitio', ['torneo_id' => $torneo_id]));
-            exit;
-        }
-        
-        // Verificar que no esté ya inscrito (excluir retirados)
-        $stmt = $pdo->prepare("SELECT id FROM inscritos WHERE id_usuario = ? AND torneo_id = ? AND " . InscritosHelper::SQL_WHERE_SOLO_CONFIRMADO);
-        $stmt->execute([$id_usuario, $torneo_id]);
-        
-        if ($stmt->fetch()) {
-            $_SESSION['error'] = 'Este usuario ya está inscrito en el torneo';
-            header('Location: ' . buildRedirectUrl('inscribir_sitio', ['torneo_id' => $torneo_id]));
-            exit;
-        }
-        
-        // Si no se especificó club, usar el club del usuario o el club del administrador
-        if (!$id_club) {
-            $stmt = $pdo->prepare("SELECT club_id FROM usuarios WHERE id = ?");
-            $stmt->execute([$id_usuario]);
-            $usuario_club = $stmt->fetchColumn();
-            $id_club = $usuario_club ?: $user_club_id;
-        }
-        
-        // Validar que todos los campos obligatorios estén presentes antes de insertar
-        if ($id_usuario <= 0) {
-            throw new Exception('ID de usuario inválido');
-        }
-        if ($torneo_id <= 0) {
-            throw new Exception('ID de torneo inválido');
-        }
-        
-        // Insertar inscripción usando función centralizada
-        try {
-            // Usar función centralizada que valida y maneja todos los campos
-            $id_inscrito = InscritosHelper::insertarInscrito($pdo, [
-                'id_usuario' => $id_usuario,
-                'torneo_id' => $torneo_id,
-                'id_club' => $id_club,
-                'estatus' => $estatus,
-                'inscrito_por' => $inscrito_por,
-                'numero' => 0 // Se asignará después si es necesario para equipos
-            ]);
-            
-            $_SESSION['success'] = 'Jugador inscrito exitosamente';
-            header('Location: ' . buildRedirectUrl('inscribir_sitio', ['torneo_id' => $torneo_id]));
-            exit;
-        } catch (PDOException $e) {
-            error_log("Error PDO al inscribir jugador: " . $e->getMessage());
-            $_SESSION['error'] = 'Error al guardar la inscripción: ' . $e->getMessage();
-            header('Location: ' . buildRedirectUrl('inscribir_sitio', ['torneo_id' => $torneo_id]));
-            exit;
-        } catch (Exception $e) {
-            error_log("Error al inscribir jugador: " . $e->getMessage());
-            $_SESSION['error'] = 'Error al inscribir: ' . $e->getMessage();
-            header('Location: ' . buildRedirectUrl('inscribir_sitio', ['torneo_id' => $torneo_id]));
-            exit;
-        }
-        
+
+        $_SESSION['error'] = $r['error'] ?? 'Error al inscribir';
+        header('Location: ' . buildRedirectUrl('inscribir_sitio', ['torneo_id' => $torneo_id]));
+        exit;
     } catch (Exception $e) {
-        error_log("Error al inscribir jugador: " . $e->getMessage());
+        error_log('Error al inscribir jugador: ' . $e->getMessage());
         $_SESSION['error'] = 'Error al inscribir: ' . $e->getMessage();
         header('Location: ' . buildRedirectUrl('inscribir_sitio', ['torneo_id' => $torneo_id]));
         exit;

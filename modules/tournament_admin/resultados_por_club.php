@@ -6,11 +6,11 @@
  */
 
 require_once __DIR__ . '/../../lib/app_helpers.php';
+require_once __DIR__ . '/../../lib/Tournament/Services/PaginationService.php';
 
 // Configuración de paginación
 $items_por_pagina_club = 10; // Clubes por página
 $pagina_actual_club = isset($_GET['pagina']) ? max(1, (int)$_GET['pagina']) : 1;
-$offset_club = ($pagina_actual_club - 1) * $items_por_pagina_club;
 
 // Función helper para generar HTML del paginador
 function generarPaginadorClubs($pagina_actual, $total_paginas, $base_url, $parametros_get = []) {
@@ -317,17 +317,14 @@ try {
     
     // Calcular paginación para clubes
     $total_clubes = count($resultados_por_club);
-    $total_paginas_club = max(1, ceil($total_clubes / $items_por_pagina_club));
-    
-    // Ajustar página actual si excede el total
-    if ($pagina_actual_club > $total_paginas_club) {
-        $pagina_actual_club = $total_paginas_club;
-        $offset_club = ($pagina_actual_club - 1) * $items_por_pagina_club;
-    }
-    
+    $p_club = \Tournament\Services\PaginationService::getParams($total_clubes, $pagina_actual_club, $items_por_pagina_club);
+    $pagina_actual_club = $p_club['page'];
+    $total_paginas_club = $p_club['total_pages'];
+    $offset_club = $p_club['offset'];
+
     // Aplicar paginación a los clubes (convertir a array numérico, paginar, luego convertir de nuevo a asociativo)
     $clubes_array = array_values($resultados_por_club);
-    $clubes_paginados = array_slice($clubes_array, $offset_club, $items_por_pagina_club);
+    $clubes_paginados = array_slice($clubes_array, $offset_club, $p_club['per_page']);
     
     // Reconstruir array asociativo con club_id como key para mantener compatibilidad
     $resultados_por_club_paginados = [];
@@ -364,7 +361,11 @@ if (!isset($total_clubes)) {
     $total_clubes = count($resultados_por_club ?? []);
 }
 if (!isset($total_paginas_club)) {
-    $total_paginas_club = max(1, ceil($total_clubes / ($items_por_pagina_club ?? 10)));
+    $ppc = (int) ($items_por_pagina_club ?? 10);
+    $pac = isset($_GET['pagina']) ? (int) $_GET['pagina'] : 1;
+    $p_fb = \Tournament\Services\PaginationService::getParams((int) $total_clubes, $pac, $ppc);
+    $total_paginas_club = $p_fb['total_pages'];
+    $pagina_actual_club = $p_fb['page'];
 }
 if (!isset($pagina_actual_club)) {
     $pagina_actual_club = isset($_GET['pagina']) ? max(1, (int)$_GET['pagina']) : 1;
