@@ -81,21 +81,19 @@ $pageTitle = isset($titulo) ? (string) $titulo : ('Cuadrícula - Ronda ' . (int)
 </head>
 <body class="page-cuadricula-10">
     <div class="cuadricula-shell">
-        <div class="cuadricula-header no-print">
-            <div class="cuadricula-header-left">
-                <span class="cuadricula-header-torneo">
-                    <?php echo htmlspecialchars(strtoupper($torneo['nombre'] ?? 'Torneo'), ENT_QUOTES, 'UTF-8'); ?>
-                    — RONDA <?php echo (int) ($numRonda ?? 0); ?>
-                    <?php if ($totalInscritos > 0): ?>
-                        <span class="text-muted font-weight-normal"> · <?php echo (int) $totalInscritos; ?> inscritos</span>
-                    <?php endif; ?>
-                </span>
-            </div>
-            <div class="cuadricula-header-right">
+        <div class="cuadricula-header no-print d-flex align-items-center justify-content-between flex-wrap w-100">
+            <span class="cuadricula-header-torneo mr-2" style="min-width:0;">
+                <?php echo htmlspecialchars(strtoupper($torneo['nombre'] ?? 'Torneo'), ENT_QUOTES, 'UTF-8'); ?>
+                — RONDA <?php echo (int) ($numRonda ?? 0); ?>
+                <?php if ($totalInscritos > 0): ?>
+                    <span class="text-muted font-weight-normal"> · <?php echo (int) $totalInscritos; ?> inscritos</span>
+                <?php endif; ?>
+            </span>
+            <div class="cuadricula-header-right d-flex align-items-center ml-auto" style="flex-shrink:0;">
                 <button type="button" onclick="window.print()" class="btn btn-primary btn-sm">
                     <i class="fas fa-print mr-2"></i> Imprimir
                 </button>
-                <a href="<?php echo htmlspecialchars($base_url . ($use_standalone ? '?' : '&') . 'action=panel&torneo_id=' . (int) ($torneo['id'] ?? 0), ENT_QUOTES, 'UTF-8'); ?>" class="btn btn-secondary btn-sm">
+                <a href="<?php echo htmlspecialchars($base_url . ($use_standalone ? '?' : '&') . 'action=panel&torneo_id=' . (int) ($torneo['id'] ?? 0), ENT_QUOTES, 'UTF-8'); ?>" class="btn btn-secondary btn-sm ml-1">
                     <i class="fas fa-arrow-left mr-2"></i> Volver al panel
                 </a>
             </div>
