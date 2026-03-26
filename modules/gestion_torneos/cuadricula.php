@@ -2,8 +2,9 @@
 /**
  * Vista: Cuadrícula de Asignaciones
  * Rejilla: 8 segmentos (IDEN|MESA) × 12 filas datos = 96 jugadores/página; grid 13 filas (cabecera + datos).
- * Llenado vertical por segmento (como 22×9): índice en bloque = segmento * filas_datos + fila.
- * Estilos 10" / 13": public/assets/css/custom-13inch.css (cabecera −30% sobre 7.2vh; datos 5.8vh; grid ≤95vh).
+ * Llenado vertical por segmento: índice en bloque = segmento * filas_datos + fila.
+ * Celdas: resources/views/tournament/partials/grid_display.php (foreach $cuad_paginas + bucles internos).
+ * Estilos 10": public/assets/css/custom-13inch.css (.matrix-header 5vh, .matrix-row 6.8vh).
  */
 if (!isset($base_url) || !isset($use_standalone)) {
     $script_actual = basename($_SERVER['PHP_SELF'] ?? '');
@@ -25,7 +26,7 @@ $totalInscritos = isset($totalInscritos)
     : (isset($totalAsignaciones) ? (int) $totalAsignaciones : 0);
 
 /** 8 pares × 12 filas datos = 96 celdas jugador/página (16 columnas + cabecera = 13 filas en grid) */
-$cuad_filas_datos = 12;
+$cuad_filas_datos = 12; // debe coincidir con grid_display.php y 12 filas de datos + 1 cabecera en CSS
 $cuad_pares = 8;
 $claseGrilla = 'grilla-pantalla';
 
@@ -100,7 +101,10 @@ $pageTitle = isset($titulo) ? (string) $titulo : ('Cuadrícula - Ronda ' . (int)
             </div>
         </div>
         <div class="cuadricula-meta no-print" id="cuadriculaMeta" aria-live="polite"></div>
-        <?php include __DIR__ . '/../../resources/views/tournament/partials/grid_display.php'; ?>
+        <?php
+        // Rejilla IDEN|MESA: parcial (foreach $cuad_paginas, segmentos, celdas matrix-cell)
+        include __DIR__ . '/../../resources/views/tournament/partials/grid_display.php';
+        ?>
     </div>
     <script>
 (function () {

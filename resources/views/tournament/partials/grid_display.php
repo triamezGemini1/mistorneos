@@ -40,8 +40,8 @@ $claseGrilla = isset($claseGrilla) ? (string) $claseGrilla : 'grilla-pantalla';
                     <div class="cuadricula-grid-wrap">
                         <div class="cuadricula-matrix-grid matrix-grid <?php echo htmlspecialchars($claseGrilla, ENT_QUOTES, 'UTF-8'); ?>">
                             <?php for ($h = 0; $h < $cuad_pares; $h++) : ?>
-                                <div class="matrix-cell matrix-iden matrix-head">IDEN</div>
-                                <div class="matrix-cell matrix-mesa matrix-head">MESA</div>
+                                <div class="matrix-cell matrix-iden matrix-head matrix-header">IDEN</div>
+                                <div class="matrix-cell matrix-mesa matrix-head matrix-header">MESA</div>
                             <?php endfor; ?>
                             <?php for ($r = 0; $r < $cuad_filas_datos; $r++) : ?>
                                 <?php for ($s = 0; $s < $cuad_pares; $s++) :
