@@ -1,0 +1,167 @@
+<?php
+/**
+ * Vista: Cuadrícula de Asignaciones
+ * Rejilla: 8 segmentos (IDEN|MESA) × 12 filas datos = 96 jugadores/página; grid 13 filas (cabecera + datos).
+ * Llenado vertical por segmento (como 22×9): índice en bloque = segmento * filas_datos + fila.
+ * Estilos 10" / 13": public/assets/css/custom-13inch.css (cabecera −30% sobre 7.2vh; datos 5.8vh; grid ≤95vh).
+ */
+if (!isset($base_url) || !isset($use_standalone)) {
+    $script_actual = basename($_SERVER['PHP_SELF'] ?? '');
+    $use_standalone = in_array($script_actual, ['admin_torneo.php', 'panel_torneo.php'], true);
+    $base_url = $use_standalone ? $script_actual : 'index.php?page=torneo_gestion';
+}
+
+$letras = [1 => 'A', 2 => 'C', 3 => 'B', 4 => 'D'];
+
+if (!isset($asignaciones) || !is_array($asignaciones)) {
+    $asignaciones = [];
+}
+if (!isset($torneo) || !is_array($torneo)) {
+    $torneo = ['id' => 0, 'nombre' => 'Torneo'];
+}
+
+$totalInscritos = isset($totalInscritos)
+    ? (int) $totalInscritos
+    : (isset($totalAsignaciones) ? (int) $totalAsignaciones : 0);
+
+/** 8 pares × 12 filas datos = 96 celdas jugador/página (16 columnas + cabecera = 13 filas en grid) */
+$cuad_filas_datos = 12;
+$cuad_pares = 8;
+$claseGrilla = 'grilla-pantalla';
+
+$listaPlana = [];
+if (!empty($asignaciones) && is_array($asignaciones)) {
+    foreach ($asignaciones as $asignacion) {
+        $mesaRaw = $asignacion['mesa'] ?? 0;
+        $mesa = (int) $mesaRaw;
+        $secuencia = (int) ($asignacion['secuencia'] ?? 0);
+        $letra = $letras[$secuencia] ?? '';
+        $esBye = ($mesa === 0 || $mesaRaw === '0' || $mesaRaw === 0);
+        $mesaDisplay = $esBye ? 'BYE' : ($mesa . $letra);
+        $listaPlana[] = [
+            'id' => (string) ($asignacion['id_usuario'] ?? ''),
+            'mesa' => $mesaDisplay,
+            'bye' => $esBye,
+        ];
+    }
+}
+
+$cuad_cap = $cuad_filas_datos * $cuad_pares;
+if (empty($listaPlana)) {
+    $cuad_paginas = [[]];
+} else {
+    $cuad_paginas = array_chunk($listaPlana, $cuad_cap);
+}
+
+require_once __DIR__ . '/../../lib/app_helpers.php';
+$href_custom_13 = AppHelpers::url('assets/css/custom-13inch.css');
+$pageTitle = isset($titulo) ? (string) $titulo : ('Cuadrícula - Ronda ' . (int) ($numRonda ?? 0));
+?>
+<!DOCTYPE html>
+<html lang="es" class="cuadricula-scroll-root">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title><?php echo htmlspecialchars($pageTitle, ENT_QUOTES, 'UTF-8'); ?></title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.6.2/dist/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="<?php echo htmlspecialchars($href_custom_13, ENT_QUOTES, 'UTF-8'); ?>">
+    <style>
+        @media print {
+            .no-print { display: none !important; }
+            html.cuadricula-scroll-root, html.cuadricula-scroll-root body {
+                height: auto !important;
+                max-height: none !important;
+                overflow: visible !important;
+            }
+            .cuadricula-shell { height: auto !important; max-height: none !important; overflow: visible !important; }
+        }
+    </style>
+</head>
+<body class="page-cuadricula-10">
+    <div class="cuadricula-shell">
+        <div class="cuadricula-header no-print">
+            <div class="cuadricula-header-left">
+                <span class="cuadricula-header-torneo">
+                    <?php echo htmlspecialchars(strtoupper($torneo['nombre'] ?? 'Torneo'), ENT_QUOTES, 'UTF-8'); ?>
+                    — RONDA <?php echo (int) ($numRonda ?? 0); ?>
+                    <?php if ($totalInscritos > 0): ?>
+                        <span class="text-muted font-weight-normal"> · <?php echo (int) $totalInscritos; ?> inscritos</span>
+                    <?php endif; ?>
+                </span>
+            </div>
+            <div class="cuadricula-header-right">
+                <button type="button" onclick="window.print()" class="btn btn-primary btn-sm">
+                    <i class="fas fa-print mr-2"></i> Imprimir
+                </button>
+                <a href="<?php echo htmlspecialchars($base_url . ($use_standalone ? '?' : '&') . 'action=panel&torneo_id=' . (int) ($torneo['id'] ?? 0), ENT_QUOTES, 'UTF-8'); ?>" class="btn btn-secondary btn-sm">
+                    <i class="fas fa-arrow-left mr-2"></i> Volver al panel
+                </a>
+            </div>
+        </div>
+        <div class="cuadricula-meta no-print" id="cuadriculaMeta" aria-live="polite"></div>
+        <?php include __DIR__ . '/../../resources/views/tournament/partials/grid_display.php'; ?>
+    </div>
+    <script>
+(function () {
+    var ROTACION_MS = 30 * 60 * 1000;
+    var series = document.querySelectorAll('.cuadricula-serie');
+    var meta = document.getElementById('cuadriculaMeta');
+    var idx = 0;
+
+    function formatearRestanteCuad(ms) {
+        var s = Math.max(0, Math.ceil(ms / 1000));
+        var m = Math.floor(s / 60);
+        var r = s % 60;
+        return m + ':' + (r < 10 ? '0' : '') + r;
+    }
+
+    function mostrarSerie(i) {
+        for (var j = 0; j < series.length; j++) {
+            series[j].classList.toggle('is-hidden-screen', j !== i);
+        }
+    }
+
+    if (series.length > 1) {
+        var deadline = Date.now() + ROTACION_MS;
+        function tick() {
+            var left = deadline - Date.now();
+            if (left <= 0) {
+                idx = (idx + 1) % series.length;
+                mostrarSerie(idx);
+                deadline = Date.now() + ROTACION_MS;
+                left = ROTACION_MS;
+            }
+            if (meta) {
+                meta.textContent = 'Página ' + (idx + 1) + ' de ' + series.length
+                    + ' · siguiente en ' + formatearRestanteCuad(left) + ' (mm:ss)';
+            }
+        }
+        tick();
+        setInterval(tick, 1000);
+        mostrarSerie(0);
+    } else if (meta) {
+        meta.textContent = '';
+    }
+
+    var grid = document.querySelector('.cuadricula-matrix-grid');
+    if (!grid) return;
+
+    function clearHover() {
+        var active = grid.querySelectorAll('.matrix-cell.is-row-hover');
+        for (var i = 0; i < active.length; i++) active[i].classList.remove('is-row-hover');
+    }
+
+    grid.addEventListener('mouseover', function (ev) {
+        var cell = ev.target.closest('.matrix-cell[data-row]');
+        if (!cell || !grid.contains(cell)) return;
+        clearHover();
+        var row = cell.getAttribute('data-row');
+        var rowCells = grid.querySelectorAll('.matrix-cell[data-row="' + row + '"]');
+        for (var i = 0; i < rowCells.length; i++) rowCells[i].classList.add('is-row-hover');
+    });
+    grid.addEventListener('mouseleave', clearHover);
+})();
+    </script>
+</body>
+</html>

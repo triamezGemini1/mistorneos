@@ -1,17 +1,18 @@
 <?php
+/**
+ * Cerrar sesión: usar el mismo inicio de sesión que index (session_start_early) para
+ * que la cookie se reconozca y se elimine correctamente (path=/ vs URL_BASE).
+ */
+require_once __DIR__ . '/../config/session_start_early.php';
+require_once __DIR__ . '/../config/bootstrap.php';
+require_once __DIR__ . '/../lib/app_helpers.php';
+require_once __DIR__ . '/../config/auth.php';
 
-declare(strict_types=1);
+Auth::logout();
 
-$root = dirname(__DIR__);
-require $root . '/config/bootstrap.php';
-
-$_SESSION = [];
-
-if (session_status() === PHP_SESSION_ACTIVE) {
-    session_destroy();
+// Usar URL absoluta para que la redirección funcione igual desde cualquier página (usuarios, organizaciones, etc.)
+$login_url = rtrim(AppHelpers::getPublicUrl(), '/') . '/login.php';
+if (!headers_sent()) {
+    header('Location: ' . $login_url, true, 302);
 }
-
-$script = $_SERVER['SCRIPT_NAME'] ?? '';
-$target = str_contains($script, '/public/') ? 'index.php' : 'public/index.php';
-header('Location: ' . $target, true, 303);
 exit;

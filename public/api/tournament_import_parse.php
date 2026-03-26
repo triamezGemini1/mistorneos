@@ -1,0 +1,228 @@
+<?php
+declare(strict_types=1);
+
+/**
+ * API: Parsea archivo de importación (.xlsx, .xls, .xlsm, .csv).
+ * Excel: PhpSpreadsheet (composer). CSV: nativo.
+ */
+
+require_once __DIR__ . '/../../config/session_start_early.php';
+require_once __DIR__ . '/../../config/bootstrap.php';
+require_once __DIR__ . '/../../config/db_config.php';
+require_once __DIR__ . '/../../config/csrf.php';
+require_once __DIR__ . '/../../config/auth.php';
+
+header('Content-Type: application/json; charset=utf-8');
+
+Auth::requireRoleJson(['admin_general', 'admin_torneo', 'admin_club']);
+
+if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+    echo json_encode(['success' => false, 'error' => 'Método no permitido']);
+    exit;
+}
+
+$csrf_token = $_POST['csrf_token'] ?? '';
+$session_token = $_SESSION['csrf_token'] ?? '';
+if (!$csrf_token || !$session_token || !hash_equals($session_token, $csrf_token)) {
+    echo json_encode(['success' => false, 'error' => 'Token CSRF inválido o sesión desincronizada. Recargue la página (F5) e intente de nuevo.']);
+    exit;
+}
+
+if (empty($_FILES['archivo']) || $_FILES['archivo']['error'] !== UPLOAD_ERR_OK) {
+    $err = (int) ($_FILES['archivo']['error'] ?? UPLOAD_ERR_NO_FILE);
+    $msg = 'No se recibió el archivo o hubo error en la subida';
+    if ($err === UPLOAD_ERR_INI_SIZE || $err === UPLOAD_ERR_FORM_SIZE) {
+        $msg = 'El archivo supera el tamaño máximo permitido por el servidor (php.ini: upload_max_filesize / post_max_size).';
+    }
+    echo json_encode(['success' => false, 'error' => $msg]);
+    exit;
+}
+
+$file = $_FILES['archivo'];
+$tmpPath = $file['tmp_name'];
+$name = $file['name'];
+$ext = strtolower(pathinfo($name, PATHINFO_EXTENSION));
+
+if (!in_array($ext, ['xls', 'xlsx', 'xlsm', 'csv'], true)) {
+    echo json_encode(['success' => false, 'error' => 'Formato no soportado. Use Excel (.xls, .xlsx, .xlsm) o CSV.']);
+    exit;
+}
+
+$asegurarUtf8 = static function ($v): string {
+    if ($v === null || $v === '') {
+        return '';
+    }
+    if (is_object($v) && method_exists($v, '__toString')) {
+        $v = (string) $v;
+    }
+    $s = trim((string) $v);
+    $s = str_replace("\xEF\xBB\xBF", '', $s);
+    $s = trim($s);
+    if ($s === '') {
+        return '';
+    }
+    $enc = mb_detect_encoding($s, ['UTF-8', 'ISO-8859-1', 'Windows-1252'], true);
+    if ($enc && $enc !== 'UTF-8') {
+        $s = mb_convert_encoding($s, 'UTF-8', $enc);
+    }
+    return $s;
+};
+
+/**
+ * @param array<int, array<int, mixed>> $allRows
+ * @return array{0: array<int, string>, 1: array<int, array<int, string>>}
+ */
+function extract_headers_and_data_rows(array $allRows, callable $asegurarUtf8): array {
+    $allRows = array_values(array_filter($allRows, static function ($row) {
+        if (!is_array($row)) {
+            return false;
+        }
+        foreach ($row as $c) {
+            if ($c !== null && $c !== '') {
+                return true;
+            }
+        }
+        return false;
+    }));
+    if (empty($allRows)) {
+        throw new RuntimeException('El archivo no contiene filas');
+    }
+    $headerRowIndex = null;
+    $headerKeywords = ['nacionalidad', 'cedula', 'cédula', 'nombre', 'club', 'organizacion', 'organización', 'sexo', 'telefono', 'email'];
+    for ($r = 0, $max = min(4, count($allRows)); $r < $max; $r++) {
+        $row = $allRows[$r];
+        $cells = array_map(static function ($c) {
+            return trim(mb_strtolower((string) $c));
+        }, $row);
+        $match = 0;
+        foreach ($cells as $cell) {
+            foreach ($headerKeywords as $kw) {
+                if ($cell === $kw || ($cell !== '' && strpos($cell, $kw) !== false)) {
+                    $match++;
+                    break;
+                }
+            }
+        }
+        if ($match >= 2) {
+            $headerRowIndex = $r;
+            break;
+        }
+    }
+    if ($headerRowIndex === null) {
+        $headerRowIndex = 3;
+    }
+    if (count($allRows) < $headerRowIndex + 1) {
+        throw new RuntimeException('El archivo debe tener cabecera (nacionalidad, CEDULA, nombre, etc.) y al menos una fila de datos');
+    }
+    $headers = array_map($asegurarUtf8, $allRows[$headerRowIndex]);
+    $numCols = count($headers);
+    $rows = [];
+    for ($i = $headerRowIndex + 1, $n = count($allRows); $i < $n; $i++) {
+        $rowCells = $allRows[$i];
+        $rowCells = array_map(static function ($v) use ($asegurarUtf8) {
+            if ($v !== null && is_float($v) && (int) $v == $v) {
+                $v = (int) $v;
+            }
+            return $asegurarUtf8($v);
+        }, $rowCells);
+        while (count($rowCells) < $numCols) {
+            $rowCells[] = '';
+        }
+        $rows[] = array_slice($rowCells, 0, $numCols);
+    }
+    return [$headers, $rows];
+}
+
+try {
+    @ini_set('memory_limit', '256M');
+    @set_time_limit(180);
+
+    $headers = [];
+    $rows = [];
+
+    if ($ext === 'csv') {
+        $content = file_get_contents($tmpPath);
+        $content = $asegurarUtf8($content) ?: $content;
+        $lines = preg_split('/\r\n|\r|\n/', $content);
+        $numHeaders = 0;
+        foreach ($lines as $i => $line) {
+            $cells = str_getcsv($line, ';');
+            if (strpos($line, ',') !== false && (count($cells) === 1 || count($cells) < 3)) {
+                $cells = str_getcsv($line, ',');
+            }
+            $cells = array_map(static function ($c) use ($asegurarUtf8) {
+                return $asegurarUtf8($c);
+            }, $cells);
+            if ($i === 0) {
+                $headers = $cells;
+                $numHeaders = count($headers);
+            } else {
+                while (count($cells) < $numHeaders) {
+                    $cells[] = '';
+                }
+                $rows[] = array_slice($cells, 0, $numHeaders);
+            }
+        }
+    } elseif (in_array($ext, ['xlsx', 'xlsm', 'xls'], true)) {
+        $autoload = dirname(__DIR__, 2) . '/vendor/autoload.php';
+        if (is_readable($autoload)) {
+            require_once $autoload;
+            if (class_exists('\PhpOffice\PhpSpreadsheet\IOFactory')) {
+                $spreadsheet = \PhpOffice\PhpSpreadsheet\IOFactory::load($tmpPath);
+                $sheet = $spreadsheet->getActiveSheet();
+                $allRows = $sheet->toArray(null, true, true, false);
+                if (!is_array($allRows)) {
+                    $allRows = [];
+                }
+                [$headers, $rows] = extract_headers_and_data_rows($allRows, $asegurarUtf8);
+            } elseif ($ext === 'xls') {
+                require_once __DIR__ . '/../../libs/SimpleXLS.php';
+                $xls = SimpleXLS::parse($tmpPath);
+                if (!$xls) {
+                    $err = SimpleXLS::parseError();
+                    throw new RuntimeException($err ?: 'Error al leer el archivo .xls');
+                }
+                $xls->setOutputEncoding('UTF-8');
+                $allRows = $xls->rows(0);
+                if (empty($allRows) || !is_array($allRows)) {
+                    throw new RuntimeException('El archivo no contiene filas');
+                }
+                [$headers, $rows] = extract_headers_and_data_rows($allRows, $asegurarUtf8);
+            } else {
+                throw new RuntimeException('Falta PhpSpreadsheet en este servidor. Ejecute: composer install (raíz del proyecto) para habilitar .xlsx/.xlsm');
+            }
+        } elseif ($ext === 'xls') {
+            require_once __DIR__ . '/../../libs/SimpleXLS.php';
+            $xls = SimpleXLS::parse($tmpPath);
+            if (!$xls) {
+                $err = SimpleXLS::parseError();
+                throw new RuntimeException($err ?: 'Error al leer el archivo .xls');
+            }
+            $xls->setOutputEncoding('UTF-8');
+            $allRows = $xls->rows(0);
+            if (empty($allRows) || !is_array($allRows)) {
+                throw new RuntimeException('El archivo no contiene filas');
+            }
+            [$headers, $rows] = extract_headers_and_data_rows($allRows, $asegurarUtf8);
+        } else {
+            throw new RuntimeException(
+                'Para abrir archivos .xlsx / .xlsm instale las dependencias en el servidor: en la carpeta del proyecto ejecute composer install'
+            );
+        }
+    } else {
+        echo json_encode(['success' => false, 'error' => 'Formato no reconocido']);
+        exit;
+    }
+
+    echo json_encode([
+        'success' => true,
+        'headers' => $headers,
+        'rows' => $rows,
+    ]);
+} catch (Throwable $e) {
+    error_log('tournament_import_parse: ' . $e->getMessage());
+    echo json_encode([
+        'success' => false,
+        'error' => 'Error al leer el archivo: ' . $e->getMessage(),
+    ]);
+}

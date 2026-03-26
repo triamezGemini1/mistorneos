@@ -1,0 +1,1094 @@
+/**
+ * Panel de Control - Alta Gama
+ * Inter, peso base 300. Títulos 400/500. Escala: móvil 12px, escritorio 13px (-20%).
+ * line-height 1.4. Labels 11px. Nitidez: -webkit-font-smoothing: antialiased.
+ */
+
+body {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-weight: 300;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  letter-spacing: 0.02em;
+  line-height: 1.4;
+}
+
+/* ========== BASE: MÓVIL (12px) ========== */
+html {
+  font-size: 12px;
+}
+
+.tw-panel {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-weight: 300;
+  box-sizing: border-box;
+  width: 100% !important;
+  max-width: 100%;
+  padding: 0.5rem;
+  letter-spacing: 0.02em;
+  line-height: 1.4;
+}
+
+.tw-panel * {
+  box-sizing: border-box;
+}
+
+.tw-panel .panel-card-title,
+.tw-panel h2,
+.tw-panel h3,
+.tw-panel h4 {
+  font-size: 1.15em;
+  font-weight: 400;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  line-height: 1.4;
+}
+
+.tw-panel .panel-card-title {
+  color: #111827;
+}
+
+.tw-panel .panel-meta,
+.tw-panel .panel-secondary {
+  color: #6b7280;
+  font-size: 1em;
+  font-weight: 300;
+}
+
+.tw-panel label {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  color: #6b7280;
+  font-weight: 500;
+  line-height: 1.4;
+}
+
+/* Contenedores: bordes finos, sombra casi imperceptible */
+.tw-panel .panel-card {
+  background: #fff;
+  border-radius: 0.4rem;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+  border: 1px solid #e0e0e0;
+  overflow: visible;
+  min-height: 100%;
+  max-width: 100%;
+  transition: box-shadow 0.2s ease;
+}
+
+.tw-panel .panel-card:hover {
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+}
+
+.tw-panel .panel-card-header {
+  padding: 5px 10px;
+  color: #fff;
+  font-weight: 500;
+  font-size: 1.15em;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  border-radius: 0.4rem 0.4rem 0 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+  line-height: 1.4;
+}
+
+.tw-panel .panel-card-header i {
+  opacity: 0.95;
+}
+
+.tw-panel .panel-card-body {
+  padding: 5px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.tw-panel .panel-card-header--mesas {
+  background: linear-gradient(135deg, #10b981 0%, #14b8a6 100%);
+}
+
+.tw-panel .panel-card-header--operaciones {
+  background: linear-gradient(135deg, #3b82f6 0%, #6366f1 100%);
+}
+
+.tw-panel .panel-card-header--resultados {
+  background: linear-gradient(135deg, #f59e0b 0%, #f97316 100%);
+}
+
+/* Grid: móvil = 1 columna (stacking) */
+.tw-panel .panel-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1.25rem;
+  width: 100%;
+  max-width: 100%;
+}
+
+.tw-panel .panel-grid-mesas {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(17.5rem, 1fr));
+  gap: 1rem;
+  max-width: 100%;
+}
+
+.tw-panel .tw-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  min-height: 1.85rem;
+  padding: 5px 10px;
+  font-family: inherit;
+  font-size: inherit;
+  font-weight: 500;
+  border-radius: 0.35rem;
+  text-decoration: none;
+  transition: box-shadow 0.2s ease, background-color 0.2s ease, color 0.2s ease;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  cursor: pointer;
+  gap: 0.4rem;
+  letter-spacing: 0.02em;
+  line-height: 1.4;
+}
+
+.tw-panel .tw-btn i {
+  font-size: 1rem;
+  flex-shrink: 0;
+}
+
+.tw-panel .tw-btn:hover:not(:disabled) {
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+}
+
+.tw-panel .tw-btn:active:not(:disabled) {
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+.tw-panel .tw-btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  transform: none !important;
+  box-shadow: none !important;
+}
+
+.tw-panel .tw-btn--cyan { background-color: #06b6d4; color: #fff; }
+.tw-panel .tw-btn--cyan:hover:not(:disabled) { background-color: #0891b2; }
+.tw-panel .tw-btn--blue { background-color: #3b82f6; color: #fff; }
+.tw-panel .tw-btn--blue:hover:not(:disabled) { background-color: #2563eb; }
+.tw-panel .tw-btn--amber { background-color: #f59e0b; color: #fff; }
+.tw-panel .tw-btn--amber:hover:not(:disabled) { background-color: #d97706; }
+.tw-panel .tw-btn--emerald { background-color: #10b981; color: #fff; }
+.tw-panel .tw-btn--emerald:hover:not(:disabled) { background-color: #059669; }
+.tw-panel .tw-btn--teal { background-color: #14b8a6; color: #fff; }
+.tw-panel .tw-btn--teal:hover:not(:disabled) { background-color: #0d9488; }
+.tw-panel .tw-btn--red { background-color: #ef4444; color: #fff; }
+.tw-panel .tw-btn--red:hover:not(:disabled) { background-color: #dc2626; }
+.tw-panel .tw-btn--purple { background-color: #a855f7; color: #fff; }
+.tw-panel .tw-btn--purple:hover:not(:disabled) { background-color: #9333ea; }
+.tw-panel .tw-btn--indigo { background-color: #6366f1; color: #fff; }
+.tw-panel .tw-btn--indigo:hover:not(:disabled) { background-color: #4f46e5; }
+.tw-panel .tw-btn--rose { background-color: #f43f5e; color: #fff; }
+.tw-panel .tw-btn--rose:hover:not(:disabled) { background-color: #e11d48; }
+.tw-panel .tw-btn--gray { background-color: #9ca3af; color: #fff; }
+.tw-panel .tw-btn--dark { background-color: #111827; color: #fff; }
+.tw-panel .tw-btn--dark:hover:not(:disabled) { background-color: #1f2937; }
+
+.tw-panel .panel-btn-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.tw-panel .panel-header {
+  background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+  border-radius: 0.4rem;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
+  border: 1px solid rgba(0, 0, 0, 0.06);
+  padding: 0.5rem 0.75rem;
+  margin-bottom: 0.5rem;
+  color: #fff;
+}
+
+.tw-panel .panel-header-inner {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.tw-panel .panel-header .titulo-torneo {
+  font-size: 1.15em;
+  font-weight: 400;
+  margin: 0 0 0.2rem 0;
+  text-align: center;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  line-height: 1.4;
+}
+
+.tw-panel .panel-header .meta {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.5rem;
+  font-size: 1em;
+  font-weight: 300;
+  opacity: 0.95;
+  padding-top: 0.35rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.3);
+  line-height: 1.4;
+}
+
+.tw-panel .panel-header .meta i {
+  margin-right: 0.25rem;
+}
+
+.tw-panel .panel-header .torneo-id {
+  font-size: 1.4em;
+  font-weight: 500;
+  opacity: 0.9;
+  text-align: right;
+}
+
+.tw-panel .panel-header-grow {
+  flex: 1;
+  min-width: 0;
+}
+
+.tw-panel .panel-breadcrumb .panel-breadcrumb-current {
+  font-weight: 500;
+}
+
+.tw-panel .tw-btn--ghost-white {
+  background: rgba(255, 255, 255, 0.25);
+  color: #fff;
+  cursor: pointer;
+}
+
+.tw-panel .tw-btn--ghost-white:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.35);
+}
+
+.tw-panel .panel-breadcrumb {
+  margin-bottom: 0.75rem;
+}
+
+.tw-panel .panel-breadcrumb ol {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: clamp(0.75rem, 1.5vw, 0.8125rem);
+  color: #6b7280;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.tw-panel .panel-breadcrumb a {
+  color: #4b5563;
+  text-decoration: none;
+  transition: color 0.2s ease;
+}
+
+.tw-panel .panel-breadcrumb a:hover {
+  color: #2563eb;
+}
+
+.tw-panel .panel-breadcrumb .panel-breadcrumb-current {
+  color: #374151;
+  font-weight: 500;
+}
+
+.tw-panel #btnCronometro {
+  min-height: 1.85rem;
+  padding: 5px 10px;
+  background: linear-gradient(135deg, #0f766e 0%, #0d9488 50%, #14b8a6 100%) !important;
+  color: #fff !important;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 0.35rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: box-shadow 0.2s ease;
+  line-height: 1.4;
+}
+
+.tw-panel #btnCronometro:hover {
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
+}
+
+.tw-panel #btnCronometro i {
+  margin-right: 0.5rem;
+}
+
+.tw-panel .cronometro-finalizar-torneo {
+  background: linear-gradient(135deg, #0f766e 0%, #0d9488 50%, #14b8a6 100%) !important;
+  color: #fff !important;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 0.4rem;
+  padding: 0.5rem 0.75rem;
+  margin-bottom: 0.5rem;
+  text-align: center;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
+  transition: box-shadow 0.2s ease;
+}
+
+.tw-panel .cronometro-finalizar-torneo:hover {
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+}
+
+.tw-panel .cronometro-finalizar-torneo .cron-finalizar-label {
+  font-size: 1em;
+  font-weight: 500;
+  opacity: 0.95;
+  margin-bottom: 0.25rem;
+  line-height: 1.4;
+}
+
+.tw-panel .cronometro-finalizar-torneo .countdown-tiempo-restante {
+  font-size: 1.5em;
+  font-weight: 400;
+  letter-spacing: 0.05em;
+  margin: 0.2rem 0;
+  line-height: 1.4;
+}
+
+.tw-panel .cronometro-finalizar-torneo .cron-finalizar-hint {
+  font-size: 0.9em;
+  opacity: 0.9;
+  margin-top: 0.2rem;
+  line-height: 1.4;
+}
+
+#cronometroOverlay {
+  position: fixed;
+  inset: 0;
+  z-index: 99999;
+  background: linear-gradient(135deg, #1e1b4b 0%, #4c1d95 50%, #831843 100%);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  font-family: 'Inter', system-ui, sans-serif;
+}
+
+#cronometroOverlay .cron-box {
+  width: 90%;
+  max-width: 32.5rem;
+  background: rgba(0, 0, 0, 0.35);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 0.4rem;
+  padding: 1rem;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+#cronometroOverlay .cron-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+}
+
+#cronometroOverlay .cron-header-actions {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+#cronometroOverlay .btn-retornar-secondary {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+#cronometroOverlay .btn-retornar-secondary:hover {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+#cronometroOverlay .btn-retornar-success {
+  width: 100%;
+  background: #22c55e;
+}
+
+#cronometroOverlay .btn-retornar-success:hover {
+  background: #16a34a;
+}
+
+#cronometroOverlay .cron-header h1 {
+  font-size: clamp(1.1rem, 2vw, 1.25rem);
+  font-weight: 500;
+  margin: 0;
+}
+
+#cronometroOverlay .btn-retornar {
+  background: #3b82f6;
+  color: #fff;
+  padding: 0.6rem 1.2rem;
+  border-radius: 0.625rem;
+  border: none;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+#cronometroOverlay .btn-retornar:hover {
+  background: #2563eb;
+}
+
+#cronometroOverlay #configPanelCron {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 0.75rem;
+  padding: 1.25rem;
+  margin-bottom: 1.25rem;
+  display: none;
+}
+
+#cronometroOverlay .config-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+#cronometroOverlay .config-grid label {
+  display: block;
+  font-weight: 500;
+  margin-bottom: 0.5rem;
+  font-size: 1rem;
+}
+
+#cronometroOverlay .config-grid input {
+  width: 100%;
+  padding: 0.75rem;
+  border-radius: 0.625rem;
+  font-size: clamp(1rem, 2vw, 1.25rem);
+  font-weight: 500;
+  text-align: center;
+  background: rgba(255, 255, 255, 0.2);
+  color: #fff;
+  border: 0.125rem solid rgba(255, 255, 255, 0.3);
+}
+
+#cronometroOverlay .cron-display {
+  text-align: center;
+  padding: 1.5rem 0;
+}
+
+#cronometroOverlay #tiempoDisplayCron {
+  font-size: clamp(2.5rem, 12vw, 6rem);
+  font-weight: 900;
+  line-height: 1.1;
+  text-shadow: 0 0.25rem 1.25rem rgba(0, 0, 0, 0.4);
+}
+
+#cronometroOverlay #estadoDisplayCron {
+  font-size: clamp(1rem, 2vw, 1.25rem);
+  opacity: 0.9;
+  margin-top: 0.5rem;
+}
+
+#cronometroOverlay .cron-controles {
+  display: flex;
+  gap: 1rem;
+  justify-content: center;
+  margin-top: 1.5rem;
+}
+
+#cronometroOverlay .cron-controles button {
+  min-height: 2.75rem;
+  padding: 0.75rem 1.5rem;
+  border-radius: 0.625rem;
+  border: none;
+  font-size: clamp(1rem, 2vw, 1.25rem);
+  cursor: pointer;
+  transition: transform 0.2s ease, background-color 0.2s ease;
+}
+
+#cronometroOverlay .cron-controles #btnIniciarCron {
+  background: #22c55e;
+  color: #fff;
+}
+
+#cronometroOverlay .cron-controles #btnIniciarCron:hover:not(:disabled) {
+  background: #16a34a;
+  transform: translateY(-0.125rem);
+}
+
+#cronometroOverlay .cron-controles #btnDetenerCron {
+  background: #ef4444;
+  color: #fff;
+}
+
+#cronometroOverlay .cron-controles #btnDetenerCron:hover:not(:disabled) {
+  background: #dc2626;
+  transform: translateY(-0.125rem);
+}
+
+#cronometroOverlay .cron-controles button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+}
+
+@keyframes cronPulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.8; transform: scale(1.02); }
+}
+
+.tw-panel .alert-success,
+.tw-panel .alert-error {
+  padding: 5px 10px;
+  border-radius: 0.35rem;
+  margin-bottom: 0.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 1em;
+  border: 1px solid;
+  line-height: 1.4;
+}
+
+.tw-panel .alert-success {
+  background: #dcfce7;
+  border-color: #22c55e;
+  color: #166534;
+}
+
+.tw-panel .alert-error {
+  background: #fee2e2;
+  border-color: #ef4444;
+  color: #991b1b;
+}
+
+.tw-panel .ronda-info {
+  background: #eff6ff;
+  border-left: 1px solid #3b82f6;
+  border-radius: 0.35rem;
+  padding: 5px 10px;
+  margin-bottom: 0.5rem;
+  line-height: 1.4;
+}
+
+.tw-panel .ronda-info .text-gray-600 {
+  color: #4b5563;
+}
+
+.tw-panel .panel-empty-hint {
+  background: #f9fafb;
+  border: 1px solid #e0e0e0;
+  border-radius: 0.35rem;
+  padding: 5px 10px;
+  text-align: center;
+  color: #6b7280;
+  font-size: 1em;
+  line-height: 1.4;
+}
+
+.tw-panel .panel-success-badge {
+  background: #dcfce7;
+  color: #15803d;
+  border: 1px solid rgba(21, 128, 61, 0.3);
+  border-radius: 0.35rem;
+  padding: 5px 10px;
+  text-align: center;
+  font-weight: 500;
+  line-height: 1.4;
+}
+
+.tw-panel .panel-alert-locked {
+  background: #f3f4f6;
+  border-left: 1px solid #6b7280;
+  border-radius: 0.35rem;
+  padding: 5px 10px;
+  color: #374151;
+  line-height: 1.4;
+}
+
+.tw-panel .panel-card hr {
+  border: 0;
+  border-top: 1px solid #e0e0e0;
+  margin: 0.35rem 0;
+}
+
+.tw-panel .panel-btn-badge {
+  background-color: rgba(255, 255, 255, 0.3);
+  font-size: clamp(0.8125rem, 1.5vw, 0.875rem);
+  font-weight: 500;
+}
+
+.tw-panel .panel-countdown-box {
+  background-color: #fce7f3;
+  border: 1px solid #e0e0e0;
+  border-radius: 0.35rem;
+  padding: 5px 10px;
+  line-height: 1.4;
+}
+
+.tw-panel .panel-countdown-label {
+  color: #86198f;
+  font-weight: 500;
+  margin-bottom: 0.25rem;
+}
+
+.tw-panel .panel-countdown-time {
+  color: #86198f;
+}
+
+.tw-panel .panel-countdown-hint {
+  color: #701a75;
+  margin-top: 0.25rem;
+  font-size: 0.75rem;
+}
+
+/* Utilidades (rem) */
+.tw-panel .mb-2 { margin-bottom: 0.5rem; }
+.tw-panel .mb-3 { margin-bottom: 0.75rem; }
+.tw-panel .mb-4 { margin-bottom: 1rem; }
+.tw-panel .mb-6 { margin-bottom: 1.5rem; }
+.tw-panel .mt-2 { margin-top: 0.5rem; }
+.tw-panel .flex { display: flex; }
+.tw-panel .items-center { align-items: center; }
+.tw-panel .justify-between { justify-content: space-between; }
+.tw-panel .flex-wrap { flex-wrap: wrap; }
+.tw-panel .gap-2 { gap: 0.5rem; }
+.tw-panel .gap-4 { gap: 1rem; }
+.tw-panel .text-center { text-align: center; }
+.tw-panel .text-sm { font-size: clamp(0.8125rem, 1.5vw, 0.875rem); }
+.tw-panel .text-xl { font-size: clamp(1.125rem, 2vw, 1.25rem); }
+.tw-panel .font-bold { font-weight: 500; }
+.tw-panel .font-semibold { font-weight: 500; }
+.tw-panel .text-white { color: #fff !important; }
+.tw-panel .text-gray-500 { color: #6b7280; }
+.tw-panel .text-gray-600 { color: #4b5563; }
+.tw-panel .text-gray-700 { color: #374151; }
+.tw-panel .inline-flex { display: inline-flex; }
+.tw-panel .rounded-full { border-radius: 50rem; }
+.tw-panel .px-3 { padding-left: 0.75rem; padding-right: 0.75rem; }
+.tw-panel .py-1 { padding-top: 0.25rem; padding-bottom: 0.25rem; }
+.tw-panel .px-4 { padding-left: 1rem; padding-right: 1rem; }
+.tw-panel .py-2 { padding-top: 0.5rem; padding-bottom: 0.5rem; }
+.tw-panel .py-3 { padding-top: 0.75rem; padding-bottom: 0.75rem; }
+.tw-panel .ml-1 { margin-left: 0.25rem; }
+.tw-panel .ml-2 { margin-left: 0.5rem; }
+.tw-panel .ml-4 { margin-left: 1rem; }
+.tw-panel .mr-1 { margin-right: 0.25rem; }
+.tw-panel .mr-2 { margin-right: 0.5rem; }
+.tw-panel .me-1 { margin-inline-end: 0.25rem; }
+.tw-panel .me-2 { margin-inline-end: 0.5rem; }
+.tw-panel .mx-2 { margin-left: 0.5rem; margin-right: 0.5rem; }
+.tw-panel .text-xs { font-size: 0.75rem; }
+.tw-panel .opacity-70 { opacity: 0.7; }
+.tw-panel .opacity-75 { opacity: 0.75; }
+.tw-panel .border { border-width: 0.0625rem; }
+.tw-panel .border-2 { border-width: 0.125rem; }
+.tw-panel .rounded-lg { border-radius: 0.75rem; }
+.tw-panel .tabular-nums { font-variant-numeric: tabular-nums; }
+.tw-panel .d-flex { display: flex; }
+.tw-panel .flex-column { flex-direction: column; }
+.tw-panel .d-inline-block { display: inline-block; }
+.tw-panel .inline { display: inline; }
+.tw-panel .w-full { width: 100%; }
+
+.tw-panel,
+.tw-panel .panel-card,
+.tw-panel .panel-card-body,
+.tw-panel .panel-card-title {
+  text-overflow: clip;
+  overflow-wrap: break-word;
+  word-wrap: break-word;
+}
+
+/* ========== TABLET (600px): 2 columnas ========== */
+@media (min-width: 600px) {
+  .tw-panel .panel-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+/* ========== ESCRITORIO (768px): 13px, tablet 10" espacioso y organizado ========== */
+@media (min-width: 768px) {
+  html {
+    font-size: 13px;
+  }
+
+  .tw-panel {
+    padding: 0.6rem;
+  }
+
+  .tw-panel .panel-grid {
+    gap: 0.6rem;
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .tw-panel .panel-grid-mesas {
+    gap: 0.5rem;
+    grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr));
+  }
+}
+
+/* ========== DESKTOP (1024px): 3–4 columnas, espacioso ========== */
+@media (min-width: 1024px) {
+  .tw-panel .panel-grid {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 0.65rem;
+  }
+
+  .tw-panel .panel-grid.panel-grid--wide {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+
+/* ========== Panel moderno: fallbacks (clases usadas en panel-moderno.php) ========== */
+.tw-panel * { box-sizing: border-box; }
+.tw-panel .tw-btn {
+  display: flex; align-items: center; justify-content: center; width: 100%;
+  padding: 0.77rem 1rem; font-size: 0.9rem; font-weight: 600;
+  border-radius: 0.5rem; text-decoration: none; transition: all 0.2s ease;
+  border: none; cursor: pointer;
+}
+.tw-panel .tw-btn:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.2); }
+.tw-panel .tw-btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none !important; }
+.tw-panel .tw-btn i { margin-right: 0.5rem; font-size: 0.9rem; }
+
+.tw-panel .mb-4 { margin-bottom: 0.85rem; }
+.tw-panel .mb-6 { margin-bottom: 1.28rem; }
+.tw-panel nav ol { display: flex; align-items: center; gap: 0.43rem; font-size: 0.74rem; color: #6b7280; margin: 0; padding: 0; list-style: none; }
+.tw-panel nav a { color: #4b5563; text-decoration: none; }
+.tw-panel nav a:hover { color: #2563eb; }
+.tw-panel nav .text-gray-700 { color: #374151; font-weight: 500; }
+
+.tw-panel .panel-header {
+  background: linear-gradient(to right, #4f46e5, #7c3aed);
+  border-radius: 0.43rem; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);
+  padding: 0.64rem 0.85rem; margin-bottom: 0.64rem; color: white;
+}
+.tw-panel .panel-header-inner { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.85rem; }
+.tw-panel .panel-header .titulo-torneo { font-size: calc(1.5rem * 1.3); font-weight: 700; margin: 0 0 0.35rem 0; text-align: center; text-transform: uppercase; }
+.tw-panel .panel-header .meta { display: flex; flex-wrap: wrap; justify-content: center; gap: 0.85rem; font-size: calc(0.74rem + 1px); font-weight: bold; opacity: 0.95; padding-top: 0.35rem; border-top: 2px solid rgba(255,255,255,0.6); }
+.tw-panel .panel-header .meta i { margin-right: 0.21rem; }
+.tw-panel .panel-header .torneo-id { font-size: 1.91rem; font-weight: 800; opacity: 0.8; text-align: right; }
+.tw-panel .panel-header-grow { flex: 1; min-width: 0; }
+
+.tw-panel #btnCronometro {
+  background: linear-gradient(135deg, #0f766e 0%, #0d9488 50%, #14b8a6 100%) !important;
+  color: #ffffff !important; border: none;
+}
+.tw-panel #btnCronometro:hover {
+  background: linear-gradient(135deg, #0d5d56 0%, #0f766e 50%, #0d9488 100%) !important;
+  color: #ffffff !important; transform: scale(1.02);
+  box-shadow: 0 20px 25px -5px rgba(0,0,0,0.25);
+}
+.tw-panel #btnCronometro i { margin-right: 0.75rem; }
+
+.tw-panel .cronometro-finalizar-torneo {
+  background: linear-gradient(135deg, #0f766e 0%, #0d9488 50%, #14b8a6 100%) !important;
+  color: #ffffff !important; border: none; border-radius: 0.5rem;
+  padding: 1rem 1.25rem; margin-bottom: 0.5rem; text-align: center;
+  box-shadow: 0 4px 14px rgba(0,0,0,0.2); transition: transform 0.2s, box-shadow 0.2s;
+}
+.tw-panel .cronometro-finalizar-torneo:hover { box-shadow: 0 20px 25px -5px rgba(0,0,0,0.25); }
+.tw-panel .cronometro-finalizar-torneo .cron-finalizar-label { font-size: 0.9rem; font-weight: 600; opacity: 0.95; margin-bottom: 0.35rem; }
+.tw-panel .cronometro-finalizar-torneo .countdown-tiempo-restante { font-size: 2.5rem; font-weight: 800; letter-spacing: 0.05em; margin: 0.25rem 0; }
+.tw-panel .cronometro-finalizar-torneo .cron-finalizar-hint { font-size: 0.75rem; opacity: 0.9; margin-top: 0.25rem; }
+
+/* Cronómetro: ventana flotante desvinculada, redimensionable y con +40% fuente bold */
+#cronometroOverlay {
+  position: fixed;
+  right: 1rem;
+  bottom: 1rem;
+  width: 320px;
+  min-width: 280px;
+  min-height: 220px;
+  max-width: 90vw;
+  max-height: 90vh;
+  z-index: 99999;
+  background: linear-gradient(135deg, #1e1b4b 0%, #4c1d95 50%, #831843 100%);
+  display: none;
+  align-items: stretch;
+  justify-content: stretch;
+  color: white;
+  font-family: 'Segoe UI', system-ui, sans-serif;
+  font-weight: 700;
+  border-radius: 12px;
+  box-shadow: 0 25px 50px rgba(0,0,0,0.4);
+  overflow: auto;
+  resize: both;
+  pointer-events: auto;
+}
+#cronometroOverlay .cron-box {
+  width: 100%;
+  min-height: 100%;
+  background: rgba(0,0,0,0.2);
+  border-radius: 12px;
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+}
+#cronometroOverlay .cron-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.75rem;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  cursor: move;
+  user-select: none;
+}
+#cronometroOverlay .cron-header h1 { font-size: 1.2rem; font-weight: 700; margin: 0; }
+#cronometroOverlay .btn-retornar { background: #3b82f6; color: white; padding: 0.5rem 0.85rem; border-radius: 0.5rem; border: none; font-weight: 700; cursor: pointer; font-size: 0.98rem; }
+#cronometroOverlay .btn-retornar:hover { background: #2563eb; }
+#cronometroOverlay #configPanelCron { background: rgba(255,255,255,0.1); border-radius: 0.5rem; padding: 0.75rem; margin-bottom: 0.75rem; display: none; }
+#cronometroOverlay .config-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; margin-bottom: 0.5rem; }
+#cronometroOverlay .config-grid label { display: block; font-weight: 700; margin-bottom: 0.25rem; font-size: 0.98rem; }
+#cronometroOverlay .config-grid input { width: 100%; padding: 0.5rem; border-radius: 0.35rem; font-size: 1.2rem; font-weight: 700; text-align: center; background: rgba(255,255,255,0.2); color: white; border: 1px solid rgba(255,255,255,0.3); }
+#cronometroOverlay .cron-display { text-align: center; padding: 0.75rem 0; }
+#cronometroOverlay #tiempoDisplayCron { font-family: 'Arial Black', sans-serif; font-size: 2.8rem; font-weight: 900; line-height: 1.1; text-shadow: 0 2px 10px rgba(0,0,0,0.5); }
+#cronometroOverlay #estadoDisplayCron { font-size: 1.05rem; font-weight: 700; opacity: 0.95; margin-top: 0.25rem; }
+#cronometroOverlay .cron-controles { display: flex; gap: 0.6rem; justify-content: center; margin-top: 0.75rem; }
+#cronometroOverlay .cron-controles button { padding: 0.6rem 1rem; border-radius: 0.5rem; border: none; font-size: 1.2rem; font-weight: 700; cursor: pointer; transition: all 0.2s; }
+#cronometroOverlay .cron-controles #btnIniciarCron { background: #22c55e; color: white; }
+#cronometroOverlay .cron-controles #btnIniciarCron:hover:not(:disabled) { background: #16a34a; transform: scale(1.05); }
+#cronometroOverlay .cron-controles #btnDetenerCron { background: #ef4444; color: white; }
+#cronometroOverlay .cron-controles #btnDetenerCron:hover:not(:disabled) { background: #dc2626; transform: scale(1.05); }
+#cronometroOverlay .cron-controles button:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+#cronometroOverlay i.fas,
+#cronometroOverlay i.far { display: none !important; }
+@keyframes cronPulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:0.7;transform:scale(1.05)} }
+
+.tw-panel .alert-success { background: #dcfce7; border: 1px solid #22c55e; color: #166534; padding: 0.64rem 0.85rem; border-radius: 0.43rem; margin-bottom: 0.85rem; display: flex; align-items: center; justify-content: space-between; font-size: 0.9rem; }
+.tw-panel .alert-error { background: #fee2e2; border: 1px solid #ef4444; color: #991b1b; padding: 0.64rem 0.85rem; border-radius: 0.43rem; margin-bottom: 0.85rem; display: flex; align-items: center; justify-content: space-between; font-size: 0.9rem; }
+.tw-panel .ronda-info { background: #eff6ff; border-left: 4px solid #3b82f6; border-radius: 0.43rem; padding: 0.43rem 0.64rem; margin-bottom: 0.64rem; }
+
+.tw-panel .tw-columns { display: flex; gap: 0.85rem; flex-wrap: wrap; }
+.tw-panel .tw-column { flex: 1; min-width: 238px; }
+.tw-panel .w-1\/3 { width: 33.333%; min-width: 238px; }
+
+.tw-panel .bg-white { background-color: #fff; }
+.tw-panel .rounded-xl { border-radius: 0.64rem; }
+.tw-panel .shadow-md { box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -2px rgba(0,0,0,0.1); }
+.tw-panel .border-gray-200 { border: 1px solid #e5e7eb; }
+.tw-panel .overflow-hidden { overflow: hidden; }
+.tw-panel .h-full { min-height: 100%; }
+.tw-panel .p-5 { padding: 0.64rem 0.85rem; }
+.tw-panel .space-y-4 > * + * { margin-top: 0.43rem; }
+.tw-panel .space-y-4 { display: flex; flex-direction: column; gap: 0.43rem; }
+
+.tw-panel .from-emerald-500 { background: linear-gradient(to right, #10b981, #14b8a6); }
+.tw-panel .from-blue-500 { background: linear-gradient(to right, #3b82f6, #6366f1); }
+.tw-panel .from-amber-500 { background: linear-gradient(to right, #f59e0b, #f97316); }
+.tw-panel [class*="from-emerald"] { background: linear-gradient(to right, #10b981, #14b8a6) !important; }
+.tw-panel [class*="from-blue"] { background: linear-gradient(to right, #3b82f6, #6366f1) !important; }
+.tw-panel [class*="from-amber"] { background: linear-gradient(to right, #f59e0b, #f97316) !important; }
+.tw-panel div[class*="bg-gradient-to-r"] { padding: 0.85rem 1.06rem; color: white; }
+.tw-panel .text-white { color: white !important; }
+.tw-panel .text-xl { font-size: 1.06rem; }
+.tw-panel .font-bold { font-weight: 700; }
+.tw-panel .flex { display: flex; }
+.tw-panel .items-center { align-items: center; }
+.tw-panel .mr-3 { margin-right: 0.75rem; }
+
+.tw-panel .tw-btn.bg-blue-500,
+.tw-panel a.tw-btn[class*="bg-blue"] { background-color: #3b82f6 !important; color: white !important; }
+.tw-panel .tw-btn.bg-blue-500:hover,
+.tw-panel a.tw-btn[class*="bg-blue"]:hover { background-color: #2563eb !important; }
+.tw-panel .tw-btn.bg-amber-500,
+.tw-panel a.tw-btn[class*="bg-amber"] { background-color: #f59e0b !important; color: white !important; }
+.tw-panel .tw-btn.bg-amber-500:hover,
+.tw-panel a.tw-btn[class*="bg-amber"]:hover { background-color: #d97706 !important; }
+.tw-panel .tw-btn.bg-emerald-500,
+.tw-panel a.tw-btn[class*="bg-emerald"] { background-color: #10b981 !important; color: white !important; }
+.tw-panel .tw-btn.bg-emerald-500:hover,
+.tw-panel a.tw-btn[class*="bg-emerald"]:hover { background-color: #059669 !important; }
+.tw-panel .tw-btn.bg-cyan-500,
+.tw-panel a.tw-btn[class*="bg-cyan"] { background-color: #06b6d4 !important; color: white !important; }
+.tw-panel .tw-btn.bg-cyan-500:hover,
+.tw-panel a.tw-btn[class*="bg-cyan"]:hover { background-color: #0891b2 !important; }
+.tw-panel .tw-btn.bg-red-500,
+.tw-panel a.tw-btn[class*="bg-red"] { background-color: #ef4444 !important; color: white !important; }
+.tw-panel .tw-btn.bg-red-500:hover,
+.tw-panel a.tw-btn[class*="bg-red"]:hover { background-color: #dc2626 !important; }
+.tw-panel .tw-btn.bg-gray-400 { background-color: #9ca3af !important; color: white !important; }
+.tw-panel .tw-btn.bg-purple-500,
+.tw-panel a.tw-btn[class*="bg-purple"] { background-color: #a855f7 !important; color: white !important; }
+.tw-panel .tw-btn.bg-purple-500:hover,
+.tw-panel a.tw-btn[class*="bg-purple"]:hover { background-color: #9333ea !important; }
+.tw-panel .tw-btn.bg-indigo-500,
+.tw-panel a.tw-btn[class*="bg-indigo"] { background-color: #6366f1 !important; color: white !important; }
+.tw-panel .tw-btn.bg-indigo-500:hover,
+.tw-panel a.tw-btn[class*="bg-indigo"]:hover { background-color: #4f46e5 !important; }
+.tw-panel .tw-btn.bg-teal-500,
+.tw-panel a.tw-btn[class*="bg-teal"] { background-color: #14b8a6 !important; color: white !important; }
+.tw-panel .tw-btn.bg-teal-500:hover,
+.tw-panel a.tw-btn[class*="bg-teal"]:hover { background-color: #0d9488 !important; }
+.tw-panel .tw-btn.bg-rose-500,
+.tw-panel a.tw-btn[class*="bg-rose"] { background-color: #f43f5e !important; color: white !important; }
+.tw-panel .tw-btn.bg-rose-500:hover,
+.tw-panel a.tw-btn[class*="bg-rose"]:hover { background-color: #e11d48 !important; }
+
+.tw-panel .bg-gray-100 { background-color: #f3f4f6; }
+.tw-panel .border-l-4 { border-left-width: 4px; }
+.tw-panel .border-gray-500 { border-color: #6b7280; }
+.tw-panel .text-gray-700 { color: #374151; }
+.tw-panel .font-semibold { font-weight: 600; }
+.tw-panel .bg-green-100 { background-color: #dcfce7; }
+.tw-panel .text-green-700 { color: #15803d; }
+.tw-panel .bg-gray-50 { background-color: #f9fafb; }
+.tw-panel .text-gray-500 { color: #6b7280; }
+.tw-panel .text-sm { font-size: 0.74rem; }
+
+@media (max-width: 1024px) {
+  .tw-panel .tw-columns { flex-direction: column !important; }
+  .tw-panel .tw-column { width: 100% !important; margin-bottom: 1rem; }
+}
+
+/* ========== Panel de control: +40% tipografía, bold, sin iconos (solo esta página) ========== */
+.tw-panel {
+  font-size: 0.84em;
+  font-weight: 700;
+}
+.tw-panel .tw-btn,
+.tw-panel a.tw-btn {
+  font-size: 0.91rem !important;
+  padding: 0.5rem 0.7rem;
+  font-weight: 700 !important;
+  color: #000 !important;
+}
+.tw-panel .tw-btn i {
+  display: none !important;
+}
+.tw-panel nav ol {
+  font-size: 0.616rem;
+  font-weight: 700;
+}
+.tw-panel .panel-header .titulo-torneo {
+  font-size: 1.26rem !important;
+  font-weight: 700 !important;
+}
+.tw-panel .panel-header .meta {
+  font-size: 0.616rem !important;
+  font-weight: 700 !important;
+}
+.tw-panel .panel-header .torneo-id {
+  font-size: 1.61rem !important;
+  font-weight: 700 !important;
+}
+.tw-panel .text-xl {
+  font-size: 0.9rem !important;
+  font-weight: 700 !important;
+}
+.tw-panel .text-sm {
+  font-size: 0.616rem !important;
+  font-weight: 700 !important;
+}
+.tw-panel .alert-success,
+.tw-panel .alert-error {
+  font-size: 0.756rem !important;
+  padding: 0.45rem 0.6rem;
+  font-weight: 700 !important;
+}
+.tw-panel .ronda-info {
+  font-size: 0.616rem;
+  padding: 0.3rem 0.45rem;
+  font-weight: 700 !important;
+}
+.tw-panel .p-5,
+.tw-panel .space-y-4 {
+  font-size: 0.616rem;
+  padding: 0.45rem 0.6rem;
+  font-weight: 700 !important;
+}
+.tw-panel div[class*="bg-gradient-to-r"] {
+  font-size: 0.862rem;
+  padding: 0.55rem 0.75rem;
+  font-weight: 700 !important;
+}
+.tw-panel div[class*="bg-gradient-to-r"] h3 {
+  font-size: 0.862rem !important;
+  color: #000 !important;
+}
+.tw-panel .text-xs {
+  font-size: 0.63rem !important;
+  font-weight: 700 !important;
+}
+.tw-panel .cronometro-finalizar-torneo .cron-finalizar-label {
+  font-size: 0.756rem !important;
+  font-weight: 700 !important;
+}
+.tw-panel .cronometro-finalizar-torneo .countdown-tiempo-restante {
+  font-size: 2.1rem !important;
+  font-weight: 800 !important;
+}
+.tw-panel .cronometro-finalizar-torneo .cron-finalizar-hint {
+  font-size: 0.63rem !important;
+  font-weight: 700 !important;
+}
+.tw-panel #btnCronometro {
+  font-size: 0.616rem !important;
+  padding: 0.45rem 0.6rem;
+  font-weight: 700 !important;
+}
+.tw-panel .mb-4 { margin-bottom: 0.55rem; }
+.tw-panel .mb-6 { margin-bottom: 0.85rem; }
+/* Ocultar todos los iconos en el panel de control (solo esta página) */
+.tw-panel i.fas,
+.tw-panel i.far,
+.tw-panel i.fab {
+  display: none !important;
+}
+/* Texto de botones en negro (los fondos conservan su color) */
+.tw-panel .tw-btn[class*="bg-"],
+.tw-panel a.tw-btn[class*="bg-"] {
+  color: #000 !important;
+}
+
+/* ========== Panel: incrementos de fuente (nombre/logo +100%, breadcrumb +150%, meta +100%, ronda +150%, tarjetas +100%, cronómetro +100%) ========== */
+/* Nombre del torneo y logo / ID: +100% */
+.tw-panel .panel-header .titulo-torneo {
+  font-size: 2.52rem !important;
+}
+.tw-panel .panel-header .torneo-id {
+  font-size: 3.22rem !important;
+}
+.tw-panel .panel-header .text-sm.opacity-70 {
+  font-size: 1.23rem !important;
+}
+/* Breadcrumb: +150% */
+.tw-panel nav[aria-label="breadcrumb"] ol,
+.tw-panel nav[aria-label="breadcrumb"] a,
+.tw-panel nav[aria-label="breadcrumb"] .text-gray-700 {
+  font-size: 1.54rem !important;
+}
+/* Línea de fecha, modalidad y rondas (meta): +100% */
+.tw-panel .panel-header .meta {
+  font-size: 1.23rem !important;
+}
+/* Información ronda actual, mesas, inscritos, pendientes: +150% */
+.tw-panel .ronda-info {
+  font-size: 1.54rem !important;
+  padding: 0.5rem 0.65rem;
+}
+.tw-panel .ronda-info .text-gray-600,
+.tw-panel .ronda-info .text-blue-600,
+.tw-panel .ronda-info .text-green-600,
+.tw-panel .ronda-info .text-indigo-600,
+.tw-panel .ronda-info .text-amber-600,
+.tw-panel .ronda-info .font-semibold {
+  font-size: 1.54rem !important;
+}
+.tw-panel .ronda-info .text-xl {
+  font-size: 2.25rem !important;
+}
+/* Títulos de las tarjetas (Gestión de Mesas, Operaciones, Resultados): +100% */
+.tw-panel div[class*="bg-gradient-to-r"] h3 {
+  font-size: 1.72rem !important;
+}
+.tw-panel div[class*="bg-gradient-to-r"] {
+  font-size: 1.72rem !important;
+}
+/* Botón Activar cronómetro: +100% */
+.tw-panel #btnCronometro {
+  font-size: 1.23rem !important;
+  padding: 0.6rem 0.9rem;
+}
+.tw-panel #btnCronometro #lblCronometro {
+  font-size: 1.23rem !important;
+}
