@@ -18,6 +18,21 @@ if (!isset($base_url) || !isset($use_standalone)) {
     $use_standalone = in_array($script_actual, ['admin_torneo.php', 'panel_torneo.php']);
     $base_url = $use_standalone ? $script_actual : 'index.php?page=torneo_gestion';
 }
+$context_switcher = isset($context_switcher) && is_array($context_switcher)
+    ? $context_switcher
+    : ['active_tournament_id' => (int)($torneo['id'] ?? 0), 'items' => []];
+$activeContextName = (string)($torneo['nombre'] ?? 'Torneo');
+$activeContextViewId = (int)($torneo['id'] ?? 0);
+if (!empty($context_switcher['items']) && is_array($context_switcher['items'])) {
+    $activeContextId = (int)($context_switcher['active_tournament_id'] ?? ($torneo['id'] ?? 0));
+    foreach ($context_switcher['items'] as $ctxItem) {
+        if ((int)($ctxItem['id'] ?? 0) === $activeContextId) {
+            $activeContextName = (string)($ctxItem['nombre'] ?? $activeContextName);
+            $activeContextViewId = (int)($ctxItem['id'] ?? $activeContextViewId);
+            break;
+        }
+    }
+}
 ?>
 <!DOCTYPE html>
 <html lang="es">
@@ -124,6 +139,8 @@ if (!isset($base_url) || !isset($use_standalone)) {
             display: flex;
             align-items: center;
             gap: 12px;
+            max-width: calc(100vw - 32px);
+            overflow: hidden;
         }
         
         .selector-mesas label {
@@ -144,6 +161,58 @@ if (!isset($base_url) || !isset($use_standalone)) {
         .selector-mesas select:focus {
             outline: none;
             border-color: #3b82f6;
+        }
+        .header-context-switch {
+            display: inline-flex;
+            align-items: center;
+            background: #f3f4f6;
+            border: 1px solid #d1d5db;
+            border-radius: 999px;
+            padding: 2px;
+            gap: 2px;
+            flex-shrink: 0;
+        }
+        .header-context-switch .switch-item {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            text-decoration: none;
+            min-width: 78px;
+            padding: 5px 7.6px;
+            border-radius: 999px;
+            font-size: 11px;
+            font-weight: 700;
+            color: #374151;
+            line-height: 1;
+            white-space: nowrap;
+        }
+        .header-context-switch .switch-item:hover { background: #e5e7eb; color: #111827; }
+        .header-context-switch .switch-item.is-active { background: #005c44; color: #fff; }
+        .header-context-switch.is-compact { gap: 5px; }
+        .header-context-switch.is-compact .switch-item { font-size: 13px; min-width: 66px; padding: 4px 5.7px; }
+        .header-context-switch .text-id-ghost { font-size: 10px; color: rgba(75,85,99,0.68); margin-left: 4px; font-weight: 500; }
+        .header-context-info {
+            display: inline-flex;
+            align-items: center;
+            font-size: 12px;
+            font-weight: 600;
+            color: #4b5563;
+            white-space: nowrap;
+        }
+        .header-context-info .context-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            display: inline-block;
+            margin-right: 6px;
+            background: #3498db;
+        }
+        @media (max-width: 1366px) {
+            .selector-mesas { gap: 8px; padding: 10px 12px; }
+            .selector-mesas label { font-size: 13px; }
+            .selector-mesas select { min-width: 120px; font-size: 13px; padding: 6px 10px; }
+            .header-context-switch .switch-item { min-width: 70px; padding: 4px 7px; font-size: 10px; }
+            .header-context-info { font-size: 11px; }
         }
         
         .hoja-mesa {
@@ -426,6 +495,35 @@ if (!isset($base_url) || !isset($use_standalone)) {
                 <option value="hoja-mesa-<?php echo $num_mesa; ?>">Mesa <?php echo $num_mesa; ?> (hoja <?php echo $idx + 1; ?>)</option>
             <?php endforeach; ?>
         </select>
+        <span class="header-context-info">
+            <span class="context-dot" aria-hidden="true"></span>
+            Visualizando: Torneo <?php echo htmlspecialchars($activeContextName, ENT_QUOTES, 'UTF-8'); ?> [#<?php echo $activeContextViewId; ?>]
+        </span>
+        <?php if (!empty($context_switcher['items'])): ?>
+            <?php
+            $activeTournamentId = (int)($context_switcher['active_tournament_id'] ?? 0);
+            $sepSwitch = $use_standalone ? '?' : '&';
+            $switchCount = count($context_switcher['items']);
+            ?>
+            <div class="header-context-switch<?php echo $switchCount >= 3 ? ' is-compact' : ''; ?>" role="group" aria-label="Selector de contexto del torneo">
+                <?php foreach ($context_switcher['items'] as $switchItem): ?>
+                    <?php
+                    $switchId = (int)($switchItem['id'] ?? 0);
+                    $switchLabel = (string)($switchItem['nombre'] ?? ('Torneo #' . $switchId));
+                    $switchParentEventId = (int)($switchItem['parent_event_id'] ?? 0);
+                    $isActiveSwitch = ($switchId === $activeTournamentId);
+                    $switchHref = $base_url . $sepSwitch . 'action=hojas_anotacion&torneo_id=' . $switchId . '&ronda=' . (int)$ronda . '&switch_torneo_id=' . $switchId . '&return_action=hojas_anotacion';
+                    ?>
+                    <a href="<?php echo htmlspecialchars($switchHref, ENT_QUOTES, 'UTF-8'); ?>"
+                       class="switch-item js-context-switch<?php echo $isActiveSwitch ? ' is-active' : ''; ?>"
+                       aria-pressed="<?php echo $isActiveSwitch ? 'true' : 'false'; ?>"
+                       title="<?php echo htmlspecialchars('ID Sistema: ' . $switchId . ' | Evento Padre: ' . $switchParentEventId, ENT_QUOTES, 'UTF-8'); ?>">
+                        <?php echo htmlspecialchars($switchLabel, ENT_QUOTES, 'UTF-8'); ?>
+                        <span class="text-id-ghost">#<?php echo $switchId; ?></span>
+                    </a>
+                <?php endforeach; ?>
+            </div>
+        <?php endif; ?>
     </div>
 
     <?php 
@@ -720,6 +818,7 @@ if (!isset($base_url) || !isset($use_standalone)) {
             window.history.back();
         }
     });
+
     </script>
 </body>
 </html>

@@ -7,6 +7,33 @@ $use_standalone = in_array($script_actual, ['admin_torneo.php', 'panel_torneo.ph
 $base_url = $use_standalone ? $script_actual : 'index.php?page=torneo_gestion';
 $action_param = $use_standalone ? '?' : '&';
 $esTorneoParejas = in_array((int)($torneo['modalidad'] ?? 0), [2, 4], true);
+$context_switcher = isset($context_switcher) && is_array($context_switcher)
+    ? $context_switcher
+    : ['active_tournament_id' => (int)($torneo['id'] ?? 0), 'items' => []];
+$contextGenero = '';
+$contextBadgeIndex = 0;
+$contextBadgeName = (string)($torneo['nombre'] ?? 'Torneo activo');
+if (!empty($context_switcher['items']) && is_array($context_switcher['items'])) {
+    $activeContextId = (int)($context_switcher['active_tournament_id'] ?? ($torneo['id'] ?? 0));
+    foreach ($context_switcher['items'] as $idx => $ctxItem) {
+        if ((int)($ctxItem['id'] ?? 0) === $activeContextId) {
+            $contextGenero = strtoupper((string)($ctxItem['genero'] ?? ''));
+            $contextBadgeIndex = (int)$idx % 3;
+            $contextBadgeName = (string)($ctxItem['nombre'] ?? $contextBadgeName);
+            break;
+        }
+    }
+}
+if ($contextGenero === '') {
+    $nombreCtx = mb_strtolower((string)($torneo['nombre'] ?? ''), 'UTF-8');
+    if (preg_match('/\b(femenino|fem|damas)\b/ui', $nombreCtx)) {
+        $contextGenero = 'F';
+    } elseif (preg_match('/\b(masculino|masc|caballeros)\b/ui', $nombreCtx)) {
+        $contextGenero = 'M';
+    }
+}
+$contextClass = $contextGenero === 'F' ? 'context-femenino' : 'context-masculino';
+$contextLabel = $contextGenero === 'F' ? 'Femenino' : 'Masculino';
 ?>
 
 <style>
@@ -20,6 +47,44 @@ $esTorneoParejas = in_array((int)($torneo['modalidad'] ?? 0), [2, 4], true);
         max-width: 100%;
         margin-left: auto;
         margin-right: auto;
+    }
+    .registrar-resultados-wrap.context-masculino .formulario-resultados-sticky {
+        border-top: 4px solid #3498db;
+    }
+    .registrar-resultados-wrap.context-femenino .formulario-resultados-sticky {
+        border-top: 4px solid #e91e63;
+    }
+    .registrar-resultados-wrap.context-masculino .formulario-resultados-sticky .card-body .form-control:not(.is-invalid):not(.is-valid),
+    .registrar-resultados-wrap.context-masculino .formulario-resultados-sticky .card-body textarea:not(.is-invalid):not(.is-valid),
+    .registrar-resultados-wrap.context-masculino .formulario-resultados-sticky .card-body select:not(.is-invalid):not(.is-valid) {
+        background-color: rgba(52, 152, 219, 0.06);
+    }
+    .registrar-resultados-wrap.context-femenino .formulario-resultados-sticky .card-body .form-control:not(.is-invalid):not(.is-valid),
+    .registrar-resultados-wrap.context-femenino .formulario-resultados-sticky .card-body textarea:not(.is-invalid):not(.is-valid),
+    .registrar-resultados-wrap.context-femenino .formulario-resultados-sticky .card-body select:not(.is-invalid):not(.is-valid) {
+        background-color: rgba(233, 30, 99, 0.06);
+    }
+    .contexto-genero-badge {
+        font-size: 0.8rem;
+        font-weight: 700;
+        letter-spacing: 0.01em;
+        border-radius: 999px;
+        padding: 0.35rem 0.65rem;
+    }
+    .contexto-genero-badge.theme-0 {
+        background-color: rgba(52, 152, 219, 0.14);
+        color: #2a6b90;
+        border: 1px solid rgba(52, 152, 219, 0.31);
+    }
+    .contexto-genero-badge.theme-1 {
+        background-color: rgba(233, 30, 99, 0.12);
+        color: #9f2c53;
+        border: 1px solid rgba(233, 30, 99, 0.3);
+    }
+    .contexto-genero-badge.theme-2 {
+        background-color: rgba(16, 185, 129, 0.12);
+        color: #1b7a58;
+        border: 1px solid rgba(16, 185, 129, 0.28);
     }
     
     /* Navegación de partidas: 10% del ancho de pantalla (solo pantallas >= 14") */
@@ -525,7 +590,7 @@ $esTorneoParejas = in_array((int)($torneo['modalidad'] ?? 0), [2, 4], true);
 <link href="https://fonts.googleapis.com/css2?family=Lato:wght@400;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="assets/css/modern-registro-resultados.css">
 
-<div class="container-fluid registrar-resultados-wrap">
+<div class="container-fluid registrar-resultados-wrap <?php echo htmlspecialchars($contextClass, ENT_QUOTES, 'UTF-8'); ?>">
     <?php if (!empty($es_operador_ambito) && !empty($mesas_ambito)): ?>
     <div class="alert alert-info py-2 mb-2 d-flex align-items-center">
         <i class="fas fa-user-cog me-2"></i>
@@ -614,8 +679,11 @@ $esTorneoParejas = in_array((int)($torneo['modalidad'] ?? 0), [2, 4], true);
             <div class="card formulario-resultados-sticky">
                 <div class="card-header d-flex flex-row justify-content-between align-items-center flex-wrap gap-2" style="background-color: #e3f2fd; color: #1565c0;">
                     <div class="d-flex flex-column align-items-start">
-                        <h4 class="mb-0">
-                            <i class="fas fa-keyboard mr-2"></i>Registro de Resultados
+                        <h4 class="mb-0 d-flex align-items-center gap-2 flex-wrap">
+                            <i class="fas fa-keyboard mr-2"></i>Carga de Resultados
+                            <span class="badge contexto-genero-badge theme-<?php echo (int)$contextBadgeIndex; ?>" title="Contexto: <?php echo htmlspecialchars($contextLabel, ENT_QUOTES, 'UTF-8'); ?>">
+                                <?php echo htmlspecialchars($contextBadgeName, ENT_QUOTES, 'UTF-8'); ?>
+                            </span>
                         </h4>
                         <?php if (!empty($mostrar_countdown_correcciones) && !empty($countdown_fin_timestamp)): ?>
                         <p class="mb-0 mt-1 font-weight-bold" style="font-size: 1.1rem;">

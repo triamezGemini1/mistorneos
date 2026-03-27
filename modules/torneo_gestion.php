@@ -75,6 +75,236 @@ function buildRedirectUrl($action, $params = []) {
 }
 
 /**
+ * Verifica dinámicamente si una columna existe en tournaments.
+ */
+function tournamentsColumnExists(string $columnName): bool {
+    static $cache = [];
+    if (isset($cache[$columnName])) {
+        return $cache[$columnName];
+    }
+    try {
+        $pdo = DB::pdo();
+        $stmt = $pdo->prepare("
+            SELECT COUNT(*)
+            FROM INFORMATION_SCHEMA.COLUMNS
+            WHERE TABLE_SCHEMA = DATABASE()
+              AND TABLE_NAME = 'tournaments'
+              AND COLUMN_NAME = ?
+        ");
+        $stmt->execute([$columnName]);
+        $cache[$columnName] = ((int)$stmt->fetchColumn()) > 0;
+    } catch (Throwable $e) {
+        $cache[$columnName] = false;
+    }
+    return $cache[$columnName];
+}
+
+/**
+ * Normaliza nombre de torneo para comparar base común.
+ */
+function normalizarNombreBaseTorneo(string $nombre): string {
+    $txt = mb_strtolower(trim($nombre), 'UTF-8');
+    $txt = preg_replace('/\b(masculino|femenino|masc|fem|caballeros|damas)\b/ui', ' ', $txt);
+    $txt = preg_replace('/[^a-z0-9]+/ui', ' ', $txt);
+    $txt = preg_replace('/\s+/u', ' ', (string)$txt);
+    return trim((string)$txt);
+}
+
+/**
+ * Detecta género del torneo desde su nombre.
+ */
+function detectarGeneroTorneoPorNombre(string $nombre): string {
+    $txt = mb_strtolower($nombre, 'UTF-8');
+    if (preg_match('/\b(femenino|fem|damas)\b/ui', $txt)) {
+        return 'F';
+    }
+    if (preg_match('/\b(masculino|masc|caballeros)\b/ui', $txt)) {
+        return 'M';
+    }
+    return '';
+}
+
+/**
+ * Obtiene contexto de torneos unificados para el switch (N torneos).
+ */
+function obtenerContextoTorneoUnificado(int $torneoId): array {
+    if ($torneoId <= 0) {
+        return ['active_tournament_id' => 0, 'items' => []];
+    }
+
+    $pdo = DB::pdo();
+    $hasParentEvent = tournamentsColumnExists('parent_event_id');
+    if (!$hasParentEvent) {
+        return ['active_tournament_id' => $torneoId, 'items' => []];
+    }
+
+    $stmt = $pdo->prepare("SELECT id, nombre, parent_event_id FROM tournaments WHERE id = ? LIMIT 1");
+    $stmt->execute([$torneoId]);
+    $actual = $stmt->fetch(PDO::FETCH_ASSOC);
+    if (!$actual) {
+        return ['active_tournament_id' => 0, 'items' => []];
+    }
+
+    // Seguridad: sin parent_event_id no hay agrupación de hermanos.
+    $parentEventId = isset($actual['parent_event_id']) ? (int)$actual['parent_event_id'] : 0;
+    if ($parentEventId <= 0) {
+        return ['active_tournament_id' => (int)$actual['id'], 'items' => []];
+    }
+
+    // Prioridad primaria solicitada: agrupar por parent_event_id.
+    $st = $pdo->prepare("
+        SELECT id, nombre, parent_event_id
+        FROM tournaments
+        WHERE parent_event_id = ?
+        ORDER BY id ASC
+    ");
+    $st->execute([$parentEventId]);
+    $candidatos = $st->fetchAll(PDO::FETCH_ASSOC) ?: [];
+
+    $items = [];
+    foreach ($candidatos as $cand) {
+        $id = (int)($cand['id'] ?? 0);
+        if ($id <= 0 || !Auth::canAccessTournament($id)) {
+            continue;
+        }
+        $nombreCand = (string)($cand['nombre'] ?? '');
+        $genero = detectarGeneroTorneoPorNombre($nombreCand);
+        $items[$id] = [
+            'id' => $id,
+            'nombre' => $nombreCand,
+            'genero' => $genero,
+            'parent_event_id' => isset($cand['parent_event_id']) ? (int)$cand['parent_event_id'] : null,
+        ];
+    }
+
+    if (!isset($items[(int)$actual['id']])) {
+        $actualGenero = detectarGeneroTorneoPorNombre((string)($actual['nombre'] ?? ''));
+        $items[(int)$actual['id']] = [
+            'id' => (int)$actual['id'],
+            'nombre' => (string)($actual['nombre'] ?? ''),
+            'genero' => $actualGenero,
+            'parent_event_id' => isset($actual['parent_event_id']) ? (int)$actual['parent_event_id'] : null,
+        ];
+    }
+
+    if (count($items) <= 1) {
+        return ['active_tournament_id' => (int)$actual['id'], 'items' => []];
+    }
+
+    // Orden consistente por creación.
+    usort($items, static function (array $a, array $b): int {
+        return ((int)($a['id'] ?? 0)) <=> ((int)($b['id'] ?? 0));
+    });
+
+    foreach ($items as $i => &$it) {
+        $it['index'] = $i;
+    }
+    unset($it);
+
+    return [
+        'active_tournament_id' => (int)$actual['id'],
+        'items' => array_values($items),
+    ];
+}
+
+/**
+ * Estado resumido de ronda/mesas de un torneo.
+ */
+function obtenerEstadoRondaTorneo(int $torneoId): array {
+    $pdo = DB::pdo();
+    $stmt = $pdo->prepare("SELECT COALESCE(MAX(partida), 0) FROM partiresul WHERE id_torneo = ?");
+    $stmt->execute([$torneoId]);
+    $rondaActual = (int)$stmt->fetchColumn();
+    if ($rondaActual <= 0) {
+        return ['ronda_actual' => 0, 'mesas_totales' => 0, 'mesas_pendientes' => 0];
+    }
+
+    $stmtTot = $pdo->prepare("SELECT COUNT(DISTINCT mesa) FROM partiresul WHERE id_torneo = ? AND partida = ? AND mesa > 0");
+    $stmtTot->execute([$torneoId, $rondaActual]);
+    $mesasTotales = (int)$stmtTot->fetchColumn();
+
+    $stmtPend = $pdo->prepare("
+        SELECT COUNT(DISTINCT mesa)
+        FROM partiresul
+        WHERE id_torneo = ?
+          AND partida = ?
+          AND mesa > 0
+          AND (registrado = 0 OR registrado IS NULL)
+    ");
+    $stmtPend->execute([$torneoId, $rondaActual]);
+    $mesasPendientes = (int)$stmtPend->fetchColumn();
+
+    return [
+        'ronda_actual' => $rondaActual,
+        'mesas_totales' => $mesasTotales,
+        'mesas_pendientes' => $mesasPendientes,
+    ];
+}
+
+/**
+ * Estado compacto del grupo unificado (N torneos).
+ */
+function obtenerEstadoParTorneosUnificado(int $torneoId): array {
+    $contexto = obtenerContextoTorneoUnificado($torneoId);
+    $items = $contexto['items'] ?? [];
+    if (count($items) <= 1) {
+        return ['enabled' => false, 'items' => [], 'bloqueo' => null];
+    }
+
+    $activeId = (int)($contexto['active_tournament_id'] ?? $torneoId);
+    $estadoItems = [];
+    foreach ($items as $item) {
+        $tid = (int)($item['id'] ?? 0);
+        if ($tid <= 0) {
+            continue;
+        }
+        $st = obtenerEstadoRondaTorneo($tid);
+        $estadoItems[] = [
+            'id' => $tid,
+            'genero' => strtoupper((string)($item['genero'] ?? '')),
+            'nombre' => (string)($item['nombre'] ?? ''),
+            'index' => (int)($item['index'] ?? 0),
+            'activo' => ($tid === $activeId),
+            'ronda_actual' => (int)$st['ronda_actual'],
+            'mesas_totales' => (int)$st['mesas_totales'],
+            'mesas_pendientes' => (int)$st['mesas_pendientes'],
+        ];
+    }
+
+    $actual = null;
+    foreach ($estadoItems as $it) {
+        if (!empty($it['activo'])) {
+            $actual = $it;
+        }
+    }
+
+    $bloqueo = null;
+    if ($actual) {
+        $rondaActual = (int)($actual['ronda_actual'] ?? 0);
+        if ($rondaActual > 0) {
+            foreach ($estadoItems as $it) {
+                if (!empty($it['activo'])) {
+                    continue;
+                }
+                $pendientesOtro = (int)($it['mesas_pendientes'] ?? 0);
+                if ($pendientesOtro > 0) {
+                    $rondaOtro = (int)($it['ronda_actual'] ?? 0);
+                    $nombreBloqueo = (string)($it['nombre'] ?? ('#' . (int)($it['id'] ?? 0)));
+                    $bloqueo = [
+                        'torneo' => $nombreBloqueo,
+                        'ronda' => $rondaOtro,
+                        'mensaje' => 'No se puede avanzar: El Torneo ' . $nombreBloqueo . ' aún tiene mesas activas en la Ronda ' . $rondaOtro . '.',
+                    ];
+                    break;
+                }
+            }
+        }
+    }
+
+    return ['enabled' => true, 'items' => $estadoItems, 'bloqueo' => $bloqueo];
+}
+
+/**
  * Verifica si existe la columna 'locked' en la tabla tournaments
  */
 function tournamentsLockedColumnExists(): bool {
@@ -155,6 +385,53 @@ $ronda = isset($_GET['ronda']) ? (int)$_GET['ronda'] : null;
 $mesa = isset($_GET['mesa']) ? (int)$_GET['mesa'] : null;
 $inscrito_id = isset($_GET['inscrito_id']) ? (int)$_GET['inscrito_id'] : null;
 
+// Context switcher: cambiar torneo activo en sesión y redirigir.
+$switch_torneo_id = (int)($_GET['switch_torneo_id'] ?? 0);
+if ($switch_torneo_id > 0) {
+    if (!Auth::canAccessTournament($switch_torneo_id)) {
+        throw new Exception('No tiene permisos para cambiar al torneo seleccionado');
+    }
+    $_SESSION['active_tournament_id'] = $switch_torneo_id;
+    $redir_action = trim((string)($_GET['return_action'] ?? 'panel'));
+    if ($redir_action === '') {
+        $redir_action = 'panel';
+    }
+    $redir_params = ['torneo_id' => $switch_torneo_id];
+    // Mantener ronda/mesa/etc. al cambiar de contexto (hojas de anotación, cuadrícula, resultados…)
+    foreach (['ronda', 'mesa', 'inscrito_id'] as $passthrough) {
+        if (isset($_GET[$passthrough]) && $_GET[$passthrough] !== '' && $_GET[$passthrough] !== null) {
+            $redir_params[$passthrough] = is_numeric($_GET[$passthrough])
+                ? (int)$_GET[$passthrough]
+                : $_GET[$passthrough];
+        }
+    }
+    header('Location: ' . buildRedirectUrl($redir_action, $redir_params));
+    exit;
+}
+
+// Plantilla CSV carga masiva equipos (GET, sin layout; antes del override de torneo activo en sesión)
+if ($action === 'carga_masiva_equipos_plantilla' && ($_SERVER['REQUEST_METHOD'] ?? '') === 'GET' && $torneo_id) {
+    verificarPermisosTorneo($torneo_id, $user_id, $is_admin_general);
+    require_once __DIR__ . '/../lib/CargaMasivaEquiposSitioService.php';
+    header('Content-Type: text/csv; charset=UTF-8');
+    header('Content-Disposition: attachment; filename="plantilla_carga_equipos_torneo_' . $torneo_id . '.csv"');
+    echo CargaMasivaEquiposSitioService::contenidoPlantillaCsv();
+    exit;
+}
+
+// Mantener torneo activo en sesión para toda la vista de gestión.
+$active_session_torneo_id = (int)($_SESSION['active_tournament_id'] ?? 0);
+if ($action === 'panel' && !empty($torneo_id) && Auth::canAccessTournament((int)$torneo_id)) {
+    $_SESSION['active_tournament_id'] = (int)$torneo_id;
+    $active_session_torneo_id = (int)$torneo_id;
+}
+if ($action !== 'index' && $active_session_torneo_id > 0 && Auth::canAccessTournament($active_session_torneo_id)) {
+    $torneo_id = $active_session_torneo_id;
+    $_GET['torneo_id'] = $active_session_torneo_id;
+} elseif ($action !== 'index' && !empty($torneo_id) && Auth::canAccessTournament((int)$torneo_id)) {
+    $_SESSION['active_tournament_id'] = (int)$torneo_id;
+}
+
 // Manejar acciones POST - DEBE estar antes de cualquier output
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $post_action = $_POST['action'] ?? $action;
@@ -174,9 +451,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         exit;
     }
     
-    // Bloquear acciones de modificación si el torneo está cerrado
+    // Bloquear acciones de modificación si el torneo está cerrado (las de carga masiva responden JSON)
     $torneo_id_check = (int)($_POST['torneo_id'] ?? 0);
-    if ($torneo_id_check && isTorneoLocked($torneo_id_check) && ($post_action !== 'cerrar_torneo')) {
+    $post_json_carga_masiva = in_array($post_action, ['carga_masiva_equipos_validar', 'carga_masiva_equipos_sitio'], true);
+    if ($torneo_id_check && isTorneoLocked($torneo_id_check) && ($post_action !== 'cerrar_torneo') && !$post_json_carga_masiva) {
         $_SESSION['error'] = 'Este torneo está cerrado y no admite modificaciones.';
         header('Location: ' . buildRedirectUrl('panel', ['torneo_id' => $torneo_id_check]));
         exit;
@@ -211,10 +489,155 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
             exit;
 
+        case 'carga_masiva_equipos_validar':
+            $tid = (int)($_POST['torneo_id'] ?? 0);
+            if ($tid <= 0) {
+                header('Content-Type: application/json; charset=utf-8');
+                echo json_encode(['success' => false, 'message' => 'Torneo no especificado'], JSON_UNESCAPED_UNICODE);
+                exit;
+            }
+            verificarPermisosTorneo($tid, $user_id, $is_admin_general);
+            if (!isset($_FILES['archivo']) || !is_uploaded_file($_FILES['archivo']['tmp_name'] ?? '')) {
+                header('Content-Type: application/json; charset=utf-8');
+                echo json_encode(['success' => false, 'message' => 'Adjunte el archivo.'], JSON_UNESCAPED_UNICODE);
+                exit;
+            }
+            require_once __DIR__ . '/../lib/CargaMasivaEquiposSitioService.php';
+            header('Content-Type: application/json; charset=utf-8');
+            $pdo = DB::pdo();
+            $parsed = CargaMasivaEquiposSitioService::parseArchivo(
+                (string)$_FILES['archivo']['tmp_name'],
+                (string)($_FILES['archivo']['name'] ?? 'upload.csv')
+            );
+            if (isset($parsed['error'])) {
+                echo json_encode(['success' => false, 'message' => $parsed['error']], JSON_UNESCAPED_UNICODE);
+                exit;
+            }
+            $val = CargaMasivaEquiposSitioService::validarPrevio($pdo, $tid, $parsed['bloques']);
+            echo json_encode([
+                'success' => $val['puede_proceder'],
+                'message' => $val['puede_proceder']
+                    ? 'Archivo válido. Revise el aviso de borrado y confirme para ejecutar.'
+                    : 'Revise errores antes de continuar.',
+                'validacion' => $val,
+                'frase_confirmacion' => CargaMasivaEquiposSitioService::CONFIRMACION_REEMPLAZO,
+            ], JSON_UNESCAPED_UNICODE);
+            exit;
+
+        case 'carga_masiva_equipos_sitio':
+            $tid = (int)($_GET['torneo_id'] ?? $_POST['torneo_id'] ?? 0);
+            if ($tid <= 0 || ($_SERVER['REQUEST_METHOD'] ?? '') !== 'POST') {
+                header('Content-Type: application/json; charset=utf-8');
+                echo json_encode(['success' => false, 'message' => 'Torneo no especificado o método inválido'], JSON_UNESCAPED_UNICODE);
+                exit;
+            }
+            verificarPermisosTorneo($tid, $user_id, $is_admin_general);
+            if (isTorneoLocked($tid)) {
+                header('Content-Type: application/json; charset=utf-8');
+                echo json_encode(['success' => false, 'message' => 'Torneo cerrado.'], JSON_UNESCAPED_UNICODE);
+                exit;
+            }
+            if (!isset($_FILES['archivo']) || !is_uploaded_file($_FILES['archivo']['tmp_name'] ?? '')) {
+                header('Content-Type: application/json; charset=utf-8');
+                echo json_encode(['success' => false, 'message' => 'No se recibió archivo.'], JSON_UNESCAPED_UNICODE);
+                exit;
+            }
+            require_once __DIR__ . '/../lib/CargaMasivaEquiposSitioService.php';
+            header('Content-Type: application/json; charset=utf-8');
+            try {
+                $pdo = DB::pdo();
+                $out = CargaMasivaEquiposSitioService::ejecutarDesdeArchivo(
+                    $pdo,
+                    $tid,
+                    (string)$_FILES['archivo']['tmp_name'],
+                    (string)($_FILES['archivo']['name'] ?? 'upload.csv'),
+                    Auth::id() ?: null,
+                    trim((string)($_POST['confirmar_reemplazo'] ?? ''))
+                );
+                echo json_encode($out, JSON_UNESCAPED_UNICODE);
+            } catch (Throwable $e) {
+                http_response_code(500);
+                error_log('carga_masiva_equipos_sitio: ' . $e->getMessage());
+                echo json_encode(['success' => false, 'message' => $e->getMessage()], JSON_UNESCAPED_UNICODE);
+            }
+            exit;
+
         case 'generar_ronda':
             $torneo_id = (int)($_POST['torneo_id'] ?? 0);
+            $estadoPar = obtenerEstadoParTorneosUnificado($torneo_id);
+            if (!empty($estadoPar['bloqueo']['mensaje'])) {
+                $_SESSION['error'] = (string)$estadoPar['bloqueo']['mensaje'];
+                header('Location: ' . buildRedirectUrl('panel', ['torneo_id' => $torneo_id]));
+                exit;
+            }
             generarRonda($torneo_id, $user_id, $is_admin_general);
             break;
+        
+        case 'vincular_torneos_evento':
+            $parent_torneo_id = (int)($_POST['parent_torneo_id'] ?? 0);
+            if ($parent_torneo_id <= 0) {
+                $_SESSION['error'] = 'Debe seleccionar un torneo principal válido.';
+                header('Location: ' . buildRedirectUrl('index'));
+                exit;
+            }
+            verificarPermisosTorneo($parent_torneo_id, $user_id, $is_admin_general);
+            $idsSeleccionados = $_POST['torneos_ids'] ?? [];
+            if (!is_array($idsSeleccionados)) {
+                $idsSeleccionados = [];
+            }
+            $ids = [];
+            foreach ($idsSeleccionados as $idRaw) {
+                $id = (int)$idRaw;
+                if ($id > 0 && $id !== $parent_torneo_id && Auth::canAccessTournament($id)) {
+                    $ids[] = $id;
+                }
+            }
+            $ids = array_values(array_unique($ids));
+            try {
+                $pdo = DB::pdo();
+                if (!tournamentsColumnExists('parent_event_id')) {
+                    throw new Exception('La columna parent_event_id no está disponible.');
+                }
+                $stParent = $pdo->prepare("UPDATE tournaments SET parent_event_id = ? WHERE id = ?");
+                $stParent->execute([$parent_torneo_id, $parent_torneo_id]);
+                if (!empty($ids)) {
+                    $placeholders = implode(',', array_fill(0, count($ids), '?'));
+                    $params = array_merge([$parent_torneo_id], $ids);
+                    $sql = "UPDATE tournaments SET parent_event_id = ? WHERE id IN ({$placeholders})";
+                    $st = $pdo->prepare($sql);
+                    $st->execute($params);
+                }
+                $_SESSION['success'] = 'Vinculación aplicada correctamente.';
+            } catch (Throwable $e) {
+                $_SESSION['error'] = 'No se pudo vincular torneos: ' . $e->getMessage();
+            }
+            header('Location: ' . buildRedirectUrl('vincular_torneos', ['torneo_id' => $parent_torneo_id]));
+            exit;
+
+        case 'desvincular_torneo_evento':
+            $parent_torneo_id = (int)($_POST['parent_torneo_id'] ?? 0);
+            $target_torneo_id = (int)($_POST['target_torneo_id'] ?? 0);
+            if ($parent_torneo_id <= 0 || $target_torneo_id <= 0) {
+                $_SESSION['error'] = 'Parámetros inválidos para desvincular.';
+                header('Location: ' . buildRedirectUrl('index'));
+                exit;
+            }
+            verificarPermisosTorneo($parent_torneo_id, $user_id, $is_admin_general);
+            if (!Auth::canAccessTournament($target_torneo_id)) {
+                $_SESSION['error'] = 'No tiene permisos para desvincular el torneo seleccionado.';
+                header('Location: ' . buildRedirectUrl('vincular_torneos', ['torneo_id' => $parent_torneo_id]));
+                exit;
+            }
+            try {
+                $pdo = DB::pdo();
+                $st = $pdo->prepare("UPDATE tournaments SET parent_event_id = NULL WHERE id = ?");
+                $st->execute([$target_torneo_id]);
+                $_SESSION['success'] = 'Torneo desvinculado correctamente.';
+            } catch (Throwable $e) {
+                $_SESSION['error'] = 'No se pudo desvincular el torneo: ' . $e->getMessage();
+            }
+            header('Location: ' . buildRedirectUrl('vincular_torneos', ['torneo_id' => $parent_torneo_id]));
+            exit;
 
         case 'eliminar_ultima_ronda':
             $torneo_id = (int)($_POST['torneo_id'] ?? 0);
@@ -404,6 +827,17 @@ try {
             }
             // También asegurar que torneo_id esté disponible
             $view_data['torneo_id'] = $torneo_id;
+            $view_data['context_switcher'] = obtenerContextoTorneoUnificado((int)$torneo_id);
+            $view_data['paired_tournaments_status'] = obtenerEstadoParTorneosUnificado((int)$torneo_id);
+            break;
+        
+        case 'vincular_torneos':
+            if (!$torneo_id) {
+                throw new Exception('Debe especificar un torneo principal');
+            }
+            verificarPermisosTorneo($torneo_id, $user_id, $is_admin_general);
+            $view_file = __DIR__ . '/gestion_torneos/vincular_torneos.php';
+            $view_data = obtenerDatosVincularTorneos($torneo_id, $user_id, $is_admin_general);
             break;
             
         case 'panel_equipos':
@@ -446,6 +880,21 @@ try {
             verificarPermisosTorneo($torneo_id, $user_id, $is_admin_general);
             $view_file = __DIR__ . '/gestion_torneos/inscribir_equipo_sitio.php';
             $view_data = obtenerDatosInscribirEquipoSitio($torneo_id);
+            break;
+
+        case 'carga_masiva_equipos_sitio':
+            if (!$torneo_id) {
+                throw new Exception('Debe especificar un torneo');
+            }
+            verificarPermisosTorneo($torneo_id, $user_id, $is_admin_general);
+            $stmt = DB::pdo()->prepare('SELECT id, nombre, modalidad, locked FROM tournaments WHERE id = ?');
+            $stmt->execute([$torneo_id]);
+            $torneo_cm = $stmt->fetch(PDO::FETCH_ASSOC);
+            if (!$torneo_cm || (int)($torneo_cm['modalidad'] ?? 0) !== 3) {
+                throw new Exception('Solo torneos modalidad equipos (4 integrantes).');
+            }
+            $view_file = __DIR__ . '/gestion_torneos/carga_masiva_equipos_sitio.php';
+            $view_data = ['torneo' => $torneo_cm, 'torneo_id' => $torneo_id];
             break;
             
         case 'mesas':
@@ -560,6 +1009,7 @@ try {
             }
             $view_file = __DIR__ . '/gestion_torneos/registrar-resultados-v2.php';
             $view_data = obtenerDatosRegistroResultados($torneo_id, $ronda, $mesa ?? 0, $user_id, $user_role);
+            $view_data['context_switcher'] = obtenerContextoTorneoUnificado((int)$torneo_id);
             break;
             
         case 'cuadricula':
@@ -569,6 +1019,7 @@ try {
             verificarPermisosTorneo($torneo_id, $user_id, $is_admin_general);
             $view_file = __DIR__ . '/gestion_torneos/cuadricula.php';
             $view_data = obtenerDatosCuadricula($torneo_id, $ronda);
+            $view_data['context_switcher'] = obtenerContextoTorneoUnificado((int)$torneo_id);
             break;
             
         case 'hojas_anotacion':
@@ -578,6 +1029,7 @@ try {
             verificarPermisosTorneo($torneo_id, $user_id, $is_admin_general);
             $view_file = __DIR__ . '/gestion_torneos/hojas-anotacion.php';
             $view_data = obtenerDatosHojasAnotacion($torneo_id, $ronda);
+            $view_data['context_switcher'] = obtenerContextoTorneoUnificado((int)$torneo_id);
             break;
             
         case 'resumen_individual':
@@ -1026,6 +1478,75 @@ function obtenerRondasGeneradas($torneo_id) {
  */
 function obtenerDatosPanel($torneo_id) {
     return \Tournament\Handlers\TournamentStatusHandler::getTournamentSummary((int) $torneo_id);
+}
+
+/**
+ * Datos para configurar vinculación de torneos por parent_event_id.
+ */
+function obtenerDatosVincularTorneos($torneo_id, $user_id, $is_admin_general) {
+    $pdo = DB::pdo();
+    $torneo = obtenerTorneo((int)$torneo_id, (int)$user_id, (bool)$is_admin_general);
+    if (!$torneo) {
+        throw new Exception('Torneo principal no encontrado o sin permisos');
+    }
+    if (!tournamentsColumnExists('parent_event_id')) {
+        throw new Exception('La columna parent_event_id no existe en la tabla tournaments');
+    }
+
+    $orgId = (int)($torneo['club_responsable'] ?? 0);
+    $parentEventId = (int)($torneo['parent_event_id'] ?? 0);
+    $eventRef = $parentEventId > 0 ? $parentEventId : (int)$torneo['id'];
+
+    // Torneos principales elegibles (misma organización, sin padre o padre propio)
+    $stmtPadres = $pdo->prepare("
+        SELECT id, nombre, fechator, club_responsable, parent_event_id
+        FROM tournaments
+        WHERE club_responsable = ?
+          AND (parent_event_id IS NULL OR parent_event_id = 0 OR parent_event_id = id)
+        ORDER BY id ASC
+    ");
+    $stmtPadres->execute([$orgId]);
+    $padresRaw = $stmtPadres->fetchAll(PDO::FETCH_ASSOC) ?: [];
+    $torneosPadre = array_values(array_filter($padresRaw, static function (array $t): bool {
+        return Auth::canAccessTournament((int)($t['id'] ?? 0));
+    }));
+
+    // Disponibles para vincular: huérfanos de la misma organización (sin padre).
+    $stmtDisp = $pdo->prepare("
+        SELECT id, nombre, fechator
+        FROM tournaments
+        WHERE club_responsable = ?
+          AND (parent_event_id IS NULL OR parent_event_id = 0)
+          AND id <> ?
+        ORDER BY id ASC
+    ");
+    $stmtDisp->execute([$orgId, $eventRef]);
+    $disponiblesRaw = $stmtDisp->fetchAll(PDO::FETCH_ASSOC) ?: [];
+    $torneosDisponibles = array_values(array_filter($disponiblesRaw, static function (array $t): bool {
+        return Auth::canAccessTournament((int)($t['id'] ?? 0));
+    }));
+
+    // Vinculados al evento padre de referencia.
+    $stmtVinc = $pdo->prepare("
+        SELECT id, nombre, fechator, parent_event_id
+        FROM tournaments
+        WHERE parent_event_id = ?
+        ORDER BY id ASC
+    ");
+    $stmtVinc->execute([$eventRef]);
+    $vinculadosRaw = $stmtVinc->fetchAll(PDO::FETCH_ASSOC) ?: [];
+    $torneosVinculados = array_values(array_filter($vinculadosRaw, static function (array $t): bool {
+        return Auth::canAccessTournament((int)($t['id'] ?? 0));
+    }));
+
+    return [
+        'torneo' => $torneo,
+        'torneo_id' => (int)$torneo_id,
+        'torneos_padre' => $torneosPadre,
+        'parent_event_ref' => $eventRef,
+        'torneos_disponibles' => $torneosDisponibles,
+        'torneos_vinculados' => $torneosVinculados,
+    ];
 }
 
 /**
@@ -1832,6 +2353,14 @@ function enviarNotificacionesResultadosAprobados(PDO $pdo, int $torneo_id, int $
 }
 
 /**
+ * Org. 32 (nacional): en listados, «club» = entidad federativa (tabla entidad); el encabezado debe reflejar el código/nombre de entidad.
+ */
+function torneo_listado_equipos_por_entidad(int $organizacion_id): bool
+{
+    return $organizacion_id === 32;
+}
+
+/**
  * Obtiene datos de equipos para el administrador
  */
 function obtenerDatosEquiposAdmin($torneo_id) {
@@ -1841,30 +2370,50 @@ function obtenerDatosEquiposAdmin($torneo_id) {
     $stmt = $pdo->prepare("SELECT * FROM tournaments WHERE id = ?");
     $stmt->execute([$torneo_id]);
     $torneo = $stmt->fetch(PDO::FETCH_ASSOC);
+    $orgId = (int)($torneo['organizacion_id'] ?? 0);
+    $porEntidad = torneo_listado_equipos_por_entidad($orgId);
     
     // Obtener todos los equipos del torneo (de todos los clubes)
     $stmt = $pdo->prepare("
         SELECT e.*, c.nombre as nombre_club,
+               c.entidad AS club_entidad,
+               ent.nombre AS nombre_entidad,
                (SELECT COUNT(*) FROM inscritos i WHERE i.torneo_id = e.id_torneo AND i.codigo_equipo = e.codigo_equipo AND " . InscritosHelper::sqlWhereSoloConfirmadoConAlias('i') . ") AS total_jugadores
         FROM equipos e
         LEFT JOIN clubes c ON e.id_club = c.id
+        LEFT JOIN entidad ent ON ent.id = c.entidad
         WHERE e.id_torneo = ?
-        ORDER BY c.nombre ASC, e.nombre_equipo ASC
+        ORDER BY " . ($porEntidad
+            ? "COALESCE(ent.nombre, c.nombre, 'ZZZ') ASC, e.codigo_equipo ASC, e.nombre_equipo ASC"
+            : "c.nombre ASC, e.nombre_equipo ASC") . "
     ");
     $stmt->execute([$torneo_id]);
     $equipos = $stmt->fetchAll(PDO::FETCH_ASSOC);
     
-    // Agrupar por club
+    // Agrupar por entidad (org. 32) o por club
     $equipos_por_club = [];
     foreach ($equipos as $equipo) {
-        $club_id = $equipo['id_club'];
-        if (!isset($equipos_por_club[$club_id])) {
-            $equipos_por_club[$club_id] = [
-                'nombre' => $equipo['nombre_club'] ?? 'Sin Club',
-                'equipos' => []
+        if ($porEntidad) {
+            $codEnt = (int)($equipo['club_entidad'] ?? 0);
+            $grupo_id = $codEnt > 0 ? $codEnt : (int)($equipo['id_club'] ?? 0);
+            $nombreGrupo = trim((string)($equipo['nombre_entidad'] ?? ''));
+            if ($nombreGrupo === '') {
+                $nombreGrupo = $equipo['nombre_club'] ?? 'Sin entidad';
+            }
+            if ($codEnt > 0) {
+                $nombreGrupo = $codEnt . ' — ' . $nombreGrupo;
+            }
+        } else {
+            $grupo_id = (int)($equipo['id_club'] ?? 0);
+            $nombreGrupo = $equipo['nombre_club'] ?? 'Sin Club';
+        }
+        if (!isset($equipos_por_club[$grupo_id])) {
+            $equipos_por_club[$grupo_id] = [
+                'nombre' => $nombreGrupo,
+                'equipos' => [],
             ];
         }
-        $equipos_por_club[$club_id]['equipos'][] = $equipo;
+        $equipos_por_club[$grupo_id]['equipos'][] = $equipo;
     }
     
     return [
@@ -2030,18 +2579,26 @@ function obtenerDatosGestionarInscripcionesEquipos($torneo_id) {
     if (!$torneo) {
         throw new Exception('Torneo no encontrado');
     }
+
+    $orgId = (int)($torneo['organizacion_id'] ?? 0);
+    $porEntidad = torneo_listado_equipos_por_entidad($orgId);
     
-    // Obtener todos los equipos del torneo ordenados por club y código de equipo (secuencial)
+    // Obtener todos los equipos del torneo ordenados por club (o entidad si org. 32) y código de equipo (secuencial)
     $stmt = $pdo->prepare("
         SELECT 
             e.*, 
             c.nombre as nombre_club,
-            c.id as club_id
+            c.id as club_id,
+            c.entidad AS club_entidad,
+            ent.nombre AS nombre_entidad
         FROM equipos e
         LEFT JOIN clubes c ON e.id_club = c.id
+        LEFT JOIN entidad ent ON ent.id = c.entidad
         WHERE e.id_torneo = ?
         ORDER BY 
-            COALESCE(c.nombre, 'ZZZ') ASC,
+            " . ($porEntidad
+                ? "COALESCE(ent.nombre, c.nombre, 'ZZZ') ASC,\n            "
+                : "COALESCE(c.nombre, 'ZZZ') ASC,\n            ") . "
             e.codigo_equipo ASC,
             e.nombre_equipo ASC
     ");
@@ -2075,29 +2632,40 @@ function obtenerDatosGestionarInscripcionesEquipos($torneo_id) {
     }
     unset($equipo);
     
-    // Agrupar equipos por club manteniendo el orden secuencial
+    // Agrupar equipos por entidad (org. 32) o por club
     $equipos_por_club = [];
-    $club_ids_orden = [];
+    $grupo_ids_orden = [];
     foreach ($equipos as $equipo) {
-        $club_id = $equipo['club_id'] ?? 0;
-        $club_nombre = $equipo['nombre_club'] ?? 'Sin Club';
-        
-        if (!isset($equipos_por_club[$club_id])) {
-            $equipos_por_club[$club_id] = [
-                'id' => $club_id,
-                'nombre' => $club_nombre,
-                'equipos' => []
-            ];
-            $club_ids_orden[] = $club_id;
+        if ($porEntidad) {
+            $codEnt = (int)($equipo['club_entidad'] ?? 0);
+            $grupo_id = $codEnt > 0 ? $codEnt : (int)($equipo['club_id'] ?? 0);
+            $club_nombre = trim((string)($equipo['nombre_entidad'] ?? ''));
+            if ($club_nombre === '') {
+                $club_nombre = $equipo['nombre_club'] ?? 'Sin entidad';
+            }
+            if ($codEnt > 0) {
+                $club_nombre = $codEnt . ' — ' . $club_nombre;
+            }
+        } else {
+            $grupo_id = (int)($equipo['club_id'] ?? 0);
+            $club_nombre = $equipo['nombre_club'] ?? 'Sin Club';
         }
-        $equipos_por_club[$club_id]['equipos'][] = $equipo;
+
+        if (!isset($equipos_por_club[$grupo_id])) {
+            $equipos_por_club[$grupo_id] = [
+                'id' => $grupo_id,
+                'nombre' => $club_nombre,
+                'equipos' => [],
+            ];
+            $grupo_ids_orden[] = $grupo_id;
+        }
+        $equipos_por_club[$grupo_id]['equipos'][] = $equipo;
     }
-    
-    // Reordenar equipos_por_club según el orden de club_ids_orden para mantener el orden secuencial
+
     $equipos_por_club_ordenado = [];
-    foreach ($club_ids_orden as $club_id) {
-        if (isset($equipos_por_club[$club_id])) {
-            $equipos_por_club_ordenado[] = $equipos_por_club[$club_id];
+    foreach ($grupo_ids_orden as $gid) {
+        if (isset($equipos_por_club[$gid])) {
+            $equipos_por_club_ordenado[] = $equipos_por_club[$gid];
         }
     }
     $equipos_por_club = $equipos_por_club_ordenado;
@@ -2193,29 +2761,33 @@ function obtenerDatosInscribirEquipoSitio($torneo_id) {
     $clubes_disponibles = [];
     $where_club_activo = "(c.estatus = 1 OR c.estatus = '1' OR c.estatus = 'activo')";
     if ($org_torneo_id) {
-        $stmt = $pdo->prepare("SELECT c.id, c.nombre FROM clubes c WHERE c.organizacion_id = ? AND {$where_club_activo} ORDER BY c.nombre ASC");
+        $stmt = $pdo->prepare("SELECT c.id, c.nombre, c.entidad FROM clubes c WHERE c.organizacion_id = ? AND {$where_club_activo} ORDER BY c.nombre ASC");
         $stmt->execute([$org_torneo_id]);
         $clubes_disponibles = $stmt->fetchAll(PDO::FETCH_ASSOC);
     } elseif ($is_admin_general) {
-        $stmt = $pdo->query("SELECT id, nombre FROM clubes WHERE (estatus = 1 OR estatus = '1' OR estatus = 'activo') ORDER BY nombre ASC");
+        $stmt = $pdo->query("SELECT id, nombre, entidad FROM clubes WHERE (estatus = 1 OR estatus = '1' OR estatus = 'activo') ORDER BY nombre ASC");
         $clubes_disponibles = $stmt->fetchAll(PDO::FETCH_ASSOC);
     } elseif ($user_club_id) {
         $stmt = $pdo->prepare('SELECT organizacion_id FROM clubes WHERE id = ? LIMIT 1');
         $stmt->execute([$user_club_id]);
         $org_usuario = $stmt->fetchColumn();
         if ($org_usuario) {
-            $stmt = $pdo->prepare("SELECT c.id, c.nombre FROM clubes c WHERE c.organizacion_id = ? AND {$where_club_activo} ORDER BY c.nombre ASC");
+            $stmt = $pdo->prepare("SELECT c.id, c.nombre, c.entidad FROM clubes c WHERE c.organizacion_id = ? AND {$where_club_activo} ORDER BY c.nombre ASC");
             $stmt->execute([(int)$org_usuario]);
             $clubes_disponibles = $stmt->fetchAll(PDO::FETCH_ASSOC);
         }
         if (empty($clubes_disponibles) && $is_admin_club) {
             $clubes_disponibles = ClubHelper::getClubesSupervisedWithData($user_club_id);
             $clubes_disponibles = array_map(static function ($r) {
-                return ['id' => (int)($r['id'] ?? 0), 'nombre' => (string)($r['nombre'] ?? '')];
+                return [
+                    'id' => (int)($r['id'] ?? 0),
+                    'nombre' => (string)($r['nombre'] ?? ''),
+                    'entidad' => (int)($r['entidad'] ?? 0),
+                ];
             }, $clubes_disponibles);
         }
         if (empty($clubes_disponibles) && $user_club_id) {
-            $stmt = $pdo->prepare("SELECT id, nombre FROM clubes WHERE id = ? AND (estatus = 1 OR estatus = '1' OR estatus = 'activo')");
+            $stmt = $pdo->prepare("SELECT id, nombre, entidad FROM clubes WHERE id = ? AND (estatus = 1 OR estatus = '1' OR estatus = 'activo')");
             $stmt->execute([$user_club_id]);
             $club = $stmt->fetch(PDO::FETCH_ASSOC);
             if ($club) {
@@ -2243,14 +2815,19 @@ function obtenerDatosInscribirEquipoSitio($torneo_id) {
         if ($cid <= 0 || in_array($cid, $ids_select, true)) {
             continue;
         }
-        $stmt = $pdo->prepare('SELECT id, nombre FROM clubes WHERE id = ? LIMIT 1');
+        $stmt = $pdo->prepare('SELECT id, nombre, entidad FROM clubes WHERE id = ? LIMIT 1');
         $stmt->execute([$cid]);
         $fila = $stmt->fetch(PDO::FETCH_ASSOC);
         if ($fila) {
-            $clubes_disponibles[] = ['id' => (int)$fila['id'], 'nombre' => $fila['nombre'] . ' (equipo)'];
+            $clubes_disponibles[] = ['id' => (int)$fila['id'], 'nombre' => $fila['nombre'] . ' (equipo)', 'entidad' => (int)($fila['entidad'] ?? 0)];
             $ids_select[] = $cid;
         }
     }
+    foreach ($clubes_disponibles as &$cClub) {
+        $ent = (int)($cClub['entidad'] ?? 0);
+        $cClub['codigo_prefijo'] = $ent > 0 ? (string)$ent : (string)(int)($cClub['id'] ?? 0);
+    }
+    unset($cClub);
     usort($clubes_disponibles, static function ($a, $b) {
         return strcasecmp((string)($a['nombre'] ?? ''), (string)($b['nombre'] ?? ''));
     });

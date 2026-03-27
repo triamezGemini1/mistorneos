@@ -42,40 +42,30 @@ try {
         $entidad_nombre = "Entidad {$entidad_id}";
     }
     
-    // Obtener administradores de organización de esta entidad con estadísticas (por organizacion_id, sin clubes_asociados)
+    // Obtener organizaciones de la entidad y sus estadísticas usando solo organizacion_id + entidad.
     $sql = "
         SELECT 
+            o.id as org_id,
+            o.nombre as club_principal_nombre,
             u.id as admin_id,
             u.username as admin_username,
             u.nombre as admin_nombre,
             u.email as admin_email,
-            u.club_id as club_principal_id,
-            c.nombre as club_principal_nombre,
-            c.delegado as club_delegado,
-            c.telefono as club_telefono,
-            (SELECT COUNT(*) FROM clubes cx WHERE cx.organizacion_id = (SELECT id FROM organizaciones WHERE admin_user_id = u.id LIMIT 1) AND cx.estatus = 1) as supervised_clubs_count,
-            (SELECT COUNT(*) FROM usuarios ux WHERE ux.club_id IN (
-                SELECT id FROM clubes WHERE organizacion_id = (SELECT id FROM organizaciones WHERE admin_user_id = u.id LIMIT 1) OR id = u.club_id
-            ) AND ux.role = 'usuario' AND ux.status = 0) as total_afiliados,
-            (SELECT COUNT(*) FROM usuarios ux WHERE ux.club_id IN (
-                SELECT id FROM clubes WHERE organizacion_id = (SELECT id FROM organizaciones WHERE admin_user_id = u.id LIMIT 1) OR id = u.club_id
-            ) AND ux.role = 'usuario' AND ux.status = 0 AND (ux.sexo = 'M' OR UPPER(ux.sexo) = 'M')) as hombres,
-            (SELECT COUNT(*) FROM usuarios ux WHERE ux.club_id IN (
-                SELECT id FROM clubes WHERE organizacion_id = (SELECT id FROM organizaciones WHERE admin_user_id = u.id LIMIT 1) OR id = u.club_id
-            ) AND ux.role = 'usuario' AND ux.status = 0 AND (ux.sexo = 'F' OR UPPER(ux.sexo) = 'F')) as mujeres,
-            (SELECT COUNT(*) FROM tournaments t WHERE t.club_responsable IN (
-                SELECT id FROM clubes WHERE organizacion_id = (SELECT id FROM organizaciones WHERE admin_user_id = u.id LIMIT 1) OR id = u.club_id
-            ) AND t.estatus = 1) as total_torneos
-        FROM usuarios u
-        LEFT JOIN clubes c ON u.club_id = c.id
-        WHERE u.role = 'admin_club' 
-          AND u.entidad = ?
-          AND u.status = 0
-        ORDER BY c.nombre ASC
+            o.telefono as club_telefono,
+            o.responsable as club_delegado,
+            (SELECT COUNT(*) FROM clubes cx WHERE cx.organizacion_id = o.id AND cx.entidad = ? AND cx.estatus = 1) as supervised_clubs_count,
+            (SELECT COUNT(*) FROM usuarios ux WHERE ux.organizacion_id = o.id AND ux.entidad = ?) as total_afiliados,
+            (SELECT COUNT(*) FROM usuarios ux WHERE ux.organizacion_id = o.id AND ux.entidad = ? AND UPPER(COALESCE(ux.sexo,'M')) = 'M') as hombres,
+            (SELECT COUNT(*) FROM usuarios ux WHERE ux.organizacion_id = o.id AND ux.entidad = ? AND UPPER(COALESCE(ux.sexo,'M')) = 'F') as mujeres,
+            (SELECT COUNT(*) FROM tournaments t WHERE t.club_responsable = o.id AND t.estatus = 1) as total_torneos
+        FROM organizaciones o
+        LEFT JOIN usuarios u ON u.id = o.admin_user_id
+        WHERE o.entidad = ?
+        ORDER BY o.nombre ASC
     ";
     
     $stmt = $pdo->prepare($sql);
-    $stmt->execute([$entidad_id]);
+    $stmt->execute([$entidad_id, $entidad_id, $entidad_id, $entidad_id, $entidad_id]);
     $admin_clubs = $stmt->fetchAll(PDO::FETCH_ASSOC);
     
     // Calcular estadísticas totales de la entidad

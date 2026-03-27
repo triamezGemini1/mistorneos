@@ -6,6 +6,8 @@ require_once __DIR__ . '/../config/auth.php';
 
 $pdo = DB::pdo();
 $base_url = app_base_url();
+$app_url = rtrim($_ENV['APP_URL'] ?? $base_url, '/');
+$url_solicitudes = $app_url . '/index.php?page=affiliate_requests&filter=pendiente';
 $logged_user = Auth::user();
 $logged_user_id = (int)($logged_user['id'] ?? 0);
 

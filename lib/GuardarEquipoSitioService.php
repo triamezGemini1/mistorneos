@@ -28,6 +28,10 @@ final class GuardarEquipoSitioService
         if ($torneo_id <= 0 || $club_id <= 0) {
             return ['success' => false, 'message' => 'Datos incompletos'];
         }
+        $stmtEnt = $pdo->prepare('SELECT COALESCE(entidad, 0) FROM clubes WHERE id = ? LIMIT 1');
+        $stmtEnt->execute([$club_id]);
+        $entidad_club = (int)($stmtEnt->fetchColumn() ?: 0);
+        $codigo_club_prefijo = trim((string)($input['codigo_club_prefijo'] ?? ''));
         $stmt = $pdo->prepare('SELECT modalidad FROM tournaments WHERE id = ? LIMIT 1');
         $stmt->execute([$torneo_id]);
         $modalidad = (int)($stmt->fetchColumn() ?: 0);
@@ -69,7 +73,13 @@ final class GuardarEquipoSitioService
                 $stmt = $pdo->prepare('UPDATE inscritos SET codigo_equipo = ? WHERE torneo_id = ? AND codigo_equipo = ?');
                 $stmt->execute(['', $torneo_id, $codigo_equipo]);
             } else {
-                $result = EquiposHelper::crearEquipo($torneo_id, $club_id, $nombre_equipo !== '' ? $nombre_equipo : '', $creado_por);
+                $result = EquiposHelper::crearEquipo(
+                    $torneo_id,
+                    $club_id,
+                    $nombre_equipo !== '' ? $nombre_equipo : '',
+                    $creado_por,
+                    $codigo_club_prefijo !== '' ? $codigo_club_prefijo : null
+                );
                 if (empty($result['success'])) {
                     throw new RuntimeException($result['message'] ?? 'Error al crear equipo');
                 }
@@ -102,6 +112,9 @@ final class GuardarEquipoSitioService
                 if ($id_usuario <= 0) {
                     throw new RuntimeException("No se pudo determinar el ID de usuario para la cédula $cedula");
                 }
+
+                $stmt = $pdo->prepare('UPDATE usuarios SET club_id = ?, entidad = ? WHERE id = ?');
+                $stmt->execute([$club_id, $entidad_club, $id_usuario]);
 
                 if ($id_inscrito > 0) {
                     $stmt = $pdo->prepare('SELECT id FROM inscritos WHERE id = ? AND id_usuario = ? AND torneo_id = ? LIMIT 1');

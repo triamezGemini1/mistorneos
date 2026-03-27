@@ -42,6 +42,9 @@ $es_modalidad_equipos = ($modalidad_num_panel === 3);
 $es_modalidad_parejas = ($modalidad_num_panel === 2); // Parejas por equipos (mismo flujo que equipos de 4)
 $es_modalidad_parejas_fijas = ($modalidad_num_panel === 4);
 $es_modalidad_equipos_o_parejas = ($es_modalidad_equipos || $es_modalidad_parejas);
+$context_switcher = isset($context_switcher) && is_array($context_switcher) ? $context_switcher : ['active_tournament_id' => (int)($torneo['id'] ?? 0), 'items' => []];
+$paired_tournaments_status = isset($paired_tournaments_status) && is_array($paired_tournaments_status) ? $paired_tournaments_status : ['enabled' => false, 'items' => [], 'bloqueo' => null];
+$bloqueo_cierre_total = $paired_tournaments_status['bloqueo'] ?? null;
 
 // Lógica de bloqueo de inscripciones: equipos, parejas y parejas fijas bloquean desde ronda >=1; otros desde ronda >=2
 $torneo_bloqueado_inscripciones = false;
@@ -166,7 +169,34 @@ tailwind.config = {
                     <span><i class="fas fa-layer-group mr-1"></i> <?php echo ($torneo['rondas'] ?? 0); ?> rondas</span>
                 </div>
             </div>
-            <div class="text-right flex-shrink-0">
+            <div class="text-right flex-shrink-0 panel-header-actions">
+                <?php if (!empty($context_switcher['items'])): ?>
+                    <?php
+                    $activeTournamentId = (int)($context_switcher['active_tournament_id'] ?? 0);
+                    $sepSwitch = $use_standalone ? '?' : '&';
+                    $switchCount = count($context_switcher['items']);
+                    ?>
+                    <div class="tournament-context-switch mb-2<?php echo $switchCount >= 3 ? ' is-compact' : ''; ?>" role="group" aria-label="Selector de contexto del torneo">
+                        <?php foreach ($context_switcher['items'] as $switchItem): ?>
+                            <?php
+                            $switchId = (int)($switchItem['id'] ?? 0);
+                            $switchLabel = (string)($switchItem['nombre'] ?? ('Torneo #' . $switchId));
+                            $switchParentEventId = (int)($switchItem['parent_event_id'] ?? 0);
+                            $isActiveSwitch = ($switchId === $activeTournamentId);
+                            $switchHref = $base_url . $sepSwitch . 'action=panel&switch_torneo_id=' . $switchId . '&return_action=panel';
+                            ?>
+                            <a
+                                href="<?php echo htmlspecialchars($switchHref, ENT_QUOTES, 'UTF-8'); ?>"
+                                class="context-switch-item<?php echo $isActiveSwitch ? ' is-active' : ''; ?>"
+                                aria-pressed="<?php echo $isActiveSwitch ? 'true' : 'false'; ?>"
+                                title="<?php echo htmlspecialchars('ID Sistema: ' . $switchId . ' | Evento Padre: ' . $switchParentEventId, ENT_QUOTES, 'UTF-8'); ?>"
+                            >
+                                <?php echo htmlspecialchars($switchLabel, ENT_QUOTES, 'UTF-8'); ?>
+                                <span class="text-id-ghost">#<?php echo $switchId; ?></span>
+                            </a>
+                        <?php endforeach; ?>
+                    </div>
+                <?php endif; ?>
                 <div class="torneo-id text-4xl font-extrabold opacity-80">#<?php echo $torneo['id']; ?></div>
                 <div class="text-sm opacity-70">ID del Torneo</div>
             </div>
@@ -212,6 +242,34 @@ tailwind.config = {
                     <i class="fas fa-keyboard mr-1"></i>Digitadas (admin): <?= $mesas_digitadas_count ?>
                 </span>
             </div>
+        </div>
+    <?php endif; ?>
+
+    <?php if (!empty($paired_tournaments_status['enabled']) && !empty($paired_tournaments_status['items'])): ?>
+        <div class="bg-white border border-slate-200 rounded-lg px-4 py-3 mb-4">
+            <h5 class="text-slate-700 font-semibold mb-2"><i class="fas fa-link mr-2"></i>Cierre total del grupo</h5>
+            <div class="flex flex-wrap gap-3">
+                <?php foreach ($paired_tournaments_status['items'] as $stItem): ?>
+                    <?php
+                    $g = strtoupper((string)($stItem['genero'] ?? 'M'));
+                    $gLabel = $g === 'F' ? 'Femenino' : 'Masculino';
+                    $p = (int)($stItem['mesas_pendientes'] ?? 0);
+                    ?>
+                    <div class="px-3 py-2 rounded-lg border <?php echo !empty($stItem['activo']) ? 'border-indigo-300 bg-indigo-50' : 'border-slate-200 bg-slate-50'; ?>">
+                        <div class="text-sm font-semibold text-slate-700">
+                            <?php echo htmlspecialchars((string)($stItem['nombre'] ?? $gLabel), ENT_QUOTES, 'UTF-8'); ?> [#<?php echo (int)($stItem['id'] ?? 0); ?>]<?php echo !empty($stItem['activo']) ? ' (Activo)' : ''; ?>
+                        </div>
+                        <div class="text-xs text-slate-600">
+                            Ronda <?php echo (int)($stItem['ronda_actual'] ?? 0); ?> · Mesas pendientes: <strong><?php echo $p; ?></strong>
+                        </div>
+                    </div>
+                <?php endforeach; ?>
+            </div>
+            <?php if (!empty($bloqueo_cierre_total['mensaje'])): ?>
+                <div class="mt-2 text-sm text-amber-700 font-semibold">
+                    <i class="fas fa-exclamation-triangle mr-1"></i><?php echo htmlspecialchars((string)$bloqueo_cierre_total['mensaje'], ENT_QUOTES, 'UTF-8'); ?>
+                </div>
+            <?php endif; ?>
         </div>
     <?php endif; ?>
 
@@ -484,12 +542,17 @@ tailwind.config = {
                                 <input type="hidden" name="csrf_token" value="<?php echo CSRF::token(); ?>">
                                 <input type="hidden" name="torneo_id" value="<?php echo (int)($torneo['id'] ?? 0); ?>">
                                 <button type="submit" id="btn-generar-ronda"
-                                        <?php echo (!$puedeGenerar || $isLocked) ? 'disabled' : ''; ?>
-                                        class="tw-btn <?php echo ($puedeGenerar && !$isLocked) ? 'bg-blue-500 hover:bg-blue-600' : 'bg-gray-400'; ?> text-white">
-                                    <i class="fas fa-<?php echo ($puedeGenerar && !$isLocked) ? 'play' : 'lock'; ?>"></i>
+                                        <?php echo (!$puedeGenerar || $isLocked || !empty($bloqueo_cierre_total)) ? 'disabled' : ''; ?>
+                                        class="tw-btn <?php echo ($puedeGenerar && !$isLocked && empty($bloqueo_cierre_total)) ? 'bg-blue-500 hover:bg-blue-600' : 'bg-gray-400'; ?> text-white">
+                                    <i class="fas fa-<?php echo ($puedeGenerar && !$isLocked && empty($bloqueo_cierre_total)) ? 'play' : 'lock'; ?>"></i>
                                     Generar Ronda <?php echo $proximaRonda; ?>
                                 </button>
                             </form>
+                            <?php if (!empty($bloqueo_cierre_total['mensaje'])): ?>
+                                <div class="text-xs text-amber-700 font-semibold">
+                                    <i class="fas fa-ban mr-1"></i><?php echo htmlspecialchars((string)$bloqueo_cierre_total['mensaje'], ENT_QUOTES, 'UTF-8'); ?>
+                                </div>
+                            <?php endif; ?>
                         <?php else: ?>
                             <div class="bg-green-100 text-green-700 rounded-lg p-3 text-center font-semibold">
                                 <i class="fas fa-check-circle mr-2"></i> Todas las rondas generadas
@@ -528,6 +591,11 @@ tailwind.config = {
                             </a>
                         <?php endif; ?>
                         
+                        <a href="<?php echo $base_url . ($use_standalone ? '?' : '&'); ?>action=vincular_torneos&torneo_id=<?php echo (int)$torneo['id']; ?>"
+                           class="tw-btn bg-slate-600 hover:bg-slate-700 text-white">
+                            <i class="fas fa-sitemap"></i> Vincular Torneos (Evento)
+                        </a>
+
                         <!-- Generar e imprimir QR del torneo (acceso desde panel) -->
                         <a href="index.php?page=tournament_admin&torneo_id=<?php echo (int)($torneo['id'] ?? 0); ?>&action=generar_qr" 
                            class="tw-btn bg-emerald-600 hover:bg-emerald-700 text-white" target="_blank" rel="noopener">

@@ -425,5 +425,25 @@ if ($page === 'torneo_gestion' && ($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POS
     exit;
 }
 
+// torneo_gestion GET — acciones que solo envían cabeceras o redirigen: sin layout (el módulo dentro del <main> ya imprimió HTML arriba)
+if ($page === 'torneo_gestion' && ($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'GET') {
+    $tg_get = trim((string)($_GET['action'] ?? ''));
+    $tg_tid = (int)($_GET['torneo_id'] ?? 0);
+    $tg_switch = (int)($_GET['switch_torneo_id'] ?? 0);
+    $tg_early = $tg_switch > 0
+        || ($tg_get === 'carga_masiva_equipos_plantilla' && $tg_tid > 0)
+        || in_array($tg_get, ['panel_equipos', 'dashboard'], true);
+    if ($tg_early) {
+        require_once __DIR__ . '/../modules/torneo_gestion.php';
+        exit;
+    }
+}
+
+// torneo_gestion GET: el módulo se incluye desde layout.php (después de que el sidebar/top ya imprimió HTML).
+// Buffer ayuda con redirecciones internas del switch (p. ej. registrar_resultados sin ronda); las rutas críticas van despachadas arriba.
+if ($page === 'torneo_gestion' && ob_get_level() === 0) {
+    ob_start();
+}
+
 // Incluir layout principal (para GET normal y páginas de visualización). $page ya está definida y saneada; el layout la usa para incluir el módulo correcto.
 include __DIR__ . "/includes/layout.php";

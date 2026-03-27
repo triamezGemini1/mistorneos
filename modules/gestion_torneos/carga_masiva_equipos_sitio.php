@@ -143,11 +143,11 @@ $frase = CargaMasivaEquiposSitioService::CONFIRMACION_REEMPLAZO;
                         <dt>Tipos de archivo</dt>
                         <dd><strong>Excel</strong> (.xlsx, .xls), <strong>CSV</strong>, o <strong>texto separado por tabuladores</strong> (.txt). Puede descargar una plantilla CSV de ejemplo.</dd>
                         <dt>Formato tipo ADEAZ (tabuladores)</dt>
-                        <dd>Primera columna <code>0</code> y en la segunda el <strong>nombre del equipo</strong>; debajo, 4 filas con <strong>cédula</strong> y <strong>nombre</strong> por jugador. Columnas <code>club</code> y <code>organizacion</code> suelen ser IDs numéricos (ej. club 6).</dd>
+                        <dd>Primera columna <code>0</code> y en la segunda el <strong>nombre del equipo</strong>; debajo, 4 filas con <strong>cédula</strong> y <strong>nombre</strong> por jugador. La columna <code>club</code> debe ser el <strong>id del club</strong> en <code>clubes</code> (no código de entidad); ese valor numérico también sirve como prefijo del código de equipo cuando aplica.</dd>
                         <dt>Formato alternativo (plantilla CSV)</dt>
-                        <dd>Fila con <code>NAC=R</code>, nombre del equipo, club y organización; luego 4 filas de jugadores con cédula y N1.</dd>
+                        <dd>Fila con <code>NAC=R</code>: el <strong>nombre del equipo</strong> va en la columna <strong>N1</strong> (ej. AVALANCHA); la columna <code>club</code> lleva el <strong>código numérico</strong> de asociación; luego 4 filas de jugadores. Si la columna «equipo» repite un número en todas las filas, no se usa como nombre — se usa <strong>N1</strong>.</dd>
                         <dt>Reglas que debe cumplir el archivo</dt>
-                        <dd>Sin cédulas repetidas en todo el archivo. Cada equipo: <strong>exactamente 4</strong> integrantes con cédula y nombre. El club indicado debe existir en el sistema (o se usará la lógica de club por organización del torneo).</dd>
+                        <dd>Sin cédulas repetidas en todo el archivo. Cada equipo: <strong>exactamente 4</strong> integrantes con cédula y nombre. El valor de <code>club</code> debe ser un <strong>id de club</strong> existente y activo en <code>clubes</code>.</dd>
                     </dl>
                     <a class="btn btn-primary btn-sm mt-3" href="<?= htmlspecialchars($href_plantilla) ?>"><i class="fas fa-download"></i> Descargar plantilla CSV</a>
                 </div>
@@ -258,6 +258,13 @@ $frase = CargaMasivaEquiposSitioService::CONFIRMACION_REEMPLAZO;
                 if (v.bloques_sin_r && v.bloques_sin_r.length) {
                     html += '<div class="alert alert-secondary border-0"><strong>Formato / estructura</strong><ul class="mb-0">';
                     v.bloques_sin_r.forEach(function (b) { html += '<li>' + esc(b) + '</li>'; });
+                    html += '</ul></div>';
+                }
+                if (v.clubs_excel_invalidos && v.clubs_excel_invalidos.length) {
+                    html += '<div class="alert alert-danger border-0" style="font-size:1rem"><strong><i class="fas fa-id-badge"></i> Columna club</strong> — Debe ser el <strong>id numérico del club</strong> en la tabla <code>clubes</code> (club activo).<ul class="mb-0 mt-2">';
+                    v.clubs_excel_invalidos.forEach(function (c) {
+                        html += '<li><strong>' + esc(c.equipo) + '</strong> (cabecera ~línea ' + esc(String(c.linea_inicio)) + '): ' + esc(c.detalle || '') + '</li>';
+                    });
                     html += '</ul></div>';
                 }
 

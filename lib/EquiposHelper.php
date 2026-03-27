@@ -34,28 +34,22 @@ class EquiposHelper {
      * @param int $clubId ID del club
      * @param string $nombreEquipo Nombre del equipo
      * @param int|null $creadoPor ID del usuario que crea el equipo
+     * @param string|null $prefijoCodigoClub Código de club (plantilla Excel / federación). Si null o vacío, se usa el id numérico del club en BD.
      * @return array ['success' => bool, 'id' => int|null, 'codigo' => string|null, 'message' => string]
      */
-    public static function crearEquipo(int $torneoId, int $clubId, string $nombreEquipo, ?int $creadoPor = null): array {
-        error_log("EquiposHelper::crearEquipo - INICIO - torneoId=$torneoId, clubId=$clubId, nombreEquipo=$nombreEquipo, creadoPor=" . ($creadoPor ?? 'NULL'));
+    public static function crearEquipo(int $torneoId, int $clubId, string $nombreEquipo, ?int $creadoPor = null, ?string $prefijoCodigoClub = null): array {
         try {
             $pdo = DB::pdo();
-            
-            // Verificar que el torneo sea modalidad equipos
-            error_log("EquiposHelper::crearEquipo - Verificando torneo");
             $stmt = $pdo->prepare("SELECT modalidad FROM tournaments WHERE id = ?");
             $stmt->execute([$torneoId]);
             $torneo = $stmt->fetch(PDO::FETCH_ASSOC);
             
             if (!$torneo) {
-                error_log("EquiposHelper::crearEquipo - ERROR: Torneo no encontrado");
                 return ['success' => false, 'id' => null, 'codigo' => null, 'message' => 'Torneo no encontrado'];
             }
             
             $modalidad = (int)($torneo['modalidad'] ?? 0);
-            error_log("EquiposHelper::crearEquipo - Torneo encontrado, modalidad=" . $modalidad);
             if ($modalidad !== self::MODALIDAD_EQUIPOS && $modalidad !== self::MODALIDAD_PAREJAS) {
-                error_log("EquiposHelper::crearEquipo - ERROR: Modalidad incorrecta (esperado 2 o 3, obtenido " . $modalidad . ")");
                 return ['success' => false, 'id' => null, 'codigo' => null, 'message' => 'El torneo no es modalidad equipos ni parejas'];
             }
             $es_parejas = ($modalidad === self::MODALIDAD_PAREJAS);
@@ -65,6 +59,7 @@ class EquiposHelper {
             } elseif (!$es_parejas && $nombreEquipoTrim === '') {
                 return ['success' => false, 'id' => null, 'codigo' => null, 'message' => 'El nombre del equipo es obligatorio'];
             }
+            $prefijoIzq = self::prefijoIzquierdoCodigoEquipo($clubId, $prefijoCodigoClub);
             if ($nombreEquipoTrim !== null && $nombreEquipoTrim !== '') {
                 $stmt = $pdo->prepare("
                     SELECT id FROM equipos 
@@ -98,7 +93,7 @@ class EquiposHelper {
                 if ($consecutivoIns < 1) {
                     $consecutivoIns = 1;
                 }
-                $codigoIns = str_pad((string)$clubId, 3, '0', STR_PAD_LEFT) . '-' . str_pad((string)$consecutivoIns, 3, '0', STR_PAD_LEFT);
+                $codigoIns = $prefijoIzq . '-' . str_pad((string)$consecutivoIns, 3, '0', STR_PAD_LEFT);
                 $nombreParaInsert = ($es_parejas && $nombreEquipoTrim === null) ? ('Pareja ' . $codigoIns) : strtoupper($nombreEquipoTrim);
                 $stmt = $pdo->prepare('
                     INSERT INTO equipos (id_torneo, id_club, nombre_equipo, creado_por, consecutivo_club, codigo_equipo)
@@ -110,27 +105,20 @@ class EquiposHelper {
 
             // Calcular consecutivo por club y actualizar código con el formato requerido
             if ($equipoId > 0) {
-                error_log("EquiposHelper::crearEquipo - Generando código para equipo id=$equipoId");
-                // Obtener consecutivo existente
                 $stmt = $pdo->prepare("SELECT consecutivo_club FROM equipos WHERE id = ?");
                 $stmt->execute([$equipoId]);
                 $consecutivo = (int)($stmt->fetchColumn() ?? 0);
-                error_log("EquiposHelper::crearEquipo - Consecutivo existente: $consecutivo");
                 if ($consecutivo <= 0) {
                     $stmt = $pdo->prepare("SELECT COALESCE(MAX(consecutivo_club),0)+1 FROM equipos WHERE id_torneo = ? AND id_club = ?");
                     $stmt->execute([$torneoId, $clubId]);
                     $consecutivo = (int)$stmt->fetchColumn();
-                    error_log("EquiposHelper::crearEquipo - Nuevo consecutivo calculado: $consecutivo");
                 }
-                $codigo = str_pad((string)$clubId, 3, '0', STR_PAD_LEFT) . '-' . str_pad((string)$consecutivo, 3, '0', STR_PAD_LEFT);
-                error_log("EquiposHelper::crearEquipo - Código generado: $codigo");
+                $codigo = $prefijoIzq . '-' . str_pad((string)$consecutivo, 3, '0', STR_PAD_LEFT);
                 
                 try {
                     $stmt = $pdo->prepare("UPDATE equipos SET consecutivo_club = ?, codigo_equipo = ? WHERE id = ?");
                     $stmt->execute([$consecutivo, $codigo, $equipoId]);
-                    error_log("EquiposHelper::crearEquipo - Código actualizado en BD, filas afectadas: " . $stmt->rowCount());
 
-                    error_log("EquiposHelper::crearEquipo - ÉXITO - equipoId=$equipoId, codigo=$codigo");
                     return [
                         'success' => true,
                         'id' => $equipoId,
@@ -144,7 +132,6 @@ class EquiposHelper {
                 }
             }
 
-            error_log("EquiposHelper::crearEquipo - ERROR: No se pudo crear el equipo (equipoId=$equipoId)");
             return ['success' => false, 'id' => null, 'codigo' => null, 'message' => 'No se pudo crear el equipo'];
             
         } catch (PDOException $e) {
@@ -152,6 +139,22 @@ class EquiposHelper {
             error_log("EquiposHelper::crearEquipo ERROR - Stack trace: " . $e->getTraceAsString());
             return ['success' => false, 'id' => null, 'codigo' => null, 'message' => 'Error al crear equipo: ' . $e->getMessage()];
         }
+    }
+
+    /**
+     * Parte izquierda del codigo_equipo (antes del guion). Prioriza el código de plantilla/federación; si no hay, id de club en BD.
+     */
+    private static function prefijoIzquierdoCodigoEquipo(int $clubId, ?string $prefijoExterno): string
+    {
+        $ext = $prefijoExterno !== null ? trim($prefijoExterno) : '';
+        $digits = preg_replace('/\D/', '', $ext);
+        if ($digits !== '') {
+            if (strlen($digits) <= 3) {
+                return str_pad($digits, 3, '0', STR_PAD_LEFT);
+            }
+            return $digits;
+        }
+        return str_pad((string)$clubId, 3, '0', STR_PAD_LEFT);
     }
     
     /**
@@ -266,6 +269,7 @@ class EquiposHelper {
      * @param string $nombreEquipo Nombre del equipo
      * @param array $jugadores Array de jugadores: [['cedula' => '', 'nombre' => '', 'es_capitan' => false], ...]
      * @param int|null $creadoPor ID del usuario creador
+     * @param string|null $prefijoCodigoClub Código de club (plantilla / federación) para el prefijo del codigo_equipo
      * @return array ['success' => bool, 'id_equipo' => int|null, 'codigo' => string|null, 'jugadores_agregados' => int, 'message' => string, 'errores' => array]
      */
     public static function crearEquipoCompleto(
@@ -273,7 +277,8 @@ class EquiposHelper {
         int $clubId, 
         string $nombreEquipo, 
         array $jugadores, 
-        ?int $creadoPor = null
+        ?int $creadoPor = null,
+        ?string $prefijoCodigoClub = null
     ): array {
         $pdo = DB::pdo();
         
@@ -281,7 +286,7 @@ class EquiposHelper {
             $pdo->beginTransaction();
             
             // Crear el equipo
-            $resultEquipo = self::crearEquipo($torneoId, $clubId, $nombreEquipo, $creadoPor);
+            $resultEquipo = self::crearEquipo($torneoId, $clubId, $nombreEquipo, $creadoPor, $prefijoCodigoClub);
             
             if (!$resultEquipo['success']) {
                 $pdo->rollBack();

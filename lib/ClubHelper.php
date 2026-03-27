@@ -105,7 +105,7 @@ class ClubHelper {
         
         try {
             $stmt = DB::pdo()->prepare("
-                SELECT id, nombre, delegado, telefono, estatus,
+                SELECT id, nombre, delegado, telefono, estatus, entidad,
                        CASE WHEN id = ? THEN 1 ELSE 0 END as es_principal
                 FROM clubes 
                 WHERE id IN ($placeholders) AND estatus = 1

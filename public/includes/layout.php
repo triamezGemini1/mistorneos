@@ -310,6 +310,7 @@ if ($from_url !== '') {
         $is_estructura_open = in_array($current_page, ['entidades', 'organizaciones', 'clubs', 'directorio_clubes']);
         $is_afiliaciones_open = in_array($current_page, ['admin_clubs', 'affiliate_requests']);
         $is_comunicacion_open = in_array($current_page, ['notificaciones_masivas', 'whatsapp_config', 'comments']);
+        $is_integraciones_open = in_array($current_page, ['admin_atletas_sync', 'importacion_torneo_externo']);
         ?>
         <!-- 1. Inicio (acordeón: Dashboard, Calendario) -->
         <li class="mb-2">
@@ -349,6 +350,12 @@ if ($from_url !== '') {
               <a href="<?= htmlspecialchars($dashboard_href('entidades')) ?>" class="nav-link nav-sub-sub-link <?= $current_page === 'entidades' ? 'active' : '' ?>">
                 <i class="fas fa-map-marked-alt me-2"></i>
                 <span>Entidades</span>
+              </a>
+            </li>
+            <li class="mb-1">
+              <a href="<?= htmlspecialchars($dashboard_href('entidades', ['action' => 'index'])) ?>#crud-entidades" class="nav-link nav-sub-sub-link <?= $current_page === 'entidades' ? 'active' : '' ?>">
+                <i class="fas fa-cogs me-2"></i>
+                <span>CRUD Entidades</span>
               </a>
             </li>
             <li class="mb-1">
@@ -413,10 +420,27 @@ if ($from_url !== '') {
         </li>
         <?php if (($user['role'] ?? '') === 'admin_general'): ?>
         <li class="mb-2">
-          <a href="<?= htmlspecialchars($dashboard_href('importacion_torneo_externo')) ?>" class="nav-link <?= $current_page === 'importacion_torneo_externo' ? 'active' : '' ?>">
-            <i class="fas fa-file-import me-3"></i>
-            <span class="nav-text">Importar torneo externo</span>
+          <a href="#" class="nav-link <?= $is_integraciones_open ? 'active' : '' ?>"
+             onclick="event.preventDefault(); toggleSubmenu('integraciones-submenu', this);"
+             style="cursor: pointer;">
+            <i class="fas fa-plug me-3"></i>
+            <span class="nav-text">Integraciones</span>
+            <i class="fas fa-chevron-<?= $is_integraciones_open ? 'up' : 'down' ?> ms-auto submenu-icon"></i>
           </a>
+          <ul class="list-unstyled ps-4 mt-1 collapse-submenu <?= $is_integraciones_open ? 'show' : '' ?>" id="integraciones-submenu">
+            <li class="mb-1">
+              <a href="<?= htmlspecialchars($dashboard_href('admin_atletas_sync')) ?>" class="nav-link nav-sub-sub-link <?= $current_page === 'admin_atletas_sync' ? 'active' : '' ?>">
+                <i class="fas fa-database me-2"></i>
+                <span>Atletas → Usuarios</span>
+              </a>
+            </li>
+            <li class="mb-1">
+              <a href="<?= htmlspecialchars($dashboard_href('importacion_torneo_externo')) ?>" class="nav-link nav-sub-sub-link <?= $current_page === 'importacion_torneo_externo' ? 'active' : '' ?>">
+                <i class="fas fa-file-import me-2"></i>
+                <span>Importar torneo externo</span>
+              </a>
+            </li>
+          </ul>
         </li>
         <?php endif; ?>
         <!-- Usuarios -->

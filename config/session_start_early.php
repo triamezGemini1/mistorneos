@@ -32,3 +32,24 @@ session_start();
 if ($session_debug) error_log('[SESSION_DEBUG] session_start_early.php | session_start OK | path=' . $path . ' | name=' . $sname . ' | id=' . session_id() . ' | cookie_enviada=' . (isset($_COOKIE[$sname]) ? 'si' : 'no'));
 if (!isset($_SESSION['created'])) $_SESSION['created'] = time();
 elseif (time() - $_SESSION['created'] > 1800) { session_regenerate_id(true); $_SESSION['created'] = time(); }
+
+// Invalidación puntual de referencias club_id por remapeo de IDs (marzo 2026).
+// Se ejecuta una sola vez por sesión para evitar conflictos con IDs legados.
+$clubRemapVersion = 'club_id_remap_20260326_v1';
+if (!isset($_SESSION['_club_id_remap_version']) || $_SESSION['_club_id_remap_version'] !== $clubRemapVersion) {
+    unset(
+        $_SESSION['club_id'],
+        $_SESSION['club_nombre'],
+        $_SESSION['authenticated_club_id'],
+        $_SESSION['club_authenticated']
+    );
+
+    if (isset($_SESSION['user']) && is_array($_SESSION['user'])) {
+        $_SESSION['user']['club_id'] = 0;
+    }
+    if (isset($_SESSION['desktop_user']) && is_array($_SESSION['desktop_user']) && isset($_SESSION['desktop_user']['club_id'])) {
+        $_SESSION['desktop_user']['club_id'] = 0;
+    }
+
+    $_SESSION['_club_id_remap_version'] = $clubRemapVersion;
+}

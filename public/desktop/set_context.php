@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 /**
  * Guarda el contexto de la sesión del usuario que inició sesión con internet
  * (organización/club/entidad) para pre-seleccionar en registro offline.
@@ -36,6 +36,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 
 $data['updated_at'] = date('c');
+
+// Invalidar referencias club_id legadas tras remapeo (IDs anteriores al corte).
+if (!empty($data['club_id']) && (int)$data['club_id'] > 0 && (int)$data['club_id'] < 40) {
+    $data['club_id'] = 0;
+    $data['club_nombre'] = '';
+}
+
 $json = json_encode($data, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
 if (file_put_contents($file, $json) !== false) {
     echo json_encode(['ok' => true, 'message' => 'Contexto guardado.']);

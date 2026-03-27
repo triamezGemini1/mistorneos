@@ -257,6 +257,66 @@ html {
   min-width: 0;
 }
 
+.tw-panel .panel-header-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.2rem;
+}
+
+.tw-panel .tournament-context-switch {
+  display: inline-flex;
+  align-items: center;
+  background: rgba(255, 255, 255, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  border-radius: 999px;
+  padding: 0.15rem;
+  gap: 5px;
+}
+
+.tw-panel .tournament-context-switch .context-switch-item {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+  color: rgba(255, 255, 255, 0.9);
+  min-width: 5.9rem;
+  padding: 0.25rem 0.665rem;
+  border-radius: 999px;
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  transition: background-color 0.2s ease, color 0.2s ease;
+  max-width: 13.5rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tw-panel .text-id-ghost {
+  font-size: 10px;
+  color: rgba(255, 255, 255, 0.72);
+  margin-left: 4px;
+  font-weight: 500;
+}
+
+.tw-panel .tournament-context-switch .context-switch-item:hover {
+  color: #ffffff;
+  background: rgba(255, 255, 255, 0.18);
+}
+
+.tw-panel .tournament-context-switch .context-switch-item.is-active {
+  background: #005c44;
+  color: #ffffff;
+}
+
+.tw-panel .tournament-context-switch.is-compact .context-switch-item {
+  font-size: 13px;
+  min-width: 4.8rem;
+  max-width: 10rem;
+  padding: 0.25rem 0.5225rem;
+}
+
 .tw-panel .panel-breadcrumb .panel-breadcrumb-current {
   font-weight: 500;
 }

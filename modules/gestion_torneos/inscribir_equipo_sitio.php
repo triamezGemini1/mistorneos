@@ -611,6 +611,7 @@ $api_guardar_equipo = $base_url . ($use_standalone ? '?' : '&') . 'action=guarda
                         <input type="hidden" name="csrf_token" value="<?php echo CSRF::token(); ?>">
                         <input type="hidden" id="equipo_id" name="equipo_id" value="">
                         <input type="hidden" id="torneo_id" name="torneo_id" value="<?php echo $torneo['id']; ?>">
+                        <input type="hidden" id="codigo_club_prefijo" name="codigo_club_prefijo" value="">
                         <input type="hidden" id="codigo_equipo" name="codigo_equipo" value="">
                         <!-- Fila 1: Club | Nombre pareja | Cédula a buscar (blur = búsqueda automática) -->
                         <div class="fila-parejas-compacta">
@@ -619,7 +620,7 @@ $api_guardar_equipo = $base_url . ($use_standalone ? '?' : '&') . 'action=guarda
                                 <select id="club_id" name="club_id" class="form-select form-select-sm w-100" required>
                                     <option value="">Club *</option>
                                     <?php if (!empty($clubes_disponibles)): foreach ($clubes_disponibles as $club): ?>
-                                        <option value="<?php echo $club['id']; ?>"><?php echo htmlspecialchars($club['nombre']); ?></option>
+                                        <option value="<?php echo $club['id']; ?>" data-codigo-prefijo="<?php echo htmlspecialchars((string)($club['codigo_prefijo'] ?? $club['id']), ENT_QUOTES, 'UTF-8'); ?>"><?php echo htmlspecialchars($club['nombre']); ?></option>
                                     <?php endforeach; else: ?>
                                         <option value="" disabled>No hay clubes</option>
                                     <?php endif; ?>
@@ -861,6 +862,7 @@ $api_guardar_equipo = $base_url . ($use_standalone ? '?' : '&') . 'action=guarda
                         <input type="hidden" name="csrf_token" value="<?php echo CSRF::token(); ?>">
                         <input type="hidden" id="equipo_id" name="equipo_id" value="">
                         <input type="hidden" id="torneo_id" name="torneo_id" value="<?php echo $torneo['id']; ?>">
+                        <input type="hidden" id="codigo_club_prefijo" name="codigo_club_prefijo" value="">
                         <input type="hidden" id="codigo_equipo" name="codigo_equipo" value="">
                         
                         <!-- Club y nombre equipo: misma línea, mismo alto -->
@@ -871,7 +873,7 @@ $api_guardar_equipo = $base_url . ($use_standalone ? '?' : '&') . 'action=guarda
                                     <option value="">Club *</option>
                                     <?php if (!empty($clubes_disponibles)): ?>
                                         <?php foreach ($clubes_disponibles as $club): ?>
-                                            <option value="<?php echo $club['id']; ?>"><?php echo htmlspecialchars($club['nombre']); ?></option>
+                                            <option value="<?php echo $club['id']; ?>" data-codigo-prefijo="<?php echo htmlspecialchars((string)($club['codigo_prefijo'] ?? $club['id']), ENT_QUOTES, 'UTF-8'); ?>"><?php echo htmlspecialchars($club['nombre']); ?></option>
                                         <?php endforeach; ?>
                                     <?php else: ?>
                                         <option value="" disabled>No hay clubes disponibles</option>
@@ -1143,7 +1145,16 @@ document.addEventListener('DOMContentLoaded', function() {
         validarFormulario();
         actualizarBloqueoSeleccionJugadores();
     });
+    function syncCodigoClubPrefijo() {
+        var sel = document.getElementById('club_id');
+        var hid = document.getElementById('codigo_club_prefijo');
+        if (!sel || !hid) return;
+        var opt = sel.options[sel.selectedIndex];
+        hid.value = opt ? (opt.getAttribute('data-codigo-prefijo') || '') : '';
+    }
+    syncCodigoClubPrefijo();
     document.getElementById('club_id').addEventListener('change', () => {
+        syncCodigoClubPrefijo();
         validarFormulario();
         actualizarBloqueoSeleccionJugadores();
     });
@@ -1667,6 +1678,7 @@ document.getElementById('formEquipo').addEventListener('submit', async function(
     formData.append('torneo_id', torneo_id);
     formData.append('nombre_equipo', nombre_equipo);
     formData.append('club_id', club_id);
+    formData.append('codigo_club_prefijo', (document.getElementById('codigo_club_prefijo') && document.getElementById('codigo_club_prefijo').value) || '');
     
     let posicionJugador = 1;
     const jugadoresEnviados = [];

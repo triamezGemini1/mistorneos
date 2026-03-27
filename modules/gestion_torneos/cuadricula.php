@@ -20,6 +20,21 @@ if (!isset($asignaciones) || !is_array($asignaciones)) {
 if (!isset($torneo) || !is_array($torneo)) {
     $torneo = ['id' => 0, 'nombre' => 'Torneo'];
 }
+$context_switcher = isset($context_switcher) && is_array($context_switcher)
+    ? $context_switcher
+    : ['active_tournament_id' => (int)($torneo['id'] ?? 0), 'items' => []];
+$activeContextName = (string)($torneo['nombre'] ?? 'Torneo');
+$activeContextViewId = (int)($torneo['id'] ?? 0);
+if (!empty($context_switcher['items']) && is_array($context_switcher['items'])) {
+    $activeContextId = (int)($context_switcher['active_tournament_id'] ?? ($torneo['id'] ?? 0));
+    foreach ($context_switcher['items'] as $ctxItem) {
+        if ((int)($ctxItem['id'] ?? 0) === $activeContextId) {
+            $activeContextName = (string)($ctxItem['nombre'] ?? $activeContextName);
+            $activeContextViewId = (int)($ctxItem['id'] ?? $activeContextViewId);
+            break;
+        }
+    }
+}
 
 $totalInscritos = isset($totalInscritos)
     ? (int) $totalInscritos
@@ -77,6 +92,56 @@ $pageTitle = isset($titulo) ? (string) $titulo : ('Cuadrícula - Ronda ' . (int)
             }
             .cuadricula-shell { height: auto !important; max-height: none !important; overflow: visible !important; }
         }
+        .header-context-switch {
+            display: inline-flex;
+            align-items: center;
+            background: rgba(255, 255, 255, 0.14);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            border-radius: 999px;
+            padding: 2px;
+            gap: 2px;
+            margin-right: 8px;
+        }
+        .header-context-switch .switch-item {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            text-decoration: none;
+            min-width: 86px;
+            padding: 4px 9.5px;
+            border-radius: 999px;
+            color: rgba(255, 255, 255, 0.92);
+            font-size: 12px;
+            font-weight: 600;
+            line-height: 1;
+            white-space: nowrap;
+        }
+        .header-context-switch .switch-item:hover { color: #fff; background: rgba(255,255,255,0.16); }
+        .header-context-switch .switch-item.is-active { background: #005c44; color: #fff; }
+        .header-context-switch.is-compact { gap: 5px; }
+        .header-context-switch.is-compact .switch-item { font-size: 13px; min-width: 74px; padding: 4px 7.6px; }
+        .header-context-switch .text-id-ghost { font-size: 10px; color: rgba(255,255,255,0.72); margin-left: 4px; font-weight: 500; }
+        .header-context-info {
+            display: inline-flex;
+            align-items: center;
+            font-size: 12px;
+            font-weight: 600;
+            color: rgba(255, 255, 255, 0.88);
+            margin-right: 8px;
+            white-space: nowrap;
+        }
+        .header-context-info .context-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            display: inline-block;
+            margin-right: 6px;
+            background: #3498db;
+        }
+        @media (max-width: 1366px) {
+            .header-context-switch .switch-item { min-width: 78px; padding: 4px 8px; font-size: 11px; }
+            .header-context-info { font-size: 11px; }
+        }
     </style>
 </head>
 <body class="page-cuadricula-10">
@@ -90,6 +155,35 @@ $pageTitle = isset($titulo) ? (string) $titulo : ('Cuadrícula - Ronda ' . (int)
                 <?php endif; ?>
             </span>
             <div class="cuadricula-header-right d-flex align-items-center ml-auto" style="flex-shrink:0;">
+                <span class="header-context-info">
+                    <span class="context-dot" aria-hidden="true"></span>
+                    Visualizando: Torneo <?php echo htmlspecialchars($activeContextName, ENT_QUOTES, 'UTF-8'); ?> [#<?php echo $activeContextViewId; ?>]
+                </span>
+                <?php if (!empty($context_switcher['items'])): ?>
+                    <?php
+                    $activeTournamentId = (int)($context_switcher['active_tournament_id'] ?? 0);
+                    $sepSwitch = $use_standalone ? '?' : '&';
+                    $switchCount = count($context_switcher['items']);
+                    ?>
+                    <div class="header-context-switch<?php echo $switchCount >= 3 ? ' is-compact' : ''; ?>" role="group" aria-label="Selector de contexto del torneo">
+                        <?php foreach ($context_switcher['items'] as $switchItem): ?>
+                            <?php
+                            $switchId = (int)($switchItem['id'] ?? 0);
+                            $switchLabel = (string)($switchItem['nombre'] ?? ('Torneo #' . $switchId));
+                            $switchParentEventId = (int)($switchItem['parent_event_id'] ?? 0);
+                            $isActiveSwitch = ($switchId === $activeTournamentId);
+                            $switchHref = $base_url . $sepSwitch . 'action=cuadricula&torneo_id=' . $switchId . '&ronda=' . (int)($numRonda ?? 0) . '&switch_torneo_id=' . $switchId . '&return_action=cuadricula';
+                            ?>
+                            <a href="<?php echo htmlspecialchars($switchHref, ENT_QUOTES, 'UTF-8'); ?>"
+                               class="switch-item js-context-switch<?php echo $isActiveSwitch ? ' is-active' : ''; ?>"
+                               aria-pressed="<?php echo $isActiveSwitch ? 'true' : 'false'; ?>"
+                               title="<?php echo htmlspecialchars('ID Sistema: ' . $switchId . ' | Evento Padre: ' . $switchParentEventId, ENT_QUOTES, 'UTF-8'); ?>">
+                                <?php echo htmlspecialchars($switchLabel, ENT_QUOTES, 'UTF-8'); ?>
+                                <span class="text-id-ghost">#<?php echo $switchId; ?></span>
+                            </a>
+                        <?php endforeach; ?>
+                    </div>
+                <?php endif; ?>
                 <button type="button" onclick="window.print()" class="btn btn-primary btn-sm">
                     <i class="fas fa-print mr-2"></i> Imprimir
                 </button>
@@ -163,6 +257,7 @@ $pageTitle = isset($titulo) ? (string) $titulo : ('Cuadrícula - Ronda ' . (int)
         for (var i = 0; i < rowCells.length; i++) rowCells[i].classList.add('is-row-hover');
     });
     grid.addEventListener('mouseleave', clearHover);
+
 })();
     </script>
 </body>

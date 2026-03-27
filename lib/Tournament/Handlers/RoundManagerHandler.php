@@ -70,7 +70,7 @@ final class RoundManagerHandler
 
             // Solo estatus 1 (confirmado) cuentan para participar en el torneo
             require_once __DIR__ . '/../../InscritosHelper.php';
-            $stmt = $pdo->prepare('SELECT COUNT(*) FROM inscritos WHERE torneo_id = ? AND ' . InscritosHelper::SQL_WHERE_SOLO_CONFIRMADO);
+            $stmt = $pdo->prepare('SELECT COUNT(*) FROM inscritos WHERE torneo_id = ? AND ' . \InscritosHelper::SQL_WHERE_SOLO_CONFIRMADO);
             $stmt->execute([$torneoId]);
             $num_inscritos = (int) $stmt->fetchColumn();
             if ($num_inscritos < 4) {
@@ -129,7 +129,7 @@ final class RoundManagerHandler
                     $msg_no_presentes = $marcados_retirados . ' inscrito(s) no presente(s) marcado(s) como retirado(s).';
                 }
                 // Revalidar que sigan habiendo al menos 4 confirmados tras retirar no presentes
-                $stmt = $pdo->prepare('SELECT COUNT(*) FROM inscritos WHERE torneo_id = ? AND ' . InscritosHelper::SQL_WHERE_SOLO_CONFIRMADO);
+                $stmt = $pdo->prepare('SELECT COUNT(*) FROM inscritos WHERE torneo_id = ? AND ' . \InscritosHelper::SQL_WHERE_SOLO_CONFIRMADO);
                 $stmt->execute([$torneoId]);
                 if ((int) $stmt->fetchColumn() < 4) {
                     $_SESSION['error'] = 'No se puede generar la ronda 3: tras marcar no presentes quedan menos de 4 participantes confirmados.';
@@ -186,7 +186,7 @@ final class RoundManagerHandler
                            COALESCE(i.efectividad, 0) AS efectividad, COALESCE(i.puntos, 0) AS puntos
                     FROM inscritos i
                     INNER JOIN usuarios u ON i.id_usuario = u.id
-                    WHERE i.torneo_id = ? AND " . InscritosHelper::sqlWhereSoloConfirmadoConAlias('i') . '
+                    WHERE i.torneo_id = ? AND " . \InscritosHelper::sqlWhereSoloConfirmadoConAlias('i') . '
                 ');
                     $stmtJug->execute([$torneoId]);
                     $jugadores = $stmtJug->fetchAll(\PDO::FETCH_ASSOC);
