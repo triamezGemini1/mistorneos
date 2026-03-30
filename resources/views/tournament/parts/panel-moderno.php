@@ -201,9 +201,28 @@ tailwind.config = {
         </div>
     <?php endif; ?>
 
-    <?php if (($mesas_verificadas_count + $mesas_digitadas_count) > 0): ?>
+    <?php
+    $return_to_panel_res = $use_standalone
+        ? ($base_url . '?action=panel&torneo_id=' . (int)$torneo['id'])
+        : ('index.php?page=torneo_gestion&action=panel&torneo_id=' . (int)$torneo['id']);
+    $url_cronometro_res = $base_url
+        . ($use_standalone ? '?' : '&')
+        . 'action=cronometro&torneo_id=' . (int)$torneo['id']
+        . '&return_to=' . urlencode($return_to_panel_res);
+    $panel_show_auditoria_res = ($mesas_verificadas_count + $mesas_digitadas_count) > 0;
+    ?>
+    <?php if ($panel_show_auditoria_res): ?>
         <div class="bg-slate-50 border border-slate-200 rounded-lg px-4 py-3 mb-4">
-            <h5 class="text-slate-700 font-semibold mb-2"><i class="fas fa-chart-bar mr-2"></i>Auditoría de Resultados</h5>
+            <div class="flex flex-wrap items-center gap-x-4 gap-y-2 mb-3">
+                <span class="font-semibold text-slate-800 inline-flex items-center" style="font-size: calc(0.875rem + 0.5rem);">
+                    <i class="fas fa-chart-bar mr-2 text-slate-600"></i>Auditoría de Resultados
+                </span>
+                <button type="button" id="btnCronometroVentana"
+                    class="inline-flex items-center font-bold py-2 px-4 rounded-lg shadow border-0 bg-violet-600 hover:bg-violet-700 text-white transition-colors"
+                    style="font-size: calc(0.875rem + 0.5rem); cursor: pointer; margin-left: auto;">
+                    <i class="fas fa-external-link-alt mr-2"></i><span>ABRIR CRONÓMETRO DE RONDA</span>
+                </button>
+            </div>
             <div class="flex flex-wrap gap-4">
                 <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-emerald-100 text-emerald-800">
                     <i class="fas fa-camera mr-1"></i>Verificadas (QR): <?= $mesas_verificadas_count ?>
@@ -212,8 +231,39 @@ tailwind.config = {
                     <i class="fas fa-keyboard mr-1"></i>Digitadas (admin): <?= $mesas_digitadas_count ?>
                 </span>
             </div>
+            <p class="text-xs text-slate-500 mt-2 mb-0">El cronómetro se abre en ventana nueva, redimensionable e independiente del panel.</p>
+        </div>
+    <?php else: ?>
+        <div class="mb-4 flex flex-wrap items-center justify-end gap-3">
+            <button type="button" id="btnCronometroVentana"
+                class="inline-flex items-center font-bold py-2 px-4 rounded-lg shadow border-0 bg-violet-600 hover:bg-violet-700 text-white transition-colors"
+                style="font-size: calc(0.875rem + 0.5rem); cursor: pointer;">
+                <i class="fas fa-external-link-alt mr-2"></i><span>ABRIR CRONÓMETRO DE RONDA</span>
+            </button>
         </div>
     <?php endif; ?>
+    <script>
+    (function() {
+        var btnCron = document.getElementById('btnCronometroVentana');
+        if (!btnCron) return;
+        var urlCronometro = <?php echo json_encode($url_cronometro_res, JSON_UNESCAPED_SLASHES); ?>;
+        btnCron.addEventListener('click', function () {
+            var features = [
+                'popup=yes',
+                'width=1100',
+                'height=820',
+                'resizable=yes',
+                'scrollbars=yes'
+            ].join(',');
+            var win = window.open(urlCronometro, 'cronometro_torneo_<?php echo (int)$torneo['id']; ?>', features);
+            if (win) {
+                win.focus();
+            } else {
+                window.location.href = urlCronometro;
+            }
+        });
+    })();
+    </script>
 
     <!-- Estado de Ronda Actual -->
     <?php if ($ultima_ronda > 0): ?>
@@ -276,59 +326,6 @@ tailwind.config = {
     </div>
     <?php endif; ?>
 
-    <?php
-    $return_to_panel = $use_standalone
-        ? ($base_url . '?action=panel&torneo_id=' . (int)$torneo['id'])
-        : ('index.php?page=torneo_gestion&action=panel&torneo_id=' . (int)$torneo['id']);
-    $url_cronometro = $base_url
-        . ($use_standalone ? '?' : '&')
-        . 'action=cronometro&torneo_id=' . (int)$torneo['id']
-        . '&return_to=' . urlencode($return_to_panel);
-    ?>
-    <!-- Cronómetro en ventana independiente (no bloquea ni interfiere con el panel) -->
-    <div class="mb-2 text-center">
-        <button type="button" id="btnCronometroVentana"
-           class="d-inline-block font-bold py-2 px-5 rounded-lg text-lg transition-all transform shadow border-0" style="cursor: pointer;">
-            <i class="fas fa-external-link-alt mr-2"></i><span>ABRIR CRONÓMETRO DE RONDA</span>
-        </button>
-        <?php
-        $u_banner = class_exists('Auth') ? Auth::user() : null;
-        $puede_admin_banner = is_array($u_banner) && in_array(($u_banner['role'] ?? ''), ['admin_general', 'admin_club'], true);
-        ?>
-        <?php if ($puede_admin_banner): ?>
-        <div class="mt-2">
-            <a href="index.php?page=bannerclock&torneo_id=<?php echo (int)$torneo['id']; ?>" class="inline-block text-sm text-indigo-200 hover:text-white underline">
-                <i class="fas fa-bullhorn mr-1"></i>Administrar banner del reloj
-            </a>
-        </div>
-        <?php endif; ?>
-        <div class="text-xs text-gray-300 mt-2">
-            Se abre en ventana nueva, redimensionable e independiente del panel.
-        </div>
-    </div>
-    <script>
-    (function() {
-        var btnCron = document.getElementById('btnCronometroVentana');
-        if (!btnCron) return;
-        var urlCronometro = <?php echo json_encode($url_cronometro, JSON_UNESCAPED_SLASHES); ?>;
-        btnCron.addEventListener('click', function () {
-            var features = [
-                'popup=yes',
-                'width=1100',
-                'height=820',
-                'resizable=yes',
-                'scrollbars=yes'
-            ].join(',');
-            var win = window.open(urlCronometro, 'cronometro_torneo_<?php echo (int)$torneo['id']; ?>', features);
-            if (win) {
-                win.focus();
-            } else {
-                window.location.href = urlCronometro;
-            }
-        });
-    })();
-    </script>
-    
     <!-- Alerta de Torneo Cerrado (compacto) -->
     <?php if ($isLocked): ?>
         <div class="bg-gray-100 border-l-4 border-gray-500 rounded-lg p-2 mb-2">

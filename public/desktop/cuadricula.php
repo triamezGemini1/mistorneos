@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 /**
  * Paso 4: Cuadrícula de asignaciones por ID (Desktop).
  * Tabla ordenada por id_usuario ASC para localizar jugadores rápido. 22 filas x 9 segmentos (ID + MESA+letra).
@@ -94,7 +94,7 @@ require_once __DIR__ . '/desktop_layout.php';
         </div>
         <div class="cuadricula-header-right no-print">
             <button onclick="window.print()" class="btn btn-primary btn-sm"><i class="fas fa-print me-2"></i>Imprimir</button>
-            <?php if ($torneo_id > 0): ?><a href="panel_torneo.php?torneo_id=<?= $torneo_id ?>" class="btn btn-secondary btn-sm"><i class="fas fa-arrow-left me-2"></i>Volver al Panel</a><?php else: ?><a href="torneos.php" class="btn btn-secondary btn-sm"><i class="fas fa-arrow-left me-2"></i>Torneos</a><?php endif; ?>
+            <?php if ($torneo_id > 0): ?><a href="panel_torneo.php?torneo_id=<?= $torneo_id ?>" class="btn btn-secondary btn-sm"><i class="fas fa-arrow-left me-2"></i>Regresar al panel</a><?php else: ?><a href="torneos.php" class="btn btn-secondary btn-sm"><i class="fas fa-arrow-left me-2"></i>Torneos</a><?php endif; ?>
         </div>
     </div>
     <div class="cuadricula-table-wrapper">

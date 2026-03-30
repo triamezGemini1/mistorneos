@@ -14,6 +14,7 @@ if (!isset($base_url) || !isset($use_standalone)) {
 
 // Mapear secuencia a letra: Pareja AC (sec 1,2) → A,C | Pareja BD (sec 3,4) → B,D
 $letras = [1 => 'A', 2 => 'C', 3 => 'B', 4 => 'D'];
+$href_panel = $base_url . ($use_standalone ? '?' : '&') . 'action=panel&torneo_id=' . (int) ($torneo['id'] ?? 0);
 ?>
 <!DOCTYPE html>
 <html lang="es">
@@ -280,8 +281,8 @@ $letras = [1 => 'A', 2 => 'C', 3 => 'B', 4 => 'D'];
                 <button onclick="window.print()" class="btn btn-primary btn-sm">
                     <i class="fas fa-print mr-2"></i> Imprimir
                 </button>
-                <a href="<?php echo $base_url . ($use_standalone ? '?' : '&'); ?>action=panel&torneo_id=<?php echo $torneo['id']; ?>" class="btn btn-secondary btn-sm">
-                    <i class="fas fa-arrow-left mr-2"></i> Volver al Panel
+                <a href="<?php echo htmlspecialchars($href_panel, ENT_QUOTES, 'UTF-8'); ?>" class="btn btn-secondary btn-sm">
+                    <i class="fas fa-arrow-left mr-2"></i> Regresar al panel
                 </a>
             </div>
         </div>

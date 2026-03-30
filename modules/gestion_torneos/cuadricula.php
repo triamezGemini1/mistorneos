@@ -4,7 +4,7 @@
  * Rejilla: 8 segmentos (IDEN|MESA) × 12 filas datos = 96 jugadores/página; grid 13 filas (cabecera + datos).
  * Llenado vertical por segmento: índice en bloque = segmento * filas_datos + fila.
  * Celdas: resources/views/tournament/partials/grid_display.php (foreach $cuad_paginas + bucles internos).
- * Estilos 10": public/assets/css/custom-13inch.css (.matrix-header 5vh, .matrix-row 6.8vh).
+ * Estilos 10": public/assets/css/custom-13inch.css (.grilla-pantalla: cabecera/datos en vh compactos).
  */
 if (!isset($base_url) || !isset($use_standalone)) {
     $script_actual = basename($_SERVER['PHP_SELF'] ?? '');
@@ -85,6 +85,10 @@ require_once __DIR__ . '/../../lib/app_helpers.php';
 $href_custom_13 = AppHelpers::url('assets/css/custom-13inch.css');
 $href_torneo_context_switch = AppHelpers::url('assets/css/torneo-context-switch.css');
 $pageTitle = isset($titulo) ? (string) $titulo : ('Cuadrícula - Ronda ' . (int) ($numRonda ?? 0));
+$href_panel = $base_url . ($use_standalone ? '?' : '&') . 'action=panel&torneo_id=' . (int) ($torneo['id'] ?? 0);
+$tid_export = (int) ($torneo['id'] ?? 0);
+$href_export_xls = $tid_export > 0 ? AppHelpers::torneoGestionUrl('inscripciones_export_xls', $tid_export) : '';
+$href_export_pdf = $tid_export > 0 ? AppHelpers::torneoGestionUrl('inscripciones_export_pdf', $tid_export) : '';
 ?>
 <!DOCTYPE html>
 <html lang="es" class="cuadricula-scroll-root">
@@ -113,24 +117,48 @@ $pageTitle = isset($titulo) ? (string) $titulo : ('Cuadrícula - Ronda ' . (int)
         @media (max-width: 1366px) and (max-height: 800px) {
             body.cuadricula-equipos-v3 .cuadricula-header .btn-sm { font-size: 0.7rem; padding: 0.2rem 0.45rem; }
         }
+        .cuadricula-header-switcher {
+            display: flex;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 6px 8px;
+            min-width: 0;
+        }
+        .cuadricula-header-switcher .torneo-asociado-select-wrap {
+            margin-bottom: 0 !important;
+        }
+        .cuadricula-header-switcher .tcs {
+            align-self: center;
+        }
+        .cuadricula-header-actions {
+            display: inline-flex;
+            align-items: center;
+            flex-wrap: nowrap;
+            gap: 4px;
+            flex-shrink: 0;
+        }
+        .cuadricula-header-actions .btn-sm { white-space: nowrap; padding: 0.2rem 0.45rem; font-size: 0.78rem; }
+        .cuadricula-header.no-print { padding: 2px 6px !important; min-height: 0; align-items: center !important; }
+        .cuadricula-meta { padding: 2px 6px !important; font-size: 0.7rem !important; line-height: 1.2 !important; min-height: 0 !important; }
     </style>
 </head>
 <body class="page-cuadricula-10<?php echo $es_modalidad_equipos_v3 ? ' cuadricula-equipos-v3' : ''; ?>">
     <div class="cuadricula-shell">
-        <div class="cuadricula-header no-print d-flex align-items-center justify-content-between flex-wrap w-100">
-            <span class="cuadricula-header-torneo mr-2" style="min-width:0;">
+        <div class="cuadricula-header no-print d-flex align-items-center justify-content-between flex-nowrap w-100">
+            <span class="cuadricula-header-torneo mr-1" style="min-width:0;flex:1 1 auto;font-size:0.82rem;line-height:1.2;">
                 <?php echo htmlspecialchars(strtoupper($torneo['nombre'] ?? 'Torneo'), ENT_QUOTES, 'UTF-8'); ?>
-                — RONDA <?php echo (int) ($numRonda ?? 0); ?>
+                — R<?php echo (int) ($numRonda ?? 0); ?>
                 <?php if ($totalInscritos > 0): ?>
-                    <span class="text-muted font-weight-normal"> · <?php echo (int) $totalInscritos; ?> inscritos</span>
+                    <span class="text-muted font-weight-normal"> · <?php echo (int) $totalInscritos; ?></span>
                 <?php endif; ?>
             </span>
-            <div class="cuadricula-header-right d-flex align-items-center ml-auto" style="flex-shrink:0;">
-                <span class="tcs-info tcs-info--on-dark mr-2">
+            <div class="cuadricula-header-right d-flex align-items-center flex-nowrap ml-1 justify-content-end" style="flex:0 1 auto;min-width:0;gap:4px;">
+                <span class="tcs-info tcs-info--on-dark mb-0 align-self-center d-none d-xl-inline" style="font-size:0.72rem;">
                     <span class="tcs-info__dot" aria-hidden="true"></span>
-                    Visualizando: Torneo <?php echo htmlspecialchars($activeContextName, ENT_QUOTES, 'UTF-8'); ?> [#<?php echo $activeContextViewId; ?>]
+                    <?php echo htmlspecialchars($activeContextName, ENT_QUOTES, 'UTF-8'); ?> #<?php echo $activeContextViewId; ?>
                 </span>
                 <?php if (!empty($context_switcher['items'])): ?>
+                <div class="cuadricula-header-switcher no-print" style="flex-wrap:nowrap;">
                     <?php
                     $tcs = [
                         'items' => $context_switcher['items'],
@@ -143,17 +171,30 @@ $pageTitle = isset($titulo) ? (string) $titulo : ('Cuadrícula - Ronda ' . (int)
                         'theme' => 'on_dark',
                         'select_id' => 'torneo-asociado-select-cuad',
                         'show_info' => false,
-                        'pill_row_class' => 'mr-2',
+                        'pill_row_class' => '',
                     ];
                     require __DIR__ . '/../../resources/views/partials/torneo_context_switch.php';
                     ?>
+                </div>
                 <?php endif; ?>
-                <button type="button" onclick="window.print()" class="btn btn-primary btn-sm">
-                    <i class="fas fa-print mr-2"></i> Imprimir
-                </button>
-                <a href="<?php echo htmlspecialchars($base_url . ($use_standalone ? '?' : '&') . 'action=panel&torneo_id=' . (int) ($torneo['id'] ?? 0), ENT_QUOTES, 'UTF-8'); ?>" class="btn btn-secondary btn-sm ml-1">
-                    <i class="fas fa-arrow-left mr-2"></i> Volver al panel
-                </a>
+                <div class="cuadricula-header-actions" title="Misma fila: volver, PDF e inscritos Excel">
+                    <a href="<?php echo htmlspecialchars($href_panel, ENT_QUOTES, 'UTF-8'); ?>" class="btn btn-secondary btn-sm">
+                        <i class="fas fa-arrow-left"></i> Volver
+                    </a>
+                    <?php if ($href_export_pdf !== ''): ?>
+                    <a href="<?php echo htmlspecialchars($href_export_pdf, ENT_QUOTES, 'UTF-8'); ?>" class="btn btn-outline-danger btn-sm" target="_blank" rel="noopener">
+                        <i class="fas fa-file-pdf"></i> PDF
+                    </a>
+                    <?php endif; ?>
+                    <?php if ($href_export_xls !== ''): ?>
+                    <a href="<?php echo htmlspecialchars($href_export_xls, ENT_QUOTES, 'UTF-8'); ?>" class="btn btn-outline-success btn-sm" target="_blank" rel="noopener">
+                        <i class="fas fa-file-excel"></i> Excel
+                    </a>
+                    <?php endif; ?>
+                    <button type="button" onclick="window.print()" class="btn btn-primary btn-sm" title="Imprimir esta cuadrícula">
+                        <i class="fas fa-print"></i>
+                    </button>
+                </div>
             </div>
         </div>
         <div class="cuadricula-meta no-print" id="cuadriculaMeta" aria-live="polite"></div>

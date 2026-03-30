@@ -172,15 +172,15 @@ html.cuadricula-scroll-root body {
 }
 
 .matrix-header {
-  height: calc(4.5vh * 0.95) !important;
-  min-height: calc(4.5vh * 0.95) !important;
-  max-height: calc(4.5vh * 0.95) !important;
+  height: calc(4.5vh * 0.855) !important;
+  min-height: calc(4.5vh * 0.855) !important;
+  max-height: calc(4.5vh * 0.855) !important;
 }
 
 .matrix-row {
-  height: calc(5.8vh * 0.95) !important;
-  min-height: calc(5.8vh * 0.95) !important;
-  max-height: calc(5.8vh * 0.95) !important;
+  height: calc(5.8vh * 0.855) !important;
+  min-height: calc(5.8vh * 0.855) !important;
+  max-height: calc(5.8vh * 0.855) !important;
   margin: 0 !important;
   padding: 0 !important;
 }
@@ -195,8 +195,8 @@ html.cuadricula-scroll-root body {
   margin: 0 !important;
   padding: 0 !important;
   grid-template-columns: repeat(16, 1fr) !important;
-  grid-template-rows: calc(4.5vh * 0.95) repeat(12, calc(5.8vh * 0.95)) !important;
-  grid-auto-rows: calc(5.8vh * 0.95) !important;
+  grid-template-rows: calc(4.5vh * 0.855) repeat(12, calc(5.8vh * 0.855)) !important;
+  grid-auto-rows: calc(5.8vh * 0.855) !important;
   gap: 0 !important;
   row-gap: 0 !important;
   column-gap: 0 !important;
@@ -220,6 +220,15 @@ html.cuadricula-scroll-root body {
   box-sizing: border-box !important;
 }
 
+/* Pantalla de cuadrícula: el header ya ocupa altura; 98vh aquí recorta la rejilla (p. ej. 14"). */
+.cuadricula-shell .cuadricula-matrix-grid.matrix-grid.grilla-pantalla {
+  height: 100% !important;
+  max-height: 100% !important;
+  min-height: 0 !important;
+  flex: 1 1 0 !important;
+  align-self: stretch !important;
+}
+
 .cuadricula-matrix-grid.grilla-pantalla .matrix-cell {
   margin: 0 !important;
   padding: 0 !important;
@@ -228,7 +237,7 @@ html.cuadricula-scroll-root body {
   align-items: center !important;
   justify-content: center !important;
   text-align: center !important;
-  font-size: 2.4vh !important;
+  font-size: 2.16vh !important;
   font-weight: 600 !important;
   box-sizing: border-box !important;
   min-height: 0 !important;
@@ -275,9 +284,9 @@ html.cuadricula-scroll-root body {
 .matrix-grid.grilla-master .matrix-row {
   display: grid !important;
   width: 100% !important;
-  height: calc(5.8vh * 0.95) !important;
-  min-height: calc(5.8vh * 0.95) !important;
-  max-height: calc(5.8vh * 0.95) !important;
+  height: calc(5.8vh * 0.855) !important;
+  min-height: calc(5.8vh * 0.855) !important;
+  max-height: calc(5.8vh * 0.855) !important;
   margin: 0 !important;
   padding: 0 !important;
   gap: 0 !important;
@@ -287,9 +296,9 @@ html.cuadricula-scroll-root body {
 
 .matrix-grid.grilla-agil .matrix-row:first-child,
 .matrix-grid.grilla-master .matrix-row:first-child {
-  height: calc(4.5vh * 0.95) !important;
-  min-height: calc(4.5vh * 0.95) !important;
-  max-height: calc(4.5vh * 0.95) !important;
+  height: calc(4.5vh * 0.855) !important;
+  min-height: calc(4.5vh * 0.855) !important;
+  max-height: calc(4.5vh * 0.855) !important;
 }
 
 .matrix-grid.grilla-agil .matrix-row {
@@ -306,7 +315,7 @@ html.cuadricula-scroll-root body {
   align-items: center !important;
   justify-content: center !important;
   text-align: center !important;
-  font-size: 2.4vh !important;
+  font-size: 2.16vh !important;
   margin: 0 !important;
   padding: 0 !important;
   overflow: visible !important;
@@ -344,13 +353,13 @@ html.cuadricula-scroll-root body {
 /* Cuadrícula equipos / pantallas 1366×768: tipografía más compacta, sin scroll horizontal */
 @media (max-width: 1366px) and (max-height: 768px) {
   .cuadricula-matrix-grid.grilla-pantalla .matrix-cell {
-    font-size: 1.75vh !important;
+    font-size: 1.575vh !important;
     font-weight: 600 !important;
   }
   .cuadricula-matrix-grid.grilla-pantalla .matrix-header {
-    font-size: 1.55vh !important;
+    font-size: 1.395vh !important;
   }
   body.cuadricula-equipos-v3 .cuadricula-matrix-grid.grilla-pantalla .matrix-cell {
-    font-size: 1.65vh !important;
+    font-size: 1.485vh !important;
   }
 }

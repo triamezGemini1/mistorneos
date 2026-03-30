@@ -490,42 +490,21 @@ if (isset($_GET['ajax']) && $_GET['ajax'] === 'deuda') {
 <div class="container-fluid">
     <div class="row">
         <div class="col-12">
-            <div class="d-flex justify-content-between align-items-center mb-4">
+            <div class="d-flex justify-content-between align-items-center <?= $action === 'list' ? 'mb-2' : 'mb-4' ?>">
                 <div>
-                    <h1 class="h3 mb-0">
+                    <h1 class="<?= $action === 'list' ? 'h4' : 'h3' ?> mb-0">
                         <i class="fas fa-users me-2"></i>Inscritos
                     </h1>
-                    <p class="text-muted mb-0">Gesti�n de jugadores inscritos en torneos</p>
+                    <p class="text-muted mb-0<?= $action === 'list' ? ' small' : '' ?>">Gesti�n de jugadores inscritos en torneos</p>
                 </div>
-                <div>
+                <div class="d-flex flex-wrap gap-2 justify-content-end align-items-center">
                     <?php if ($action === 'list'): ?>
-                        <?php if (!empty($filter_torneo)): ?>
-                        <?php
-                        $url_panel = ($return_to === 'panel_torneo')
-                            ? ('panel_torneo.php?action=panel&torneo_id=' . (int)$filter_torneo)
-                            : ('index.php?page=torneo_gestion&action=panel&torneo_id=' . (int)$filter_torneo);
-                        ?>
-                        <a href="<?= htmlspecialchars($url_panel) ?>" class="btn btn-outline-secondary me-2">
-                            <i class="fas fa-arrow-left me-2"></i>Retornar al panel del torneo
-                        </a>
-                        <?php endif; ?>
-                        <?php if (!empty($filter_torneo) && class_exists('AppHelpers')): ?>
-                        <a href="<?= htmlspecialchars(AppHelpers::torneoGestionUrl('inscripciones_reporte_detallado_pdf', (int)$filter_torneo)) ?>"
-                               class="btn btn-primary me-2" target="_blank" rel="noopener"
-                               title="PDF con logo del organizador, por asociación y equipo">
-                            <i class="fas fa-file-pdf me-2"></i>Inscritos detallado (PDF)
-                        </a>
-                        <a href="<?= htmlspecialchars(AppHelpers::torneoGestionUrl('inscripciones_reporte_detallado_xls', (int)$filter_torneo)) ?>"
-                               class="btn btn-outline-primary me-2" target="_blank" rel="noopener">
-                            <i class="fas fa-file-excel me-2"></i>Inscritos detallado (Excel)
-                        </a>
-                        <?php endif; ?>
-                        <a href="index.php?page=registrants_report<?= !empty($filter_torneo) ? '&filter_torneo=' . (int)$filter_torneo : '' ?><?= !empty($filter_clubs) ? '&' . http_build_query(['filter_clubs' => $filter_clubs]) : '' ?>" 
-                               class="btn btn-info me-2">
+                        <a href="index.php?page=registrants_report<?= !empty($filter_torneo) ? '&filter_torneo=' . (int)$filter_torneo : '' ?><?= !empty($filter_clubs) ? '&' . http_build_query(['filter_clubs' => $filter_clubs]) : '' ?>"
+                               class="btn btn-sm btn-info">
                             <i class="fas fa-file-alt me-2"></i>Reportes
                         </a>
-                        <a href="index.php?page=registrants_report_retirados<?= !empty($filter_torneo) ? '&filter_torneo=' . (int)$filter_torneo : '' ?><?= !empty($filter_clubs) ? '&' . http_build_query(['filter_clubs' => $filter_clubs]) : '' ?>" 
-                               class="btn btn-warning text-dark me-2">
+                        <a href="index.php?page=registrants_report_retirados<?= !empty($filter_torneo) ? '&filter_torneo=' . (int)$filter_torneo : '' ?><?= !empty($filter_clubs) ? '&' . http_build_query(['filter_clubs' => $filter_clubs]) : '' ?>"
+                               class="btn btn-sm btn-warning text-dark">
                             <i class="fas fa-user-minus me-2"></i>Reporte Retirados
                         </a>
                     <?php endif; ?>
@@ -561,6 +540,93 @@ if (isset($_GET['ajax']) && $_GET['ajax'] === 'deuda') {
 </div>
 
 <?php if ($action === 'list'): ?>
+    <style>
+    /* Vista listado inscritos: optimizada ~1366×768 (más filas visibles) */
+    .registrants-view-compact .card-header {
+        padding: 0.5rem 0.75rem;
+    }
+    .registrants-view-compact .card-header .card-title {
+        margin-bottom: 0 !important;
+        font-size: 1rem;
+    }
+    .registrants-view-compact .card-body {
+        padding-top: 0.75rem;
+        padding-bottom: 0.75rem;
+    }
+    .registrants-view-compact .mb-4 {
+        margin-bottom: 0.75rem !important;
+    }
+    .registrants-view-compact .row.g-4 {
+        --bs-gutter-y: 0.75rem;
+        --bs-gutter-x: 0.75rem;
+    }
+    .registrants-view-compact .table {
+        width: 100%;
+        table-layout: fixed;
+        margin-bottom: 0;
+    }
+    .registrants-view-compact .table td,
+    .registrants-view-compact .table th {
+        padding: 4px 8px;
+        vertical-align: middle;
+    }
+    .registrants-view-compact .table tbody td {
+        font-size: 0.85rem;
+    }
+    .registrants-view-compact .table thead th {
+        font-size: 0.8rem;
+        margin-bottom: 0;
+    }
+    .registrants-view-compact .table tfoot th,
+    .registrants-view-compact .table tfoot td {
+        padding: 4px 8px;
+    }
+    .registrants-view-compact .table-registrants-main td:nth-child(2),
+    .registrants-view-compact .table-registrants-main th:nth-child(2) {
+        word-break: break-word;
+        overflow-wrap: anywhere;
+    }
+    .registrants-view-compact .table-registrants-main td:last-child,
+    .registrants-view-compact .table-registrants-main th:last-child {
+        white-space: nowrap;
+        width: 1%;
+    }
+    .registrants-view-compact .table-resumen-club td:first-child,
+    .registrants-view-compact .table-resumen-club th:first-child {
+        word-break: break-word;
+        overflow-wrap: anywhere;
+    }
+    .registrants-view-compact .table-resumen-club td:last-child,
+    .registrants-view-compact .table-resumen-club th:last-child {
+        white-space: nowrap;
+        width: 1%;
+    }
+    .registrants-view-compact .registrants-list-title {
+        margin-bottom: 0.5rem !important;
+    }
+    .registrants-view-compact .registrants-list-title h3 {
+        font-size: 1.15rem;
+        margin-bottom: 0 !important;
+    }
+    .registrants-view-compact .row.mb-4 > .col-md-3 .card-body,
+    .registrants-view-compact .row.g-4.mb-4 .card-body {
+        padding: 0.5rem 0.75rem;
+    }
+    .registrants-view-compact .row.mb-4 .card-title {
+        font-size: 0.9rem;
+        margin-bottom: 0.25rem !important;
+    }
+    .registrants-view-compact .row.mb-4 h2.mb-0 {
+        font-size: 1.35rem;
+    }
+    .registrants-view-compact .row.g-4.mb-4 .card-body.text-center h3 {
+        font-size: 1.1rem;
+    }
+    .registrants-view-compact .row.g-4.mb-4 .card-body.text-center p {
+        font-size: 0.75rem;
+    }
+    </style>
+    <div class="registrants-view-compact">
     <?php
     // Cargar estadísticas para widgets
     require_once __DIR__ . '/../lib/StatisticsHelper.php';
@@ -743,7 +809,7 @@ if (isset($_GET['ajax']) && $_GET['ajax'] === 'deuda') {
                 <div class="row mt-3">
                     <div class="col-12">
                         <div class="d-flex gap-2 flex-wrap">
-                            <a href="index.php?page=registrants" class="btn btn-secondary">
+                            <a href="index.php?page=registrants" class="btn btn-sm btn-secondary">
                                 <i class="fas fa-times me-2"></i>Limpiar Filtros
                             </a>
                             
@@ -751,7 +817,7 @@ if (isset($_GET['ajax']) && $_GET['ajax'] === 'deuda') {
                             
                             <?php if (!empty($filter_torneo)): ?>
                             <a href="index.php?page=registrants_report<?= !empty($filter_torneo) ? '&filter_torneo=' . (int)$filter_torneo : '' ?><?= !empty($filter_clubs) ? '&' . http_build_query(['filter_clubs' => $filter_clubs]) : '' ?>" 
-                               class="btn btn-primary">
+                               class="btn btn-sm btn-primary">
                                 <i class="fas fa-file-alt me-2"></i>Ir a Reportes
                             </a>
                             <?php
@@ -764,12 +830,12 @@ if (isset($_GET['ajax']) && $_GET['ajax'] === 'deuda') {
                             }
                             if (!empty($torneo_iniciado) && $torneo_iniciado && $modalidad_sust !== 3): ?>
                             <a href="index.php?page=torneo_gestion&action=sustituir_jugador&torneo_id=<?= (int)$filter_torneo ?>" 
-                               class="btn btn-warning">
+                               class="btn btn-sm btn-warning">
                                 <i class="fas fa-user-exchange me-2"></i>Sustituir jugador retirado
                             </a>
                             <?php endif; ?>
                             <?php else: ?>
-                            <button type="button" class="btn btn-primary" disabled title="Primero debe seleccionar un torneo">
+                            <button type="button" class="btn btn-sm btn-primary" disabled title="Primero debe seleccionar un torneo">
                                 <i class="fas fa-file-alt me-2"></i>Ir a Reportes
                             </button>
                             <?php endif; ?>
@@ -785,6 +851,28 @@ if (isset($_GET['ajax']) && $_GET['ajax'] === 'deuda') {
                             </div>
                             <p class="small text-muted mb-2 mb-md-3">Resumen en pantalla, PDF/Excel simple o <strong>reporte detallado</strong> (logo del organizador, por asociación y equipo).</p>
                             <div class="d-flex flex-wrap gap-2 align-items-center">
+                                <?php
+                                $url_panel_export = ($return_to === 'panel_torneo')
+                                    ? ('panel_torneo.php?action=panel&torneo_id=' . (int)$filter_torneo)
+                                    : ('index.php?page=torneo_gestion&action=panel&torneo_id=' . (int)$filter_torneo);
+                                ?>
+                                <button type="button" class="btn btn-sm btn-outline-secondary" onclick="if (history.length > 1) { history.back(); } else { window.location.href='index.php?page=registrants'; }">
+                                    <i class="fas fa-arrow-left me-1"></i>Volver
+                                </button>
+                                <button type="button" class="btn btn-sm btn-outline-secondary" onclick="window.print();">
+                                    <i class="fas fa-print me-1"></i>Imprimir
+                                </button>
+                                <a href="<?= htmlspecialchars($url_panel_export) ?>" class="btn btn-sm btn-outline-primary">
+                                    <i class="fas fa-th-large me-1"></i>Regresar al panel
+                                </a>
+                                <?php if (class_exists('AppHelpers')): ?>
+                                <span class="small text-muted me-1 d-none d-md-inline">Listado simple:</span>
+                                <a href="<?= htmlspecialchars(AppHelpers::torneoGestionUrl('inscripciones_export_pdf', (int)$filter_torneo)) ?>"
+                                   class="btn btn-outline-danger btn-sm" target="_blank" rel="noopener">PDF</a>
+                                <a href="<?= htmlspecialchars(AppHelpers::torneoGestionUrl('inscripciones_export_xls', (int)$filter_torneo)) ?>"
+                                   class="btn btn-outline-success btn-sm" target="_blank" rel="noopener">Excel</a>
+                                <?php endif; ?>
+                                <span class="vr d-none d-sm-block"></span>
                                 <a href="index.php?page=registrants_report&amp;filter_torneo=<?= (int)$filter_torneo ?><?= !empty($filter_clubs) ? '&amp;' . htmlspecialchars(http_build_query(['filter_clubs' => $filter_clubs])) : '' ?>"
                                    class="btn btn-primary btn-sm">
                                     <i class="fas fa-desktop me-1"></i>Pantalla de reportes
@@ -801,12 +889,6 @@ if (isset($_GET['ajax']) && $_GET['ajax'] === 'deuda') {
                                    class="btn btn-success btn-sm" target="_blank" rel="noopener">
                                     <i class="fas fa-file-excel me-1"></i>Excel detallado
                                 </a>
-                                <span class="vr d-none d-md-block"></span>
-                                <span class="small text-muted me-1 d-none d-md-inline">Listado simple:</span>
-                                <a href="<?= htmlspecialchars(AppHelpers::torneoGestionUrl('inscripciones_export_pdf', (int)$filter_torneo)) ?>"
-                                   class="btn btn-outline-danger btn-sm" target="_blank" rel="noopener">PDF</a>
-                                <a href="<?= htmlspecialchars(AppHelpers::torneoGestionUrl('inscripciones_export_xls', (int)$filter_torneo)) ?>"
-                                   class="btn btn-outline-success btn-sm" target="_blank" rel="noopener">Excel</a>
                                 <?php endif; ?>
                             </div>
                         </div>
@@ -890,7 +972,7 @@ if (isset($_GET['ajax']) && $_GET['ajax'] === 'deuda') {
                 </div>
                 <div class="card-body">
                     <div class="table-responsive">
-                        <table class="table table-hover">
+                        <table class="table table-hover table-resumen-club">
                             <thead>
                                 <tr>
                                     <th>Club</th>
@@ -1038,7 +1120,7 @@ if (isset($_GET['ajax']) && $_GET['ajax'] === 'deuda') {
                 }
             ?>
                 <?php if ($torneo_info): ?>
-                <div class="mb-3">
+                <div class="mb-2 registrants-list-title">
                     <h3 class="mb-0">
                         <?= htmlspecialchars($torneo_info['nombre']) ?>
                         <?php if ($club_info): ?>
@@ -1050,7 +1132,7 @@ if (isset($_GET['ajax']) && $_GET['ajax'] === 'deuda') {
                 </div>
                 <?php endif; ?>
                 <div class="table-responsive">
-                    <table class="table table-hover">
+                    <table class="table table-hover table-registrants-main">
                         <thead>
                             <tr>
                                 <th>ID</th>
@@ -1231,10 +1313,9 @@ if (isset($_GET['ajax']) && $_GET['ajax'] === 'deuda') {
                     </table>
                 </div>
                 <?php endif; ?>
-            </div>
         </div>
     </div>
-</div>
+    </div>
 
 <?php elseif ($action === 'new' || $action === 'edit'): ?>
     <?php if ($action === 'new' && $torneo_id_context <= 0): ?>

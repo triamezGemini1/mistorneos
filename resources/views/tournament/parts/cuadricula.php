@@ -144,8 +144,8 @@ $letras = [1 => 'A', 2 => 'C', 3 => 'B', 4 => 'D'];
                 <button onclick="window.print()" class="btn btn-primary btn-sm">
                     <i class="fas fa-print mr-2"></i> Imprimir
                 </button>
-                <a href="<?php echo $base_url . ($use_standalone ? '?' : '&'); ?>action=panel&torneo_id=<?php echo $torneo['id']; ?>" class="btn btn-secondary btn-sm">
-                    <i class="fas fa-arrow-left mr-2"></i> Volver al Panel
+                <a href="<?php echo htmlspecialchars($base_url . ($use_standalone ? '?' : '&') . 'action=panel&torneo_id=' . (int)($torneo['id'] ?? 0), ENT_QUOTES, 'UTF-8'); ?>" class="btn btn-secondary btn-sm">
+                    <i class="fas fa-arrow-left mr-2"></i> Regresar al panel
                 </a>
             </div>
         </div>

@@ -241,47 +241,131 @@ tailwind.config = {
         </div>
     <?php endif; ?>
 
-    <?php if (($mesas_verificadas_count + $mesas_digitadas_count) > 0): ?>
+    <?php
+    $return_to_panel = $use_standalone
+        ? ($base_url . '?action=panel&torneo_id=' . (int)$torneo['id'])
+        : ('index.php?page=torneo_gestion&action=panel&torneo_id=' . (int)$torneo['id']);
+    $url_cronometro = $base_url
+        . ($use_standalone ? '?' : '&')
+        . 'action=cronometro&torneo_id=' . (int)$torneo['id']
+        . '&return_to=' . urlencode($return_to_panel);
+    $panel_show_auditoria = ($mesas_verificadas_count + $mesas_digitadas_count) > 0;
+    $panel_show_cierre = !empty($paired_tournaments_status['enabled']) && !empty($paired_tournaments_status['items']);
+    $panel_slate_bar = $panel_show_auditoria || $panel_show_cierre;
+    ?>
+    <?php if ($panel_slate_bar): ?>
         <div class="bg-slate-50 border border-slate-200 rounded-lg px-4 py-3 mb-4">
-            <h5 class="text-slate-700 font-semibold mb-2"><i class="fas fa-chart-bar mr-2"></i>Auditoría de Resultados</h5>
-            <div class="flex flex-wrap gap-4">
-                <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-emerald-100 text-emerald-800">
-                    <i class="fas fa-camera mr-1"></i>Verificadas (QR): <?= $mesas_verificadas_count ?>
+            <div class="flex flex-wrap items-center gap-x-4 gap-y-2 mb-3">
+                <?php if ($panel_show_auditoria): ?>
+                <span class="font-semibold text-slate-800 inline-flex items-center" style="font-size: calc(0.875rem + 0.5rem);">
+                    <i class="fas fa-chart-bar mr-2 text-slate-600"></i>Auditoría de Resultados
                 </span>
-                <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800">
-                    <i class="fas fa-keyboard mr-1"></i>Digitadas (admin): <?= $mesas_digitadas_count ?>
+                <?php endif; ?>
+                <?php if ($panel_show_cierre): ?>
+                <span class="font-semibold text-slate-800 inline-flex items-center" style="font-size: calc(0.875rem + 0.5rem);">
+                    <i class="fas fa-link mr-2 text-indigo-600"></i>Cierre total del grupo
                 </span>
+                <?php endif; ?>
+                <button type="button" id="btnCronometroVentana"
+                    class="inline-flex items-center font-bold py-2 px-4 rounded-lg shadow border-0 bg-violet-600 hover:bg-violet-700 text-white transition-colors"
+                    style="font-size: calc(0.875rem + 0.5rem); cursor: pointer; margin-left: auto;">
+                    <i class="fas fa-external-link-alt mr-2"></i><span>ABRIR CRONÓMETRO DE RONDA</span>
+                </button>
             </div>
-        </div>
-    <?php endif; ?>
-
-    <?php if (!empty($paired_tournaments_status['enabled']) && !empty($paired_tournaments_status['items'])): ?>
-        <div class="bg-white border border-slate-200 rounded-lg px-4 py-3 mb-4">
-            <h5 class="text-slate-700 font-semibold mb-2"><i class="fas fa-link mr-2"></i>Cierre total del grupo</h5>
-            <div class="flex flex-wrap gap-3">
-                <?php foreach ($paired_tournaments_status['items'] as $stItem): ?>
-                    <?php
-                    $g = strtoupper((string)($stItem['genero'] ?? 'M'));
-                    $gLabel = $g === 'F' ? 'Femenino' : 'Masculino';
-                    $p = (int)($stItem['mesas_pendientes'] ?? 0);
-                    ?>
-                    <div class="px-3 py-2 rounded-lg border <?php echo !empty($stItem['activo']) ? 'border-indigo-300 bg-indigo-50' : 'border-slate-200 bg-slate-50'; ?>">
-                        <div class="text-sm font-semibold text-slate-700">
-                            <?php echo htmlspecialchars((string)($stItem['nombre'] ?? $gLabel), ENT_QUOTES, 'UTF-8'); ?> [#<?php echo (int)($stItem['id'] ?? 0); ?>]<?php echo !empty($stItem['activo']) ? ' (Activo)' : ''; ?>
-                        </div>
-                        <div class="text-xs text-slate-600">
-                            Ronda <?php echo (int)($stItem['ronda_actual'] ?? 0); ?> · Mesas pendientes: <strong><?php echo $p; ?></strong>
-                        </div>
-                    </div>
-                <?php endforeach; ?>
-            </div>
-            <?php if (!empty($bloqueo_cierre_total['mensaje'])): ?>
-                <div class="mt-2 text-sm text-amber-700 font-semibold">
-                    <i class="fas fa-exclamation-triangle mr-1"></i><?php echo htmlspecialchars((string)$bloqueo_cierre_total['mensaje'], ENT_QUOTES, 'UTF-8'); ?>
+            <div class="flex flex-wrap gap-6 items-start">
+                <?php if ($panel_show_auditoria): ?>
+                <div class="flex flex-wrap gap-4 flex-1 min-w-[12.5rem]">
+                    <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-emerald-100 text-emerald-800">
+                        <i class="fas fa-camera mr-1"></i>Verificadas (QR): <?= $mesas_verificadas_count ?>
+                    </span>
+                    <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800">
+                        <i class="fas fa-keyboard mr-1"></i>Digitadas (admin): <?= $mesas_digitadas_count ?>
+                    </span>
                 </div>
+                <?php endif; ?>
+                <?php if ($panel_show_cierre): ?>
+                <div class="flex flex-col gap-2 flex-1 min-w-[12.5rem]">
+                    <div class="flex flex-wrap gap-3">
+                        <?php foreach ($paired_tournaments_status['items'] as $stItem): ?>
+                            <?php
+                            $g = strtoupper((string)($stItem['genero'] ?? 'M'));
+                            $gLabel = $g === 'F' ? 'Femenino' : 'Masculino';
+                            $p = (int)($stItem['mesas_pendientes'] ?? 0);
+                            ?>
+                            <div class="px-3 py-2 rounded-lg border <?php echo !empty($stItem['activo']) ? 'border-indigo-300 bg-indigo-50' : 'border-slate-200 bg-slate-50'; ?>">
+                                <div class="text-sm font-semibold text-slate-700">
+                                    <?php echo htmlspecialchars((string)($stItem['nombre'] ?? $gLabel), ENT_QUOTES, 'UTF-8'); ?> [#<?php echo (int)($stItem['id'] ?? 0); ?>]<?php echo !empty($stItem['activo']) ? ' (Activo)' : ''; ?>
+                                </div>
+                                <div class="text-xs text-slate-600">
+                                    Ronda <?php echo (int)($stItem['ronda_actual'] ?? 0); ?> · Mesas pendientes: <strong><?php echo $p; ?></strong>
+                                </div>
+                            </div>
+                        <?php endforeach; ?>
+                    </div>
+                    <?php if (!empty($bloqueo_cierre_total['mensaje'])): ?>
+                        <div class="text-sm text-amber-700 font-semibold">
+                            <i class="fas fa-exclamation-triangle mr-1"></i><?php echo htmlspecialchars((string)$bloqueo_cierre_total['mensaje'], ENT_QUOTES, 'UTF-8'); ?>
+                        </div>
+                    <?php endif; ?>
+                </div>
+                <?php endif; ?>
+            </div>
+            <?php
+            $u_banner = class_exists('Auth') ? Auth::user() : null;
+            $puede_admin_banner = is_array($u_banner) && in_array(($u_banner['role'] ?? ''), ['admin_general', 'admin_club'], true);
+            ?>
+            <?php if ($puede_admin_banner): ?>
+            <div class="mt-2 pt-2 border-t border-slate-200">
+                <a href="index.php?page=bannerclock&torneo_id=<?php echo (int)$torneo['id']; ?>" class="text-sm text-indigo-700 hover:text-indigo-900 underline">
+                    <i class="fas fa-bullhorn mr-1"></i>Administrar banner del reloj
+                </a>
+            </div>
             <?php endif; ?>
+            <p class="text-xs text-slate-500 mt-2 mb-0">El cronómetro se abre en ventana nueva, redimensionable e independiente del panel.</p>
         </div>
+    <?php else: ?>
+        <div class="mb-4 flex flex-wrap items-center justify-end gap-3">
+            <button type="button" id="btnCronometroVentana"
+                class="inline-flex items-center font-bold py-2 px-4 rounded-lg shadow border-0 bg-violet-600 hover:bg-violet-700 text-white transition-colors"
+                style="font-size: calc(0.875rem + 0.5rem); cursor: pointer;">
+                <i class="fas fa-external-link-alt mr-2"></i><span>ABRIR CRONÓMETRO DE RONDA</span>
+            </button>
+        </div>
+        <?php
+        $u_banner = class_exists('Auth') ? Auth::user() : null;
+        $puede_admin_banner = is_array($u_banner) && in_array(($u_banner['role'] ?? ''), ['admin_general', 'admin_club'], true);
+        ?>
+        <?php if ($puede_admin_banner): ?>
+        <div class="mb-2 text-center">
+            <a href="index.php?page=bannerclock&torneo_id=<?php echo (int)$torneo['id']; ?>" class="inline-block text-sm text-indigo-200 hover:text-white underline">
+                <i class="fas fa-bullhorn mr-1"></i>Administrar banner del reloj
+            </a>
+        </div>
+        <?php endif; ?>
+        <p class="text-xs text-gray-300 text-center mb-4">Se abre en ventana nueva, redimensionable e independiente del panel.</p>
     <?php endif; ?>
+    <script>
+    (function() {
+        var btnCron = document.getElementById('btnCronometroVentana');
+        if (!btnCron) return;
+        var urlCronometro = <?php echo json_encode($url_cronometro, JSON_UNESCAPED_SLASHES); ?>;
+        btnCron.addEventListener('click', function () {
+            var features = [
+                'popup=yes',
+                'width=1100',
+                'height=820',
+                'resizable=yes',
+                'scrollbars=yes'
+            ].join(',');
+            var win = window.open(urlCronometro, 'cronometro_torneo_<?php echo (int)$torneo['id']; ?>', features);
+            if (win) {
+                win.focus();
+            } else {
+                window.location.href = urlCronometro;
+            }
+        });
+    })();
+    </script>
 
     <!-- Estado de Ronda Actual -->
     <?php if ($ultima_ronda > 0): ?>
@@ -344,59 +428,6 @@ tailwind.config = {
     </div>
     <?php endif; ?>
 
-    <?php
-    $return_to_panel = $use_standalone
-        ? ($base_url . '?action=panel&torneo_id=' . (int)$torneo['id'])
-        : ('index.php?page=torneo_gestion&action=panel&torneo_id=' . (int)$torneo['id']);
-    $url_cronometro = $base_url
-        . ($use_standalone ? '?' : '&')
-        . 'action=cronometro&torneo_id=' . (int)$torneo['id']
-        . '&return_to=' . urlencode($return_to_panel);
-    ?>
-    <!-- Cronómetro en ventana independiente (no bloquea ni interfiere con el panel) -->
-    <div class="mb-2 text-center">
-        <button type="button" id="btnCronometroVentana"
-           class="d-inline-block font-bold py-2 px-5 rounded-lg text-lg transition-all transform shadow border-0" style="cursor: pointer;">
-            <i class="fas fa-external-link-alt mr-2"></i><span>ABRIR CRONÓMETRO DE RONDA</span>
-        </button>
-        <?php
-        $u_banner = class_exists('Auth') ? Auth::user() : null;
-        $puede_admin_banner = is_array($u_banner) && in_array(($u_banner['role'] ?? ''), ['admin_general', 'admin_club'], true);
-        ?>
-        <?php if ($puede_admin_banner): ?>
-        <div class="mt-2">
-            <a href="index.php?page=bannerclock&torneo_id=<?php echo (int)$torneo['id']; ?>" class="inline-block text-sm text-indigo-200 hover:text-white underline">
-                <i class="fas fa-bullhorn mr-1"></i>Administrar banner del reloj
-            </a>
-        </div>
-        <?php endif; ?>
-        <div class="text-xs text-gray-300 mt-2">
-            Se abre en ventana nueva, redimensionable e independiente del panel.
-        </div>
-    </div>
-    <script>
-    (function() {
-        var btnCron = document.getElementById('btnCronometroVentana');
-        if (!btnCron) return;
-        var urlCronometro = <?php echo json_encode($url_cronometro, JSON_UNESCAPED_SLASHES); ?>;
-        btnCron.addEventListener('click', function () {
-            var features = [
-                'popup=yes',
-                'width=1100',
-                'height=820',
-                'resizable=yes',
-                'scrollbars=yes'
-            ].join(',');
-            var win = window.open(urlCronometro, 'cronometro_torneo_<?php echo (int)$torneo['id']; ?>', features);
-            if (win) {
-                win.focus();
-            } else {
-                window.location.href = urlCronometro;
-            }
-        });
-    })();
-    </script>
-    
     <!-- Alerta de Torneo Cerrado (compacto) -->
     <?php if ($isLocked): ?>
         <div class="bg-gray-100 border-l-4 border-gray-500 rounded-lg p-2 mb-2">
