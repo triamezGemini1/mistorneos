@@ -181,11 +181,11 @@ $action_param = $use_standalone ? '?' : '&';
         max-width: 9rem;
     }
     
-    /* Columna ID usuario: más estrecha */
+    /* Columna ID usuario: ~40% menos que antes */
     .columna-id {
-        width: 2.65rem;
-        min-width: 2.35rem;
-        max-width: 3.2rem;
+        width: 1.59rem;
+        min-width: 1.41rem;
+        max-width: 1.92rem;
     }
     
     /* Columna Nombre: ampliada 15% */

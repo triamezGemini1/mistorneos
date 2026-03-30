@@ -417,8 +417,8 @@ body {
     border: 1px solid #e0e0e0;
   }
   .registrar-resultados-wrap #formResultados thead th { font-weight: bold !important; }
-  .registrar-resultados-wrap #formResultados .columna-id { width: 2.75%; max-width: 2.75%; }
-  .registrar-resultados-wrap #formResultados .columna-nombre { width: 27.25%; }
+  .registrar-resultados-wrap #formResultados .columna-id { width: 1.65%; max-width: 1.65%; }
+  .registrar-resultados-wrap #formResultados .columna-nombre { width: 28.35%; }
   .registrar-resultados-wrap #formResultados .columna-puntos { width: 10%; }
   .registrar-resultados-wrap #formResultados .columna-puntos.columna-puntos-combinada {
     width: 24%;

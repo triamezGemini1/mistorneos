@@ -183,8 +183,8 @@ $esTorneoParejas = in_array((int)($torneo['modalidad'] ?? 0), [2, 4], true);
         table-layout: fixed;
         width: 100%;
     }
-    .columna-id { width: 2.75%; max-width: 2.75%; font-size: 0.78em !important; }
-    .columna-nombre { width: 27.25%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-weight: 300; }
+    .columna-id { width: 1.65%; max-width: 1.65%; font-size: 0.74em !important; }
+    .columna-nombre { width: 28.35%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-weight: 300; }
     .columna-puntos { width: 10%; }
     .columna-sancion { width: 5%; }
     .columna-forfait { width: 4%; }
