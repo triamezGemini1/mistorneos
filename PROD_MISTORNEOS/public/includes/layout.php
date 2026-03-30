@@ -600,8 +600,6 @@ if (in_array($user['role'], ['admin_club', 'admin_general'], true)) {
   <script src="<?= htmlspecialchars($layout_asset_base) ?>/assets/image-preview.js" defer></script>
   <?php endif; ?>
   <script src="<?= htmlspecialchars($layout_asset_base) ?>/assets/notifications-toast.js" defer></script>
-  <script src="<?= htmlspecialchars($layout_asset_base) ?>/assets/breadcrumb-back.js" defer></script>
-  
   <script src="<?= htmlspecialchars($layout_asset_base) ?>/assets/dashboard-init.js" defer></script>
 </body>
 </html>

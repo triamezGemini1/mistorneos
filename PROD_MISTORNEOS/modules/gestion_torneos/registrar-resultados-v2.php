@@ -181,11 +181,11 @@ $action_param = $use_standalone ? '?' : '&';
         max-width: 9rem;
     }
     
-    /* Columna ID Usuario: reducida 20% */
+    /* Columna ID usuario: más estrecha */
     .columna-id {
-        width: 3.2rem;
-        min-width: 2.8rem;
-        max-width: 4rem;
+        width: 2.65rem;
+        min-width: 2.35rem;
+        max-width: 3.2rem;
     }
     
     /* Columna Nombre: ampliada 15% */
@@ -237,9 +237,10 @@ $action_param = $use_standalone ? '?' : '&';
         border: 2px solid #333 !important;
     }
     #formResultados tbody tr td {
-        padding: 0.25rem 0.4rem !important;
+        padding: 0.29rem 0.46rem !important;
         vertical-align: middle;
         border: 1px solid #666;
+        line-height: 1.29 !important;
     }
     #formResultados tbody tr.table-info,
     #formResultados tbody tr.table-success {
@@ -261,9 +262,9 @@ $action_param = $use_standalone ? '?' : '&';
         -webkit-overflow-scrolling: touch;
     }
     
-    /* Lista de mesas: barra de desplazamiento al superar 10 mesas */
+    /* Lista mesas pendientes: máx. ~6 visibles, scroll si hay más */
     .lista-mesas-scroll {
-        max-height: 28rem; /* ~10 mesas visibles (~44px c/u) */
+        max-height: 16.5rem;
         overflow-y: auto;
         -webkit-overflow-scrolling: touch;
         scrollbar-width: thin;
@@ -558,14 +559,8 @@ $action_param = $use_standalone ? '?' : '&';
         <!-- Panel Lateral - Lista de Mesas (ancho reducido 50%) -->
         <div class="col-md-2 col-lg-1" id="sidebar-mesas">
             <div class="card sidebar-sticky">
-                <div class="card-header" style="background-color: #e3f2fd; color: #1565c0;">
-                    <h6 class="mb-0">
-                        <i class="fas fa-clipboard-list mr-2"></i>Navegación de Partidas
-                    </h6>
-                </div>
-
                 <!-- Selector de Ronda/Partida -->
-                <div class="card-body p-3 border-bottom bg-light">
+                <div class="card-body p-3 border-bottom bg-light rounded-top">
                     <select id="selector-ronda" 
                             onchange="cambiarRonda(<?php echo $torneo['id']; ?>, this.value)"
                             class="form-control form-control-sm">
@@ -598,7 +593,7 @@ $action_param = $use_standalone ? '?' : '&';
                     <h6 class="small font-weight-bold mb-2">
                         <i class="fas fa-table mr-1"></i>Mesas pendientes (Ronda <?php echo $ronda; ?>)
                     </h6>
-                    <div class="<?php echo count($mesasPendientesLista) > 10 ? 'lista-mesas-scroll' : ''; ?>">
+                    <div class="<?php echo count($mesasPendientesLista) > 6 ? 'lista-mesas-scroll' : ''; ?>">
                     <div class="list-group list-group-flush">
                         <?php if (empty($mesasPendientesLista)): ?>
                             <div class="list-group-item text-center text-success py-3 small">
@@ -626,8 +621,10 @@ $action_param = $use_standalone ? '?' : '&';
         <!-- Área Principal - Formulario (ampliada 20%) -->
         <div class="col-md-10 col-lg-11 col-form-registro">
             <div class="card formulario-resultados-sticky">
-                <div class="card-header d-flex flex-row justify-content-between align-items-center flex-wrap gap-2" style="background-color: #e3f2fd; color: #1565c0;">
-                    <div class="d-flex flex-column align-items-start">
+                <div class="card-header" style="background-color: #e3f2fd; color: #1565c0;">
+                    <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 w-100">
+                    <div class="d-flex flex-wrap align-items-center gap-2 min-w-0">
+                    <div class="d-flex flex-column align-items-start min-w-0">
                         <h4 class="mb-0">
                             <i class="fas fa-keyboard mr-2"></i>Registro de Resultados
                         </h4>
@@ -637,7 +634,22 @@ $action_param = $use_standalone ? '?' : '&';
                         </p>
                         <?php endif; ?>
                     </div>
-                    <div class="d-flex align-items-center">
+                    <?php if (isset($vieneDeResumen) && $vieneDeResumen && isset($inscritoId) && $inscritoId): ?>
+                        <?php
+                        $from_param_hdr = isset($_GET['from_original']) ? $_GET['from_original'] : (isset($_GET['from']) && $_GET['from'] !== 'resumen' ? $_GET['from'] : '');
+                        $from_url_hdr = !empty($from_param_hdr) ? '&from=' . urlencode($from_param_hdr) : '';
+                        ?>
+                        <a href="<?php echo $base_url . $action_param; ?>action=resumen_individual&torneo_id=<?php echo $torneo['id']; ?>&inscrito_id=<?php echo $inscritoId; ?><?php echo $from_url_hdr; ?>"
+                           class="btn btn-info btn-sm flex-shrink-0">
+                            <i class="fas fa-arrow-left mr-2"></i>Volver al Resumen
+                        </a>
+                    <?php endif; ?>
+                    <a href="<?php echo $base_url . $action_param; ?>action=panel&torneo_id=<?php echo $torneo['id']; ?>"
+                       class="btn btn-primary btn-sm flex-shrink-0">
+                        <i class="fas fa-arrow-left mr-2"></i>Volver al Panel
+                    </a>
+                    </div>
+                    <div class="d-flex align-items-center flex-shrink-0 flex-wrap gap-2 justify-content-end">
                         <?php if (!empty($puede_cerrar_torneo)): ?>
                         <form method="POST" action="<?php echo $use_standalone ? $base_url : 'index.php?page=torneo_gestion'; ?>" class="mb-0" onsubmit="return confirm('¿Finalizar el torneo? A partir de ese momento no se podrán modificar datos.');">
                             <input type="hidden" name="action" value="cerrar_torneo">
@@ -650,6 +662,7 @@ $action_param = $use_standalone ? '?' : '&';
                         <?php elseif (!empty($torneo['locked']) && (int)$torneo['locked'] === 1): ?>
                         <span class="badge bg-secondary">Torneo finalizado</span>
                         <?php endif; ?>
+                    </div>
                     </div>
                 </div>
                 
@@ -704,27 +717,12 @@ $action_param = $use_standalone ? '?' : '&';
                                 </div>
                             </div>
                             <div class="d-flex gap-2">
-                                <?php if (isset($vieneDeResumen) && $vieneDeResumen && isset($inscritoId) && $inscritoId): ?>
-                                    <?php 
-                                    // Preservar el parámetro from original si existe
-                                    $from_param = isset($_GET['from_original']) ? $_GET['from_original'] : (isset($_GET['from']) && $_GET['from'] !== 'resumen' ? $_GET['from'] : '');
-                                    $from_url_param = !empty($from_param) ? '&from=' . urlencode($from_param) : '';
-                                    ?>
-                                    <a href="<?php echo $base_url . $action_param; ?>action=resumen_individual&torneo_id=<?php echo $torneo['id']; ?>&inscrito_id=<?php echo $inscritoId; ?><?php echo $from_url_param; ?>" 
-                                       class="btn btn-info btn-sm">
-                                        <i class="fas fa-arrow-left mr-2"></i>Volver al Resumen
-                                    </a>
-                                <?php endif; ?>
                                 <?php if (!empty($jugadores) && count($jugadores) == 4): ?>
                                     <a href="<?php echo $base_url . $action_param; ?>action=reasignar_mesa&torneo_id=<?php echo $torneo['id']; ?>&ronda=<?php echo $ronda; ?>&mesa=<?php echo $mesaActual; ?>" 
                                        class="btn btn-teal btn-sm" style="background-color: #20c997; color: white;">
                                         <i class="fas fa-exchange-alt mr-2"></i>Reasignar Mesa
                                     </a>
                                 <?php endif; ?>
-                                <a href="<?php echo $base_url . $action_param; ?>action=panel&torneo_id=<?php echo $torneo['id']; ?>" 
-                                   class="btn btn-secondary btn-sm">
-                                    <i class="fas fa-arrow-left mr-2"></i>Volver al Panel
-                                </a>
                             </div>
                         </div>
                     </div>

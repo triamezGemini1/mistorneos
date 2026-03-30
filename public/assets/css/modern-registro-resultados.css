@@ -228,6 +228,19 @@ body {
   box-sizing: border-box;
 }
 
+/* Puntos pareja: fila compacta (14", alta densidad) */
+.registrar-resultados-wrap #formResultados .input-puntos-densidad,
+.registrar-resultados-wrap .input-puntos-densidad {
+  width: 3.25rem !important;
+  min-width: 3rem !important;
+  max-width: 4rem !important;
+  height: 35px !important;
+  min-height: 35px !important;
+  max-height: 35px !important;
+  font-size: 1.1rem !important;
+  padding: 0.12rem 0.28rem !important;
+}
+
 .registrar-resultados-wrap #input_ir_mesa {
   width: 100% !important;
   max-width: 100% !important;
@@ -404,9 +417,31 @@ body {
     border: 1px solid #e0e0e0;
   }
   .registrar-resultados-wrap #formResultados thead th { font-weight: bold !important; }
-  .registrar-resultados-wrap #formResultados .columna-id { width: 5%; max-width: 5%; }
-  .registrar-resultados-wrap #formResultados .columna-nombre { width: 25%; }
+  .registrar-resultados-wrap #formResultados .columna-id { width: 2.75%; max-width: 2.75%; }
+  .registrar-resultados-wrap #formResultados .columna-nombre { width: 27.25%; }
   .registrar-resultados-wrap #formResultados .columna-puntos { width: 10%; }
+  .registrar-resultados-wrap #formResultados .columna-puntos.columna-puntos-combinada {
+    width: 24%;
+    min-width: 240px;
+    max-width: 340px;
+    vertical-align: middle;
+  }
+  .registrar-resultados-wrap .mesa-puntos-toolbar {
+    flex-wrap: nowrap;
+    justify-content: flex-start;
+    gap: 0.35rem;
+  }
+  .registrar-resultados-wrap .input-puntos-densidad {
+    width: 3.25rem !important;
+    min-width: 3rem !important;
+    max-width: 4rem !important;
+    height: 35px !important;
+    min-height: 35px !important;
+    max-height: 35px !important;
+    font-size: 1.1rem !important;
+    padding: 0.12rem 0.28rem !important;
+    box-sizing: border-box !important;
+  }
   .registrar-resultados-wrap #formResultados .columna-sancion { width: 5%; }
   .registrar-resultados-wrap #formResultados .columna-forfait { width: 4%; max-width: 4%; }
   .registrar-resultados-wrap #formResultados .columna-tarjeta { width: 15%; overflow: hidden; min-width: 0; }
@@ -426,6 +461,10 @@ body {
     box-shadow: none;
     margin-bottom: 0;
     padding: 0;
+  }
+  .registrar-resultados-wrap #formResultados .tabla-resultados-densa tbody tr td {
+    padding: 0.104rem 0.25rem !important;
+    line-height: 1.27 !important;
   }
 
   .registrar-resultados-wrap #formResultados tbody td::before {

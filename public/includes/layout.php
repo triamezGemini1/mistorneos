@@ -769,7 +769,6 @@ if (str_ends_with($app_base_for_js, '/public')) {
   <script src="<?= htmlspecialchars($layout_asset_base) ?>/assets/image-preview.js" defer></script>
   <?php endif; ?>
   <script src="<?= htmlspecialchars($layout_asset_base) ?>/assets/notifications-toast.js" defer></script>
-  <script src="<?= htmlspecialchars($layout_asset_base) ?>/assets/breadcrumb-back.js" defer></script>
   <script src="<?= htmlspecialchars($layout_asset_base) ?>/assets/single-tab-enforcer.js" defer></script>
   <script src="<?= htmlspecialchars($layout_asset_base) ?>/assets/dashboard-init.js" defer></script>
 <?php

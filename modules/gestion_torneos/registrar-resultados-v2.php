@@ -251,8 +251,9 @@ $contextLabel = $contextGenero === 'F' ? 'Femenino' : 'Masculino';
         table-layout: fixed;
         width: 100%;
     }
-    .columna-id { width: 5%; }
-    .columna-nombre { width: 25%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-weight: 300; }
+    /* ID usuario: columna estrecha */
+    .columna-id { width: 2.75%; max-width: 2.75%; font-size: 0.78em !important; }
+    .columna-nombre { width: 27.25%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-weight: 300; }
     .columna-puntos { width: 10%; }
     .columna-sancion { width: 5%; }
     .columna-forfait { width: 4%; }
@@ -263,7 +264,7 @@ $contextLabel = $contextGenero === 'F' ? 'Femenino' : 'Masculino';
     .columna-tarjeta .tarjeta-btn { width: 33.33%; min-width: 1.5rem; max-width: 33.33%; box-sizing: border-box; flex-shrink: 0; }
     .estadisticas-valores { font-size: clamp(0.75rem, 1.5vw, 0.875rem); font-weight: 300; color: #111827; white-space: nowrap; line-height: 1.5; }
     /* Títulos de columna (ID, nombre, puntos, etc.) en negrita; filas ~10% más compactas */
-    #formResultados thead th { font-weight: bold !important; padding: 0.18rem 0.32rem !important; }
+    #formResultados thead th { font-weight: bold !important; padding: 0.115rem 0.28rem !important; line-height: 1.2 !important; }
     /* Contenedor de la información: reducir tamaño de letra y negrita */
     .registrar-resultados-wrap #formResultados tbody td,
     .registrar-resultados-wrap .estadisticas-valores,
@@ -277,10 +278,12 @@ $contextLabel = $contextGenero === 'F' ? 'Femenino' : 'Masculino';
     #formResultados tbody tr {
         border: 2px solid #333 !important;
     }
+    /* Filas jugadores: +15% altura respecto a la versión compacta previa */
     #formResultados tbody tr td {
-        padding: 0.18rem 0.32rem !important;
+        padding: 0.115rem 0.28rem !important;
         vertical-align: middle;
         border: 1px solid #666;
+        line-height: 1.29 !important;
     }
     #formResultados tbody tr.table-info,
     #formResultados tbody tr.table-success {
@@ -302,9 +305,9 @@ $contextLabel = $contextGenero === 'F' ? 'Femenino' : 'Masculino';
         -webkit-overflow-scrolling: touch;
     }
     
-    /* Lista de mesas: barra de desplazamiento al superar 10 mesas */
+    /* Lista de mesas pendientes: como máximo ~6 filas visibles, scroll si hay más */
     .lista-mesas-scroll {
-        max-height: 28rem; /* ~10 mesas visibles (~44px c/u) */
+        max-height: 16.5rem; /* ~6 mesas (items compactos) */
         overflow-y: auto;
         -webkit-overflow-scrolling: touch;
         scrollbar-width: thin;
@@ -363,9 +366,64 @@ $contextLabel = $contextGenero === 'F' ? 'Femenino' : 'Masculino';
     #mensaje-validacion.show {
         display: block;
     }
+    .mensaje-validacion-compacta.alert {
+        font-size: 0.8125rem;
+        line-height: 1.25;
+        margin-bottom: 0.35rem !important;
+        padding: 0.25rem 0.5rem !important;
+    }
+
+    /* 1366×768: alta densidad */
+    .mesa-titulo-compacto { font-size: 1.05rem; line-height: 1.2; }
+    .badge-mesa-estado { font-size: 0.7rem; font-weight: 600; padding: 0.2em 0.45em; vertical-align: middle; }
+    .input-ir-mesa-densidad { max-width: 5rem; font-size: 1rem !important; font-weight: 700; padding: 0.2rem 0.35rem !important; min-height: 30px !important; height: 30px !important; }
+    .mesa-puntos-toolbar { gap: 0.35rem 0.5rem; max-width: 100%; }
+    .mesa-puntos-grupo { gap: 0.25rem; flex: 0 0 auto; }
+    .mesa-puntos-label { display: inline-flex; align-items: center; justify-content: center; min-width: 1.25rem; font-size: 0.75rem; font-weight: 800; border-radius: 0.2rem; padding: 0.1rem 0.2rem; }
+    .mesa-puntos-label--a { background: rgba(23, 162, 184, 0.2); color: #0c5460; }
+    .mesa-puntos-label--b { background: rgba(40, 167, 69, 0.2); color: #155724; }
+    .form-botones-acciones-der { flex-shrink: 0; }
+    .input-puntos-densidad {
+        width: 3.25rem !important;
+        min-width: 3rem !important;
+        max-width: 4rem !important;
+        height: 35px !important;
+        min-height: 35px !important;
+        max-height: 35px !important;
+        font-size: 1.1rem !important;
+        line-height: 1.15 !important;
+        padding: 0.12rem 0.28rem !important;
+        box-sizing: border-box !important;
+    }
+    #formResultados .tabla-resultados-densa tbody tr td {
+        padding: 0.104rem 0.25rem !important;
+        vertical-align: middle !important;
+        line-height: 1.27 !important;
+    }
+    #formResultados .tabla-resultados-densa tbody tr .form-control-sm:not(.input-puntos-densidad) {
+        padding: 0.07rem 0.17rem !important;
+        min-height: 1.55rem !important;
+        font-size: 0.8rem !important;
+    }
+    #formResultados .tabla-resultados-densa tbody tr .tarjeta-btn {
+        width: 1.78rem !important;
+        height: 1.78rem !important;
+        min-width: 1.67rem !important;
+        min-height: 1.67rem !important;
+        font-size: 1rem !important;
+    }
+    #formResultados .tabla-resultados-densa tbody tr {
+        margin-bottom: 0 !important;
+    }
+    @media (max-width: 1023px) {
+        .registrar-resultados-wrap #formResultados tbody tr {
+            margin-bottom: 8px !important;
+        }
+    }
+    .columna-puntos-combinada { min-width: 200px; }
     
     /* Fila Observaciones + Zap/Chan: 20% más compacta */
-    .row-observaciones-zapchan { margin-bottom: 0.55rem; }
+    .row-observaciones-zapchan { margin-bottom: 8px !important; }
     .row-observaciones-zapchan .d-flex.mb-2 { margin-bottom: 0.4rem !important; }
     .row-observaciones-zapchan textarea.observaciones-compact {
         min-height: 2.4rem !important;
@@ -517,11 +575,13 @@ $contextLabel = $contextGenero === 'F' ? 'Femenino' : 'Masculino';
             margin-bottom: 0.65rem !important;
         }
         
-        /* Input de puntos: algo más compacto */
+        /* Input de puntos: densidad 14" */
         #puntos_pareja_A,
         #puntos_pareja_B {
-            font-size: clamp(0.95rem, 2.8vw, 1.15rem) !important;
-            min-height: 2.5rem;
+            font-size: 1.1rem !important;
+            height: 35px !important;
+            min-height: 35px !important;
+            max-height: 35px !important;
         }
     }
     
@@ -613,14 +673,8 @@ $contextLabel = $contextGenero === 'F' ? 'Femenino' : 'Masculino';
         <!-- Panel Lateral - Lista de Mesas (ancho reducido 50%) -->
         <div class="col-md-2 col-lg-1" id="sidebar-mesas">
             <div class="card sidebar-sticky">
-                <div class="card-header" style="background-color: #e3f2fd; color: #1565c0;">
-                    <h6 class="mb-0">
-                        <i class="fas fa-clipboard-list mr-2"></i>Navegación de Partidas
-                    </h6>
-                </div>
-
                 <!-- Selector de Ronda/Partida -->
-                <div class="card-body p-3 border-bottom bg-light">
+                <div class="card-body p-3 border-bottom bg-light rounded-top">
                     <select id="selector-ronda" 
                             onchange="cambiarRonda(<?php echo $torneo['id']; ?>, this.value)"
                             class="form-control form-control-sm">
@@ -653,7 +707,7 @@ $contextLabel = $contextGenero === 'F' ? 'Femenino' : 'Masculino';
                     <h6 class="small font-weight-bold mb-2">
                         <i class="fas fa-table mr-1"></i>Mesas pendientes (Ronda <?php echo $ronda; ?>)
                     </h6>
-                    <div class="<?php echo count($mesasPendientesLista) > 10 ? 'lista-mesas-scroll' : ''; ?>">
+                    <div class="<?php echo count($mesasPendientesLista) > 6 ? 'lista-mesas-scroll' : ''; ?>">
                     <div class="list-group list-group-flush">
                         <?php if (empty($mesasPendientesLista)): ?>
                             <div class="list-group-item text-center text-success py-3 small">
@@ -681,60 +735,85 @@ $contextLabel = $contextGenero === 'F' ? 'Femenino' : 'Masculino';
         <!-- Área Principal - Formulario (ampliada 20%) -->
         <div class="col-md-10 col-lg-11 col-form-registro">
             <div class="card formulario-resultados-sticky">
-                <div class="card-header d-flex flex-row justify-content-between align-items-center flex-wrap gap-2" style="background-color: #e3f2fd; color: #1565c0;">
-                    <div class="d-flex flex-column align-items-start">
-                        <h4 class="mb-0 d-flex align-items-center gap-2 flex-wrap">
-                            <i class="fas fa-keyboard mr-2"></i>Carga de Resultados
-                            <span class="badge contexto-genero-badge theme-<?php echo (int)$contextBadgeIndex; ?>" title="Contexto: <?php echo htmlspecialchars($contextLabel, ENT_QUOTES, 'UTF-8'); ?>">
-                                <?php echo htmlspecialchars($contextBadgeName, ENT_QUOTES, 'UTF-8'); ?>
-                            </span>
-                        </h4>
+                <div class="card-header" style="background-color: #e3f2fd; color: #1565c0;">
+                    <div class="d-flex flex-column w-100 gap-2">
+                        <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 w-100">
+                            <div class="d-flex flex-wrap align-items-center gap-2 min-w-0 registrar-resultados-header-titulo">
+                                <h4 class="mb-0 d-flex align-items-center gap-2 flex-wrap">
+                                    <i class="fas fa-keyboard mr-2"></i>Carga de Resultados
+                                    <span class="badge contexto-genero-badge theme-<?php echo (int)$contextBadgeIndex; ?>" title="Contexto: <?php echo htmlspecialchars($contextLabel, ENT_QUOTES, 'UTF-8'); ?>">
+                                        <?php echo htmlspecialchars($contextBadgeName, ENT_QUOTES, 'UTF-8'); ?>
+                                    </span>
+                                </h4>
+                                <?php if (!empty($context_switcher['items'])): ?>
+                                    <?php
+                                    $tcs = [
+                                        'items' => $context_switcher['items'],
+                                        'active_id' => (int) ($context_switcher['active_tournament_id'] ?? 0),
+                                        'base_url' => $base_url,
+                                        'sep' => $use_standalone ? '?' : '&',
+                                        'ronda_base' => (int) $ronda,
+                                        'map_max' => $map_max_partida_switch,
+                                        'mode' => 'registrar_resultados',
+                                        'theme' => 'on_light',
+                                        'select_id' => 'torneo-asociado-select-registrar',
+                                        'show_info' => false,
+                                        'show_pills' => false,
+                                        'show_select_label' => false,
+                                        'aria_label' => 'Torneo asociado (mismo evento)',
+                                        'extra' => ['mesa' => 0],
+                                    ];
+                                    require __DIR__ . '/../../resources/views/partials/torneo_context_switch.php';
+                                    ?>
+                                <?php endif; ?>
+                                <?php if (isset($vieneDeResumen) && $vieneDeResumen && isset($inscritoId) && $inscritoId): ?>
+                                    <?php
+                                    $from_param_header = isset($_GET['from_original']) ? $_GET['from_original'] : (isset($_GET['from']) && $_GET['from'] !== 'resumen' ? $_GET['from'] : '');
+                                    $from_url_param_header = !empty($from_param_header) ? '&from=' . urlencode($from_param_header) : '';
+                                    ?>
+                                    <a href="<?php echo $base_url . $action_param; ?>action=resumen_individual&torneo_id=<?php echo $torneo['id']; ?>&inscrito_id=<?php echo $inscritoId; ?><?php echo $from_url_param_header; ?>"
+                                       class="btn btn-info btn-sm flex-shrink-0">
+                                        <i class="fas fa-arrow-left mr-2"></i>Volver al Resumen
+                                    </a>
+                                <?php endif; ?>
+                                <a href="<?php echo $base_url . $action_param; ?>action=panel&torneo_id=<?php echo $torneo['id']; ?>"
+                                   class="btn btn-primary btn-sm flex-shrink-0">
+                                    <i class="fas fa-arrow-left mr-2"></i>Volver al Panel
+                                </a>
+                            </div>
+                            <div class="d-flex align-items-center flex-shrink-0 flex-wrap gap-2 justify-content-end">
+                                <?php if (!empty($puede_cerrar_torneo)): ?>
+                                <form method="POST" action="<?php echo $use_standalone ? $base_url : 'index.php?page=torneo_gestion'; ?>" class="mb-0" onsubmit="return confirm('¿Finalizar el torneo? A partir de ese momento no se podrán modificar datos.');">
+                                    <input type="hidden" name="action" value="cerrar_torneo">
+                                    <input type="hidden" name="csrf_token" value="<?php echo CSRF::token(); ?>">
+                                    <input type="hidden" name="torneo_id" value="<?php echo (int)$torneo['id']; ?>">
+                                    <button type="submit" class="btn btn-dark btn-sm font-weight-bold">
+                                        <i class="fas fa-lock mr-1"></i>Finalizar torneo
+                                    </button>
+                                </form>
+                                <?php elseif (!empty($torneo['locked']) && (int)$torneo['locked'] === 1): ?>
+                                <span class="badge bg-secondary">Torneo finalizado</span>
+                                <?php endif; ?>
+                            </div>
+                        </div>
                         <?php if (!empty($mostrar_countdown_correcciones) && !empty($countdown_fin_timestamp)): ?>
-                        <p class="mb-0 mt-1 font-weight-bold" style="font-size: 1.1rem;">
+                        <p class="mb-0 font-weight-bold" style="font-size: 1.05rem;">
                             Correcciones se cierran en: <span id="countdown-correcciones" class="tabular-nums" data-fin="<?php echo (int)$countdown_fin_timestamp; ?>">--:--</span>
                         </p>
-                        <?php endif; ?>
-                    </div>
-                    <div class="d-flex align-items-center flex-wrap justify-content-end" style="gap:.5rem;">
-                        <span class="tcs-info tcs-info--on-light">
-                            <span class="tcs-info__dot" aria-hidden="true"></span>
-                            Visualizando: Torneo <?php echo htmlspecialchars($contextBadgeName, ENT_QUOTES, 'UTF-8'); ?> [#<?php echo (int)($context_switcher['active_tournament_id'] ?? ($torneo['id'] ?? 0)); ?>]
-                        </span>
-                        <?php if (!empty($context_switcher['items'])): ?>
-                            <?php
-                            $tcs = [
-                                'items' => $context_switcher['items'],
-                                'active_id' => (int) ($context_switcher['active_tournament_id'] ?? 0),
-                                'base_url' => $base_url,
-                                'sep' => $use_standalone ? '?' : '&',
-                                'ronda_base' => (int) $ronda,
-                                'map_max' => $map_max_partida_switch,
-                                'mode' => 'registrar_resultados',
-                                'theme' => 'on_light',
-                                'select_id' => 'torneo-asociado-select-registrar',
-                                'show_info' => false,
-                                'aria_label' => 'Selector de contexto del torneo',
-                                'extra' => ['mesa' => 0],
-                            ];
-                            require __DIR__ . '/../../resources/views/partials/torneo_context_switch.php';
-                            ?>
-                        <?php endif; ?>
-                        <?php if (!empty($puede_cerrar_torneo)): ?>
-                        <form method="POST" action="<?php echo $use_standalone ? $base_url : 'index.php?page=torneo_gestion'; ?>" class="mb-0" onsubmit="return confirm('¿Finalizar el torneo? A partir de ese momento no se podrán modificar datos.');">
-                            <input type="hidden" name="action" value="cerrar_torneo">
-                            <input type="hidden" name="csrf_token" value="<?php echo CSRF::token(); ?>">
-                            <input type="hidden" name="torneo_id" value="<?php echo (int)$torneo['id']; ?>">
-                            <button type="submit" class="btn btn-dark btn-sm font-weight-bold">
-                                <i class="fas fa-lock mr-1"></i>Finalizar torneo
-                            </button>
-                        </form>
-                        <?php elseif (!empty($torneo['locked']) && (int)$torneo['locked'] === 1): ?>
-                        <span class="badge bg-secondary">Torneo finalizado</span>
                         <?php endif; ?>
                     </div>
                 </div>
                 
                 <div class="card-body">
+                    <?php
+                    $mesaEstadoCerrada = false;
+                    foreach ($todasLasMesas ?? [] as $__mx) {
+                        if ((int) ($__mx['numero'] ?? 0) === (int) ($mesaActual ?? 0)) {
+                            $mesaEstadoCerrada = !empty($__mx['tiene_resultados']);
+                            break;
+                        }
+                    }
+                    ?>
                     <!-- Mensajes -->
                     <?php if (isset($_SESSION['success'])): ?>
                         <div class="alert alert-success alert-dismissible fade show">
@@ -765,60 +844,45 @@ $contextLabel = $contextGenero === 'F' ? 'Femenino' : 'Masculino';
                         </div>
                     <?php endif; ?>
 
-                    <!-- Botones de navegación y reasignar -->
-                    <div class="mb-3">
+                    <!-- Navegación mesa: título compacto + badge estado + ir a mesa + acciones -->
+                    <div class="mb-2 mesa-nav-compacto">
                         <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
-                            <div>
-                                <div class="text-muted font-weight-bold" style="font-size: clamp(2.625rem, 4.5vw, 3rem); font-weight: bold;">
-                                    Ronda <?php echo $ronda ?? 0; ?> - Mesa <?php echo $mesaActual ?? 0; ?>
-                                </div>
+                            <div class="d-flex align-items-center flex-wrap gap-2">
+                                <span class="mesa-titulo-compacto text-muted font-weight-bold">Ronda <?php echo (int) ($ronda ?? 0); ?> · Mesa <?php echo (int) ($mesaActual ?? 0); ?></span>
+                                <span class="badge rounded-pill badge-mesa-estado <?php echo $mesaEstadoCerrada ? 'text-bg-secondary' : 'text-bg-primary'; ?>" title="<?php echo $mesaEstadoCerrada ? 'Resultados ya registrados en esta mesa' : 'Mesa abierta para registrar o editar'; ?>"><?php echo $mesaEstadoCerrada ? 'Cerrada' : 'En juego'; ?></span>
                             </div>
-                            <div class="d-flex align-items-center gap-2 flex-grow-1 justify-content-center">
-                                <div class="input-group" style="width: auto; max-width: 100%;">
+                            <div class="d-flex align-items-center gap-2 flex-grow-1 justify-content-center" style="min-width: 0;">
+                                <div class="input-group input-group-sm mesa-ir-input-wrap" style="width: auto; max-width: 11rem;">
+                                    <span class="input-group-text py-0">Ir</span>
                                     <input type="number" 
                                            id="input_ir_mesa" 
                                            name="ir_mesa"
                                            value="<?php echo (int)($mesaActual ?? 0); ?>"
                                            min="1"
                                            max="<?php echo !empty($todasLasMesas) ? max(array_column($todasLasMesas, 'numero')) : 1; ?>"
-                                           class="form-control"
+                                           class="form-control form-control-sm input-ir-mesa-densidad"
                                            style="text-align: center;"
                                            onkeydown="manejarEnterIrAMesa(event);"
                                            oninput="validarNumeroMesa(this); actualizarEstadoPorMesa();"
                                            onblur="validarNumeroMesa(this); actualizarEstadoPorMesa();"
                                            onfocus="this.select();"
                                            placeholder=""
-                                           title="Ingrese un número entre 1 y <?php echo !empty($todasLasMesas) ? max(array_column($todasLasMesas, 'numero')) : 1; ?>">
+                                           title="Mesa 1–<?php echo !empty($todasLasMesas) ? max(array_column($todasLasMesas, 'numero')) : 1; ?>">
                                 </div>
                             </div>
-                            <div class="d-flex gap-2">
-                                <?php if (isset($vieneDeResumen) && $vieneDeResumen && isset($inscritoId) && $inscritoId): ?>
-                                    <?php 
-                                    // Preservar el parámetro from original si existe
-                                    $from_param = isset($_GET['from_original']) ? $_GET['from_original'] : (isset($_GET['from']) && $_GET['from'] !== 'resumen' ? $_GET['from'] : '');
-                                    $from_url_param = !empty($from_param) ? '&from=' . urlencode($from_param) : '';
-                                    ?>
-                                    <a href="<?php echo $base_url . $action_param; ?>action=resumen_individual&torneo_id=<?php echo $torneo['id']; ?>&inscrito_id=<?php echo $inscritoId; ?><?php echo $from_url_param; ?>" 
-                                       class="btn btn-info btn-sm">
-                                        <i class="fas fa-arrow-left mr-2"></i>Volver al Resumen
-                                    </a>
-                                <?php endif; ?>
+                            <div class="d-flex flex-wrap gap-1 align-items-center">
                                 <?php if (!empty($jugadores) && count($jugadores) == 4): ?>
                                     <a href="<?php echo $base_url . $action_param; ?>action=reasignar_mesa&torneo_id=<?php echo $torneo['id']; ?>&ronda=<?php echo $ronda; ?>&mesa=<?php echo $mesaActual; ?>" 
                                        class="btn btn-teal btn-sm" style="background-color: #20c997; color: white;">
                                         <i class="fas fa-exchange-alt mr-2"></i>Reasignar Mesa
                                     </a>
                                 <?php endif; ?>
-                                <a href="<?php echo $base_url . $action_param; ?>action=panel&torneo_id=<?php echo $torneo['id']; ?>" 
-                                   class="btn btn-secondary btn-sm">
-                                    <i class="fas fa-arrow-left mr-2"></i>Volver al Panel
-                                </a>
                             </div>
                         </div>
                     </div>
 
-                    <!-- Mensaje de Validación -->
-                    <div id="mensaje-validacion" class="mb-3"></div>
+                    <!-- Validación puntos (compacto, no banner) -->
+                    <div id="mensaje-validacion" class="mb-2 mensaje-validacion-compacta"></div>
 
                     <!-- Formulario -->
                     <?php 
@@ -852,7 +916,7 @@ $contextLabel = $contextGenero === 'F' ? 'Femenino' : 'Masculino';
                             <input type="hidden" name="mesa" value="<?php echo (int)$mesaActual; ?>">
 
                             <!-- Tabla de Jugadores -->
-                            <div class="table-responsive mb-4">
+                            <div class="table-responsive mb-2 tabla-resultados-densa">
                                 <table class="table table-bordered table-sm">
                                     <thead class="thead-dark">
                                         <tr>
@@ -876,6 +940,8 @@ $contextLabel = $contextGenero === 'F' ? 'Femenino' : 'Masculino';
                                                     $parejaB[] = $jugador;
                                                 }
                                             }
+                                            $puntosIniA = isset($parejaA[0]) ? (int) ($parejaA[0]['resultado1'] ?? 0) : 0;
+                                            $puntosIniB = isset($parejaB[0]) ? (int) ($parejaB[0]['resultado1'] ?? 0) : 0;
                                             
                                             // Procesar Pareja A
                                             foreach ($parejaA as $index => $jugador): 
@@ -898,23 +964,43 @@ $contextLabel = $contextGenero === 'F' ? 'Femenino' : 'Masculino';
                                                     <span class="nombre-jugador-linea <?php echo $tieneTarjetaPrevia ? 'jugador-tarjeta-previa' : ''; ?>" <?php echo $tituloTarjeta ? 'title="' . htmlspecialchars($tituloTarjeta) . '"' : ''; ?>><?php echo htmlspecialchars($jugador['nombre_completo'] ?? $jugador['nombre'] ?? 'N/A'); ?></span>
                                                 </td>
                                                 
-                                                <!-- Puntos -->
+                                                <!-- Puntos A+B (una sola celda, 4 filas); Guardar/Limpiar/Mano D. abajo a la derecha -->
                                                 <?php if ($index == 0): ?>
-                                                <td rowspan="2" class="text-center align-middle columna-puntos">
-                                <input type="number" 
-                                       id="puntos_pareja_A"
-                                       class="form-control text-center font-weight-bold"
-                                       style="font-size: clamp(1rem, 3vw, 1.25rem);"
-                                       value="<?php echo $puntosParejaA; ?>"
-                                                           min="0"
-                                                           max="999"
-                                                           maxlength="3"
-                                                           onfocus="this.select();"
-                                                           onkeydown="manejarEnterPuntos(event, 'A', 'B');"
-                                                           onchange="distribuirPuntos('A'); validarPuntosEnTiempoReal();"
-                                                           onblur="validarPuntosInmediato(event);"
-                                                           oninput="limitardigitos(this, 3); distribuirPuntos('A'); validarPuntosEnTiempoReal();"
-                                                           required>
+                                                <td rowspan="4" class="text-center align-middle columna-puntos columna-puntos-combinada">
+                                                    <div class="mesa-puntos-toolbar d-flex flex-row align-items-center justify-content-center flex-wrap">
+                                                        <div class="d-flex align-items-center mesa-puntos-grupo">
+                                                            <span class="mesa-puntos-label mesa-puntos-label--a">A</span>
+                                                            <input type="number"
+                                                                   id="puntos_pareja_A"
+                                                                   class="form-control form-control-sm text-center font-weight-bold input-puntos-densidad"
+                                                                   value="<?php echo $puntosIniA; ?>"
+                                                                   min="0"
+                                                                   max="999"
+                                                                   maxlength="3"
+                                                                   onfocus="this.select();"
+                                                                   onkeydown="manejarEnterPuntos(event, 'A', 'B');"
+                                                                   onchange="distribuirPuntos('A'); validarPuntosEnTiempoReal();"
+                                                                   onblur="validarPuntosInmediato(event);"
+                                                                   oninput="limitardigitos(this, 3); distribuirPuntos('A'); validarPuntosEnTiempoReal();"
+                                                                   required>
+                                                        </div>
+                                                        <div class="d-flex align-items-center mesa-puntos-grupo">
+                                                            <span class="mesa-puntos-label mesa-puntos-label--b">B</span>
+                                                            <input type="number"
+                                                                   id="puntos_pareja_B"
+                                                                   class="form-control form-control-sm text-center font-weight-bold input-puntos-densidad"
+                                                                   value="<?php echo $puntosIniB; ?>"
+                                                                   min="0"
+                                                                   max="999"
+                                                                   maxlength="3"
+                                                                   onfocus="this.select();"
+                                                                   onkeydown="manejarEnterPuntos(event, 'B', 'guardar');"
+                                                                   onchange="distribuirPuntos('B'); validarPuntosEnTiempoReal();"
+                                                                   onblur="validarPuntosInmediato(event);"
+                                                                   oninput="limitardigitos(this, 3); distribuirPuntos('B'); validarPuntosEnTiempoReal();"
+                                                                   required>
+                                                        </div>
+                                                    </div>
                                                 </td>
                                                 <?php endif; ?>
                                                 
@@ -997,7 +1083,6 @@ $contextLabel = $contextGenero === 'F' ? 'Femenino' : 'Masculino';
                                             // Procesar Pareja B
                                             foreach ($parejaB as $index => $jugador): 
                                                 $indiceArray = 2 + $index;
-                                                $puntosParejaB = $jugador['resultado1'] ?? 0;
                                         ?>
                                             <tr class="table-success">
                                                 <!-- ID Usuario -->
@@ -1014,26 +1099,6 @@ $contextLabel = $contextGenero === 'F' ? 'Femenino' : 'Masculino';
                                                 <td class="columna-nombre">
                                                     <span class="nombre-jugador-linea <?php echo $tieneTarjetaPrevia ? 'jugador-tarjeta-previa' : ''; ?>" <?php echo $tituloTarjeta ? 'title="' . htmlspecialchars($tituloTarjeta) . '"' : ''; ?>><?php echo htmlspecialchars($jugador['nombre_completo'] ?? $jugador['nombre'] ?? 'N/A'); ?></span>
                                                 </td>
-                                                
-                                                <!-- Puntos -->
-                                                <?php if ($index == 0): ?>
-                                                <td rowspan="2" class="text-center align-middle columna-puntos">
-                                                    <input type="number" 
-                                                           id="puntos_pareja_B"
-                                                           class="form-control text-center font-weight-bold"
-                                                           style="font-size: clamp(1rem, 3vw, 1.25rem);"
-                                                           value="<?php echo $puntosParejaB; ?>"
-                                                           min="0" 
-                                                           max="999"
-                                                           maxlength="3"
-                                                           onfocus="this.select();"
-                                                           onkeydown="manejarEnterPuntos(event, 'B', 'guardar');"
-                                                           onchange="distribuirPuntos('B'); validarPuntosEnTiempoReal();"
-                                                           onblur="validarPuntosInmediato(event);"
-                                                           oninput="limitardigitos(this, 3); distribuirPuntos('B'); validarPuntosEnTiempoReal();"
-                                                           required>
-                                                </td>
-                                                <?php endif; ?>
                                                 
                                                 <!-- Sanción: 40=resta pts sin tarjeta; 80=resta pts y tarjeta (amarilla o siguiente si ya tenía) -->
                                                 <td class="text-center columna-sancion" data-tarjeta-inscritos="<?php echo (int)($jugador['inscrito']['tarjeta_previa'] ?? $jugador['inscrito']['tarjeta'] ?? 0); ?>">
@@ -1141,55 +1206,51 @@ $contextLabel = $contextGenero === 'F' ? 'Femenino' : 'Masculino';
                                     </div>
                                 </div>
                                 <textarea name="observaciones" 
-                                          rows="2"
+                                          rows="1"
                                           class="form-control observaciones-compact"
                                           placeholder="Observaciones sobre la partida (opcional)"><?php echo htmlspecialchars($observacionesMesa ?? ''); ?></textarea>
                             </div>
 
-                            <!-- Botones de Acción -->
-                            <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 form-botones-row">
-                                <!-- Navegación y Reasignar -->
-                                <div class="d-flex gap-2 flex-wrap align-items-center">
+                            <!-- Navegación entre mesas (izq.) y acciones de guardado (der.) -->
+                            <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 w-100 form-botones-row">
+                                <div class="d-flex gap-1 flex-wrap align-items-center">
                                     <?php if ($mesaAnterior ?? null): ?>
                                         <a href="<?php echo $base_url . $action_param; ?>action=registrar_resultados&torneo_id=<?php echo $torneo['id']; ?>&ronda=<?php echo $ronda; ?>&mesa=<?php echo $mesaAnterior; ?>"
-                                           class="btn btn-secondary">
-                                            <i class="fas fa-arrow-left mr-2"></i>Mesa Anterior
+                                           class="btn btn-secondary btn-sm">
+                                            <i class="fas fa-arrow-left mr-1"></i>Anterior
                                         </a>
                                     <?php endif; ?>
                                     <?php if (!empty($jugadores) && count($jugadores) == 4): ?>
                                         <a href="<?php echo $base_url . $action_param; ?>action=reasignar_mesa&torneo_id=<?php echo $torneo['id']; ?>&ronda=<?php echo $ronda; ?>&mesa=<?php echo $mesaActual; ?>"
                                            class="btn btn-sm" style="background-color: #20c997; color: white;" title="Intercambiar posiciones de jugadores en la mesa">
-                                            <i class="fas fa-exchange-alt mr-2"></i>Reasignar Mesa
+                                            <i class="fas fa-exchange-alt mr-1"></i>Reasignar
                                         </a>
                                     <?php endif; ?>
                                     <?php if ($mesaSiguiente ?? null): ?>
                                         <a href="<?php echo $base_url . $action_param; ?>action=registrar_resultados&torneo_id=<?php echo $torneo['id']; ?>&ronda=<?php echo $ronda; ?>&mesa=<?php echo $mesaSiguiente; ?>"
-                                           class="btn btn-secondary">
-                                            Mesa Siguiente<i class="fas fa-arrow-right ml-2"></i>
+                                           class="btn btn-secondary btn-sm">
+                                            Siguiente<i class="fas fa-arrow-right ml-1"></i>
                                         </a>
                                     <?php endif; ?>
                                 </div>
-
-                                <!-- Acciones -->
-                                <div class="d-flex gap-2 align-items-center flex-wrap">
-                                    <button type="button" 
+                                <div class="d-flex gap-1 flex-wrap align-items-center justify-content-end ms-auto form-botones-acciones-der">
+                                    <button type="button"
                                             id="btn-limpiar"
                                             onclick="limpiarFormulario()"
-                                            class="btn btn-warning">
-                                        <i class="fas fa-eraser mr-2"></i>Limpiar
+                                            class="btn btn-warning btn-sm">
+                                        <i class="fas fa-eraser mr-1"></i>Limpiar
                                     </button>
                                     <button type="button"
                                             id="btn-mano-desierta"
                                             onclick="guardarManoDesierta()"
-                                            class="btn btn-secondary">
-                                        <i class="fas fa-flag mr-2"></i>Mano Desierta
+                                            class="btn btn-secondary btn-sm">
+                                        <i class="fas fa-flag mr-1"></i>Mano desierta
                                     </button>
-                                    
-                                    <button type="submit" 
+                                    <button type="submit"
                                             id="btn-guardar"
-                                            class="btn btn-success btn-lg font-weight-bold"
+                                            class="btn btn-success btn-sm font-weight-bold"
                                             disabled>
-                                        <i class="fas fa-save mr-2"></i>GUARDAR
+                                        <i class="fas fa-save mr-1"></i>Guardar
                                     </button>
                                 </div>
                             </div>
@@ -1849,7 +1910,7 @@ function validarPuntosEnTiempoReal() {
     // Remover clases de error previas
     campoA.classList.remove('border-danger', 'bg-danger', 'border-warning', 'bg-warning');
     campoB.classList.remove('border-danger', 'bg-danger', 'border-warning', 'bg-warning');
-    mensajeDiv.classList.remove('show', 'alert', 'alert-danger', 'alert-warning');
+    mensajeDiv.classList.remove('show', 'alert', 'alert-danger', 'alert-warning', 'mensaje-validacion-compacta', 'small', 'py-1', 'px-2', 'mb-2');
     mensajeDiv.innerHTML = '';
     
     // Obtener estado de forfait y tarjetas
@@ -1897,8 +1958,8 @@ function validarPuntosEnTiempoReal() {
     
     // Mostrar mensaje si hay error
     if (hayError && mensaje) {
-        mensajeDiv.className = 'mb-3 alert alert-warning show';
-        mensajeDiv.innerHTML = '<i class="fas fa-exclamation-triangle mr-2"></i>' + mensaje;
+        mensajeDiv.className = 'mb-2 py-1 px-2 small alert alert-warning show mensaje-validacion-compacta';
+        mensajeDiv.innerHTML = '<i class="fas fa-exclamation-triangle mr-1"></i>' + mensaje;
     }
 }
 

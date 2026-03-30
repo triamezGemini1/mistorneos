@@ -4,8 +4,9 @@
  * Requiere: torneoContextSwitchHref() en torneo_gestion.php
  *
  * $tcs: items[], active_id, base_url, sep, ronda_base (solo compat.; el enlace usa última ronda en destino), map_max[], mode, theme (on_dark|on_light),
- *       select_id, show_select (bool), show_info (bool), context_name, context_id,
- *       extra[] (p.ej. mesa para registrar_resultados), select_label_class (opcional)
+ *       select_id, show_select (bool), show_info (bool), show_pills (bool, default true), show_select_label (bool, default true),
+ *       context_name, context_id, extra[] (p.ej. mesa para registrar_resultados), select_label_class, select_class,
+ *       pill_row_class, aria_label (opcionales)
  */
 if (empty($tcs) || !is_array($tcs)) {
     return;
@@ -31,6 +32,8 @@ $extra = isset($tcs['extra']) && is_array($tcs['extra']) ? $tcs['extra'] : [];
 $contextName = (string) ($tcs['context_name'] ?? '');
 $contextId = (int) ($tcs['context_id'] ?? 0);
 $showInfo = array_key_exists('show_info', $tcs) ? (bool) $tcs['show_info'] : true;
+$showPills = array_key_exists('show_pills', $tcs) ? (bool) $tcs['show_pills'] : true;
+$showSelectLabel = array_key_exists('show_select_label', $tcs) ? (bool) $tcs['show_select_label'] : true;
 $labelClass = (string) ($tcs['select_label_class'] ?? 'mb-0 mr-1 small text-muted');
 $selectClass = array_key_exists('select_class', $tcs)
     ? (string) $tcs['select_class']
@@ -51,9 +54,11 @@ $ariaLabel = (string) ($tcs['aria_label'] ?? 'Torneos asociados (mismo evento)')
 <?php endif; ?>
 
 <?php if ($showSelect && $switchCount > 1): ?>
-<div class="torneo-asociado-select-wrap d-flex align-items-center flex-shrink-0 mr-2 mb-1 mb-md-0">
+<div class="torneo-asociado-select-wrap d-flex align-items-center flex-shrink-0 mr-2 mb-0">
+    <?php if ($showSelectLabel): ?>
     <label for="<?php echo htmlspecialchars($selectId, ENT_QUOTES, 'UTF-8'); ?>" class="<?php echo htmlspecialchars($labelClass, ENT_QUOTES, 'UTF-8'); ?>">Torneo asociado</label>
-    <select id="<?php echo htmlspecialchars($selectId, ENT_QUOTES, 'UTF-8'); ?>" class="<?php echo htmlspecialchars($selectClass, ENT_QUOTES, 'UTF-8'); ?>" style="min-width:10rem;max-width:14rem;" title="Cambiar al torneo hermano del mismo evento">
+    <?php endif; ?>
+    <select id="<?php echo htmlspecialchars($selectId, ENT_QUOTES, 'UTF-8'); ?>" class="<?php echo htmlspecialchars($selectClass, ENT_QUOTES, 'UTF-8'); ?>" style="min-width:10rem;max-width:18rem;" title="Cambiar al torneo hermano del mismo evento" aria-label="<?php echo htmlspecialchars($ariaLabel, ENT_QUOTES, 'UTF-8'); ?>">
         <?php foreach ($items as $switchItem): ?>
             <?php
             $switchId = (int) ($switchItem['id'] ?? 0);
@@ -69,6 +74,7 @@ $ariaLabel = (string) ($tcs['aria_label'] ?? 'Torneos asociados (mismo evento)')
 </div>
 <?php endif; ?>
 
+<?php if ($showPills): ?>
 <div class="tcs <?php echo $themeClass; ?><?php echo $compact ? ' tcs--compact' : ''; ?><?php echo $pillRowClass !== '' ? ' ' . htmlspecialchars($pillRowClass, ENT_QUOTES, 'UTF-8') : ''; ?>" role="group" aria-label="<?php echo htmlspecialchars($ariaLabel, ENT_QUOTES, 'UTF-8'); ?>">
     <?php foreach ($items as $switchItem): ?>
         <?php
@@ -87,6 +93,7 @@ $ariaLabel = (string) ($tcs['aria_label'] ?? 'Torneos asociados (mismo evento)')
         </a>
     <?php endforeach; ?>
 </div>
+<?php endif; ?>
 <?php if ($showSelect && $switchCount > 1): ?>
 <script>
 (function () {

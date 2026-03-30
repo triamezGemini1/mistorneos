@@ -177,10 +177,7 @@ $href_export_pdf = $tid_export > 0 ? AppHelpers::torneoGestionUrl('inscripciones
                     ?>
                 </div>
                 <?php endif; ?>
-                <div class="cuadricula-header-actions" title="Misma fila: volver, PDF e inscritos Excel">
-                    <a href="<?php echo htmlspecialchars($href_panel, ENT_QUOTES, 'UTF-8'); ?>" class="btn btn-secondary btn-sm">
-                        <i class="fas fa-arrow-left"></i> Volver
-                    </a>
+                <div class="cuadricula-header-actions" title="PDF, Excel, Volver al panel e imprimir cuadrícula">
                     <?php if ($href_export_pdf !== ''): ?>
                     <a href="<?php echo htmlspecialchars($href_export_pdf, ENT_QUOTES, 'UTF-8'); ?>" class="btn btn-outline-danger btn-sm" target="_blank" rel="noopener">
                         <i class="fas fa-file-pdf"></i> PDF
@@ -191,6 +188,9 @@ $href_export_pdf = $tid_export > 0 ? AppHelpers::torneoGestionUrl('inscripciones
                         <i class="fas fa-file-excel"></i> Excel
                     </a>
                     <?php endif; ?>
+                    <a href="<?php echo htmlspecialchars($href_panel, ENT_QUOTES, 'UTF-8'); ?>" class="btn btn-secondary btn-sm">
+                        <i class="fas fa-arrow-left"></i> Volver
+                    </a>
                     <button type="button" onclick="window.print()" class="btn btn-primary btn-sm" title="Imprimir esta cuadrícula">
                         <i class="fas fa-print"></i>
                     </button>
