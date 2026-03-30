@@ -53,6 +53,14 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
                 'message' => 'Usuarios creados desde atletas faltantes: ' . (int)$result['creados'],
                 'data' => $result,
             ];
+        } elseif ($accion === 'homologar_utf8') {
+            $result = AtletasAdminSyncService::homologarUtf8AtletasUsuarios(DB::pdo());
+            $_SESSION['admin_atletas_sync_flash'] = [
+                'ok' => true,
+                'title' => 'Homologación UTF-8 completada',
+                'message' => 'Atletas actualizados: ' . (int)$result['atletas_actualizados'] . ' | Usuarios actualizados: ' . (int)$result['usuarios_actualizados'],
+                'data' => $result,
+            ];
         } else {
             $_SESSION['admin_atletas_sync_flash'] = [
                 'ok' => false,
@@ -157,6 +165,26 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
                 </div>
             </div>
         </div>
+        <div class="col-lg-6">
+            <div class="card h-100">
+                <div class="card-header bg-light">
+                    <strong>4) Homologar caracteres UTF-8</strong>
+                </div>
+                <div class="card-body">
+                    <p class="small text-muted mb-3">
+                        Normaliza caracteres en <code>atletas</code> y <code>usuarios</code> (tildes, eñes y símbolos),
+                        para prevenir pérdida de información por diferencias de codificación.
+                    </p>
+                    <form method="post">
+                        <input type="hidden" name="csrf_token" value="<?= htmlspecialchars(CSRF::token()) ?>">
+                        <input type="hidden" name="accion" value="homologar_utf8">
+                        <button type="submit" class="btn btn-outline-primary">
+                            <i class="fas fa-language me-1"></i> Ejecutar homologación UTF-8
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
     </div>
 
     <?php if (!empty($flash['data']) && is_array($flash['data'])): ?>
@@ -231,6 +259,11 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
                             <?= htmlspecialchars(implode(' | ', array_slice($d['detalle_errores'], 0, 5))) ?>
                         </div>
                     <?php endif; ?>
+                <?php elseif (isset($d['atletas_revisados'])): ?>
+                    <p class="mb-1">Atletas revisados: <strong><?= (int)$d['atletas_revisados'] ?></strong></p>
+                    <p class="mb-1">Atletas actualizados: <strong><?= (int)$d['atletas_actualizados'] ?></strong></p>
+                    <p class="mb-1">Usuarios revisados: <strong><?= (int)$d['usuarios_revisados'] ?></strong></p>
+                    <p class="mb-0">Usuarios actualizados: <strong><?= (int)$d['usuarios_actualizados'] ?></strong></p>
                 <?php endif; ?>
             </div>
         </div>

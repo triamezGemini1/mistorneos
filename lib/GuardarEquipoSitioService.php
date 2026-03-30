@@ -112,20 +112,24 @@ final class GuardarEquipoSitioService
                 if ($id_usuario <= 0) {
                     throw new RuntimeException("No se pudo determinar el ID de usuario para la cédula $cedula");
                 }
+                $id_usuario_db = $id_usuario;
+                if ($id_usuario_db <= 0) {
+                    throw new RuntimeException("No se pudo determinar el identificador operativo para la cédula $cedula");
+                }
 
                 $stmt = $pdo->prepare('UPDATE usuarios SET club_id = ?, entidad = ? WHERE id = ?');
                 $stmt->execute([$club_id, $entidad_club, $id_usuario]);
 
                 if ($id_inscrito > 0) {
                     $stmt = $pdo->prepare('SELECT id FROM inscritos WHERE id = ? AND id_usuario = ? AND torneo_id = ? LIMIT 1');
-                    $stmt->execute([$id_inscrito, $id_usuario, $torneo_id]);
+                    $stmt->execute([$id_inscrito, $id_usuario_db, $torneo_id]);
                     if (!$stmt->fetch()) {
                         $id_inscrito = 0;
                     }
                 }
                 if ($id_inscrito <= 0) {
                     $stmt = $pdo->prepare('SELECT id FROM inscritos WHERE id_usuario = ? AND torneo_id = ? LIMIT 1');
-                    $stmt->execute([$id_usuario, $torneo_id]);
+                    $stmt->execute([$id_usuario_db, $torneo_id]);
                     $row = $stmt->fetch(PDO::FETCH_ASSOC);
                     if ($row) {
                         $id_inscrito = (int)$row['id'];
@@ -142,8 +146,8 @@ final class GuardarEquipoSitioService
                         UserActivationHelper::activateUser($pdo, $id_usuario);
                     }
                 }
-                $stmt = $pdo->prepare('UPDATE inscritos SET id_club = ?, codigo_equipo = ?, estatus = 1 WHERE id = ?');
-                $stmt->execute([$club_id, $codigo_equipo, $id_inscrito]);
+                $stmt = $pdo->prepare('UPDATE inscritos SET id_usuario = ?, id_club = ?, codigo_equipo = ?, estatus = 1 WHERE id = ?');
+                $stmt->execute([$id_usuario_db, $club_id, $codigo_equipo, $id_inscrito]);
             }
 
             if ($transaccionPropia) {
@@ -161,4 +165,5 @@ final class GuardarEquipoSitioService
             throw $e;
         }
     }
+
 }

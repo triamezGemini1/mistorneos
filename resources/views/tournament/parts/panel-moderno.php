@@ -350,6 +350,16 @@ tailwind.config = {
                         </h3>
                     </div>
                     <div class="p-5 space-y-4">
+                        <?php
+                        $bi = (int) $total_inscritos;
+                        $bj = (int) $inscritos_para_rondas;
+                        $be = (int) $total_equipos;
+                        ?>
+                        <div class="flex flex-wrap gap-2 mb-1 text-xs" role="group" aria-label="Resumen de inscripciones">
+                            <span class="inline-flex items-center rounded-full bg-blue-100 text-blue-900 px-2 py-1 font-semibold border border-blue-200" title="Registros en inscritos">Inscritos <span class="ml-1 tabular-nums"><?php echo $bi; ?></span></span>
+                            <span class="inline-flex items-center rounded-full bg-emerald-100 text-emerald-900 px-2 py-1 font-semibold border border-emerald-200" title="Inscritos confirmados">Jugadores <span class="ml-1 tabular-nums"><?php echo $bj; ?></span></span>
+                            <span class="inline-flex items-center rounded-full bg-slate-100 text-slate-800 px-2 py-1 font-semibold border border-slate-200" title="Equipos activos (modalidad equipos/parejas)">Equipos <span class="ml-1 tabular-nums"><?php echo $be; ?></span></span>
+                        </div>
                         <!-- Invitar Clubes (listado directorio + envío por WhatsApp/Telegram) -->
                         <a href="index.php?page=invitacion_clubes&torneo_id=<?= (int)($torneo['id'] ?? 0) ?>" class="tw-btn bg-cyan-500 hover:bg-cyan-600 text-white w-full text-center">
                             <i class="fas fa-paper-plane mr-2"></i> Invitar Clubes
@@ -424,7 +434,7 @@ tailwind.config = {
                                 <input type="hidden" name="action" value="eliminar_ultima_ronda">
                                 <input type="hidden" name="csrf_token" value="<?php echo CSRF::token(); ?>">
                                 <input type="hidden" name="torneo_id" value="<?php echo $torneo['id']; ?>">
-                                <input type="hidden" name="confirmar_eliminar_con_resultados" id="confirmar_eliminar_con_resultados" value="">
+                                <input type="hidden" name="confirmar_eliminar_con_resultados" value="">
                                 <button type="submit" <?php echo $isLocked ? 'disabled' : ''; ?>
                                         class="tw-btn <?php echo $isLocked ? 'bg-gray-400' : 'bg-red-500 hover:bg-red-600'; ?> text-white"
                                         title="<?php echo $isLocked ? 'Torneo cerrado.' : ($ultima_ronda_tiene_resultados ? 'Eliminar ronda (la ronda tiene resultados en mesas; se pedirá confirmación estricta).' : 'Eliminar la última ronda.'); ?>">
@@ -484,6 +494,10 @@ tailwind.config = {
                                 <input type="hidden" name="csrf_token" value="<?php echo CSRF::token(); ?>">
                                 <input type="hidden" name="torneo_id" value="<?php echo (int)($torneo['id'] ?? 0); ?>">
                                 <button type="submit" id="btn-generar-ronda"
+                                        data-btn-reset-html="<?php echo htmlspecialchars(
+                                            '<i class="fas fa-' . (($puedeGenerar && !$isLocked) ? 'play' : 'lock') . '"></i> Generar Ronda ' . (int)$proximaRonda,
+                                            ENT_QUOTES, 'UTF-8'
+                                        ); ?>"
                                         <?php echo (!$puedeGenerar || $isLocked) ? 'disabled' : ''; ?>
                                         class="tw-btn <?php echo ($puedeGenerar && !$isLocked) ? 'bg-blue-500 hover:bg-blue-600' : 'bg-gray-400'; ?> text-white">
                                     <i class="fas fa-<?php echo ($puedeGenerar && !$isLocked) ? 'play' : 'lock'; ?>"></i>
@@ -668,17 +682,42 @@ tailwind.config = {
 </div>
 
 <script>
+function limpiarSwalUI() {
+    try {
+        document.body.style.removeProperty('padding-right');
+        document.body.style.removeProperty('overflow');
+        document.documentElement.style.removeProperty('overflow');
+        document.body.classList.remove('swal2-shown', 'swal2-height-auto');
+        document.documentElement.classList.remove('swal2-shown');
+        document.querySelectorAll('body > .swal2-container').forEach(function(el) {
+            if (el && el.parentNode) el.parentNode.removeChild(el);
+        });
+    } catch (e) {}
+}
+
 document.addEventListener('DOMContentLoaded', function() {
     const formGenerarRonda = document.getElementById('form-generar-ronda');
     if (formGenerarRonda) {
-        formGenerarRonda.addEventListener('submit', async function(e) {
-            const btnGenerar = document.getElementById('btn-generar-ronda');
+        formGenerarRonda.addEventListener('submit', function() {
+            const btnGenerar = formGenerarRonda.querySelector('button[type="submit"]');
             if (btnGenerar && !btnGenerar.disabled) {
                 btnGenerar.disabled = true;
                 btnGenerar.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> Generando...';
             }
         });
     }
+
+    window.addEventListener('pageshow', function() {
+        var f = document.getElementById('form-generar-ronda');
+        if (!f) return;
+        var btn = f.querySelector('button[type="submit"]');
+        if (!btn || !btn.disabled) return;
+        var reset = btn.getAttribute('data-btn-reset-html');
+        if (reset && btn.querySelector('.fa-spinner')) {
+            btn.disabled = false;
+            btn.innerHTML = reset;
+        }
+    });
 
     // Cuenta regresiva: cierre oficial del torneo en 20 minutos (actualiza todos los .countdown-tiempo-restante)
     const countdownEls = document.querySelectorAll('.countdown-tiempo-restante');
@@ -709,81 +748,92 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 async function actualizarEstadisticasConfirmar(event) {
-    const result = await Swal.fire({
-        title: '¿Actualizar estadísticas?',
-        text: '¿Actualizar estadísticas de todos los inscritos?',
-        icon: 'question',
-        showCancelButton: true,
-        confirmButtonText: 'Sí, actualizar',
-        cancelButtonText: 'Cancelar',
-        confirmButtonColor: '#3b82f6',
-        cancelButtonColor: '#6b7280'
-    });
-    
-    if (result.isConfirmed) {
-        event.target.submit();
+    try {
+        const result = await Swal.fire({
+            title: '¿Actualizar estadísticas?',
+            text: '¿Actualizar estadísticas de todos los inscritos?',
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonText: 'Sí, actualizar',
+            cancelButtonText: 'Cancelar',
+            confirmButtonColor: '#3b82f6',
+            cancelButtonColor: '#6b7280'
+        });
+
+        if (result.isConfirmed) {
+            event.target.submit();
+        }
+    } finally {
+        limpiarSwalUI();
     }
 }
 
 
 async function eliminarRondaConfirmar(event, ronda, tieneResultadosMesas) {
     const form = event.target;
-    const inputConfirmar = document.getElementById('confirmar_eliminar_con_resultados');
+    const inputConfirmar = form.querySelector('input[name="confirmar_eliminar_con_resultados"]');
     if (inputConfirmar) inputConfirmar.value = '';
 
-    // Fallback cuando SweetAlert2 no está cargado (p. ej. panel desde index.php con layout)
     if (typeof Swal === 'undefined') {
+        try {
+            if (tieneResultadosMesas) {
+                var texto = prompt('La ronda ' + ronda + ' tiene resultados registrados. Para eliminar de todas formas escriba exactamente: ELIMINAR');
+                if (texto === 'ELIMINAR' && inputConfirmar) {
+                    inputConfirmar.value = 'ELIMINAR';
+                    form.submit();
+                }
+            } else {
+                if (confirm('¿Eliminar la ronda ' + ronda + '? Se eliminarán las asignaciones de mesas de esta ronda.')) {
+                    form.submit();
+                }
+            }
+        } finally {
+            limpiarSwalUI();
+        }
+        return;
+    }
+
+    try {
         if (tieneResultadosMesas) {
-            var texto = prompt('La ronda ' + ronda + ' tiene resultados registrados. Para eliminar de todas formas escriba exactamente: ELIMINAR');
+            const { value: texto } = await Swal.fire({
+                title: 'Confirmación estricta',
+                html: '<p class="text-left">La ronda <strong>' + ronda + '</strong> tiene <strong>resultados de mesas registrados</strong>.</p>' +
+                      '<p class="text-left text-gray-600">Eliminar borrará todos los resultados y asignaciones de esta ronda. Esta acción no se puede deshacer.</p>' +
+                      '<p class="text-left mt-3 font-semibold">Para continuar, escriba exactamente: <code class="bg-gray-200 px-1">ELIMINAR</code></p>',
+                icon: 'warning',
+                input: 'text',
+                inputPlaceholder: 'Escriba ELIMINAR',
+                inputValidator: (value) => {
+                    if (value !== 'ELIMINAR') return 'Debe escribir exactamente: ELIMINAR';
+                },
+                showCancelButton: true,
+                confirmButtonText: 'Sí, eliminar la ronda',
+                cancelButtonText: 'Cancelar',
+                confirmButtonColor: '#ef4444',
+                cancelButtonColor: '#6b7280'
+            });
             if (texto === 'ELIMINAR' && inputConfirmar) {
                 inputConfirmar.value = 'ELIMINAR';
                 form.submit();
             }
-        } else {
-            if (confirm('¿Eliminar la ronda ' + ronda + '? Se eliminarán las asignaciones de mesas de esta ronda.')) {
-                form.submit();
-            }
+            return;
         }
-        return;
-    }
 
-    if (tieneResultadosMesas) {
-        const { value: texto } = await Swal.fire({
-            title: 'Confirmación estricta',
-            html: '<p class="text-left">La ronda <strong>' + ronda + '</strong> tiene <strong>resultados de mesas registrados</strong>.</p>' +
-                  '<p class="text-left text-gray-600">Eliminar borrará todos los resultados y asignaciones de esta ronda. Esta acción no se puede deshacer.</p>' +
-                  '<p class="text-left mt-3 font-semibold">Para continuar, escriba exactamente: <code class="bg-gray-200 px-1">ELIMINAR</code></p>',
+        const result = await Swal.fire({
+            title: '¿Eliminar ronda?',
+            html: '¿Está seguro de eliminar la ronda <strong>' + ronda + '</strong>?<br><small class="text-gray-500">Se eliminarán las asignaciones de mesas de esta ronda.</small>',
             icon: 'warning',
-            input: 'text',
-            inputPlaceholder: 'Escriba ELIMINAR',
-            inputValidator: (value) => {
-                if (value !== 'ELIMINAR') return 'Debe escribir exactamente: ELIMINAR';
-            },
             showCancelButton: true,
-            confirmButtonText: 'Sí, eliminar la ronda',
+            confirmButtonText: 'Sí, eliminar',
             cancelButtonText: 'Cancelar',
             confirmButtonColor: '#ef4444',
             cancelButtonColor: '#6b7280'
         });
-        if (texto === 'ELIMINAR' && inputConfirmar) {
-            inputConfirmar.value = 'ELIMINAR';
+        if (result.isConfirmed) {
             form.submit();
         }
-        return;
-    }
-
-    const result = await Swal.fire({
-        title: '¿Eliminar ronda?',
-        html: '¿Está seguro de eliminar la ronda <strong>' + ronda + '</strong>?<br><small class="text-gray-500">Se eliminarán las asignaciones de mesas de esta ronda.</small>',
-        icon: 'warning',
-        showCancelButton: true,
-        confirmButtonText: 'Sí, eliminar',
-        cancelButtonText: 'Cancelar',
-        confirmButtonColor: '#ef4444',
-        cancelButtonColor: '#6b7280'
-    });
-    if (result.isConfirmed) {
-        form.submit();
+    } finally {
+        limpiarSwalUI();
     }
 }
 
@@ -1077,7 +1127,7 @@ async function confirmarCierreTorneo(event) {
                 document.getElementById('importMasivaLoading').classList.add('d-none');
                 if (!data.success) { alert(data.error || 'Error'); return; }
                 const tieneErrores = data.errores && data.errores.length > 0;
-                const html = '<p>Procesados: <strong>' + (data.procesados || 0) + '</strong></p><p>Nuevos (creados e inscritos): <strong>' + (data.nuevos || 0) + '</strong></p><p>Omitidos (ya inscritos): <strong>' + (data.omitidos || 0) + '</strong></p>' +
+                const html = '<p>Procesados: <strong>' + (data.procesados || 0) + '</strong></p><p>Nuevos (creados e inscritos): <strong>' + (data.nuevos || 0) + '</strong></p><p>Omitidos (ya inscritos): <strong>' + (data.omitidos || 0) + '</strong></p><p>Usuarios actualizados (nombre/sexo): <strong>' + (data.usuarios_actualizados || 0) + '</strong></p>' +
                     (tieneErrores ? '<p class="text-danger">Errores: ' + data.errores.length + '</p>' : '');
                 const opts = {
                     title: 'Importación finalizada',

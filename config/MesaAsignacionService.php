@@ -443,7 +443,16 @@ class MesaAsignacionService
     {
         $sql = "SELECT i.*, u.nombre, u.sexo, c.nombre as club_nombre, c.id as club_id
                 FROM inscritos i
-                INNER JOIN usuarios u ON i.id_usuario = u.id
+                INNER JOIN usuarios u ON (
+                    u.id = i.id_usuario
+                    OR (
+                        u.numfvd = i.id_usuario
+                        AND EXISTS (
+                            SELECT 1 FROM tournaments tx
+                            WHERE tx.id = i.torneo_id AND tx.club_responsable = 7
+                        )
+                    )
+                )
                 LEFT JOIN clubes c ON i.id_club = c.id
                 WHERE i.torneo_id = ? AND " . InscritosHelper::sqlWhereSoloConfirmadoConAlias('i') . "
                 ORDER BY i.posicion ASC, i.ganados DESC, i.efectividad DESC, i.puntos DESC, i.id_usuario ASC";
@@ -560,7 +569,16 @@ class MesaAsignacionService
                 (CASE WHEN pr1.id IS NOT NULL AND pr1.registrado = 1 AND pr1.resultado1 > pr1.resultado2 THEN 1 ELSE 0 END) AS ganador_r1,
                 (CASE WHEN pr1.id IS NOT NULL AND pr1.registrado = 1 AND pr1.resultado1 > pr1.resultado2 AND pr1.mesa = 0 THEN 1 ELSE 0 END) AS bye_r1
                 FROM inscritos i
-                INNER JOIN usuarios u ON i.id_usuario = u.id
+                INNER JOIN usuarios u ON (
+                    u.id = i.id_usuario
+                    OR (
+                        u.numfvd = i.id_usuario
+                        AND EXISTS (
+                            SELECT 1 FROM tournaments tx
+                            WHERE tx.id = i.torneo_id AND tx.club_responsable = 7
+                        )
+                    )
+                )
                 LEFT JOIN clubes c ON i.id_club = c.id
                 LEFT JOIN partiresul pr1 ON pr1.id_torneo = i.torneo_id AND pr1.id_usuario = i.id_usuario AND pr1.partida = 1
                 WHERE i.torneo_id = ? AND " . InscritosHelper::sqlWhereSoloConfirmadoConAlias('i') . "

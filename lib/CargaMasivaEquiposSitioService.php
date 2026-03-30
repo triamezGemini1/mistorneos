@@ -70,6 +70,7 @@ final class CargaMasivaEquiposSitioService
         $equiposIncompletos = [];
         $bloquesSinR = [];
         $clubsExcelInvalidos = [];
+        $reporteEquipos = [];
 
         foreach ($bloques as $bloque) {
             $nombreEquipo = $bloque['nombre_equipo'];
@@ -85,17 +86,32 @@ final class CargaMasivaEquiposSitioService
 
             $codigoColumna = self::resolverIdClubDesdeBloque($bloque);
             $resClub = self::validarResolverClubDesdeExcel($pdo, $codigoColumna);
+            $erroresEquipo = [];
             if (!$resClub['ok']) {
                 $clubsExcelInvalidos[] = [
                     'equipo' => $nombreEquipo,
                     'linea_inicio' => $linea,
                     'detalle' => $resClub['detalle'],
                 ];
+                $erroresEquipo[] = [
+                    'tipo' => 'club',
+                    'detalle' => $resClub['detalle'],
+                    'como_resolver' => 'Revise la columna club del archivo. Debe contener un id de club activo existente en la tabla clubes.',
+                ];
             }
             $validos = 0;
+            $integrantesReporte = [];
             foreach ($miembros as $m) {
                 $c = trim((string)($m['cedula'] ?? ''));
                 $n = trim((string)($m['n1'] ?? ''));
+                $completo = ($c !== '' && $n !== '');
+                $integrantesReporte[] = [
+                    'cedula' => $c,
+                    'nombre' => $n,
+                    'completo' => $completo,
+                    'id_usuario' => self::idUsuarioPorCedula($pdo, $c),
+                    'numfvd' => self::numfvdPorCedula($pdo, $c),
+                ];
                 if ($c !== '' && $n !== '') {
                     $validos++;
                     $cNorm = self::normalizarCedula($c);
@@ -116,7 +132,23 @@ final class CargaMasivaEquiposSitioService
                         ? "Faltan {$faltan} jugador(es) con Cedula y N1 completos."
                         : "Sobran " . ($validos - self::JUGADORES_REQUERIDOS) . " fila(s) con datos válidos (máximo " . self::JUGADORES_REQUERIDOS . ").",
                 ];
+                $erroresEquipo[] = [
+                    'tipo' => 'integrantes',
+                    'detalle' => $validos < self::JUGADORES_REQUERIDOS
+                        ? "Tiene {$validos} integrantes válidos de " . self::JUGADORES_REQUERIDOS . '.'
+                        : "Tiene más de " . self::JUGADORES_REQUERIDOS . " integrantes válidos.",
+                    'como_resolver' => 'Deje exactamente 4 jugadores por equipo, cada uno con cédula y nombre completos.',
+                ];
             }
+            $reporteEquipos[] = [
+                'equipo' => $nombreEquipo,
+                'linea_inicio' => $linea,
+                'club_excel' => $codigoColumna,
+                'club_resuelto' => (int)($resClub['club_id'] ?? 0),
+                'integrantes' => $integrantesReporte,
+                'ok' => $erroresEquipo === [],
+                'errores' => $erroresEquipo,
+            ];
         }
 
         $duplicadas = [];
@@ -152,6 +184,14 @@ final class CargaMasivaEquiposSitioService
                 'total_inscritos_torneo' => $nInsc,
                 'total_equipos_torneo' => $nEq,
             ],
+            'reporte_detallado' => [
+                'equipos' => $reporteEquipos,
+                'recomendaciones_generales' => [
+                    'Verifique que cada equipo tenga exactamente 4 integrantes completos (cédula y nombre).',
+                    'Corrija cédulas duplicadas en todo el archivo antes de ejecutar.',
+                    'Asegure que la columna club contenga id de club activo (tabla clubes).',
+                ],
+            ],
         ];
     }
 
@@ -181,7 +221,7 @@ final class CargaMasivaEquiposSitioService
             ];
         }
 
-        $stmt = $pdo->prepare('SELECT id, modalidad, organizacion_id FROM tournaments WHERE id = ?');
+        $stmt = $pdo->prepare('SELECT id, modalidad, organizacion_id, club_responsable FROM tournaments WHERE id = ?');
         $stmt->execute([$torneo_id]);
         $torneo = $stmt->fetch(PDO::FETCH_ASSOC);
         if (!$torneo || (int)$torneo['modalidad'] !== EquiposHelper::MODALIDAD_EQUIPOS) {
@@ -219,18 +259,30 @@ final class CargaMasivaEquiposSitioService
             ];
         }
 
+        $detalles = [];
+        $reporteProceso = [];
         $pdo->beginTransaction();
         try {
             $pdo->prepare('DELETE FROM inscritos WHERE torneo_id = ?')->execute([$torneo_id]);
             $pdo->prepare('DELETE FROM equipos WHERE id_torneo = ?')->execute([$torneo_id]);
-
-            $detalles = [];
             $ok = 0;
             $err = 0;
             foreach ($bloques as $bloque) {
                 $nombreEquipo = $bloque['nombre_equipo'];
                 $linea = $bloque['linea_inicio'];
                 $miembros = $bloque['miembros'];
+                $integrantesReporte = [];
+                foreach ($miembros as $m) {
+                    $cedulaR = trim((string)($m['cedula'] ?? ''));
+                    $nombreR = trim(self::normalizarTextoUtf8((string)($m['n1'] ?? '')));
+                    $integrantesReporte[] = [
+                        'cedula' => $cedulaR,
+                        'nombre' => $nombreR,
+                        'completo' => ($cedulaR !== '' && $nombreR !== ''),
+                        'id_usuario' => self::idUsuarioPorCedula($pdo, $cedulaR),
+                        'numfvd' => self::numfvdPorCedula($pdo, $cedulaR),
+                    ];
+                }
 
                 $codigoColumna = self::resolverIdClubDesdeBloque($bloque);
                 $resClub = self::validarResolverClubDesdeExcel($pdo, $codigoColumna);
@@ -242,6 +294,16 @@ final class CargaMasivaEquiposSitioService
                         'message' => $resClub['detalle'],
                         'linea_inicio' => $linea,
                     ];
+                    $reporteProceso[] = [
+                        'equipo' => $nombreEquipo,
+                        'linea_inicio' => $linea,
+                        'club_excel' => $codigoColumna,
+                        'club_resuelto' => 0,
+                        'integrantes' => $integrantesReporte,
+                        'ok' => false,
+                        'error' => $resClub['detalle'],
+                        'como_resolver' => 'Corrija el id de club en la columna club y vuelva a ejecutar.',
+                    ];
                     continue;
                 }
                 $club_id = $resClub['club_id'];
@@ -250,12 +312,27 @@ final class CargaMasivaEquiposSitioService
                 $jugadores = [];
                 foreach ($miembros as $m) {
                     $cedula = trim((string)($m['cedula'] ?? ''));
-                    $nombre = trim((string)($m['n1'] ?? ''));
+                    $nombre = trim(self::normalizarTextoUtf8((string)($m['n1'] ?? '')));
                     if ($cedula === '' || $nombre === '') {
                         continue;
                     }
                     self::asegurarUsuarioAfiliado($pdo, $cedula, $nombre, $club_id, $m, $entidad_club);
                     $jugadores[] = ['cedula' => $cedula, 'nombre' => $nombre, 'id_usuario' => 0, 'id_inscrito' => 0];
+                }
+
+                // Tras crear/afiliar usuarios faltantes, recalcular ids para reporte y verificación post-grabado
+                // (el primer armado de $integrantesReporte ocurre antes de asegurarUsuarioAfiliado y quedaba con id_usuario=0).
+                $integrantesReporte = [];
+                foreach ($miembros as $m) {
+                    $cedulaR = trim((string)($m['cedula'] ?? ''));
+                    $nombreR = trim(self::normalizarTextoUtf8((string)($m['n1'] ?? '')));
+                    $integrantesReporte[] = [
+                        'cedula' => $cedulaR,
+                        'nombre' => $nombreR,
+                        'completo' => ($cedulaR !== '' && $nombreR !== ''),
+                        'id_usuario' => self::idUsuarioPorCedula($pdo, $cedulaR),
+                        'numfvd' => self::numfvdPorCedula($pdo, $cedulaR),
+                    ];
                 }
 
                 $prefPlantilla = trim((string)($bloque['codigo_club_prefijo'] ?? ''));
@@ -272,14 +349,53 @@ final class CargaMasivaEquiposSitioService
                     if (!empty($out['success'])) {
                         $ok++;
                         $detalles[] = ['equipo' => $nombreEquipo, 'ok' => true, 'message' => $out['message'] ?? 'OK', 'linea_inicio' => $linea];
+                        $reporteProceso[] = [
+                            'equipo' => $nombreEquipo,
+                            'linea_inicio' => $linea,
+                            'club_excel' => $codigoColumna,
+                            'club_resuelto' => (int)$club_id,
+                            'integrantes' => $integrantesReporte,
+                            'ok' => true,
+                            'error' => '',
+                            'como_resolver' => '',
+                        ];
+                        $verif = self::verificarRegistrosEquipoGrabados($pdo, $torneo_id, $integrantesReporte);
+                        if (!$verif['ok']) {
+                            throw new RuntimeException('Verificación post-grabado falló para ' . $nombreEquipo . ': ' . $verif['detalle']);
+                        }
                     } else {
                         $err++;
-                        $detalles[] = ['equipo' => $nombreEquipo, 'ok' => false, 'message' => $out['message'] ?? 'Error', 'linea_inicio' => $linea];
+                        $msgErr = $out['message'] ?? 'Error';
+                        $detalles[] = ['equipo' => $nombreEquipo, 'ok' => false, 'message' => $msgErr, 'linea_inicio' => $linea];
+                        $reporteProceso[] = [
+                            'equipo' => $nombreEquipo,
+                            'linea_inicio' => $linea,
+                            'club_excel' => $codigoColumna,
+                            'club_resuelto' => (int)$club_id,
+                            'integrantes' => $integrantesReporte,
+                            'ok' => false,
+                            'error' => $msgErr,
+                            'como_resolver' => 'Revise los integrantes del equipo (cédulas/nombres/duplicados) y la consistencia del club antes de reintentar.',
+                        ];
                     }
                 } catch (Throwable $e) {
                     $err++;
-                    $detalles[] = ['equipo' => $nombreEquipo, 'ok' => false, 'message' => $e->getMessage(), 'linea_inicio' => $linea];
+                    $msgErr = $e->getMessage();
+                    $detalles[] = ['equipo' => $nombreEquipo, 'ok' => false, 'message' => $msgErr, 'linea_inicio' => $linea];
+                    $reporteProceso[] = [
+                        'equipo' => $nombreEquipo,
+                        'linea_inicio' => $linea,
+                        'club_excel' => $codigoColumna,
+                        'club_resuelto' => (int)$club_id,
+                        'integrantes' => $integrantesReporte,
+                        'ok' => false,
+                        'error' => $msgErr,
+                        'como_resolver' => 'Corrija el problema indicado y vuelva a ejecutar la carga con un archivo validado.',
+                    ];
                 }
+            }
+            if ($err > 0) {
+                throw new RuntimeException('Se detectaron errores durante la carga. La transacción fue revertida para evitar inconsistencias entre torneos.');
             }
             $pdo->commit();
             $total = count($bloques);
@@ -290,6 +406,15 @@ final class CargaMasivaEquiposSitioService
                 'equipos_ok' => $ok,
                 'equipos_error' => $err,
                 'detalles' => $detalles,
+                'reporte_proceso' => [
+                    'resumen' => ['total' => $total, 'ok' => $ok, 'error' => $err],
+                    'equipos' => $reporteProceso,
+                    'recomendaciones_generales' => [
+                        'Si hubo errores, corrija el archivo y vuelva a validar antes de ejecutar.',
+                        'Mantenga un solo registro por jugador (sin cédulas duplicadas entre equipos).',
+                        'Verifique que todos los clubs referenciados existan y estén activos.',
+                    ],
+                ],
             ];
         } catch (Throwable $e) {
             if ($pdo->inTransaction()) {
@@ -301,8 +426,110 @@ final class CargaMasivaEquiposSitioService
                 'equipos_procesados' => 0,
                 'equipos_ok' => 0,
                 'equipos_error' => 0,
-                'detalles' => [],
+                'detalles' => $detalles,
+                'reporte_proceso' => [
+                    'resumen' => ['total' => count($bloques ?? []), 'ok' => 0, 'error' => max(1, count($detalles))],
+                    'equipos' => $reporteProceso,
+                    'recomendaciones_generales' => [
+                        'La carga se revirtió por seguridad. Corrija los errores y ejecute nuevamente.',
+                        'Verifique IDs utilizados y que cada integrante pertenezca al torneo correcto.',
+                    ],
+                ],
             ];
+        }
+    }
+
+    private static function idUsuarioPorCedula(PDO $pdo, string $cedula): int
+    {
+        $ced = preg_replace('/\D/', '', trim($cedula));
+        if ($ced === '') {
+            return 0;
+        }
+        try {
+            $stmt = $pdo->prepare('SELECT id FROM usuarios WHERE REPLACE(REPLACE(cedula, "-", ""), " ", "") = ? LIMIT 1');
+            $stmt->execute([$ced]);
+            $row = $stmt->fetch(PDO::FETCH_ASSOC);
+            if (!$row) {
+                return 0;
+            }
+            return (int)($row['id'] ?? 0);
+        } catch (Throwable $e) {
+            return 0;
+        }
+    }
+
+    private static function numfvdPorCedula(PDO $pdo, string $cedula): int
+    {
+        $ced = preg_replace('/\D/', '', trim($cedula));
+        if ($ced === '') {
+            return 0;
+        }
+        try {
+            $stmt = $pdo->prepare('SELECT COALESCE(numfvd, 0) AS numfvd FROM usuarios WHERE REPLACE(REPLACE(cedula, "-", ""), " ", "") = ? LIMIT 1');
+            $stmt->execute([$ced]);
+            return (int)($stmt->fetchColumn() ?: 0);
+        } catch (Throwable $e) {
+            return 0;
+        }
+    }
+
+    /**
+     * @param list<array{cedula:string,nombre:string,completo:bool,id_usuario:int,numfvd:int}> $integrantesReporte
+     * @return array{ok: bool, detalle: string}
+     */
+    private static function verificarRegistrosEquipoGrabados(PDO $pdo, int $torneoId, array $integrantesReporte): array
+    {
+        $ids = [];
+        foreach ($integrantesReporte as $j) {
+            $id = (int)($j['id_usuario'] ?? 0);
+            if ($id > 0) {
+                $ids[] = $id;
+            }
+        }
+        $ids = array_values(array_unique($ids));
+        if (count($ids) !== self::JUGADORES_REQUERIDOS) {
+            return ['ok' => false, 'detalle' => 'No se pudieron resolver 4 identificadores de integrantes para verificación.'];
+        }
+        $ph = implode(',', array_fill(0, count($ids), '?'));
+        $sql = "SELECT COUNT(*) FROM inscritos WHERE torneo_id = ? AND id_usuario IN ($ph)";
+        $stmt = $pdo->prepare($sql);
+        $stmt->execute(array_merge([$torneoId], $ids));
+        $cnt = (int)$stmt->fetchColumn();
+        if ($cnt !== self::JUGADORES_REQUERIDOS) {
+            return ['ok' => false, 'detalle' => 'No coinciden los registros insertados en inscritos para el torneo activo.'];
+        }
+        return ['ok' => true, 'detalle' => ''];
+    }
+
+    /**
+     * Limpia caché local del proyecto al entrar a la carga masiva.
+     * @return array{ok: bool, message: string, archivos_eliminados: int}
+     */
+    public static function limpiarCacheCargaMasiva(): array
+    {
+        $cacheDir = dirname(__DIR__) . '/storage/cache';
+        if (!is_dir($cacheDir)) {
+            return ['ok' => true, 'message' => 'No existe directorio de caché para limpiar.', 'archivos_eliminados' => 0];
+        }
+        $deleted = 0;
+        try {
+            $it = new RecursiveIteratorIterator(
+                new RecursiveDirectoryIterator($cacheDir, FilesystemIterator::SKIP_DOTS),
+                RecursiveIteratorIterator::CHILD_FIRST
+            );
+            foreach ($it as $item) {
+                $path = $item->getPathname();
+                if ($item->isFile()) {
+                    if (@unlink($path)) {
+                        $deleted++;
+                    }
+                } elseif ($item->isDir()) {
+                    @rmdir($path);
+                }
+            }
+            return ['ok' => true, 'message' => 'Caché limpiada correctamente.', 'archivos_eliminados' => $deleted];
+        } catch (Throwable $e) {
+            return ['ok' => false, 'message' => 'No se pudo limpiar toda la caché: ' . $e->getMessage(), 'archivos_eliminados' => $deleted];
         }
     }
 

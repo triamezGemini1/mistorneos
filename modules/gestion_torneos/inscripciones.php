@@ -8,6 +8,7 @@ $base_url = $use_standalone ? $script_actual : 'index.php?page=torneo_gestion';
 $url_panel = $base_url . ($use_standalone ? '?' : '&') . 'action=panel&torneo_id=' . (int)($torneo['id'] ?? 0);
 $total_inscritos = isset($total_inscritos) ? (int)$total_inscritos : 0;
 $confirmados = isset($confirmados) ? (int)$confirmados : 0;
+$contadores_inscripcion = isset($contadores_inscripcion) && is_array($contadores_inscripcion) ? $contadores_inscripcion : ['inscritos_total' => $total_inscritos, 'jugadores_confirmados' => $confirmados, 'equipos_activos' => 0];
 $hombres = isset($hombres) ? (int)$hombres : 0;
 $mujeres = isset($mujeres) ? (int)$mujeres : 0;
 $resumen_clubes = $resumen_clubes ?? [];
@@ -35,6 +36,7 @@ $puede_confirmar_retirar = isset($puede_confirmar_retirar) ? $puede_confirmar_re
                 <span><i class="fas fa-calendar-alt me-1"></i> <?php echo date('d/m/Y', strtotime($torneo['fechator'] ?? 'now')); ?></span>
                 <span><i class="fas fa-building me-1"></i> <?php echo htmlspecialchars($torneo['club_nombre'] ?? 'N/A'); ?></span>
             </div>
+            <?php require __DIR__ . '/../../resources/views/partials/torneo_inscripcion_badges_bs5.php'; ?>
         </div>
         <div class="text-end">
             <a href="<?php echo htmlspecialchars($url_panel); ?>" class="btn btn-light btn-sm">

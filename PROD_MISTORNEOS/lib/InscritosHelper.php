@@ -17,6 +17,9 @@ class InscritosHelper {
     const ESTATUS_CONFIRMADO = 'confirmado';
     const ESTATUS_RETIRADO = 'retirado';
 
+    /** Valor numérico para confirmado (columna INT en producción). */
+    const ESTATUS_CONFIRMADO_NUM = 1;
+
     /** Valor numérico para retirado (columna INT). */
     const ESTATUS_RETIRADO_NUM = 4;
 
@@ -230,6 +233,9 @@ class InscritosHelper {
         if ($torneo_id <= 0) {
             throw new Exception('ID de torneo es requerido y debe ser mayor a 0');
         }
+
+        // id_usuario en inscritos se mantiene como id interno de usuario para todos los torneos.
+        $id_usuario_guardar = $id_usuario;
         
         // Validar estatus: solo pendiente, confirmado, retirado
         $estatusRaw = $datos['estatus'] ?? 1;
@@ -249,27 +255,47 @@ class InscritosHelper {
         $numero = isset($datos['numero']) && $datos['numero'] !== null ? (int)$datos['numero'] : 0;
         // clasiequi: Clasificación de equipo (INT), valor por defecto 0
         $clasiequi = isset($datos['clasiequi']) && $datos['clasiequi'] !== null ? (int)$datos['clasiequi'] : 0;
+        /* Individual en sitio no trae equipo: la columna suele ser NOT NULL → placeholder reservado (no es un equipo real) */
         $codigo_equipo = isset($datos['codigo_equipo']) ? trim((string)$datos['codigo_equipo']) : '';
         if ($codigo_equipo === '') {
             $codigo_equipo = '000-000';
         }
+        // nacionalidad y cedula en inscritos (obligatorios para búsqueda NIVEL 1)
         $nacionalidad_inscrito = isset($datos['nacionalidad']) ? strtoupper(trim((string)$datos['nacionalidad'])) : 'V';
         if (!in_array($nacionalidad_inscrito, ['V', 'E', 'J', 'P'], true)) {
             $nacionalidad_inscrito = 'V';
         }
         $cedula_inscrito = isset($datos['cedula']) ? preg_replace('/\D/', '', (string)$datos['cedula']) : '';
-
+        if ($cedula_inscrito === '' || $nacionalidad_inscrito === 'V') {
+            $identidadUsuario = self::obtenerIdentidadUsuario($pdo, $id_usuario);
+            if ($cedula_inscrito === '') {
+                $cedula_inscrito = $identidadUsuario['cedula'];
+            }
+            if (($nacionalidad_inscrito === 'V' || $nacionalidad_inscrito === '') && $identidadUsuario['nacionalidad'] !== '') {
+                $nacionalidad_inscrito = $identidadUsuario['nacionalidad'];
+            }
+        }
+        if ($cedula_inscrito === '') {
+            throw new Exception('No se pudo determinar la cédula del jugador para registrar la inscripción.');
+        }
+        $numfvd_inscrito = isset($datos['numfvd']) ? (int)$datos['numfvd'] : 0;
+        if ($numfvd_inscrito <= 0) {
+            $numfvd_inscrito = self::obtenerNumfvdDesdeUsuario($pdo, $id_usuario);
+        }
+        
         // Verificar que no esté ya inscrito (excluir retirados)
         $stmt = $pdo->prepare("SELECT id FROM inscritos WHERE id_usuario = ? AND torneo_id = ? AND " . self::SQL_WHERE_NO_RETIRADO);
-        $stmt->execute([$id_usuario, $torneo_id]);
+        $stmt->execute([$id_usuario_guardar, $torneo_id]);
         if ($stmt->fetch()) {
             throw new Exception('Este usuario ya está inscrito en el torneo');
         }
-
+        
+        // estatus siempre numérico (1 = confirmado)
         $estatus_for_db = is_numeric($estatus) && isset(self::ESTATUS_MAP[(int)$estatus])
             ? (int)$estatus
             : (int) self::getEstatusNumero(is_string($estatus) ? $estatus : 'confirmado');
 
+        // INSERT alineado al esquema real (evita 1136 si faltan/sobran columnas vs VALUES fijos)
         $colNames = $pdo->query('SHOW COLUMNS FROM inscritos')->fetchAll(PDO::FETCH_COLUMN);
         $have = [];
         foreach ($colNames as $c) {
@@ -292,13 +318,17 @@ class InscritosHelper {
                 $params[] = $param;
             }
         };
+        /* Orden alineado a esquemas habituales: nac/cédula, usuario/torneo/club/código, stats, fecha, inscrito, número, notas, clasiequi, estatus */
         if ($H('nacionalidad')) {
             $push('nacionalidad', '?', $nacionalidad_inscrito);
         }
         if ($H('cedula')) {
             $push('cedula', '?', $cedula_inscrito);
         }
-        $push('id_usuario', '?', $id_usuario);
+        if ($H('numfvd')) {
+            $push('numfvd', '?', $numfvd_inscrito);
+        }
+        $push('id_usuario', '?', $id_usuario_guardar);
         $push('torneo_id', '?', $torneo_id);
         if ($H('id_club')) {
             $push('id_club', '?', $id_club);
@@ -340,19 +370,87 @@ class InscritosHelper {
                 $push('entidad_id', '?', $ent);
             }
         }
-        if ($insertCols === [] || count($insertCols) !== count($insertVals)) {
-            throw new Exception('INSERT inscritos inconsistente (cols/vals). Ejecute migraciones inscritos.');
+        if ($insertCols === []) {
+            throw new Exception('Tabla inscritos sin columnas reconocidas');
+        }
+        if (count($insertCols) !== count($insertVals)) {
+            throw new Exception('INSERT inscritos: columnas=' . count($insertCols) . ' valores=' . count($insertVals) . ' (error interno; avisar soporte)');
+        }
+        if (count($params) !== substr_count(implode(',', $insertVals), '?')) {
+            throw new Exception('INSERT inscritos: placeholders no coinciden con parámetros');
         }
         $sql = 'INSERT INTO inscritos (' . implode(', ', $insertCols) . ') VALUES (' . implode(', ', $insertVals) . ')';
         $stmt = $pdo->prepare($sql);
         $resultado = $stmt->execute($params);
+        
         if (!$resultado) {
             $error_info = $stmt->errorInfo();
-            throw new Exception('Error al insertar la inscripción: ' . ($error_info[2] ?? 'Error desconocido'));
+            $driverMsg = $error_info[2] ?? 'Error desconocido';
+            throw new Exception('Error al insertar la inscripción. Columna estatus: valor enviado=' . var_export($estatus_for_db, true) . ' (tipo ' . gettype($estatus_for_db) . '). SQL: ' . $driverMsg);
         }
+        
         return (int)$pdo->lastInsertId();
     }
+
+    /**
+     * @return array{cedula:string,nacionalidad:string}
+     */
+    private static function obtenerIdentidadUsuario(PDO $pdo, int $usuarioId): array
+    {
+        if ($usuarioId <= 0) {
+            return ['cedula' => '', 'nacionalidad' => ''];
+        }
+        try {
+            $stmt = $pdo->prepare('SELECT cedula, nacionalidad FROM usuarios WHERE id = ? LIMIT 1');
+            $stmt->execute([$usuarioId]);
+            $row = $stmt->fetch(PDO::FETCH_ASSOC) ?: [];
+            $ced = preg_replace('/\D/', '', (string)($row['cedula'] ?? ''));
+            $nac = strtoupper(trim((string)($row['nacionalidad'] ?? '')));
+            if (!in_array($nac, ['V', 'E', 'J', 'P'], true)) {
+                $nac = 'V';
+            }
+            return ['cedula' => $ced, 'nacionalidad' => $nac];
+        } catch (Throwable $e) {
+            return ['cedula' => '', 'nacionalidad' => ''];
+        }
+    }
+
+    private static function obtenerNumfvdDesdeUsuario(PDO $pdo, int $usuarioId): int
+    {
+        if ($usuarioId <= 0) {
+            return 0;
+        }
+        try {
+            $stmt = $pdo->prepare('SELECT COALESCE(numfvd, 0) FROM usuarios WHERE id = ? LIMIT 1');
+            $stmt->execute([$usuarioId]);
+            return (int)($stmt->fetchColumn() ?: 0);
+        } catch (Throwable $e) {
+            return 0;
+        }
+    }
     
+    /**
+     * Obtiene el código de equipo para inscripción en sitio en torneo individual o parejas.
+     * Formato: código club (2 dígitos) + '-' + consecutivo por club en el torneo (3 dígitos).
+     * Ejemplo: club id=2 con 4 jugadores ya inscritos → "02-005" para el quinto.
+     *
+     * @param \PDO $pdo Conexión a la base de datos
+     * @param int $torneo_id ID del torneo
+     * @param int|null $id_club ID del club (si null se devuelve '000-000')
+     * @param int $modalidad Modalidad del torneo (1=individual, 2=parejas; otro valor devuelve '000-000')
+     * @return string Código equipo ej. "02-001" o "000-000"
+     */
+    public static function codigoEquipoParaInscripcionSitioIndividual(PDO $pdo, int $torneo_id, ?int $id_club, int $modalidad): string {
+        if (!$id_club || ($modalidad !== 1 && $modalidad !== 2)) {
+            return '000-000';
+        }
+        $codigo_club = str_pad((string)$id_club, 2, '0', STR_PAD_LEFT);
+        $stmt = $pdo->prepare("SELECT COUNT(*) FROM inscritos WHERE torneo_id = ? AND id_club = ? AND estatus != 4");
+        $stmt->execute([$torneo_id, $id_club]);
+        $consecutivo = (int)$stmt->fetchColumn() + 1;
+        return $codigo_club . '-' . str_pad((string)$consecutivo, 3, '0', STR_PAD_LEFT);
+    }
+
     /**
      * Verifica si un usuario puede inscribirse en línea en eventos masivos (es_evento_masivo = 2)
      * 
@@ -515,6 +613,45 @@ class InscritosHelper {
                 'mensaje' => 'Error al validar pago'
             ];
         }
+    }
+
+    /**
+     * Contadores para badges/resumen: inscritos totales, jugadores confirmados y equipos activos.
+     * Equipos solo aplica a modalidades con tabla equipos (2=Parejas, 3=Equipos, 4=Parejas fijas).
+     *
+     * @return array{inscritos_total:int,jugadores_confirmados:int,equipos_activos:int}
+     */
+    public static function contadoresResumenInscripcionTorneo(\PDO $pdo, int $torneoId, ?int $modalidad = null): array
+    {
+        $torneoId = max(0, $torneoId);
+        if ($torneoId <= 0) {
+            return ['inscritos_total' => 0, 'jugadores_confirmados' => 0, 'equipos_activos' => 0];
+        }
+        if ($modalidad === null) {
+            $st = $pdo->prepare('SELECT modalidad FROM tournaments WHERE id = ?');
+            $st->execute([$torneoId]);
+            $modalidad = (int) ($st->fetchColumn() ?: 0);
+        }
+        $st = $pdo->prepare('SELECT COUNT(*) FROM inscritos WHERE torneo_id = ?');
+        $st->execute([$torneoId]);
+        $inscritosTotal = (int) $st->fetchColumn();
+
+        $st = $pdo->prepare('SELECT COUNT(*) FROM inscritos WHERE torneo_id = ? AND ' . self::SQL_WHERE_SOLO_CONFIRMADO);
+        $st->execute([$torneoId]);
+        $jugadoresConf = (int) $st->fetchColumn();
+
+        $equipos = 0;
+        if (in_array($modalidad, [2, 3, 4], true)) {
+            $st = $pdo->prepare('SELECT COUNT(*) FROM equipos WHERE id_torneo = ? AND estatus = 0');
+            $st->execute([$torneoId]);
+            $equipos = (int) $st->fetchColumn();
+        }
+
+        return [
+            'inscritos_total' => $inscritosTotal,
+            'jugadores_confirmados' => $jugadoresConf,
+            'equipos_activos' => $equipos,
+        ];
     }
 }
 

@@ -21,54 +21,64 @@ $user_club_id = $current_user['club_id'] ?? null;
 $is_admin_general = Auth::isAdminGeneral();
 $is_admin_club = Auth::isAdminClub();
 
-// Construir filtro de territorio según el rol del administrador
+// En esta vista de administración por torneo se deben ver TODOS los inscritos del torneo.
 $where_clause = "i.torneo_id = ?";
 $params = [$torneo_id];
 
-// Si no es admin_general, filtrar por territorio del administrador
-if (!$is_admin_general && $user_club_id) {
-    if ($is_admin_club) {
-        // Admin_club: ver inscripciones de su club y clubes supervisados
-        require_once __DIR__ . '/../../lib/ClubHelper.php';
-        $clubes_supervisados = ClubHelper::getClubesSupervised($user_club_id);
-        $clubes_ids = array_merge([$user_club_id], $clubes_supervisados);
-        
-        if (!empty($clubes_ids)) {
-            $placeholders = str_repeat('?,', count($clubes_ids) - 1) . '?';
-            $where_clause .= " AND (i.id_club IN ($placeholders) OR u.club_id IN ($placeholders))";
-            $params = array_merge($params, $clubes_ids, $clubes_ids);
-        } else {
-            $where_clause .= " AND (i.id_club = ? OR u.club_id = ?)";
-            $params[] = $user_club_id;
-            $params[] = $user_club_id;
-        }
-    } else {
-        // Admin_torneo: solo ver inscripciones de su club
-        $where_clause .= " AND (i.id_club = ? OR u.club_id = ?)";
-        $params[] = $user_club_id;
-        $params[] = $user_club_id;
-    }
-}
+// Obtener metadatos de torneo para reporte general
+$stmtMeta = $pdo->prepare("SELECT id, nombre, modalidad, es_evento_masivo, club_responsable FROM tournaments WHERE id = ? LIMIT 1");
+$stmtMeta->execute([$torneo_id]);
+$torneo_meta = $stmtMeta->fetch(PDO::FETCH_ASSOC) ?: [];
+$modalidad_num = (int)($torneo_meta['modalidad'] ?? 0);
+$modalidad_label = $modalidad_num === 3 ? 'Equipos'
+    : ($modalidad_num === 2 ? 'Parejas' : ($modalidad_num === 4 ? 'Parejas fijas' : 'Individual'));
+$tipo_evento = (int)($torneo_meta['es_evento_masivo'] ?? 0);
+$tipo_evento_label = $tipo_evento === 3 ? 'Local'
+    : ($tipo_evento === 2 ? 'Regional' : ($tipo_evento === 1 ? 'Masivo' : 'Regular'));
+$usa_numfvd = (int)($torneo_meta['club_responsable'] ?? 0) === 7;
 
-// Obtener inscripciones con información del club y administrador
+// Obtener inscripciones con información del club y administrador (sin perder registros).
+// Importante: no usar OR (id vs numfvd) en un solo JOIN — puede duplicar filas y mezclar datos de usuarios.
 $stmt = $pdo->prepare("
     SELECT 
         i.*,
-        u.username as usuario_nombre,
-        u.nombre as usuario_nombre_completo,
-        u.cedula as usuario_cedula,
-        u.club_id as usuario_club_id,
+        t.nombre AS torneo_nombre,
+        t.modalidad AS torneo_modalidad,
+        t.es_evento_masivo AS torneo_tipo_evento,
+        COALESCE(u.username, u_alt.username) as usuario_nombre,
+        COALESCE(u.nombre, u_alt.nombre) as usuario_nombre_completo,
+        COALESCE(u.cedula, u_alt.cedula) as usuario_cedula,
+        COALESCE(u.numfvd, u_alt.numfvd, i.numfvd, 0) AS usuario_numfvd,
+        COALESCE(u.email, u_alt.email) as usuario_email,
+        COALESCE(u.telefono, u_alt.telefono) as usuario_telefono,
+        COALESCE(u.sexo, u_alt.sexo) as usuario_sexo,
+        COALESCE(u.nacionalidad, u_alt.nacionalidad) as usuario_nacionalidad,
+        COALESCE(u.club_id, u_alt.club_id) as usuario_club_id,
         c.id as club_id,
         c.nombre as club_nombre,
         c.delegado as club_delegado,
-        admin.username as admin_username,
-        admin.nombre as admin_nombre
+        admin_data.admin_username,
+        admin_data.admin_nombre
     FROM inscritos i
-    LEFT JOIN usuarios u ON i.id_usuario = u.id
+    LEFT JOIN tournaments t ON t.id = i.torneo_id
+    LEFT JOIN usuarios u ON u.id = i.id_usuario
+    LEFT JOIN usuarios u_alt ON u.id IS NULL
+        AND u_alt.numfvd = i.id_usuario
+        AND EXISTS (
+            SELECT 1 FROM tournaments tx
+            WHERE tx.id = i.torneo_id AND tx.club_responsable = 7
+        )
     LEFT JOIN clubes c ON i.id_club = c.id
-    LEFT JOIN usuarios admin ON c.id = admin.club_id AND admin.role IN ('admin_club', 'admin_torneo') AND admin.status = 0
+    LEFT JOIN (
+        SELECT club_id,
+               MAX(username) AS admin_username,
+               MAX(nombre) AS admin_nombre
+        FROM usuarios
+        WHERE role IN ('admin_club', 'admin_torneo') AND status = 0
+        GROUP BY club_id
+    ) admin_data ON c.id = admin_data.club_id
     WHERE $where_clause
-    ORDER BY c.nombre ASC, COALESCE(u.nombre, u.username) ASC
+    ORDER BY c.nombre ASC, COALESCE(u.nombre, u_alt.nombre, u.username, u_alt.username) ASC
 ");
 $stmt->execute($params);
 $inscripciones = $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -101,11 +111,67 @@ foreach ($inscripciones as $insc) {
         <h5 class="mb-0">
             <i class="fas fa-list-check me-2"></i>Revisar Inscripciones
         </h5>
-        <span class="badge bg-light text-dark">
-            Total: <?= count($inscripciones) ?>
-        </span>
+        <div class="d-flex align-items-center" style="gap:.5rem;">
+            <a class="btn btn-sm btn-light" target="_blank" rel="noopener"
+               href="<?= htmlspecialchars(AppHelpers::torneoGestionUrl('inscripciones_export_xls', (int)$torneo_id)) ?>">
+                <i class="fas fa-file-excel"></i> Exportar XLS
+            </a>
+            <a class="btn btn-sm btn-warning" target="_blank" rel="noopener"
+               href="<?= htmlspecialchars(AppHelpers::torneoGestionUrl('inscripciones_export_pdf', (int)$torneo_id)) ?>">
+                <i class="fas fa-file-pdf"></i> Exportar PDF
+            </a>
+            <a class="btn btn-sm btn-success" target="_blank" rel="noopener"
+               href="<?= htmlspecialchars(AppHelpers::torneoGestionUrl('inscripciones_reporte_detallado_pdf', (int)$torneo_id)) ?>"
+               title="Logo organizador, por asociación y equipo">
+                <i class="fas fa-file-contract"></i> Detallado PDF
+            </a>
+            <a class="btn btn-sm btn-outline-light" target="_blank" rel="noopener"
+               href="<?= htmlspecialchars(AppHelpers::torneoGestionUrl('inscripciones_reporte_detallado_xls', (int)$torneo_id)) ?>">
+                <i class="fas fa-table"></i> Detallado Excel
+            </a>
+            <span class="badge bg-light text-dark">
+                Total: <?= count($inscripciones) ?>
+            </span>
+        </div>
     </div>
     <div class="card-body">
+        <div class="alert alert-light border mb-3">
+            <strong>Reporte general del torneo:</strong>
+            <span class="ml-2"><strong>Modalidad:</strong> <?= htmlspecialchars($modalidad_label) ?></span>
+            <span class="ml-3"><strong>Tipo:</strong> <?= htmlspecialchars($tipo_evento_label) ?></span>
+            <?php if ($usa_numfvd): ?>
+                <span class="ml-3 badge bg-info text-dark">Identificación principal mostrada: NUMFVD</span>
+            <?php else: ?>
+                <span class="ml-3 badge bg-secondary">Identificación principal mostrada: ID Usuario</span>
+            <?php endif; ?>
+            <div class="mt-2">
+                <?php
+                $total_confirmados = 0;
+                $total_pendientes = 0;
+                $total_retirados = 0;
+                $total_m = 0;
+                $total_f = 0;
+                foreach ($inscripciones as $ri) {
+                    $est = (string)($ri['estatus_texto'] ?? '');
+                    if ($est === 'confirmado') $total_confirmados++;
+                    elseif ($est === 'retirado') $total_retirados++;
+                    else $total_pendientes++;
+                    $sx = strtoupper((string)($ri['usuario_sexo'] ?? ''));
+                    if ($sx === 'M') $total_m++;
+                    if ($sx === 'F') $total_f++;
+                }
+                ?>
+                <small>
+                    Total: <strong><?= count($inscripciones) ?></strong> |
+                    Confirmados: <strong><?= $total_confirmados ?></strong> |
+                    Pendientes: <strong><?= $total_pendientes ?></strong> |
+                    Retirados: <strong><?= $total_retirados ?></strong> |
+                    Masculino: <strong><?= $total_m ?></strong> |
+                    Femenino: <strong><?= $total_f ?></strong>
+                </small>
+            </div>
+        </div>
+
         <?php if (empty($inscripciones_por_club)): ?>
             <div class="alert alert-info">
                 <i class="fas fa-info-circle me-2"></i>
@@ -148,8 +214,13 @@ foreach ($inscripciones as $insc) {
                             <table class="table table-hover mb-0">
                                 <thead class="table-light">
                                     <tr>
-                                        <th>ID</th>
+                                        <th>ID Usuario</th>
+                                        <th>NUMFVD</th>
+                                        <th>Cédula</th>
                                         <th>Nombre Completo</th>
+                                        <th>Sexo</th>
+                                        <th>Email</th>
+                                        <th>Teléfono</th>
                                         <th>Estatus</th>
                                         <th>Fecha Inscripción</th>
                                         <th>Acciones</th>
@@ -167,8 +238,17 @@ foreach ($inscripciones as $insc) {
                                                 <code class="text-primary"><?= $id_usuario ?></code>
                                             </td>
                                             <td>
+                                                <code class="<?= $usa_numfvd ? 'text-success' : 'text-muted' ?>"><?= (int)($insc['usuario_numfvd'] ?? 0) ?></code>
+                                            </td>
+                                            <td>
+                                                <span><?= htmlspecialchars((string)($insc['usuario_cedula'] ?? $insc['cedula'] ?? '')) ?></span>
+                                            </td>
+                                            <td>
                                                 <strong><?= htmlspecialchars($nombre_completo ?? 'N/A') ?></strong>
                                             </td>
+                                            <td><?= htmlspecialchars((string)($insc['usuario_sexo'] ?? '')) ?></td>
+                                            <td><?= htmlspecialchars((string)($insc['usuario_email'] ?? '')) ?></td>
+                                            <td><?= htmlspecialchars((string)($insc['usuario_telefono'] ?? '')) ?></td>
                                             <td>
                                                 <span class="badge <?= $insc['estatus_clase'] ?> fw-bold" id="badge_estatus_<?= $insc['id'] ?>">
                                                     <?= $insc['estatus_formateado'] ?>

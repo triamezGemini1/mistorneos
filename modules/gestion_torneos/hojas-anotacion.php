@@ -8,7 +8,11 @@
 if (!defined('APP_BOOTSTRAPPED') && file_exists(__DIR__ . '/../../config/bootstrap.php')) {
     require_once __DIR__ . '/../../config/bootstrap.php';
 }
+if (!class_exists('AppHelpers', false)) {
+    require_once __DIR__ . '/../../lib/app_helpers.php';
+}
 require_once __DIR__ . '/../../lib/QrMesaTokenHelper.php';
+$href_torneo_context_switch = AppHelpers::url('assets/css/torneo-context-switch.css');
 $letras_secuencia = [1 => 'A', 2 => 'C', 3 => 'B', 4 => 'D'];
 // URL base: interfaz móvil para carga de actas (formato requerido: ?t=&m=&r=&token=)
 $url_dominio_public = rtrim(function_exists('AppHelpers') ? AppHelpers::getPublicUrl() : (function_exists('app_base_url') ? rtrim(app_base_url(), '/') . '/public' : ''), '/');
@@ -21,6 +25,9 @@ if (!isset($base_url) || !isset($use_standalone)) {
 $context_switcher = isset($context_switcher) && is_array($context_switcher)
     ? $context_switcher
     : ['active_tournament_id' => (int)($torneo['id'] ?? 0), 'items' => []];
+$map_max_partida_switch = isset($map_max_partida_switch) && is_array($map_max_partida_switch)
+    ? $map_max_partida_switch
+    : [];
 $activeContextName = (string)($torneo['nombre'] ?? 'Torneo');
 $activeContextViewId = (int)($torneo['id'] ?? 0);
 if (!empty($context_switcher['items']) && is_array($context_switcher['items'])) {
@@ -40,6 +47,7 @@ if (!empty($context_switcher['items']) && is_array($context_switcher['items'])) 
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Hojas de Anotación - Ronda <?php echo $ronda; ?></title>
+    <link rel="stylesheet" href="<?php echo htmlspecialchars($href_torneo_context_switch, ENT_QUOTES, 'UTF-8'); ?>">
     <style>
         * {
             margin: 0;
@@ -137,7 +145,9 @@ if (!empty($context_switcher['items']) && is_array($context_switcher['items'])) 
             border-radius: 12px;
             box-shadow: 0 4px 16px rgba(0,0,0,0.15);
             display: flex;
+            flex-wrap: wrap;
             align-items: center;
+            justify-content: center;
             gap: 12px;
             max-width: calc(100vw - 32px);
             overflow: hidden;
@@ -162,57 +172,11 @@ if (!empty($context_switcher['items']) && is_array($context_switcher['items'])) 
             outline: none;
             border-color: #3b82f6;
         }
-        .header-context-switch {
-            display: inline-flex;
-            align-items: center;
-            background: #f3f4f6;
-            border: 1px solid #d1d5db;
-            border-radius: 999px;
-            padding: 2px;
-            gap: 2px;
-            flex-shrink: 0;
-        }
-        .header-context-switch .switch-item {
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            text-decoration: none;
-            min-width: 78px;
-            padding: 5px 7.6px;
-            border-radius: 999px;
-            font-size: 11px;
-            font-weight: 700;
-            color: #374151;
-            line-height: 1;
-            white-space: nowrap;
-        }
-        .header-context-switch .switch-item:hover { background: #e5e7eb; color: #111827; }
-        .header-context-switch .switch-item.is-active { background: #005c44; color: #fff; }
-        .header-context-switch.is-compact { gap: 5px; }
-        .header-context-switch.is-compact .switch-item { font-size: 13px; min-width: 66px; padding: 4px 5.7px; }
-        .header-context-switch .text-id-ghost { font-size: 10px; color: rgba(75,85,99,0.68); margin-left: 4px; font-weight: 500; }
-        .header-context-info {
-            display: inline-flex;
-            align-items: center;
-            font-size: 12px;
-            font-weight: 600;
-            color: #4b5563;
-            white-space: nowrap;
-        }
-        .header-context-info .context-dot {
-            width: 8px;
-            height: 8px;
-            border-radius: 50%;
-            display: inline-block;
-            margin-right: 6px;
-            background: #3498db;
-        }
         @media (max-width: 1366px) {
             .selector-mesas { gap: 8px; padding: 10px 12px; }
             .selector-mesas label { font-size: 13px; }
             .selector-mesas select { min-width: 120px; font-size: 13px; padding: 6px 10px; }
-            .header-context-switch .switch-item { min-width: 70px; padding: 4px 7px; font-size: 10px; }
-            .header-context-info { font-size: 11px; }
+            .tcs-info { font-size: 11px; }
         }
         
         .hoja-mesa {
@@ -323,28 +287,43 @@ if (!empty($context_switcher['items']) && is_array($context_switcher['items'])) 
         
         .jugador-izquierda {
             flex: 1;
+            min-width: 0;
             padding-right: 20px;
         }
         
         .jugador-derecha {
             flex: 1;
             padding-left: 20px;
+            min-width: 0;
             text-align: right;
         }
         
         .jugador-id-nombre {
             font-weight: bold;
             margin-bottom: 5px;
+            display: flex;
+            align-items: baseline;
+            gap: 8px;
+            min-width: 0;
+            width: 100%;
+        }
+        /* Columna derecha (B/D): ID junto al borde interno; nombre trunca hacia el centro */
+        .linea-con-qr .col-der .jugador-id-nombre,
+        .jugador-derecha .jugador-id-nombre {
+            flex-direction: row-reverse;
         }
         
         .jugador-id {
-            display: inline-block;
+            flex-shrink: 0;
             font-weight: bold;
-            margin-right: 8px;
         }
         
         .jugador-nombre {
-            display: inline-block;
+            min-width: 0;
+            flex: 1 1 0%;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
         }
         
         /* Estadísticas */
@@ -495,34 +474,28 @@ if (!empty($context_switcher['items']) && is_array($context_switcher['items'])) 
                 <option value="hoja-mesa-<?php echo $num_mesa; ?>">Mesa <?php echo $num_mesa; ?> (hoja <?php echo $idx + 1; ?>)</option>
             <?php endforeach; ?>
         </select>
-        <span class="header-context-info">
-            <span class="context-dot" aria-hidden="true"></span>
+        <span class="tcs-info tcs-info--on-light">
+            <span class="tcs-info__dot" aria-hidden="true"></span>
             Visualizando: Torneo <?php echo htmlspecialchars($activeContextName, ENT_QUOTES, 'UTF-8'); ?> [#<?php echo $activeContextViewId; ?>]
         </span>
         <?php if (!empty($context_switcher['items'])): ?>
             <?php
-            $activeTournamentId = (int)($context_switcher['active_tournament_id'] ?? 0);
-            $sepSwitch = $use_standalone ? '?' : '&';
-            $switchCount = count($context_switcher['items']);
+            $tcs = [
+                'items' => $context_switcher['items'],
+                'active_id' => (int) ($context_switcher['active_tournament_id'] ?? 0),
+                'base_url' => $base_url,
+                'sep' => $use_standalone ? '?' : '&',
+                'ronda_base' => (int) $ronda,
+                'map_max' => $map_max_partida_switch,
+                'mode' => 'hojas_anotacion',
+                'theme' => 'on_light',
+                'select_id' => 'torneo-asociado-select-hojas',
+                'show_info' => false,
+                'select_class' => 'tcs-select-control',
+                'select_label_class' => 'mb-0 mr-1',
+            ];
+            require __DIR__ . '/../../resources/views/partials/torneo_context_switch.php';
             ?>
-            <div class="header-context-switch<?php echo $switchCount >= 3 ? ' is-compact' : ''; ?>" role="group" aria-label="Selector de contexto del torneo">
-                <?php foreach ($context_switcher['items'] as $switchItem): ?>
-                    <?php
-                    $switchId = (int)($switchItem['id'] ?? 0);
-                    $switchLabel = (string)($switchItem['nombre'] ?? ('Torneo #' . $switchId));
-                    $switchParentEventId = (int)($switchItem['parent_event_id'] ?? 0);
-                    $isActiveSwitch = ($switchId === $activeTournamentId);
-                    $switchHref = $base_url . $sepSwitch . 'action=hojas_anotacion&torneo_id=' . $switchId . '&ronda=' . (int)$ronda . '&switch_torneo_id=' . $switchId . '&return_action=hojas_anotacion';
-                    ?>
-                    <a href="<?php echo htmlspecialchars($switchHref, ENT_QUOTES, 'UTF-8'); ?>"
-                       class="switch-item js-context-switch<?php echo $isActiveSwitch ? ' is-active' : ''; ?>"
-                       aria-pressed="<?php echo $isActiveSwitch ? 'true' : 'false'; ?>"
-                       title="<?php echo htmlspecialchars('ID Sistema: ' . $switchId . ' | Evento Padre: ' . $switchParentEventId, ENT_QUOTES, 'UTF-8'); ?>">
-                        <?php echo htmlspecialchars($switchLabel, ENT_QUOTES, 'UTF-8'); ?>
-                        <span class="text-id-ghost">#<?php echo $switchId; ?></span>
-                    </a>
-                <?php endforeach; ?>
-            </div>
         <?php endif; ?>
     </div>
 
@@ -591,7 +564,30 @@ if (!empty($context_switcher['items']) && is_array($context_switcher['items'])) 
                             <?php 
                             if ($es_torneo_equipos && !empty($jugador1['nombre_equipo'])) { ?>
                             <div class="equipo-info">
-                                <div class="equipo-nombre"><?php if (!empty($jugador1['codigo_equipo_display'])) echo '<span class="equipo-codigo-inline">' . htmlspecialchars($jugador1['codigo_equipo_display']) . '</span> - '; ?><?php echo htmlspecialchars($jugador1['nombre_equipo']); ?><?php $t1=(int)($jugador1['tarjeta']??0); if($t1>0){ $c=''; if($t1==1)$c='Amarilla'; elseif($t1==3)$c='Roja'; elseif($t1==4)$c='Negra'; else $c=''; echo ' -<span class="tarjeta-club">* '.$c.' *</span>'; } ?></div>
+                                <div class="equipo-nombre">
+                                    <?php
+                                    if (!empty($jugador1['codigo_equipo_display'])) {
+                                        echo '<span class="equipo-codigo-inline">' . htmlspecialchars($jugador1['codigo_equipo_display']) . '</span> - ';
+                                    }
+                                    echo htmlspecialchars($jugador1['nombre_equipo']);
+                                    $t1 = (int)($jugador1['tarjeta'] ?? 0);
+                                    if ($t1 > 0) {
+                                        $c = $t1 === 1 ? 'Amarilla' : ($t1 === 3 ? 'Roja' : ($t1 === 4 ? 'Negra' : ''));
+                                        echo ' -<span class="tarjeta-club">* ' . $c . ' *</span>';
+                                    }
+                                    ?>
+                                </div>
+                                <?php if (!empty($jugador1['estadisticas_equipo'])):
+                                    $statsEquipo1 = $jugador1['estadisticas_equipo'];
+                                ?>
+                                <div class="equipo-estadisticas">
+                                    <span class="equipo-stat-item"><span class="equipo-stat-label">Pos:</span><?php echo htmlspecialchars((string)($statsEquipo1['clasiequi'] ?? $statsEquipo1['posicion'] ?? 0), ENT_QUOTES, 'UTF-8'); ?></span>
+                                    <span class="equipo-stat-item"><span class="equipo-stat-label">G:</span><?php echo (int)($statsEquipo1['ganados'] ?? 0); ?></span>
+                                    <span class="equipo-stat-item"><span class="equipo-stat-label">P:</span><?php echo (int)($statsEquipo1['perdidos'] ?? 0); ?></span>
+                                    <span class="equipo-stat-item"><span class="equipo-stat-label">Efect:</span><?php echo (int)($statsEquipo1['efectividad'] ?? 0); ?></span>
+                                    <span class="equipo-stat-item"><span class="equipo-stat-label">Pts:</span><?php echo (int)($statsEquipo1['puntos'] ?? 0); ?></span>
+                                </div>
+                                <?php endif; ?>
                             </div>
                             <?php } else { echo htmlspecialchars($jugador1['nombre_club'] ?? $jugador1['club_nombre'] ?? 'Sin Club'); $t1=(int)($jugador1['tarjeta']??0); if($t1>0){ $c=$t1==1?'Amarilla':($t1==3?'Roja':($t1==4?'Negra':'')); echo ' -<span class="tarjeta-club">* '.$c.' *</span>'; } } ?>
                         </div>
@@ -604,7 +600,7 @@ if (!empty($context_switcher['items']) && is_array($context_switcher['items'])) 
                         </div>
                     </div>
                     <div class="col-der">
-                        <div class="jugador-id-nombre" style="text-align:right">
+                        <div class="jugador-id-nombre">
                             <span class="jugador-id"><?php echo $jugador3['id_usuario'] ?? 'N/A'; ?></span>
                             <span class="jugador-nombre"><?php echo htmlspecialchars($jugador3['nombre_completo'] ?? $jugador3['nombre'] ?? 'N/A'); ?> (<?php echo $letras_secuencia[3] ?? 'B'; ?>)</span>
                         </div>
@@ -621,7 +617,30 @@ if (!empty($context_switcher['items']) && is_array($context_switcher['items'])) 
                             <?php 
                             if ($es_torneo_equipos && !empty($jugador3['nombre_equipo'])) { ?>
                             <div class="equipo-info">
-                                <div class="equipo-nombre"><?php if (!empty($jugador3['codigo_equipo_display'])) echo '<span class="equipo-codigo-inline">' . htmlspecialchars($jugador3['codigo_equipo_display']) . '</span> - '; ?><?php echo htmlspecialchars($jugador3['nombre_equipo']); ?><?php $t3=(int)($jugador3['tarjeta']??0); if($t3>0){ $c=$t3==1?'Amarilla':($t3==3?'Roja':($t3==4?'Negra':'')); echo ' -<span class="tarjeta-club">* '.$c.' *</span>'; } ?></div>
+                                <div class="equipo-nombre">
+                                    <?php
+                                    if (!empty($jugador3['codigo_equipo_display'])) {
+                                        echo '<span class="equipo-codigo-inline">' . htmlspecialchars($jugador3['codigo_equipo_display']) . '</span> - ';
+                                    }
+                                    echo htmlspecialchars($jugador3['nombre_equipo']);
+                                    $t3 = (int)($jugador3['tarjeta'] ?? 0);
+                                    if ($t3 > 0) {
+                                        $c = $t3 === 1 ? 'Amarilla' : ($t3 === 3 ? 'Roja' : ($t3 === 4 ? 'Negra' : ''));
+                                        echo ' -<span class="tarjeta-club">* ' . $c . ' *</span>';
+                                    }
+                                    ?>
+                                </div>
+                                <?php if (!empty($jugador3['estadisticas_equipo'])):
+                                    $statsEquipo3 = $jugador3['estadisticas_equipo'];
+                                ?>
+                                <div class="equipo-estadisticas">
+                                    <span class="equipo-stat-item"><span class="equipo-stat-label">Pos:</span><?php echo htmlspecialchars((string)($statsEquipo3['clasiequi'] ?? $statsEquipo3['posicion'] ?? 0), ENT_QUOTES, 'UTF-8'); ?></span>
+                                    <span class="equipo-stat-item"><span class="equipo-stat-label">G:</span><?php echo (int)($statsEquipo3['ganados'] ?? 0); ?></span>
+                                    <span class="equipo-stat-item"><span class="equipo-stat-label">P:</span><?php echo (int)($statsEquipo3['perdidos'] ?? 0); ?></span>
+                                    <span class="equipo-stat-item"><span class="equipo-stat-label">Efect:</span><?php echo (int)($statsEquipo3['efectividad'] ?? 0); ?></span>
+                                    <span class="equipo-stat-item"><span class="equipo-stat-label">Pts:</span><?php echo (int)($statsEquipo3['puntos'] ?? 0); ?></span>
+                                </div>
+                                <?php endif; ?>
                             </div>
                             <?php } else { echo htmlspecialchars($jugador3['nombre_club'] ?? $jugador3['club_nombre'] ?? 'Sin Club'); $t3=(int)($jugador3['tarjeta']??0); if($t3>0){ $c=$t3==1?'Amarilla':($t3==3?'Roja':($t3==4?'Negra':'')); echo ' -<span class="tarjeta-club">* '.$c.' *</span>'; } } ?>
                         </div>
@@ -708,15 +727,15 @@ if (!empty($context_switcher['items']) && is_array($context_switcher['items'])) 
                                     }
                                     ?>
                                 </div>
-                                <?php if (!empty($jugador2['estadisticas_equipo'])): 
+                                <?php if (!empty($jugador2['estadisticas_equipo'])):
                                     $statsEquipo2 = $jugador2['estadisticas_equipo'];
                                 ?>
                                     <div class="equipo-estadisticas">
-                                        <span class="equipo-stat-item"><span class="equipo-stat-label">Pos:</span><?php echo $statsEquipo2['clasiequi'] ?? $statsEquipo2['posicion'] ?? 0; ?></span>
-                                        <span class="equipo-stat-item"><span class="equipo-stat-label">G:</span><?php echo $statsEquipo2['ganados']; ?></span>
-                                        <span class="equipo-stat-item"><span class="equipo-stat-label">P:</span><?php echo $statsEquipo2['perdidos'] ?? 0; ?></span>
+                                        <span class="equipo-stat-item"><span class="equipo-stat-label">Pos:</span><?php echo htmlspecialchars((string)($statsEquipo2['clasiequi'] ?? $statsEquipo2['posicion'] ?? 0), ENT_QUOTES, 'UTF-8'); ?></span>
+                                        <span class="equipo-stat-item"><span class="equipo-stat-label">G:</span><?php echo (int)($statsEquipo2['ganados'] ?? 0); ?></span>
+                                        <span class="equipo-stat-item"><span class="equipo-stat-label">P:</span><?php echo (int)($statsEquipo2['perdidos'] ?? 0); ?></span>
                                         <span class="equipo-stat-item"><span class="equipo-stat-label">Efect:</span><?php echo (int)($statsEquipo2['efectividad'] ?? 0); ?></span>
-                                        <span class="equipo-stat-item"><span class="equipo-stat-label">Pts:</span><?php echo $statsEquipo2['puntos']; ?></span>
+                                        <span class="equipo-stat-item"><span class="equipo-stat-label">Pts:</span><?php echo (int)($statsEquipo2['puntos'] ?? 0); ?></span>
                                     </div>
                                 <?php endif; ?>
                             </div>
@@ -749,15 +768,15 @@ if (!empty($context_switcher['items']) && is_array($context_switcher['items'])) 
                                     }
                                     ?>
                                 </div>
-                                <?php if (!empty($jugador4['estadisticas_equipo'])): 
+                                <?php if (!empty($jugador4['estadisticas_equipo'])):
                                     $statsEquipo4 = $jugador4['estadisticas_equipo'];
                                 ?>
                                     <div class="equipo-estadisticas">
-                                        <span class="equipo-stat-item"><span class="equipo-stat-label">Pos:</span><?php echo $statsEquipo4['clasiequi'] ?? $statsEquipo4['posicion'] ?? 0; ?></span>
-                                        <span class="equipo-stat-item"><span class="equipo-stat-label">G:</span><?php echo $statsEquipo4['ganados']; ?></span>
-                                        <span class="equipo-stat-item"><span class="equipo-stat-label">P:</span><?php echo $statsEquipo4['perdidos'] ?? 0; ?></span>
+                                        <span class="equipo-stat-item"><span class="equipo-stat-label">Pos:</span><?php echo htmlspecialchars((string)($statsEquipo4['clasiequi'] ?? $statsEquipo4['posicion'] ?? 0), ENT_QUOTES, 'UTF-8'); ?></span>
+                                        <span class="equipo-stat-item"><span class="equipo-stat-label">G:</span><?php echo (int)($statsEquipo4['ganados'] ?? 0); ?></span>
+                                        <span class="equipo-stat-item"><span class="equipo-stat-label">P:</span><?php echo (int)($statsEquipo4['perdidos'] ?? 0); ?></span>
                                         <span class="equipo-stat-item"><span class="equipo-stat-label">Efect:</span><?php echo (int)($statsEquipo4['efectividad'] ?? 0); ?></span>
-                                        <span class="equipo-stat-item"><span class="equipo-stat-label">Pts:</span><?php echo $statsEquipo4['puntos']; ?></span>
+                                        <span class="equipo-stat-item"><span class="equipo-stat-label">Pts:</span><?php echo (int)($statsEquipo4['puntos'] ?? 0); ?></span>
                                     </div>
                                 <?php endif; ?>
                             </div>

@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 /**
  * Paso 5: Imprimir Hojas de Anotación (Desktop).
  * Una hoja por mesa con el diseño: encabezado (torneo | Ronda - Mesa),
@@ -137,13 +137,37 @@ require_once __DIR__ . '/desktop_layout.php';
 }
 .linea-con-qr .col-izq, .linea-con-qr .col-der { flex: 1; min-width: 0; }
 .linea-con-qr .col-qr { flex-shrink: 0; display: flex; align-items: center; justify-content: center; min-width: 120px; }
-.jugador-block { margin-bottom: 12px; }
-.jugador-id { font-weight: bold; margin-right: 8px; }
+.jugador-block { margin-bottom: 12px; min-width: 0; }
+.jugador-linea-id-nombre {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    min-width: 0;
+    width: 100%;
+    font-weight: bold;
+}
+.jugador-linea-id-nombre--izq .jugador-nombre {
+    min-width: 0;
+    flex: 1 1 0%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.jugador-linea-id-nombre--der {
+    flex-direction: row-reverse;
+}
+.jugador-linea-id-nombre--der .jugador-nombre {
+    min-width: 0;
+    flex: 1 1 0%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.jugador-id { flex-shrink: 0; font-weight: bold; }
 .jugador-nombre { font-weight: bold; }
 .jugador-stats { font-size: 12px; margin: 4px 0 2px 0; }
 .jugador-club { font-size: 12px; font-style: italic; color: #333; }
 .col-der .jugador-block { text-align: right; }
-.col-der .jugador-id { margin-right: 0; margin-left: 8px; }
 .qr-mesa img { width: 100px; height: 100px; display: block; }
 .seccion-c-d { margin-top: 10px; display: flex; justify-content: space-between; gap: 15px; }
 .seccion-c-d .col-izq, .seccion-c-d .col-der { flex: 1; }
@@ -196,13 +220,17 @@ require_once __DIR__ . '/desktop_layout.php';
         <div class="linea-con-qr">
             <div class="col-izq">
                 <div class="jugador-block">
+                    <div class="jugador-linea-id-nombre jugador-linea-id-nombre--izq">
                     <span class="jugador-id"><?= $jugador1 ? (int)($jugador1['id_usuario'] ?? 0) : '—' ?></span>
                     <span class="jugador-nombre"><?= $jugador1 ? htmlspecialchars($jugador1['nombre_completo'] ?? $jugador1['nombre'] ?? 'N/A') . ' (' . ($letras_secuencia[1] ?? 'A') . ')' : '—' ?></span>
+                    </div>
                     <?php if ($jugador1): ?><div class="jugador-stats">Pos: <?= (int)($jugador1['inscrito']['posicion'] ?? 0) ?> G: <?= (int)($jugador1['inscrito']['ganados'] ?? 0) ?> P: <?= (int)($jugador1['inscrito']['perdidos'] ?? 0) ?> Efect: <?= (int)($jugador1['inscrito']['efectividad'] ?? 0) ?> Pts: <?= (int)($jugador1['inscrito']['puntos'] ?? 0) ?></div><div class="jugador-club"><?= htmlspecialchars($jugador1['nombre_club'] ?? 'Sin Club') ?></div><?php endif; ?>
                 </div>
                 <div class="jugador-block">
+                    <div class="jugador-linea-id-nombre jugador-linea-id-nombre--izq">
                     <span class="jugador-id"><?= $jugador2 ? (int)($jugador2['id_usuario'] ?? 0) : '—' ?></span>
                     <span class="jugador-nombre"><?= $jugador2 ? htmlspecialchars($jugador2['nombre_completo'] ?? $jugador2['nombre'] ?? 'N/A') . ' (' . ($letras_secuencia[2] ?? 'C') . ')' : '—' ?></span>
+                    </div>
                     <?php if ($jugador2): ?><div class="jugador-stats">Pos: <?= (int)($jugador2['inscrito']['posicion'] ?? 0) ?> G: <?= (int)($jugador2['inscrito']['ganados'] ?? 0) ?> P: <?= (int)($jugador2['inscrito']['perdidos'] ?? 0) ?> Efect: <?= (int)($jugador2['inscrito']['efectividad'] ?? 0) ?> Pts: <?= (int)($jugador2['inscrito']['puntos'] ?? 0) ?></div><div class="jugador-club"><?= htmlspecialchars($jugador2['nombre_club'] ?? 'Sin Club') ?></div><?php endif; ?>
                 </div>
             </div>
@@ -213,13 +241,17 @@ require_once __DIR__ . '/desktop_layout.php';
             </div>
             <div class="col-der">
                 <div class="jugador-block">
+                    <div class="jugador-linea-id-nombre jugador-linea-id-nombre--der">
                     <span class="jugador-nombre"><?= $jugador3 ? htmlspecialchars($jugador3['nombre_completo'] ?? $jugador3['nombre'] ?? 'N/A') . ' (' . ($letras_secuencia[3] ?? 'B') . ')' : '—' ?></span>
                     <span class="jugador-id"><?= $jugador3 ? (int)($jugador3['id_usuario'] ?? 0) : '—' ?></span>
+                    </div>
                     <?php if ($jugador3): ?><div class="jugador-stats">Pos: <?= (int)($jugador3['inscrito']['posicion'] ?? 0) ?> G: <?= (int)($jugador3['inscrito']['ganados'] ?? 0) ?> P: <?= (int)($jugador3['inscrito']['perdidos'] ?? 0) ?> Efect: <?= (int)($jugador3['inscrito']['efectividad'] ?? 0) ?> Pts: <?= (int)($jugador3['inscrito']['puntos'] ?? 0) ?></div><div class="jugador-club"><?= htmlspecialchars($jugador3['nombre_club'] ?? 'Sin Club') ?></div><?php endif; ?>
                 </div>
                 <div class="jugador-block">
+                    <div class="jugador-linea-id-nombre jugador-linea-id-nombre--der">
                     <span class="jugador-nombre"><?= $jugador4 ? htmlspecialchars($jugador4['nombre_completo'] ?? $jugador4['nombre'] ?? 'N/A') . ' (' . ($letras_secuencia[4] ?? 'D') . ')' : '—' ?></span>
                     <span class="jugador-id"><?= $jugador4 ? (int)($jugador4['id_usuario'] ?? 0) : '—' ?></span>
+                    </div>
                     <?php if ($jugador4): ?><div class="jugador-stats">Pos: <?= (int)($jugador4['inscrito']['posicion'] ?? 0) ?> G: <?= (int)($jugador4['inscrito']['ganados'] ?? 0) ?> P: <?= (int)($jugador4['inscrito']['perdidos'] ?? 0) ?> Efect: <?= (int)($jugador4['inscrito']['efectividad'] ?? 0) ?> Pts: <?= (int)($jugador4['inscrito']['puntos'] ?? 0) ?></div><div class="jugador-club"><?= htmlspecialchars($jugador4['nombre_club'] ?? 'Sin Club') ?></div><?php endif; ?>
                 </div>
             </div>

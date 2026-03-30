@@ -10,8 +10,7 @@
  * Usa DB::pdo() de db_bridge (SQLite local).
  */
 require_once __DIR__ . '/db_bridge.php';
-require_once __DIR__ . '/MesaAsignacionService.php';
-require_once __DIR__ . '/MesaAsignacionEquiposService.php';
+require_once dirname(__DIR__, 2) . '/lib/Core/TorneoMesaAsignacionResolver.php';
 require_once __DIR__ . '/InscritosHelper.php';
 
 /** Filtro evento local: fragmento SQL y bind para inscritos/partiresul (solo cuando DESKTOP_ENTIDAD_ID > 0). */
@@ -45,13 +44,8 @@ function generarRonda($torneo_id, $user_id, $is_admin_general, array $opciones =
         }
         $total_rondas = (int)($torneo['rondas'] ?? 0);
         $modalidad = (int)($torneo['modalidad'] ?? 0);
-        $es_torneo_equipos = ($modalidad === 3);
-
-        if ($es_torneo_equipos) {
-            $mesaService = new MesaAsignacionEquiposService();
-        } else {
-            $mesaService = new MesaAsignacionService();
-        }
+        $es_torneo_equipos = ($modalidad === TorneoMesaAsignacionResolver::MODALIDAD_EQUIPOS);
+        $mesaService = TorneoMesaAsignacionResolver::servicioPorModalidad($modalidad);
 
         $ultima_ronda = $mesaService->obtenerUltimaRonda($torneo_id);
         if ($ultima_ronda > 0) {
@@ -73,7 +67,9 @@ function generarRonda($torneo_id, $user_id, $is_admin_general, array $opciones =
             ? ($opciones['estrategia_asignacion'] ?? $_POST['estrategia_asignacion'] ?? 'secuencial')
             : ($opciones['estrategia_ronda2'] ?? $_POST['estrategia_ronda2'] ?? 'separar');
 
-        $resultado = $mesaService->generarAsignacionRonda($torneo_id, $proxima_ronda, $total_rondas, $estrategia);
+        $resultado = $es_torneo_equipos
+            ? TorneoMesaAsignacionResolver::generarAsignacionRondaEquipos($torneo_id, $proxima_ronda, $total_rondas, $estrategia)
+            : $mesaService->generarAsignacionRonda($torneo_id, $proxima_ronda, $total_rondas, $estrategia);
 
         if ($resultado['success']) {
             try {

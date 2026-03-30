@@ -340,3 +340,17 @@ html.cuadricula-scroll-root body {
   background: var(--color-mesa-bg) !important;
   color: var(--color-mesa-text) !important;
 }
+
+/* Cuadrícula equipos / pantallas 1366×768: tipografía más compacta, sin scroll horizontal */
+@media (max-width: 1366px) and (max-height: 768px) {
+  .cuadricula-matrix-grid.grilla-pantalla .matrix-cell {
+    font-size: 1.75vh !important;
+    font-weight: 600 !important;
+  }
+  .cuadricula-matrix-grid.grilla-pantalla .matrix-header {
+    font-size: 1.55vh !important;
+  }
+  body.cuadricula-equipos-v3 .cuadricula-matrix-grid.grilla-pantalla .matrix-cell {
+    font-size: 1.65vh !important;
+  }
+}

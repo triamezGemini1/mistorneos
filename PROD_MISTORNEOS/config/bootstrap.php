@@ -63,15 +63,45 @@ if ($is_web_request && $is_localhost && $is_https && !$is_production && !headers
 }
 
 // =================================================================
-// CONFIGURACIÓN DE SESIONES SEGURAS
+// URL_BASE: ruta de la aplicación (subcarpeta en producción)
 // =================================================================
-// Configurar parámetros de cookies de sesión ANTES de iniciar la sesión
-// Esto es crítico para seguridad: HttpOnly previene XSS, Secure solo permite HTTPS
-if (session_status() === PHP_SESSION_NONE) {
-    // Configurar parámetros de cookies de sesión
+// En producción bajo /pruebas/public/ definir BASE_PATH=/pruebas/public/ en .env
+// Todas las redirecciones y enlaces deben usar: header("Location: " . URL_BASE . "index.php?page=...");
+if (!defined('URL_BASE')) {
+    $url_base_path = '';
+    if (class_exists('Env') && (string) Env::get('BASE_PATH', '') !== '') {
+        $url_base_path = trim((string) Env::get('BASE_PATH'), '/');
+        $url_base_path = ($url_base_path === '') ? '' : '/' . $url_base_path . '/';
+    }
+    if ($url_base_path === '' && !empty($_SERVER['SCRIPT_NAME'])) {
+        $dir = dirname($_SERVER['SCRIPT_NAME']);
+        $dir = str_replace('\\', '/', $dir);
+        // Scripts bajo …/public/api/ deben compartir la misma cookie de sesión que …/public/
+        if (preg_match('#^(.+?/public)/api$#', $dir, $m)) {
+            $dir = $m[1];
+        }
+        if ($dir !== '.' && $dir !== '' && $dir !== '/') {
+            $url_base_path = '/' . trim($dir, '/') . '/';
+        }
+    }
+    if ($url_base_path === '') {
+        $url_base_path = '/pruebas/public/';
+    }
+    define('URL_BASE', $url_base_path);
+}
+
+// =================================================================
+// CONFIGURACIÓN DE SESIONES SEGURAS (anclaje a URL_BASE)
+// =================================================================
+// path: debe coincidir con la URL real (ej. /pruebas/public/) para que la cookie no se pierda.
+if (session_status() === PHP_SESSION_ACTIVE && (getenv('SESSION_DEBUG') || defined('SESSION_DEBUG'))) {
+    error_log('[SESSION_DEBUG] bootstrap.php | sesión ya activa (session_start_early), no se inicia de nuevo | id=' . session_id());
+}
+if (session_status() === PHP_SESSION_NONE && !headers_sent()) {
+    $cookie_path = (URL_BASE !== '' && URL_BASE !== '/') ? URL_BASE : '/';
     session_set_cookie_params([
         'lifetime' => 0, // Sesión expira al cerrar el navegador
-        'path' => '/',
+        'path' => $cookie_path,
         'domain' => '', // Usar dominio actual
         'secure' => $is_https, // Solo enviar cookies por HTTPS en producción
         'httponly' => true, // Prevenir acceso desde JavaScript (protección XSS)

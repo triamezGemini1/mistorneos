@@ -323,22 +323,24 @@ if (!empty($filter_torneo) && $action === 'list') {
             $torneo_stats['confirmados'] = (int)($torneo_stats['confirmados'] ?? 0);
             $torneo_stats['hombres'] = (int)($torneo_stats['hombres'] ?? 0);
             $torneo_stats['mujeres'] = (int)($torneo_stats['mujeres'] ?? 0);
+            $contadores_inscripcion = InscritosHelper::contadoresResumenInscripcionTorneo(DB::pdo(), (int) $filter_torneo);
+            $torneo_stats['equipos_activos'] = (int) ($contadores_inscripcion['equipos_activos'] ?? 0);
         }
         
         // Resumen por club
         $stmt = DB::pdo()->prepare("
             SELECT 
-                c.id,
-                c.nombre as club_nombre,
+                COALESCE(c.id, r.id_club) as id,
+                COALESCE(NULLIF(TRIM(c.nombre), ''), CONCAT('Club #', r.id_club)) as club_nombre,
                 COUNT(r.id) as total_inscritos,
                 SUM(CASE WHEN u.sexo = 1 OR UPPER(u.sexo) = 'M' THEN 1 ELSE 0 END) as hombres,
                 SUM(CASE WHEN u.sexo = 2 OR UPPER(u.sexo) = 'F' THEN 1 ELSE 0 END) as mujeres
-            FROM clubes c
-            INNER JOIN inscritos r ON c.id = r.id_club AND r.torneo_id = ?
+            FROM inscritos r
+            LEFT JOIN clubes c ON c.id = r.id_club
             LEFT JOIN usuarios u ON r.id_usuario = u.id
-            WHERE c.estatus = 1
-            GROUP BY c.id, c.nombre
-            ORDER BY total_inscritos DESC, c.nombre ASC
+            WHERE r.torneo_id = ?
+            GROUP BY COALESCE(c.id, r.id_club), COALESCE(NULLIF(TRIM(c.nombre), ''), CONCAT('Club #', r.id_club))
+            ORDER BY total_inscritos DESC, club_nombre ASC
         ");
         $stmt->execute([(int)$filter_torneo]);
         $resumen_por_club = $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -358,10 +360,6 @@ if (!empty($filter_torneo) && $action === 'list') {
 
 if ($action === 'list') {
     try {
-        // Configurar paginaci�n
-        $current_page = isset($_GET['p']) ? max(1, (int)$_GET['p']) : 1;
-        $per_page = isset($_GET['per_page']) ? max(10, min(100, (int)$_GET['per_page'])) : 25;
-        
         // Construir query con filtros
         $where = [];
         $params = [];
@@ -382,24 +380,7 @@ if ($action === 'list') {
             // NO aplicar filtro por club aquí: admin_club y admin_torneo deben ver todos los inscritos
             // del torneo para validar participación y confirmar inscritos en sitio.
             
-            // Si hay filtro de clubes específicos y es admin_general, aplicar filtro adicional
-            if ($is_admin_general && !empty($filter_clubs) && is_array($filter_clubs)) {
-                // Limpiar club_ids inválidos y reindexar
-                $clubes_ids_validos = [];
-                foreach ($filter_clubs as $club_id) {
-                    $club_id = (int)$club_id;
-                    if ($club_id > 0) {
-                        $clubes_ids_validos[] = $club_id;
-                    }
-                }
-                $clubes_ids_validos = array_values(array_unique($clubes_ids_validos));
-                
-                if (!empty($clubes_ids_validos)) {
-                    $placeholders = str_repeat('?,', count($clubes_ids_validos) - 1) . '?';
-                    $where[] = "r.id_club IN ($placeholders)";
-                    $params = array_merge($params, $clubes_ids_validos);
-                }
-            }
+            // Sin filtros adicionales por club: listar TODO lo inscrito en el torneo.
             
             $where_clause = 'WHERE ' . implode(' AND ', $where);
             
@@ -415,8 +396,8 @@ if ($action === 'list') {
         $stmt->execute($params);
         $total_registrants = (int)$stmt->fetchColumn();
         
-        // Crear objeto de paginaci�n
-        $pagination = new Pagination($total_registrants, $current_page, $per_page);
+        // Sin paginación: en este reporte se debe listar TODO el torneo.
+        $pagination = null;
         
         // Obtener registros de la p�gina actual
         $stmt = DB::pdo()->prepare("
@@ -441,7 +422,6 @@ if ($action === 'list') {
                 END ASC,
                 c.nombre ASC,
                 u.nombre ASC
-            LIMIT {$pagination->getLimit()} OFFSET {$pagination->getOffset()}
         ");
         $stmt->execute($params);
         $registrants_list = $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -527,6 +507,17 @@ if (isset($_GET['ajax']) && $_GET['ajax'] === 'deuda') {
                         ?>
                         <a href="<?= htmlspecialchars($url_panel) ?>" class="btn btn-outline-secondary me-2">
                             <i class="fas fa-arrow-left me-2"></i>Retornar al panel del torneo
+                        </a>
+                        <?php endif; ?>
+                        <?php if (!empty($filter_torneo) && class_exists('AppHelpers')): ?>
+                        <a href="<?= htmlspecialchars(AppHelpers::torneoGestionUrl('inscripciones_reporte_detallado_pdf', (int)$filter_torneo)) ?>"
+                               class="btn btn-primary me-2" target="_blank" rel="noopener"
+                               title="PDF con logo del organizador, por asociación y equipo">
+                            <i class="fas fa-file-pdf me-2"></i>Inscritos detallado (PDF)
+                        </a>
+                        <a href="<?= htmlspecialchars(AppHelpers::torneoGestionUrl('inscripciones_reporte_detallado_xls', (int)$filter_torneo)) ?>"
+                               class="btn btn-outline-primary me-2" target="_blank" rel="noopener">
+                            <i class="fas fa-file-excel me-2"></i>Inscritos detallado (Excel)
                         </a>
                         <?php endif; ?>
                         <a href="index.php?page=registrants_report<?= !empty($filter_torneo) ? '&filter_torneo=' . (int)$filter_torneo : '' ?><?= !empty($filter_clubs) ? '&' . http_build_query(['filter_clubs' => $filter_clubs]) : '' ?>" 
@@ -785,6 +776,43 @@ if (isset($_GET['ajax']) && $_GET['ajax'] === 'deuda') {
                         </div>
                     </div>
                 </div>
+                <?php if (!empty($filter_torneo)): ?>
+                <div class="row mt-3">
+                    <div class="col-12">
+                        <div class="alert alert-success border border-success mb-0 shadow-sm">
+                            <div class="fw-bold mb-2 text-success">
+                                <i class="fas fa-file-export me-2"></i>Ver y generar reportes de este torneo
+                            </div>
+                            <p class="small text-muted mb-2 mb-md-3">Resumen en pantalla, PDF/Excel simple o <strong>reporte detallado</strong> (logo del organizador, por asociación y equipo).</p>
+                            <div class="d-flex flex-wrap gap-2 align-items-center">
+                                <a href="index.php?page=registrants_report&amp;filter_torneo=<?= (int)$filter_torneo ?><?= !empty($filter_clubs) ? '&amp;' . htmlspecialchars(http_build_query(['filter_clubs' => $filter_clubs])) : '' ?>"
+                                   class="btn btn-primary btn-sm">
+                                    <i class="fas fa-desktop me-1"></i>Pantalla de reportes
+                                </a>
+                                <?php if (class_exists('AppHelpers')): ?>
+                                <span class="vr d-none d-md-block"></span>
+                                <span class="small text-muted me-1 d-none d-md-inline">Detallado:</span>
+                                <a href="<?= htmlspecialchars(AppHelpers::torneoGestionUrl('inscripciones_reporte_detallado_pdf', (int)$filter_torneo)) ?>"
+                                   class="btn btn-danger btn-sm" target="_blank" rel="noopener"
+                                   title="PDF con encabezado organizador, asociación y equipos">
+                                    <i class="fas fa-file-pdf me-1"></i>PDF detallado
+                                </a>
+                                <a href="<?= htmlspecialchars(AppHelpers::torneoGestionUrl('inscripciones_reporte_detallado_xls', (int)$filter_torneo)) ?>"
+                                   class="btn btn-success btn-sm" target="_blank" rel="noopener">
+                                    <i class="fas fa-file-excel me-1"></i>Excel detallado
+                                </a>
+                                <span class="vr d-none d-md-block"></span>
+                                <span class="small text-muted me-1 d-none d-md-inline">Listado simple:</span>
+                                <a href="<?= htmlspecialchars(AppHelpers::torneoGestionUrl('inscripciones_export_pdf', (int)$filter_torneo)) ?>"
+                                   class="btn btn-outline-danger btn-sm" target="_blank" rel="noopener">PDF</a>
+                                <a href="<?= htmlspecialchars(AppHelpers::torneoGestionUrl('inscripciones_export_xls', (int)$filter_torneo)) ?>"
+                                   class="btn btn-outline-success btn-sm" target="_blank" rel="noopener">Excel</a>
+                                <?php endif; ?>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <?php endif; ?>
             </form>
             
             <?php if (!empty($filter_torneo) && $total_registrants > 0): ?>
@@ -798,7 +826,7 @@ if (isset($_GET['ajax']) && $_GET['ajax'] === 'deuda') {
             <?php elseif (empty($filter_torneo)): ?>
                 <div class="alert alert-warning mt-3 mb-0">
                     <i class="fas fa-exclamation-triangle me-2"></i>
-                    <strong>Seleccione un torneo</strong> para ver los inscritos y estadísticas.
+                    <strong>Seleccione un torneo</strong> en el desplegable de arriba para ver inscritos, estadísticas y <strong>reportes / exportaciones</strong>.
                 </div>
             <?php endif; ?>
         </div>
@@ -806,6 +834,14 @@ if (isset($_GET['ajax']) && $_GET['ajax'] === 'deuda') {
     
     <!-- Estad�sticas y Resumen por Club -->
     <?php if (!empty($filter_torneo) && $torneo_stats): ?>
+        <?php
+        $contadores_inscripcion = [
+            'inscritos_total' => (int) ($torneo_stats['total'] ?? 0),
+            'jugadores_confirmados' => (int) ($torneo_stats['confirmados'] ?? 0),
+            'equipos_activos' => (int) ($torneo_stats['equipos_activos'] ?? 0),
+        ];
+        require __DIR__ . '/../resources/views/partials/torneo_inscripcion_badges_bs5.php';
+        ?>
         <!-- Estad�sticas Generales del Torneo -->
         <div class="row mb-4">
             <div class="col-md-3">

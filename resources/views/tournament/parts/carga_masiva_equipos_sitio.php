@@ -11,7 +11,9 @@ $locked = (int)($torneo['locked'] ?? 0) === 1;
 $post_validar = $base_url . ($use_standalone ? '?' : '&') . 'action=carga_masiva_equipos_validar&torneo_id=' . $torneo_id;
 $post_ejecutar = $base_url . ($use_standalone ? '?' : '&') . 'action=carga_masiva_equipos_sitio&torneo_id=' . $torneo_id;
 $href_plantilla = $base_url . ($use_standalone ? '?' : '&') . 'action=carga_masiva_equipos_plantilla&torneo_id=' . $torneo_id;
+$href_inicio = $use_standalone ? ($base_url . '?action=index') : 'index.php?page=torneo_gestion&action=index';
 $frase = CargaMasivaEquiposSitioService::CONFIRMACION_REEMPLAZO;
+$cache_cleanup = $cache_cleanup ?? ['ok' => true, 'message' => '', 'archivos_eliminados' => 0];
 ?>
 <style>
     .cm-ayuda-card {
@@ -88,6 +90,16 @@ $frase = CargaMasivaEquiposSitioService::CONFIRMACION_REEMPLAZO;
     .cm-result-body { padding: 1rem 1.25rem; font-size: .98rem; }
     .cm-valid-ok { background: #f0fdf4; border-color: #86efac !important; }
     .cm-valid-err { background: #fffbeb; border-color: #fcd34d !important; }
+    .cm-btn-home {
+        position: fixed;
+        right: 22px;
+        bottom: 22px;
+        z-index: 1200;
+        border-radius: 999px;
+        box-shadow: 0 6px 20px rgba(0,0,0,.24);
+        padding: .7rem 1rem;
+        font-weight: 700;
+    }
 </style>
 
 <div class="container-fluid py-3">
@@ -98,6 +110,16 @@ $frase = CargaMasivaEquiposSitioService::CONFIRMACION_REEMPLAZO;
         </ol>
     </nav>
     <h1 class="h4 mb-3"><i class="fas fa-users-cog text-primary"></i> Carga automática — <?= htmlspecialchars((string)($torneo['nombre'] ?? '')) ?></h1>
+    <div class="alert alert-info" style="max-width:920px">
+        <strong>Contexto bloqueado de operación:</strong> Torneo <strong>#<?= (int)$torneo_id ?></strong> — <?= htmlspecialchars((string)($torneo['nombre'] ?? '')) ?>.
+        Para evitar cruces entre torneos, esta pantalla solo ejecuta acciones sobre este torneo.
+    </div>
+    <div class="alert <?= !empty($cache_cleanup['ok']) ? 'alert-success' : 'alert-warning' ?>" style="max-width:920px">
+        <strong>Limpieza previa de caché:</strong> <?= htmlspecialchars((string)($cache_cleanup['message'] ?? '')) ?>
+        <?php if (isset($cache_cleanup['archivos_eliminados'])): ?>
+            <span class="ml-1">(archivos eliminados: <strong><?= (int)$cache_cleanup['archivos_eliminados'] ?></strong>)</span>
+        <?php endif; ?>
+    </div>
 
     <?php if ($locked): ?>
         <div class="card border-secondary cm-ayuda-card" style="max-width:520px">
@@ -193,6 +215,9 @@ $frase = CargaMasivaEquiposSitioService::CONFIRMACION_REEMPLAZO;
         <div id="resultadoCarga" class="mb-4" style="max-width:920px"></div>
     <?php endif; ?>
 </div>
+<a href="<?= htmlspecialchars($href_inicio) ?>" class="btn btn-dark cm-btn-home" title="Ir al inicio">
+    <i class="fas fa-home"></i> Inicio
+</a>
 <script>
 (function () {
     var form = document.getElementById('formCargaMasiva');
@@ -201,6 +226,7 @@ $frase = CargaMasivaEquiposSitioService::CONFIRMACION_REEMPLAZO;
     var postEjecutar = <?= json_encode($post_ejecutar) ?>;
     var torneoId = <?= (int)$torneo_id ?>;
     var csrf = form ? form.querySelector('input[name="csrf_token"]').value : '';
+    var hiddenTid = form ? parseInt((form.querySelector('input[name="torneo_id"]') || {}).value || '0', 10) : 0;
 
     function esc(s) {
         if (!s) return '';
@@ -210,6 +236,7 @@ $frase = CargaMasivaEquiposSitioService::CONFIRMACION_REEMPLAZO;
     }
 
     document.getElementById('btnValidar').addEventListener('click', function () {
+        if (hiddenTid !== torneoId) { alert('Contexto inválido de torneo. Recargue la pantalla.'); return; }
         if (!archivoInput.files.length) { alert('Seleccione un archivo.'); return; }
         var fd = new FormData();
         fd.append('action', 'carga_masiva_equipos_validar');
@@ -267,6 +294,23 @@ $frase = CargaMasivaEquiposSitioService::CONFIRMACION_REEMPLAZO;
                     });
                     html += '</ul></div>';
                 }
+                if (v.reporte_detallado && v.reporte_detallado.equipos && v.reporte_detallado.equipos.length) {
+                    html += '<div class="alert alert-light border"><strong>Reporte de validación por equipo</strong><div class="table-responsive mt-2"><table class="table table-sm table-bordered bg-white"><thead class="thead-light"><tr><th>Equipo</th><th>Integrantes</th><th>Estado</th><th>Errores y solución</th></tr></thead><tbody>';
+                    v.reporte_detallado.equipos.forEach(function (eq) {
+                        var integrantes = (eq.integrantes || []).map(function (j) {
+                            var nom = (j.nombre || '').trim();
+                            var ced = (j.cedula || '').trim();
+                            var idu = (j.id_usuario || 0);
+                            var nf = (j.numfvd || 0);
+                            return esc((ced || 'S/C') + ' - ' + (nom || 'SIN NOMBRE')) + ' <small class="text-muted">[id_usuario: ' + esc(String(idu)) + ' | numfvd: ' + esc(String(nf)) + ']</small>' + (j.completo ? '' : ' <span class="text-danger">(incompleto)</span>');
+                        }).join('<br>');
+                        var errores = (eq.errores || []).map(function (er) {
+                            return '<div><strong>' + esc(er.detalle || '') + '</strong><br><small class="text-muted">Cómo resolver: ' + esc(er.como_resolver || '') + '</small></div>';
+                        }).join('<hr class="my-1">');
+                        html += '<tr><td><strong>' + esc(eq.equipo || '') + '</strong><br><small>Línea ' + esc(String(eq.linea_inicio || 0)) + '</small></td><td>' + (integrantes || '<span class="text-muted">Sin integrantes</span>') + '</td><td>' + (eq.ok ? '<span class="text-success font-weight-bold">OK</span>' : '<span class="text-danger font-weight-bold">Con errores</span>') + '</td><td>' + (errores || '<span class="text-success">Sin errores</span>') + '</td></tr>';
+                    });
+                    html += '</tbody></table></div></div>';
+                }
 
                 if (data.success) {
                     titulo.textContent = 'Validación correcta — puede pasar al paso 2';
@@ -287,6 +331,7 @@ $frase = CargaMasivaEquiposSitioService::CONFIRMACION_REEMPLAZO;
     });
 
     document.getElementById('btnEjecutar').addEventListener('click', function () {
+        if (hiddenTid !== torneoId) { alert('Contexto inválido de torneo. Recargue la pantalla.'); return; }
         if (!archivoInput.files.length) { alert('Seleccione de nuevo el archivo validado.'); return; }
         var confirmTxt = (document.getElementById('confirmar_reemplazo').value || '').trim();
         var fd = new FormData();
@@ -317,6 +362,25 @@ $frase = CargaMasivaEquiposSitioService::CONFIRMACION_REEMPLAZO;
                         html += '<tr><td>' + esc(d.equipo) + '</td><td>' + (d.ok ? '<span class="text-success font-weight-bold">OK</span>' : '<span class="text-danger font-weight-bold">Error</span>') + '</td><td>' + esc(d.message) + '</td></tr>';
                     });
                     html += '</tbody></table></div>';
+                }
+                if (data.reporte_proceso && data.reporte_proceso.equipos && data.reporte_proceso.equipos.length) {
+                    html += '<h6 class="font-weight-bold mt-3">Reporte completo del proceso</h6>';
+                    html += '<div class="table-responsive"><table class="table table-bordered table-sm bg-white"><thead class="thead-light"><tr><th>Equipo</th><th>Integrantes</th><th>Resultado</th><th>Error / Cómo resolver</th></tr></thead><tbody>';
+                    data.reporte_proceso.equipos.forEach(function (eq) {
+                        var integrantes = (eq.integrantes || []).map(function (j) {
+                            var nom = (j.nombre || '').trim();
+                            var ced = (j.cedula || '').trim();
+                            var idu = (j.id_usuario || 0);
+                            var nf = (j.numfvd || 0);
+                            return esc((ced || 'S/C') + ' - ' + (nom || 'SIN NOMBRE')) + ' <small class="text-muted">[id_usuario: ' + esc(String(idu)) + ' | numfvd: ' + esc(String(nf)) + ']</small>' + (j.completo ? '' : ' <span class="text-danger">(incompleto)</span>');
+                        }).join('<br>');
+                        var solucion = eq.ok ? '<span class="text-success">Sin acciones pendientes</span>' : '<strong>' + esc(eq.error || '') + '</strong><br><small class="text-muted">Cómo resolver: ' + esc(eq.como_resolver || '') + '</small>';
+                        html += '<tr><td><strong>' + esc(eq.equipo || '') + '</strong><br><small>Línea ' + esc(String(eq.linea_inicio || 0)) + '</small></td><td>' + (integrantes || '<span class="text-muted">Sin integrantes</span>') + '</td><td>' + (eq.ok ? '<span class="text-success font-weight-bold">OK</span>' : '<span class="text-danger font-weight-bold">Error</span>') + '</td><td>' + solucion + '</td></tr>';
+                    });
+                    html += '</tbody></table></div>';
+                }
+                if (data.reporte_pdf_url) {
+                    html += '<div class="mt-3"><a class="btn btn-outline-primary" target="_blank" rel="noopener" href="' + esc(data.reporte_pdf_url) + '"><i class="fas fa-file-pdf"></i> Descargar PDF del reporte</a></div>';
                 }
                 html += '</div></div>';
                 out.innerHTML = html;

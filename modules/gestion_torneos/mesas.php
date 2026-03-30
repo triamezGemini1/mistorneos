@@ -8,7 +8,32 @@ $base_url = $use_standalone ? $script_actual : 'index.php?page=torneo_gestion';
 $action_param = $use_standalone ? '?' : '&';
 ?>
 
-<div class="container-fluid">
+<div class="container-fluid mesas-reporte-v32 px-2 px-md-3">
+    <style>
+        .mesas-reporte-v32 .card { margin-bottom: 0.65rem; }
+        .mesas-reporte-v32 .card-header { padding: 0.4rem 0.65rem; }
+        .mesas-reporte-v32 .card-header h5 { font-size: 0.95rem; margin: 0; }
+        .mesas-reporte-v32 .card-body { padding: 0.5rem 0.65rem 0.6rem; }
+        .mesas-reporte-v32 .mb-3 { margin-bottom: 0.5rem !important; }
+        .mesas-reporte-v32 ul.list-unstyled { margin-bottom: 0.35rem; font-size: 0.88rem; line-height: 1.35; }
+        .mesa-jugador-alerta-genero {
+            background: linear-gradient(90deg, #fff3cd 0%, transparent 100%);
+            border-left: 3px solid #f0ad4e;
+            padding: 3px 5px 3px 6px;
+            margin: 1px 0;
+            border-radius: 4px;
+        }
+        .mesa-jugador-alerta-genero .badge-alerta-genero {
+            font-size: 0.65rem;
+            vertical-align: middle;
+            padding: 0.15em 0.35em;
+        }
+        @media (min-width: 1200px) and (max-width: 1440px) {
+            .mesas-reporte-v32 h1.h3 { font-size: 1.15rem; }
+            .mesas-reporte-v32 .mesa-jugador-alerta-genero { font-size: 0.85rem; }
+            .mesas-reporte-v32 ul.list-unstyled { font-size: 0.82rem; }
+        }
+    </style>
     <div class="row mb-4">
         <div class="col-12">
             <h1 class="h3 mb-2">
@@ -88,14 +113,15 @@ $action_param = $use_standalone ? '?' : '&';
         <?php endif; ?>
         
         <?php if (!empty($mesas_normales)): ?>
+            <?php $es_modalidad_equipos_mesas = (int)($torneo['modalidad'] ?? 0) === 3; ?>
             <div class="row">
                 <?php foreach ($mesas_normales as $mesa_data): ?>
                     <?php 
                     $num_mesa = $mesa_data['numero'] ?? 0;
                     $jugadores = $mesa_data['jugadores'] ?? [];
                     ?>
-                    <div class="col-md-6 col-lg-4 mb-4" id="mesa-<?php echo (int)$num_mesa; ?>">
-                        <div class="card">
+                    <div class="col-md-6 col-lg-4 col-xl-3 mb-3" id="mesa-<?php echo (int)$num_mesa; ?>">
+                        <div class="card h-100">
                             <div class="card-header" style="background-color: #e3f2fd; color: #1565c0;">
                                 <h5 class="mb-0">
                                     <i class="fas fa-chess-board mr-2"></i> Mesa <?php echo $num_mesa; ?>
@@ -117,9 +143,16 @@ $action_param = $use_standalone ? '?' : '&';
                                         <ul class="list-unstyled ml-3">
                                             <?php foreach ($pareja_a as $jugador): ?>
                                                 <?php if (is_array($jugador)): ?>
-                                                    <li>
+                                                    <?php $ag = !empty($jugador['alerta_genero']); ?>
+                                                    <li class="<?php echo $ag ? 'mesa-jugador-alerta-genero' : ''; ?>">
                                                         <i class="fas fa-user mr-1"></i>
+                                                        <?php if ($ag): ?>
+                                                            <span class="badge badge-warning badge-alerta-genero mr-1" title="Género del jugador no coincide con el inferido del nombre del torneo (revisar registro)."><i class="fas fa-venus-mars"></i></span>
+                                                        <?php endif; ?>
                                                         <?php echo htmlspecialchars($jugador['nombre'] ?? $jugador['nombre_completo'] ?? 'Sin nombre'); ?>
+                                                        <?php if ($es_modalidad_equipos_mesas && !empty($jugador['codigo_equipo_inscrito'])): ?>
+                                                            <small class="text-primary font-weight-bold ml-1">[<?php echo htmlspecialchars($jugador['codigo_equipo_inscrito']); ?>]</small>
+                                                        <?php endif; ?>
                                                         <?php if (!empty($jugador['club_nombre'])): ?>
                                                             <small class="text-muted">(<?php echo htmlspecialchars($jugador['club_nombre']); ?>)</small>
                                                         <?php endif; ?>
@@ -133,9 +166,16 @@ $action_param = $use_standalone ? '?' : '&';
                                         <ul class="list-unstyled ml-3">
                                             <?php foreach ($pareja_b as $jugador): ?>
                                                 <?php if (is_array($jugador)): ?>
-                                                    <li>
+                                                    <?php $ag = !empty($jugador['alerta_genero']); ?>
+                                                    <li class="<?php echo $ag ? 'mesa-jugador-alerta-genero' : ''; ?>">
                                                         <i class="fas fa-user mr-1"></i>
+                                                        <?php if ($ag): ?>
+                                                            <span class="badge badge-warning badge-alerta-genero mr-1" title="Género del jugador no coincide con el inferido del nombre del torneo (revisar registro)."><i class="fas fa-venus-mars"></i></span>
+                                                        <?php endif; ?>
                                                         <?php echo htmlspecialchars($jugador['nombre'] ?? $jugador['nombre_completo'] ?? 'Sin nombre'); ?>
+                                                        <?php if ($es_modalidad_equipos_mesas && !empty($jugador['codigo_equipo_inscrito'])): ?>
+                                                            <small class="text-primary font-weight-bold ml-1">[<?php echo htmlspecialchars($jugador['codigo_equipo_inscrito']); ?>]</small>
+                                                        <?php endif; ?>
                                                         <?php if (!empty($jugador['club_nombre'])): ?>
                                                             <small class="text-muted">(<?php echo htmlspecialchars($jugador['club_nombre']); ?>)</small>
                                                         <?php endif; ?>
@@ -184,9 +224,16 @@ $action_param = $use_standalone ? '?' : '&';
                                     <ul class="list-unstyled">
                                         <?php foreach ($jugadores as $jugador): ?>
                                             <?php if (is_array($jugador)): ?>
-                                                <li>
+                                                <?php $ag = !empty($jugador['alerta_genero']); ?>
+                                                <li class="<?php echo $ag ? 'mesa-jugador-alerta-genero' : ''; ?>">
                                                     <i class="fas fa-user mr-1"></i>
+                                                    <?php if ($ag): ?>
+                                                        <span class="badge badge-warning badge-alerta-genero mr-1" title="Género del jugador no coincide con el inferido del nombre del torneo."><i class="fas fa-venus-mars"></i></span>
+                                                    <?php endif; ?>
                                                     <?php echo htmlspecialchars($jugador['nombre'] ?? $jugador['nombre_completo'] ?? 'Sin nombre'); ?>
+                                                    <?php if ($es_modalidad_equipos_mesas && !empty($jugador['codigo_equipo_inscrito'])): ?>
+                                                        <small class="text-primary font-weight-bold ml-1">[<?php echo htmlspecialchars($jugador['codigo_equipo_inscrito']); ?>]</small>
+                                                    <?php endif; ?>
                                                 </li>
                                             <?php endif; ?>
                                         <?php endforeach; ?>

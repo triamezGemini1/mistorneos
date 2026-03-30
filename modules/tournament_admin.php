@@ -213,9 +213,19 @@ $menu_action = $_GET['action'] ?? 'dashboard';
 // Fase activa del torneo (Workflow: Registro → Preparación → Ejecución → Cierre)
 $fase_activa = TournamentPhaseHelper::getFaseActiva($torneo, $pdo);
 
-// Mensajes
+// Mensajes (GET o flash de sesión tras redirect desde RoundManagerHandler / otros)
 $success_message = $_GET['success'] ?? null;
 $error_message = $_GET['error'] ?? null;
+if (session_status() === PHP_SESSION_ACTIVE) {
+    if (!empty($_SESSION['success'])) {
+        $success_message = (string) $_SESSION['success'];
+        unset($_SESSION['success']);
+    }
+    if (!empty($_SESSION['error'])) {
+        $error_message = (string) $_SESSION['error'];
+        unset($_SESSION['error']);
+    }
+}
 ?>
 
 <style>

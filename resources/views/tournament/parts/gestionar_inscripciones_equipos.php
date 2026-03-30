@@ -184,6 +184,10 @@ $csrf_token = class_exists('CSRF') ? CSRF::token() : '';
                     <p class="text-muted mb-0">
                         <i class="fas fa-trophy me-1"></i><?php echo htmlspecialchars($torneo['nombre']); ?>
                     </p>
+                    <?php
+                    $contadores_inscripcion = $contadores_inscripcion ?? ['inscritos_total' => 0, 'jugadores_confirmados' => 0, 'equipos_activos' => 0];
+                    require __DIR__ . '/../../partials/torneo_inscripcion_badges_bs5.php';
+                    ?>
                 </div>
                 <div class="d-flex gap-2 mt-2 mt-md-0">
                     <a href="<?php echo $base_url . ($use_standalone ? '?' : '&'); ?>action=inscribir_equipo_sitio&torneo_id=<?php echo $torneo['id']; ?>" 
@@ -384,7 +388,7 @@ async function retirarEquipo(equipoId, nombreEquipo) {
             formData.append('equipo_id', equipoId);
             formData.append('csrf_token', '<?php echo htmlspecialchars($csrf_token, ENT_QUOTES); ?>');
             
-            const response = await fetch('<?= rtrim(AppHelpers::getPublicPath(), '/') ?>api/eliminar_equipo.php', {
+            const response = await fetch('<?= rtrim(AppHelpers::getPublicPath(), '/') . '/api/eliminar_equipo.php' ?>', {
                 method: 'POST',
                 body: formData
             });

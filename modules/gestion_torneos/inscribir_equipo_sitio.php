@@ -8,6 +8,11 @@ if (ob_get_level() < 5) {
     ob_start(null, 2 * 1024 * 1024);
 }
 $torneo = $view_data['torneo'] ?? [];
+$contadores_inscripcion = $view_data['contadores_inscripcion'] ?? [];
+if ($contadores_inscripcion === [] && !empty($torneo['id'])) {
+    require_once __DIR__ . '/../../lib/InscritosHelper.php';
+    $contadores_inscripcion = InscritosHelper::contadoresResumenInscripcionTorneo(DB::pdo(), (int) $torneo['id'], (int) ($torneo['modalidad'] ?? 0));
+}
 $jugadores_disponibles = $view_data['jugadores_disponibles'] ?? [];
 $clubes_disponibles = $view_data['clubes_disponibles'] ?? [];
 $equipos_registrados = $view_data['equipos_registrados'] ?? [];
@@ -579,6 +584,7 @@ $api_guardar_equipo = $base_url . ($use_standalone ? '?' : '&') . 'action=guarda
                         <i class="fas fa-trophy me-1"></i><?php echo htmlspecialchars($torneo['nombre']); ?>
                         <span class="badge bg-info ms-2"><?php echo $jugadores_por_equipo; ?> jugadores por <?php echo strtolower($etiqueta_equipo); ?></span>
                     </p>
+                    <?php require __DIR__ . '/../../resources/views/partials/torneo_inscripcion_badges_bs5.php'; ?>
                 </div>
                 <div class="mt-2 mt-md-0">
                     <a href="<?php echo $base_url . ($use_standalone ? '?' : '&'); ?>action=panel&torneo_id=<?php echo $torneo['id']; ?>" 
@@ -1876,7 +1882,7 @@ async function eliminarEquipo(equipoId, nombreEquipo) {
     const result = await Swal.fire({
         icon: 'warning',
         title: '¿Eliminar equipo?',
-        html: `¿Está seguro de eliminar el equipo <strong>"${nombreEquipo}"</strong>?<br><br>Los jugadores del equipo quedarán liberados y disponibles para otros equipos.`,
+        html: `¿Está seguro de eliminar el equipo <strong>"${nombreEquipo}"</strong>?<br><br>Se eliminarán el equipo y los <strong>inscritos</strong> de sus integrantes en este torneo (no se borran usuarios del sistema).`,
         showCancelButton: true,
         confirmButtonText: 'Sí, eliminar',
         cancelButtonText: 'Cancelar',

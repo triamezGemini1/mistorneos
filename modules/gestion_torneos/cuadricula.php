@@ -40,10 +40,16 @@ $totalInscritos = isset($totalInscritos)
     ? (int) $totalInscritos
     : (isset($totalAsignaciones) ? (int) $totalAsignaciones : 0);
 
+$map_max_partida_switch = isset($map_max_partida_switch) && is_array($map_max_partida_switch)
+    ? $map_max_partida_switch
+    : [];
+
 /** 8 pares × 12 filas datos = 96 celdas jugador/página (16 columnas + cabecera = 13 filas en grid) */
 $cuad_filas_datos = 12; // debe coincidir con grid_display.php y 12 filas de datos + 1 cabecera en CSS
 $cuad_pares = 8;
 $claseGrilla = 'grilla-pantalla';
+$es_modalidad_equipos_v3 = (int)($torneo['modalidad'] ?? 0) === 3;
+$usarNumfvd = !$es_modalidad_equipos_v3 && (int)($torneo['club_responsable'] ?? 0) === 7;
 
 $listaPlana = [];
 if (!empty($asignaciones) && is_array($asignaciones)) {
@@ -54,8 +60,14 @@ if (!empty($asignaciones) && is_array($asignaciones)) {
         $letra = $letras[$secuencia] ?? '';
         $esBye = ($mesa === 0 || $mesaRaw === '0' || $mesaRaw === 0);
         $mesaDisplay = $esBye ? 'BYE' : ($mesa . $letra);
+        $idMostrar = $usarNumfvd
+            ? (int)($asignacion['numfvd'] ?? 0)
+            : (int)($asignacion['id_usuario'] ?? 0);
+        if ($idMostrar <= 0) {
+            $idMostrar = (int)($asignacion['id_usuario'] ?? 0);
+        }
         $listaPlana[] = [
-            'id' => (string) ($asignacion['id_usuario'] ?? ''),
+            'id' => (string) $idMostrar,
             'mesa' => $mesaDisplay,
             'bye' => $esBye,
         ];
@@ -71,6 +83,7 @@ if (empty($listaPlana)) {
 
 require_once __DIR__ . '/../../lib/app_helpers.php';
 $href_custom_13 = AppHelpers::url('assets/css/custom-13inch.css');
+$href_torneo_context_switch = AppHelpers::url('assets/css/torneo-context-switch.css');
 $pageTitle = isset($titulo) ? (string) $titulo : ('Cuadrícula - Ronda ' . (int) ($numRonda ?? 0));
 ?>
 <!DOCTYPE html>
@@ -82,6 +95,7 @@ $pageTitle = isset($titulo) ? (string) $titulo : ('Cuadrícula - Ronda ' . (int)
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.6.2/dist/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="<?php echo htmlspecialchars($href_custom_13, ENT_QUOTES, 'UTF-8'); ?>">
+    <link rel="stylesheet" href="<?php echo htmlspecialchars($href_torneo_context_switch, ENT_QUOTES, 'UTF-8'); ?>">
     <style>
         @media print {
             .no-print { display: none !important; }
@@ -92,59 +106,16 @@ $pageTitle = isset($titulo) ? (string) $titulo : ('Cuadrícula - Ronda ' . (int)
             }
             .cuadricula-shell { height: auto !important; max-height: none !important; overflow: visible !important; }
         }
-        .header-context-switch {
-            display: inline-flex;
-            align-items: center;
-            background: rgba(255, 255, 255, 0.14);
-            border: 1px solid rgba(255, 255, 255, 0.3);
-            border-radius: 999px;
-            padding: 2px;
-            gap: 2px;
-            margin-right: 8px;
-        }
-        .header-context-switch .switch-item {
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            text-decoration: none;
-            min-width: 86px;
-            padding: 4px 9.5px;
-            border-radius: 999px;
-            color: rgba(255, 255, 255, 0.92);
-            font-size: 12px;
-            font-weight: 600;
-            line-height: 1;
-            white-space: nowrap;
-        }
-        .header-context-switch .switch-item:hover { color: #fff; background: rgba(255,255,255,0.16); }
-        .header-context-switch .switch-item.is-active { background: #005c44; color: #fff; }
-        .header-context-switch.is-compact { gap: 5px; }
-        .header-context-switch.is-compact .switch-item { font-size: 13px; min-width: 74px; padding: 4px 7.6px; }
-        .header-context-switch .text-id-ghost { font-size: 10px; color: rgba(255,255,255,0.72); margin-left: 4px; font-weight: 500; }
-        .header-context-info {
-            display: inline-flex;
-            align-items: center;
-            font-size: 12px;
-            font-weight: 600;
-            color: rgba(255, 255, 255, 0.88);
-            margin-right: 8px;
-            white-space: nowrap;
-        }
-        .header-context-info .context-dot {
-            width: 8px;
-            height: 8px;
-            border-radius: 50%;
-            display: inline-block;
-            margin-right: 6px;
-            background: #3498db;
-        }
-        @media (max-width: 1366px) {
-            .header-context-switch .switch-item { min-width: 78px; padding: 4px 8px; font-size: 11px; }
-            .header-context-info { font-size: 11px; }
+        /* Equipos V3: cabecera compacta, sin desbordar 1366×768 */
+        body.cuadricula-equipos-v3 .cuadricula-header-torneo { font-size: 0.8rem; line-height: 1.2; max-width: min(52vw, 520px); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        body.cuadricula-equipos-v3 .cuadricula-header { flex-wrap: nowrap; gap: 4px; }
+        body.cuadricula-equipos-v3 .cuadricula-header-right { flex-wrap: nowrap; min-width: 0; }
+        @media (max-width: 1366px) and (max-height: 800px) {
+            body.cuadricula-equipos-v3 .cuadricula-header .btn-sm { font-size: 0.7rem; padding: 0.2rem 0.45rem; }
         }
     </style>
 </head>
-<body class="page-cuadricula-10">
+<body class="page-cuadricula-10<?php echo $es_modalidad_equipos_v3 ? ' cuadricula-equipos-v3' : ''; ?>">
     <div class="cuadricula-shell">
         <div class="cuadricula-header no-print d-flex align-items-center justify-content-between flex-wrap w-100">
             <span class="cuadricula-header-torneo mr-2" style="min-width:0;">
@@ -155,34 +126,27 @@ $pageTitle = isset($titulo) ? (string) $titulo : ('Cuadrícula - Ronda ' . (int)
                 <?php endif; ?>
             </span>
             <div class="cuadricula-header-right d-flex align-items-center ml-auto" style="flex-shrink:0;">
-                <span class="header-context-info">
-                    <span class="context-dot" aria-hidden="true"></span>
+                <span class="tcs-info tcs-info--on-dark mr-2">
+                    <span class="tcs-info__dot" aria-hidden="true"></span>
                     Visualizando: Torneo <?php echo htmlspecialchars($activeContextName, ENT_QUOTES, 'UTF-8'); ?> [#<?php echo $activeContextViewId; ?>]
                 </span>
                 <?php if (!empty($context_switcher['items'])): ?>
                     <?php
-                    $activeTournamentId = (int)($context_switcher['active_tournament_id'] ?? 0);
-                    $sepSwitch = $use_standalone ? '?' : '&';
-                    $switchCount = count($context_switcher['items']);
+                    $tcs = [
+                        'items' => $context_switcher['items'],
+                        'active_id' => (int) ($context_switcher['active_tournament_id'] ?? 0),
+                        'base_url' => $base_url,
+                        'sep' => $use_standalone ? '?' : '&',
+                        'ronda_base' => (int) ($numRonda ?? 0),
+                        'map_max' => $map_max_partida_switch,
+                        'mode' => 'cuadricula',
+                        'theme' => 'on_dark',
+                        'select_id' => 'torneo-asociado-select-cuad',
+                        'show_info' => false,
+                        'pill_row_class' => 'mr-2',
+                    ];
+                    require __DIR__ . '/../../resources/views/partials/torneo_context_switch.php';
                     ?>
-                    <div class="header-context-switch<?php echo $switchCount >= 3 ? ' is-compact' : ''; ?>" role="group" aria-label="Selector de contexto del torneo">
-                        <?php foreach ($context_switcher['items'] as $switchItem): ?>
-                            <?php
-                            $switchId = (int)($switchItem['id'] ?? 0);
-                            $switchLabel = (string)($switchItem['nombre'] ?? ('Torneo #' . $switchId));
-                            $switchParentEventId = (int)($switchItem['parent_event_id'] ?? 0);
-                            $isActiveSwitch = ($switchId === $activeTournamentId);
-                            $switchHref = $base_url . $sepSwitch . 'action=cuadricula&torneo_id=' . $switchId . '&ronda=' . (int)($numRonda ?? 0) . '&switch_torneo_id=' . $switchId . '&return_action=cuadricula';
-                            ?>
-                            <a href="<?php echo htmlspecialchars($switchHref, ENT_QUOTES, 'UTF-8'); ?>"
-                               class="switch-item js-context-switch<?php echo $isActiveSwitch ? ' is-active' : ''; ?>"
-                               aria-pressed="<?php echo $isActiveSwitch ? 'true' : 'false'; ?>"
-                               title="<?php echo htmlspecialchars('ID Sistema: ' . $switchId . ' | Evento Padre: ' . $switchParentEventId, ENT_QUOTES, 'UTF-8'); ?>">
-                                <?php echo htmlspecialchars($switchLabel, ENT_QUOTES, 'UTF-8'); ?>
-                                <span class="text-id-ghost">#<?php echo $switchId; ?></span>
-                            </a>
-                        <?php endforeach; ?>
-                    </div>
                 <?php endif; ?>
                 <button type="button" onclick="window.print()" class="btn btn-primary btn-sm">
                     <i class="fas fa-print mr-2"></i> Imprimir

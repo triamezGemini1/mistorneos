@@ -10,6 +10,9 @@ $esTorneoParejas = in_array((int)($torneo['modalidad'] ?? 0), [2, 4], true);
 $context_switcher = isset($context_switcher) && is_array($context_switcher)
     ? $context_switcher
     : ['active_tournament_id' => (int)($torneo['id'] ?? 0), 'items' => []];
+$map_max_partida_switch = isset($map_max_partida_switch) && is_array($map_max_partida_switch)
+    ? $map_max_partida_switch
+    : [];
 $contextGenero = '';
 $contextBadgeIndex = 0;
 $contextBadgeName = (string)($torneo['nombre'] ?? 'Torneo activo');
@@ -589,6 +592,7 @@ $contextLabel = $contextGenero === 'F' ? 'Femenino' : 'Masculino';
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Lato:wght@400;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="assets/css/modern-registro-resultados.css">
+<link rel="stylesheet" href="assets/css/torneo-context-switch.css">
 
 <div class="container-fluid registrar-resultados-wrap <?php echo htmlspecialchars($contextClass, ENT_QUOTES, 'UTF-8'); ?>">
     <?php if (!empty($es_operador_ambito) && !empty($mesas_ambito)): ?>
@@ -691,7 +695,30 @@ $contextLabel = $contextGenero === 'F' ? 'Femenino' : 'Masculino';
                         </p>
                         <?php endif; ?>
                     </div>
-                    <div class="d-flex align-items-center">
+                    <div class="d-flex align-items-center flex-wrap justify-content-end" style="gap:.5rem;">
+                        <span class="tcs-info tcs-info--on-light">
+                            <span class="tcs-info__dot" aria-hidden="true"></span>
+                            Visualizando: Torneo <?php echo htmlspecialchars($contextBadgeName, ENT_QUOTES, 'UTF-8'); ?> [#<?php echo (int)($context_switcher['active_tournament_id'] ?? ($torneo['id'] ?? 0)); ?>]
+                        </span>
+                        <?php if (!empty($context_switcher['items'])): ?>
+                            <?php
+                            $tcs = [
+                                'items' => $context_switcher['items'],
+                                'active_id' => (int) ($context_switcher['active_tournament_id'] ?? 0),
+                                'base_url' => $base_url,
+                                'sep' => $use_standalone ? '?' : '&',
+                                'ronda_base' => (int) $ronda,
+                                'map_max' => $map_max_partida_switch,
+                                'mode' => 'registrar_resultados',
+                                'theme' => 'on_light',
+                                'select_id' => 'torneo-asociado-select-registrar',
+                                'show_info' => false,
+                                'aria_label' => 'Selector de contexto del torneo',
+                                'extra' => ['mesa' => 0],
+                            ];
+                            require __DIR__ . '/../../resources/views/partials/torneo_context_switch.php';
+                            ?>
+                        <?php endif; ?>
                         <?php if (!empty($puede_cerrar_torneo)): ?>
                         <form method="POST" action="<?php echo $use_standalone ? $base_url : 'index.php?page=torneo_gestion'; ?>" class="mb-0" onsubmit="return confirm('¿Finalizar el torneo? A partir de ese momento no se podrán modificar datos.');">
                             <input type="hidden" name="action" value="cerrar_torneo">

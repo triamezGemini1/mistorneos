@@ -184,6 +184,10 @@ $csrf_token = class_exists('CSRF') ? CSRF::token() : '';
                     <p class="text-muted mb-0">
                         <i class="fas fa-trophy me-1"></i><?php echo htmlspecialchars($torneo['nombre']); ?>
                     </p>
+                    <?php
+                    $contadores_inscripcion = $contadores_inscripcion ?? ['inscritos_total' => 0, 'jugadores_confirmados' => 0, 'equipos_activos' => 0];
+                    require __DIR__ . '/../../resources/views/partials/torneo_inscripcion_badges_bs5.php';
+                    ?>
                 </div>
                 <div class="d-flex gap-2 mt-2 mt-md-0">
                     <a href="<?php echo $base_url . ($use_standalone ? '?' : '&'); ?>action=inscribir_equipo_sitio&torneo_id=<?php echo $torneo['id']; ?>" 
@@ -350,12 +354,13 @@ async function retirarEquipo(equipoId, nombreEquipo) {
                 <p>¿Está seguro de retirar la <?php echo strtolower($etiqueta_equipo); ?> <strong>${nombreEquipo}</strong> del torneo?</p>
                 <div class="alert alert-warning mt-3 mb-0">
                     <i class="fas fa-exclamation-triangle me-2"></i>
-                    <strong>Advertencia:</strong> Esta acción:
+                    <strong>Advertencia:</strong> Esta acción elimina por completo:
                     <ul class="mt-2 mb-0">
-                        <li>Eliminará la <?php echo strtolower($etiqueta_equipo); ?> del torneo</li>
-                        <li>Liberará a los jugadores (quedarán disponibles para otras <?php echo strtolower($etiqueta_equipos); ?>)</li>
-                        <li>No se pueden deshacer los cambios una vez confirmado</li>
+                        <li>El registro del <?php echo strtolower($etiqueta_equipo); ?> en <strong>equipos</strong></li>
+                        <li>Los <strong>inscritos</strong> de todos los integrantes en este torneo (dejan de figurar en el listado)</li>
+                        <li>Asignaciones y resultados de mesas de esos jugadores en este torneo, si existían</li>
                     </ul>
+                    <p class="mb-0 mt-2 small text-muted">No se borran usuarios del sistema; solo la inscripción al torneo. No se puede deshacer.</p>
                 </div>
             </div>
         `,
@@ -384,18 +389,31 @@ async function retirarEquipo(equipoId, nombreEquipo) {
             formData.append('equipo_id', equipoId);
             formData.append('csrf_token', '<?php echo htmlspecialchars($csrf_token, ENT_QUOTES); ?>');
             
-            const response = await fetch('<?= rtrim(AppHelpers::getPublicPath(), '/') ?>api/eliminar_equipo.php', {
+            const response = await fetch('<?= rtrim(AppHelpers::getPublicPath(), '/') . '/api/eliminar_equipo.php' ?>', {
                 method: 'POST',
-                body: formData
+                body: formData,
+                credentials: 'same-origin'
             });
             
-            const data = await response.json();
+            const raw = await response.text();
+            let data;
+            try {
+                data = raw ? JSON.parse(raw) : {};
+            } catch (parseErr) {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Respuesta no válida',
+                    html: '<pre style="text-align:left;font-size:0.8rem;max-height:200px;overflow:auto;">' + (raw || '(vacío)').replace(/</g, '&lt;') + '</pre>',
+                    confirmButtonText: 'Aceptar'
+                });
+                return;
+            }
             
             if (data.success) {
                 Swal.fire({
                     icon: 'success',
                     title: '<?php echo $etiqueta_equipo; ?> retirada',
-                    text: data.message || 'La <?php echo strtolower($etiqueta_equipo); ?> ha sido retirada del torneo',
+                    text: data.message || 'Equipo e inscripciones eliminados del torneo',
                     confirmButtonText: 'Aceptar'
                 }).then(() => {
                     // Remover la fila del equipo de la vista
@@ -417,7 +435,7 @@ async function retirarEquipo(equipoId, nombreEquipo) {
                 Swal.fire({
                     icon: 'error',
                     title: 'Error al retirar <?php echo strtolower($etiqueta_equipo); ?>',
-                    text: data.message || 'No se pudo retirar la <?php echo strtolower($etiqueta_equipo); ?>',
+                    text: data.message || data.error || 'No se pudo retirar la <?php echo strtolower($etiqueta_equipo); ?>',
                     confirmButtonText: 'Aceptar'
                 });
             }
