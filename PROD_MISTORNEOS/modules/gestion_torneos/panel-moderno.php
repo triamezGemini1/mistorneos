@@ -236,93 +236,83 @@ tailwind.config = {
         . '&return_to=' . urlencode($return_to_panel);
     $panel_show_auditoria = ($mesas_verificadas_count + $mesas_digitadas_count) > 0;
     $panel_show_cierre = !empty($paired_tournaments_status['enabled']) && !empty($paired_tournaments_status['items']);
-    $panel_slate_bar = $panel_show_auditoria || $panel_show_cierre;
+    $total_jugadores_panel = (int)($estadisticas['total_jugadores_inscritos'] ?? 0);
+    $jugadores_mostrar = $es_modalidad_equipos && $total_jugadores_panel > 0 ? $total_jugadores_panel : (int)$inscritos_para_rondas;
+    $mostrar_eq_panel = $es_modalidad_equipos || $es_modalidad_parejas || $es_modalidad_parejas_fijas || ($total_equipos > 0);
     ?>
-    <div class="flex flex-wrap items-center justify-between gap-2 mb-4 w-full panel-stats-crono-row">
-        <div class="flex flex-wrap items-center gap-2 panel-stats-badges">
-        <?php if ($ultima_ronda > 0): ?>
-            <span class="inline-flex items-center px-3 py-1.5 rounded-full text-sm font-semibold bg-blue-100 text-blue-800 border border-blue-200"><?php echo 'Ronda ' . (int) $ultima_ronda; ?></span>
-            <?php if (isset($estadisticas['mesas_ronda'])): ?>
-            <span class="inline-flex items-center px-3 py-1.5 rounded-full text-sm font-semibold bg-sky-100 text-sky-900 border border-sky-200"><?php echo (int) $estadisticas['mesas_ronda']; ?> mesas</span>
-            <?php endif; ?>
-            <?php if ($es_modalidad_equipos): ?>
-                <?php if (isset($total_equipos) && $total_equipos > 0): ?>
-                <span class="inline-flex items-center px-3 py-1.5 rounded-full text-sm font-semibold bg-indigo-100 text-indigo-900 border border-indigo-200"><?php echo (int) $total_equipos; ?> equipos</span>
-                <?php endif; ?>
-                <?php if (isset($estadisticas['total_jugadores_inscritos']) && (int) $estadisticas['total_jugadores_inscritos'] > 0): ?>
-                <span class="inline-flex items-center px-3 py-1.5 rounded-full text-sm font-semibold bg-green-100 text-green-900 border border-green-200"><?php echo (int) $estadisticas['total_jugadores_inscritos']; ?> jugadores</span>
-                <?php endif; ?>
-            <?php else: ?>
-                <?php if (isset($inscritos_para_rondas) && (int) $inscritos_para_rondas > 0): ?>
-                <span class="inline-flex items-center px-3 py-1.5 rounded-full text-sm font-semibold bg-green-100 text-green-900 border border-green-200"><?php echo (int) $inscritos_para_rondas; ?><?php if ($total_inscritos !== $inscritos_para_rondas): ?><span class="opacity-75 font-normal"> / <?php echo (int) $total_inscritos; ?></span><?php endif; ?></span>
-                <?php endif; ?>
-            <?php endif; ?>
-            <?php if (!$puedeGenerar && $ultima_ronda > 0 && $mesasInc > 0): ?>
-            <span class="inline-flex items-center px-3 py-1.5 rounded-full text-sm font-bold bg-amber-100 text-amber-900 border border-amber-300" title="Mesas sin resultado"><?php echo (int) $mesasInc; ?></span>
-            <?php endif; ?>
+    <div class="flex flex-wrap items-stretch gap-3 mb-4 w-full panel-slate-ac-split">
+        <?php if ($panel_show_auditoria): ?>
+        <div class="panel-slate-auditoria-cierre panel-ac-badge-col panel-ac-auditoria-crono flex flex-row flex-wrap items-center gap-2 w-auto bg-slate-50 border border-slate-200 rounded-lg px-2 py-1.5 shadow-sm">
+            <div class="flex flex-col gap-1 justify-start shrink-0 w-[10.5rem] max-w-full">
+                <span class="panel-ac-pill inline-flex items-center justify-center px-2 py-0.5 rounded-md text-[0.7rem] leading-tight font-medium bg-emerald-100 text-emerald-800 w-full text-center">
+                    <i class="fas fa-camera mr-1 shrink-0 text-[0.65rem]"></i>Verificadas (QR): <?= (int)$mesas_verificadas_count ?>
+                </span>
+                <span class="panel-ac-pill inline-flex items-center justify-center px-2 py-0.5 rounded-md text-[0.7rem] leading-tight font-medium bg-blue-100 text-blue-800 w-full text-center">
+                    <i class="fas fa-keyboard mr-1 shrink-0 text-[0.65rem]"></i>Digitadas (admin): <?= (int)$mesas_digitadas_count ?>
+                </span>
+            </div>
+            <button type="button" id="btnCronometroVentana"
+                class="inline-flex flex-col items-center justify-center gap-0.5 shrink-0 font-bold py-2 px-2.5 sm:px-3 rounded-lg bg-green-500 hover:bg-green-400 active:bg-green-600 text-black border-2 border-green-800 shadow-sm text-[0.65rem] sm:text-xs leading-tight transition-colors min-h-[3.25rem] sm:min-h-0"
+                style="cursor: pointer;" title="Abrir cronómetro de ronda en ventana nueva">
+                <i class="fas fa-external-link-alt text-sm sm:text-base text-black" aria-hidden="true"></i>
+                <span class="text-center text-black font-bold max-w-[4.5rem] sm:max-w-none leading-tight">Cronómetro</span>
+            </button>
+        </div>
+        <?php else: ?>
+        <div class="panel-ac-badge-col w-auto shrink-0">
+            <button type="button" id="btnCronometroVentana"
+                class="inline-flex flex-row items-center justify-center gap-2 font-bold py-2 px-4 rounded-lg bg-green-500 hover:bg-green-400 text-black border-2 border-green-800 shadow-sm text-sm transition-colors"
+                style="cursor: pointer;" title="Abrir cronómetro de ronda en ventana nueva">
+                <i class="fas fa-external-link-alt text-base text-black" aria-hidden="true"></i>
+                <span class="text-black font-bold">Cronómetro de ronda</span>
+            </button>
+        </div>
         <?php endif; ?>
-        </div>
-        <button type="button" id="btnCronometroVentana"
-            class="inline-flex items-center font-bold py-2 px-4 rounded-lg shadow border-0 bg-violet-600 hover:bg-violet-700 text-white transition-colors panel-stats-crono-btn flex-shrink-0"
-            style="font-size: calc(0.875rem + 0.5rem); cursor: pointer;">
-            <i class="fas fa-external-link-alt mr-2"></i><span>ABRIR CRONÓMETRO DE RONDA</span>
-        </button>
-    </div>
-    <?php if ($panel_slate_bar): ?>
-        <div class="flex flex-wrap items-start justify-between gap-4 mb-4 w-full panel-slate-ac-split">
-            <?php if ($panel_show_auditoria): ?>
-            <div class="panel-slate-auditoria-cierre panel-ac-badge-col panel-ac-badge-col--izq bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 shadow-sm max-w-full">
-                <div class="mb-3 flex justify-start">
-                    <span class="panel-ac-head font-semibold text-slate-800 inline-flex items-center">
-                        <i class="fas fa-chart-bar mr-2 text-slate-600"></i>Auditoría de Resultados
-                    </span>
-                </div>
-                <div class="flex flex-wrap gap-3 justify-start">
-                    <span class="panel-ac-pill inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-emerald-100 text-emerald-800">
-                        <i class="fas fa-camera mr-1"></i>Verificadas (QR): <?= $mesas_verificadas_count ?>
-                    </span>
-                    <span class="panel-ac-pill inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800">
-                        <i class="fas fa-keyboard mr-1"></i>Digitadas (admin): <?= $mesas_digitadas_count ?>
-                    </span>
-                </div>
-            </div>
-            <?php endif; ?>
 
-            <?php if ($panel_show_cierre): ?>
-            <div class="panel-slate-auditoria-cierre panel-ac-badge-col panel-ac-badge-col--der bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 shadow-sm max-w-full <?php echo !$panel_show_auditoria ? 'ml-auto' : ''; ?>">
-                <div class="mb-3 flex justify-end">
-                    <span class="panel-ac-head font-semibold text-slate-800 inline-flex items-center">
-                        <i class="fas fa-link mr-2 text-indigo-600"></i>Cierre total del grupo
-                    </span>
-                </div>
-                <div class="flex flex-col gap-2 items-end text-right">
-                    <div class="flex flex-wrap gap-3 justify-end">
-                        <?php foreach ($paired_tournaments_status['items'] as $stItem): ?>
-                            <?php
-                            $g = strtoupper((string)($stItem['genero'] ?? 'M'));
-                            $gLabel = $g === 'F' ? 'Femenino' : 'Masculino';
-                            $p = (int)($stItem['mesas_pendientes'] ?? 0);
-                            ?>
-                            <div class="px-3 py-2 rounded-lg border text-left <?php echo !empty($stItem['activo']) ? 'border-emerald-500 bg-emerald-100 shadow-sm' : 'border-slate-200 bg-slate-100 text-slate-600'; ?>">
-                                <div class="panel-ac-paired-title text-sm font-semibold <?php echo !empty($stItem['activo']) ? 'text-emerald-900' : 'text-slate-700'; ?>">
-                                    <?php echo htmlspecialchars($gLabel, ENT_QUOTES, 'UTF-8'); ?><?php echo !empty($stItem['activo']) ? ' · Activo' : ''; ?>
-                                </div>
-                                <div class="panel-ac-paired-sub text-xs <?php echo !empty($stItem['activo']) ? 'text-emerald-800' : 'text-slate-500'; ?>">
-                                    Ronda <?php echo (int)($stItem['ronda_actual'] ?? 0); ?> · <strong><?php echo $p; ?></strong> mesas
-                                </div>
+        <?php if ($panel_show_cierre): ?>
+        <div class="panel-slate-auditoria-cierre panel-ac-badge-col flex-1 min-w-[200px] bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 shadow-sm">
+            <div class="flex flex-col gap-1.5 items-stretch text-left">
+                <div class="flex flex-wrap gap-2 justify-start">
+                    <?php foreach ($paired_tournaments_status['items'] as $stItem): ?>
+                        <?php
+                        $g = strtoupper((string)($stItem['genero'] ?? 'M'));
+                        $gLabel = $g === 'F' ? 'Femenino' : 'Masculino';
+                        $p = (int)($stItem['mesas_pendientes'] ?? 0);
+                        ?>
+                        <div class="px-1.5 py-1 rounded-lg border text-left <?php echo !empty($stItem['activo']) ? 'border-emerald-500 bg-emerald-100 shadow-sm' : 'border-slate-200 bg-slate-100 text-slate-600'; ?>">
+                            <div class="panel-ac-paired-title text-[8px] leading-snug font-semibold <?php echo !empty($stItem['activo']) ? 'text-emerald-900' : 'text-slate-700'; ?>">
+                                <?php echo htmlspecialchars($gLabel, ENT_QUOTES, 'UTF-8'); ?><?php echo !empty($stItem['activo']) ? ' · Activo' : ''; ?>
                             </div>
-                        <?php endforeach; ?>
-                    </div>
-                    <?php if (!empty($bloqueo_cierre_total['mensaje'])): ?>
-                        <div class="panel-ac-bloqueo text-sm text-amber-700 font-semibold max-w-md">
-                            <i class="fas fa-exclamation-triangle mr-1"></i><?php echo htmlspecialchars((string)$bloqueo_cierre_total['mensaje'], ENT_QUOTES, 'UTF-8'); ?>
+                            <div class="panel-ac-paired-sub text-[7px] leading-snug mt-0.5 <?php echo !empty($stItem['activo']) ? 'text-emerald-800' : 'text-slate-500'; ?>">
+                                Ronda <?php echo (int)($stItem['ronda_actual'] ?? 0); ?> · <strong><?php echo $p; ?></strong> mesas
+                            </div>
                         </div>
-                    <?php endif; ?>
+                    <?php endforeach; ?>
                 </div>
+                <?php if (!empty($bloqueo_cierre_total['mensaje'])): ?>
+                    <div class="panel-ac-bloqueo text-[8px] leading-snug text-amber-700 font-semibold">
+                        <i class="fas fa-exclamation-triangle mr-0.5"></i><?php echo htmlspecialchars((string)$bloqueo_cierre_total['mensaje'], ENT_QUOTES, 'UTF-8'); ?>
+                    </div>
+                <?php endif; ?>
             </div>
-            <?php endif; ?>
         </div>
-    <?php endif; ?>
+        <?php endif; ?>
+
+        <div class="panel-ac-badge-col flex-1 min-w-[200px] bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 shadow-sm">
+            <div class="mb-2 flex justify-start">
+                <span class="panel-ac-head text-[1.12rem] leading-tight font-semibold text-slate-800 inline-flex items-center">
+                    <i class="fas fa-users mr-1.5 text-[1.04rem] text-slate-600"></i>Jugadores y equipos
+                </span>
+            </div>
+            <div class="flex flex-wrap gap-x-2 gap-y-0.5 items-baseline text-[0.98rem] leading-snug text-slate-700">
+                <span title="Jugadores">Jug. <strong><?php echo $jugadores_mostrar; ?></strong></span>
+                <?php if ($mostrar_eq_panel): ?>
+                <span class="text-slate-300" aria-hidden="true">·</span>
+                <span title="Equipos"><?php echo $es_modalidad_parejas || $es_modalidad_parejas_fijas ? 'Parejas' : 'Eq.'; ?> <strong><?php echo (int)$total_equipos; ?></strong></span>
+                <?php endif; ?>
+            </div>
+        </div>
+    </div>
     <script>
     (function() {
         var btnCron = document.getElementById('btnCronometroVentana');
