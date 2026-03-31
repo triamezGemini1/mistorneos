@@ -22,17 +22,18 @@ $action_param = $use_standalone ? '?' : '&';
     }
     
     /* Sidebar sticky en desktop; formulario ampliado 15% */
+    /* Navegador de partidas +10% de ancho (8.9% × 1.1) */
     @media (min-width: 769px) {
         .registrar-resultados-wrap #sidebar-mesas {
-            flex: 0 0 8.9%;
-            max-width: 8.9%;
+            flex: 0 0 9.79%;
+            max-width: 9.79%;
         }
         .registrar-resultados-wrap #sidebar-mesas .card {
             max-width: 100%;
         }
         .registrar-resultados-wrap .col-form-registro {
-            flex: 0 0 91.1%;
-            max-width: 91.1%;
+            flex: 0 0 90.21%;
+            max-width: 90.21%;
         }
     }
     
@@ -264,7 +265,7 @@ $action_param = $use_standalone ? '?' : '&';
     
     /* Lista mesas pendientes: máx. ~6 visibles, scroll si hay más */
     .lista-mesas-scroll {
-        max-height: 16.5rem;
+        max-height: 33rem; /* ~12 mesas visibles */
         overflow-y: auto;
         -webkit-overflow-scrolling: touch;
         scrollbar-width: thin;
@@ -559,21 +560,8 @@ $action_param = $use_standalone ? '?' : '&';
         <!-- Panel Lateral - Lista de Mesas (ancho reducido 50%) -->
         <div class="col-md-2 col-lg-1" id="sidebar-mesas">
             <div class="card sidebar-sticky">
-                <!-- Selector de Ronda/Partida -->
-                <div class="card-body p-3 border-bottom bg-light rounded-top">
-                    <select id="selector-ronda" 
-                            onchange="cambiarRonda(<?php echo $torneo['id']; ?>, this.value)"
-                            class="form-control form-control-sm">
-                        <?php foreach ($todasLasRondas as $r): ?>
-                            <option value="<?php echo $r['partida']; ?>" <?php echo $r['partida'] == $ronda ? 'selected' : ''; ?>>
-                                Ronda <?php echo $r['partida']; ?>
-                            </option>
-                        <?php endforeach; ?>
-                    </select>
-                </div>
-
                 <!-- Estadísticas de Mesas: total y faltantes en la misma fila -->
-                <div class="card-body p-3 border-bottom bg-light">
+                <div class="card-body p-3 border-bottom bg-light rounded-top">
                     <div class="d-flex justify-content-between align-items-center flex-wrap gap-1 small">
                         <span class="text-muted">
                             <i class="fas fa-table mr-1"></i>Total: <strong><?php echo $totalMesas; ?></strong> mesas
@@ -591,9 +579,9 @@ $action_param = $use_standalone ? '?' : '&';
                 ?>
                 <div class="card-body p-2">
                     <h6 class="small font-weight-bold mb-2">
-                        <i class="fas fa-table mr-1"></i>Mesas pendientes (Ronda <?php echo $ronda; ?>)
+                        <i class="fas fa-table mr-1"></i>Mesas pendientes
                     </h6>
-                    <div class="<?php echo count($mesasPendientesLista) > 6 ? 'lista-mesas-scroll' : ''; ?>">
+                    <div class="<?php echo count($mesasPendientesLista) > 12 ? 'lista-mesas-scroll' : ''; ?>">
                     <div class="list-group list-group-flush">
                         <?php if (empty($mesasPendientesLista)): ?>
                             <div class="list-group-item text-center text-success py-3 small">
@@ -694,7 +682,7 @@ $action_param = $use_standalone ? '?' : '&';
                     <div class="mb-3">
                         <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
                             <div>
-                                <div class="text-muted font-weight-bold" style="font-size: clamp(2.625rem, 4.5vw, 3rem); font-weight: bold;">
+                                <div class="text-body" style="font-size: clamp(2.559375rem, 4.3875vw, 2.925rem); font-weight: 800;">
                                     Ronda <?php echo $ronda ?? 0; ?> - Mesa <?php echo $mesaActual ?? 0; ?>
                                 </div>
                             </div>
@@ -1169,11 +1157,6 @@ document.addEventListener('click', function(event) {
         }
     }
 });
-
-// Función para cambiar de ronda
-function cambiarRonda(torneoId, ronda) {
-    window.location.href = '<?php echo $base_url . $action_param; ?>action=mesas&torneo_id=' + torneoId + '&ronda=' + ronda;
-}
 
 // Función para limitar dígitos
 function limitardigitos(input, max) {

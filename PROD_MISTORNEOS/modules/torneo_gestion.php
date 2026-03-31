@@ -1022,13 +1022,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     }
     
-    // Verificar CSRF
+    // Verificar CSRF (AJAX debe recibir JSON; no redirigir o fetch seguiría la Location y devolvería HTML)
     $csrf_token = $_POST['csrf_token'] ?? '';
     $session_token = $_SESSION['csrf_token'] ?? '';
     if (!$csrf_token || !$session_token || !hash_equals($session_token, $csrf_token)) {
-        $_SESSION['error'] = 'Token de seguridad inválido. Por favor, recarga la página e intenta nuevamente.';
-        // Si hay torneo_id en POST, redirigir al panel; de lo contrario, al índice
-        $redirect_torneo_id = (int)($_POST['torneo_id'] ?? 0);
+        $msg = 'Token de seguridad inválido. Por favor, recarga la página e intenta nuevamente.';
+        if (isset($_POST['ajax']) && (string) $_POST['ajax'] === '1') {
+            header('Content-Type: application/json; charset=utf-8');
+            http_response_code(403);
+            echo json_encode(['ok' => false, 'error' => $msg], JSON_UNESCAPED_UNICODE);
+            exit;
+        }
+        $_SESSION['error'] = $msg;
+        $redirect_torneo_id = (int) ($_POST['torneo_id'] ?? 0);
         if ($redirect_torneo_id > 0) {
             header('Location: ' . buildRedirectUrl('panel', ['torneo_id' => $redirect_torneo_id]));
         } else {
@@ -1041,7 +1047,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $torneo_id_check = (int)($_POST['torneo_id'] ?? 0);
     $post_json_carga_masiva = in_array($post_action, ['carga_masiva_equipos_validar', 'carga_masiva_equipos_sitio'], true);
     if ($torneo_id_check && isTorneoLocked($torneo_id_check) && ($post_action !== 'cerrar_torneo') && !$post_json_carga_masiva) {
-        $_SESSION['error'] = 'Este torneo está cerrado y no admite modificaciones.';
+        $msgLocked = 'Este torneo está cerrado y no admite modificaciones.';
+        if (isset($_POST['ajax']) && (string) $_POST['ajax'] === '1') {
+            header('Content-Type: application/json; charset=utf-8');
+            http_response_code(403);
+            echo json_encode(['ok' => false, 'error' => $msgLocked], JSON_UNESCAPED_UNICODE);
+            exit;
+        }
+        $_SESSION['error'] = $msgLocked;
         header('Location: ' . buildRedirectUrl('panel', ['torneo_id' => $torneo_id_check]));
         exit;
     }
@@ -1424,6 +1437,19 @@ try {
             $view_data['torneo_id'] = $torneo_id;
             $view_data['context_switcher'] = obtenerContextoTorneoUnificado((int)$torneo_id);
             $view_data['paired_tournaments_status'] = obtenerEstadoParTorneosUnificado((int)$torneo_id);
+            break;
+
+        case 'reportes_inscritos':
+            if (!$torneo_id) {
+                throw new Exception('Debe especificar un torneo');
+            }
+            verificarPermisosTorneo($torneo_id, $user_id, $is_admin_general);
+            $torneo = obtenerTorneo($torneo_id, $user_id, $is_admin_general);
+            if (!$torneo) {
+                throw new Exception('Torneo no encontrado o sin permisos');
+            }
+            $view_file = __DIR__ . '/gestion_torneos/reportes_inscritos.php';
+            $view_data = ['torneo' => $torneo, 'torneo_id' => $torneo_id];
             break;
         
         case 'vincular_torneos':

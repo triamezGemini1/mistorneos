@@ -90,18 +90,18 @@ $contextLabel = $contextGenero === 'F' ? 'Femenino' : 'Masculino';
         border: 1px solid rgba(16, 185, 129, 0.28);
     }
     
-    /* Navegación de partidas: 10% del ancho de pantalla (solo pantallas >= 14") */
+    /* Navegación de partidas: 11% del ancho (+10% sobre el 10% anterior; pantallas >= 14") */
     @media (min-width: 769px) {
         .registrar-resultados-wrap #sidebar-mesas {
-            flex: 0 0 10%;
-            max-width: 10%;
+            flex: 0 0 11%;
+            max-width: 11%;
         }
         .registrar-resultados-wrap #sidebar-mesas .card {
             max-width: 100%;
         }
         .registrar-resultados-wrap .col-form-registro {
-            flex: 0 0 90%;
-            max-width: 90%;
+            flex: 0 0 89%;
+            max-width: 89%;
         }
     }
     /* Pantallas menores a 14": suprimir navegador de mesas */
@@ -307,7 +307,7 @@ $contextLabel = $contextGenero === 'F' ? 'Femenino' : 'Masculino';
     
     /* Lista de mesas pendientes: como máximo ~6 filas visibles, scroll si hay más */
     .lista-mesas-scroll {
-        max-height: 16.5rem; /* ~6 mesas (items compactos) */
+        max-height: 33rem; /* ~12 mesas (misma altura por fila que 9×24.75rem) */
         overflow-y: auto;
         -webkit-overflow-scrolling: touch;
         scrollbar-width: thin;
@@ -329,6 +329,11 @@ $contextLabel = $contextGenero === 'F' ? 'Femenino' : 'Masculino';
         position: sticky;
         top: 0.5rem;
         align-self: flex-start;
+    }
+    /* Evita salto del layout inferior cuando aparece tabla + botones (altura típica mesa 4 jugadores) */
+    .registrar-resultados-wrap .formulario-resultados-sticky > .card-body.registro-resultados-reserva {
+        min-height: clamp(26rem, 48vh, 38rem);
+        box-sizing: border-box;
     }
     
     /* Ancla del formulario: al volver tras guardar, la vista se mantiene en el formulario */
@@ -374,7 +379,11 @@ $contextLabel = $contextGenero === 'F' ? 'Femenino' : 'Masculino';
     }
 
     /* 1366×768: alta densidad */
-    .mesa-titulo-compacto { font-size: 1.05rem; line-height: 1.2; }
+    .mesa-titulo-compacto {
+        font-size: 1.365rem; /* +100% sobre 0.6825rem */
+        line-height: 1.2;
+        font-weight: 800;
+    }
     .badge-mesa-estado { font-size: 0.7rem; font-weight: 600; padding: 0.2em 0.45em; vertical-align: middle; }
     .input-ir-mesa-densidad { max-width: 5rem; font-size: 1rem !important; font-weight: 700; padding: 0.2rem 0.35rem !important; min-height: 30px !important; height: 30px !important; }
     .mesa-puntos-toolbar { gap: 0.35rem 0.5rem; max-width: 100%; }
@@ -673,41 +682,19 @@ $contextLabel = $contextGenero === 'F' ? 'Femenino' : 'Masculino';
         <!-- Panel Lateral - Lista de Mesas (ancho reducido 50%) -->
         <div class="col-md-2 col-lg-1" id="sidebar-mesas">
             <div class="card sidebar-sticky">
-                <!-- Selector de Ronda/Partida -->
-                <div class="card-body p-3 border-bottom bg-light rounded-top">
-                    <select id="selector-ronda" 
-                            onchange="cambiarRonda(<?php echo $torneo['id']; ?>, this.value)"
-                            class="form-control form-control-sm">
-                        <?php foreach ($todasLasRondas as $r): ?>
-                            <option value="<?php echo $r['partida']; ?>" <?php echo $r['partida'] == $ronda ? 'selected' : ''; ?>>
-                                Ronda <?php echo $r['partida']; ?>
-                            </option>
-                        <?php endforeach; ?>
-                    </select>
-                </div>
-
-                <!-- Estadísticas de Mesas: total y faltantes en la misma fila -->
-                <div class="card-body p-3 border-bottom bg-light">
-                    <div class="d-flex justify-content-between align-items-center flex-wrap gap-1 small">
-                        <span class="text-muted">
-                            <i class="fas fa-table mr-1"></i>Total: <strong><?php echo $totalMesas; ?></strong> mesas
-                        </span>
-                        <span class="badge bg-warning text-dark px-2 py-1">
-                            Faltantes: <strong><?php echo $mesasPendientes; ?></strong>
-                        </span>
+                <!-- Solo pendientes por registrar en esta ronda -->
+                <div class="card-body py-2 px-2 border-bottom bg-light rounded-top">
+                    <div class="text-center small font-weight-bold text-uppercase text-muted">
+                        Faltan <span class="text-dark"><?php echo (int) $mesasPendientes; ?></span>
                     </div>
                 </div>
 
-                <!-- Lista de Mesas (solo las pendientes) -->
                 <?php 
                 $mesasPendientesLista = array_filter($todasLasMesas ?? [], function($m) { return empty($m['tiene_resultados']); });
                 $mesasPendientesLista = array_values($mesasPendientesLista);
                 ?>
-                <div class="card-body p-2">
-                    <h6 class="small font-weight-bold mb-2">
-                        <i class="fas fa-table mr-1"></i>Mesas pendientes (Ronda <?php echo $ronda; ?>)
-                    </h6>
-                    <div class="<?php echo count($mesasPendientesLista) > 6 ? 'lista-mesas-scroll' : ''; ?>">
+                <div class="card-body p-2 pt-1">
+                    <div class="<?php echo count($mesasPendientesLista) > 12 ? 'lista-mesas-scroll' : ''; ?>">
                     <div class="list-group list-group-flush">
                         <?php if (empty($mesasPendientesLista)): ?>
                             <div class="list-group-item text-center text-success py-3 small">
@@ -718,7 +705,8 @@ $contextLabel = $contextGenero === 'F' ? 'Femenino' : 'Masculino';
                         <?php foreach ($mesasPendientesLista as $m): ?>
                             <?php $esActiva = $m['numero'] == $mesaActual; ?>
                             <a href="<?php echo $base_url . $action_param; ?>action=registrar_resultados&torneo_id=<?php echo $torneo['id']; ?>&ronda=<?php echo $ronda; ?>&mesa=<?php echo $m['numero']; ?>"
-                               class="mesa-item list-group-item list-group-item-action <?php echo $esActiva ? 'mesa-activa' : 'mesa-pendiente'; ?> rounded mb-1">
+                               class="mesa-item list-group-item list-group-item-action <?php echo $esActiva ? 'mesa-activa' : 'mesa-pendiente'; ?> rounded mb-1"
+                               data-mesa="<?php echo (int) $m['numero']; ?>">
                                 <div class="d-flex justify-content-between align-items-center">
                                     <strong><?php echo $m['numero']; ?></strong>
                                     <i class="far fa-circle"></i>
@@ -804,7 +792,7 @@ $contextLabel = $contextGenero === 'F' ? 'Femenino' : 'Masculino';
                     </div>
                 </div>
                 
-                <div class="card-body">
+                <div class="card-body registro-resultados-reserva">
                     <?php
                     $mesaEstadoCerrada = false;
                     foreach ($todasLasMesas ?? [] as $__mx) {
@@ -848,7 +836,7 @@ $contextLabel = $contextGenero === 'F' ? 'Femenino' : 'Masculino';
                     <div class="mb-2 mesa-nav-compacto">
                         <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
                             <div class="d-flex align-items-center flex-wrap gap-2">
-                                <span class="mesa-titulo-compacto text-muted font-weight-bold">Ronda <?php echo (int) ($ronda ?? 0); ?> · Mesa <?php echo (int) ($mesaActual ?? 0); ?></span>
+                                <span class="mesa-titulo-compacto text-body">Ronda <?php echo (int) ($ronda ?? 0); ?> · Mesa <?php echo (int) ($mesaActual ?? 0); ?></span>
                                 <span class="badge rounded-pill badge-mesa-estado <?php echo $mesaEstadoCerrada ? 'text-bg-secondary' : 'text-bg-primary'; ?>" title="<?php echo $mesaEstadoCerrada ? 'Resultados ya registrados en esta mesa' : 'Mesa abierta para registrar o editar'; ?>"><?php echo $mesaEstadoCerrada ? 'Cerrada' : 'En juego'; ?></span>
                             </div>
                             <div class="d-flex align-items-center gap-2 flex-grow-1 justify-content-center" style="min-width: 0;">
@@ -910,6 +898,9 @@ $contextLabel = $contextGenero === 'F' ? 'Femenino' : 'Masculino';
                               data-mesa="<?php echo (int)$mesaActual; ?>">
                             
                             <input type="hidden" name="action" value="guardar_resultados">
+                            <?php if (!$use_standalone): ?>
+                            <input type="hidden" name="page" value="torneo_gestion">
+                            <?php endif; ?>
                             <input type="hidden" name="csrf_token" value="<?php echo CSRF::token(); ?>">
                             <input type="hidden" name="torneo_id" value="<?php echo $torneo['id']; ?>">
                             <input type="hidden" name="ronda" value="<?php echo $ronda; ?>">
@@ -926,7 +917,7 @@ $contextLabel = $contextGenero === 'F' ? 'Femenino' : 'Masculino';
                                             <th rowspan="2" class="text-center align-middle columna-sancion">Sanción</th>
                                             <th rowspan="2" class="text-center align-middle columna-forfait">Forfait</th>
                                             <th rowspan="2" class="text-center align-middle columna-tarjeta">Tarjeta</th>
-                                            <th rowspan="2" class="text-center align-middle columna-estadisticas">Estadísticas</th>
+                                            <th rowspan="2" class="text-center align-middle columna-estadisticas" title="Pos, Gan, Per, Efec, Pts, Sanc">Est.</th>
                                         </tr>
                                     </thead>
                                     <tbody>
@@ -1053,15 +1044,18 @@ $contextLabel = $contextGenero === 'F' ? 'Femenino' : 'Masculino';
                                                     </div>
                                                 </td>
                                                 
-                                                <!-- Estadísticas: pos - gan - per - efect (≤10% ancho) -->
+                                                <!-- Estadísticas resumidas: Pos, Gan, Per, Efec, Pts, Sanc -->
                                                 <?php 
                                                 $pos = (int)($jugador['inscrito']['posicion'] ?? 0);
                                                 $gan = (int)($jugador['inscrito']['ganados'] ?? 0);
                                                 $per = (int)($jugador['inscrito']['perdidos'] ?? 0);
                                                 $efec = (int)($jugador['inscrito']['efectividad'] ?? 0);
-                                                $estadisticas_linea = $pos . ' - ' . $gan . ' - ' . $per . ' - ' . $efec;
+                                                $pts = (int)($jugador['inscrito']['puntos'] ?? 0);
+                                                $sanc = (int)($jugador['inscrito']['sancion'] ?? 0);
+                                                $estadisticas_linea = $pos . '° ' . $gan . ' ' . $per . ' ' . $efec . ' ' . $pts . ' ' . $sanc;
+                                                $estadisticas_title = 'Pos ' . $pos . '° · Gan ' . $gan . ' · Per ' . $per . ' · Efec ' . $efec . ' · Pts ' . $pts . ' · Sanc ' . $sanc;
                                                 ?>
-                                                <td class="text-center bg-light columna-estadisticas"><span class="estadisticas-valores"><?php echo htmlspecialchars($estadisticas_linea); ?></span></td>
+                                                <td class="text-center bg-light columna-estadisticas"><span class="estadisticas-valores" title="<?php echo htmlspecialchars($estadisticas_title, ENT_QUOTES, 'UTF-8'); ?>"><?php echo htmlspecialchars($estadisticas_linea); ?></span></td>
                                                 
                                                 <!-- Campos Hidden -->
                                                 <input type="hidden" name="jugadores[<?php echo $indiceArray; ?>][id]" 
@@ -1076,6 +1070,7 @@ $contextLabel = $contextGenero === 'F' ? 'Femenino' : 'Masculino';
                                                 <input type="hidden" name="jugadores[<?php echo $indiceArray; ?>][resultado2]" 
                                                        id="resultado2_<?php echo $indiceArray; ?>" 
                                                        value="<?php echo $jugador['resultado2'] ?? 0; ?>">
+                                                <input type="hidden" name="jugadores[<?php echo $indiceArray; ?>][codigo_equipo]" value="<?php echo htmlspecialchars($jugador['codigo_equipo'] ?? '', ENT_QUOTES, 'UTF-8'); ?>">
                                             </tr>
                                         <?php endforeach; ?>
                                         
@@ -1149,15 +1144,18 @@ $contextLabel = $contextGenero === 'F' ? 'Femenino' : 'Masculino';
                                                     </div>
                                                 </td>
                                                 
-                                                <!-- Estadísticas: pos - gan - per - efect (≤10% ancho) -->
+                                                <!-- Estadísticas resumidas: Pos, Gan, Per, Efec, Pts, Sanc -->
                                                 <?php 
                                                 $pos = (int)($jugador['inscrito']['posicion'] ?? 0);
                                                 $gan = (int)($jugador['inscrito']['ganados'] ?? 0);
                                                 $per = (int)($jugador['inscrito']['perdidos'] ?? 0);
                                                 $efec = (int)($jugador['inscrito']['efectividad'] ?? 0);
-                                                $estadisticas_linea = $pos . ' - ' . $gan . ' - ' . $per . ' - ' . $efec;
+                                                $pts = (int)($jugador['inscrito']['puntos'] ?? 0);
+                                                $sanc = (int)($jugador['inscrito']['sancion'] ?? 0);
+                                                $estadisticas_linea = $pos . '° ' . $gan . ' ' . $per . ' ' . $efec . ' ' . $pts . ' ' . $sanc;
+                                                $estadisticas_title = 'Pos ' . $pos . '° · Gan ' . $gan . ' · Per ' . $per . ' · Efec ' . $efec . ' · Pts ' . $pts . ' · Sanc ' . $sanc;
                                                 ?>
-                                                <td class="text-center bg-light columna-estadisticas"><span class="estadisticas-valores"><?php echo htmlspecialchars($estadisticas_linea); ?></span></td>
+                                                <td class="text-center bg-light columna-estadisticas"><span class="estadisticas-valores" title="<?php echo htmlspecialchars($estadisticas_title, ENT_QUOTES, 'UTF-8'); ?>"><?php echo htmlspecialchars($estadisticas_linea); ?></span></td>
                                                 
                                                 <!-- Campos Hidden -->
                                                 <input type="hidden" name="jugadores[<?php echo $indiceArray; ?>][id]" 
@@ -1172,6 +1170,7 @@ $contextLabel = $contextGenero === 'F' ? 'Femenino' : 'Masculino';
                                                 <input type="hidden" name="jugadores[<?php echo $indiceArray; ?>][resultado2]" 
                                                        id="resultado2_<?php echo $indiceArray; ?>" 
                                                        value="<?php echo $jugador['resultado2'] ?? 0; ?>">
+                                                <input type="hidden" name="jugadores[<?php echo $indiceArray; ?>][codigo_equipo]" value="<?php echo htmlspecialchars($jugador['codigo_equipo'] ?? '', ENT_QUOTES, 'UTF-8'); ?>">
                                             </tr>
                                         <?php endforeach; ?>
                                     </tbody>
@@ -1289,15 +1288,33 @@ document.addEventListener('click', function(event) {
     }
 });
 
-// Función para cambiar de ronda
-function cambiarRonda(torneoId, ronda) {
-    window.location.href = '<?php echo $base_url . $action_param; ?>action=mesas&torneo_id=' + torneoId + '&ronda=' + ronda;
-}
-
 // Función para limitar dígitos
 function limitardigitos(input, max) {
     if (input.value.length > max) {
         input.value = input.value.slice(0, max);
+    }
+}
+
+/** Enfoque programático sin desplazar el viewport (evita “brinco” al buscar mesa / puntos). */
+function enfocarSinScroll(el, conSelect) {
+    if (!el || typeof el.focus !== 'function') {
+        return;
+    }
+    try {
+        el.focus({ preventScroll: true });
+    } catch (err) {
+        el.focus();
+    }
+    if (conSelect && typeof el.select === 'function') {
+        el.select();
+    }
+}
+
+/** Mesa inválida: sin modales; quedarse en el buscador con el valor seleccionado para reemplazarlo. */
+function enfocarBuscarMesaSeleccionar() {
+    const el = document.getElementById('input_ir_mesa');
+    if (el) {
+        enfocarSinScroll(el, true);
     }
 }
 
@@ -1311,14 +1328,13 @@ function manejarEnterPuntos(event, parejaActual, siguienteAccion) {
             // Si es el último campo, solo enfocar el botón de guardar (NO guardar)
             const btnGuardar = document.getElementById('btn-guardar');
             if (btnGuardar) {
-                btnGuardar.focus();
+                enfocarSinScroll(btnGuardar, false);
             }
         } else {
             // Ir al siguiente campo de puntos
             const siguienteCampo = document.getElementById('puntos_pareja_' + siguienteAccion);
             if (siguienteCampo) {
-                siguienteCampo.focus();
-                siguienteCampo.select();
+                enfocarSinScroll(siguienteCampo, true);
             }
         }
     }
@@ -1408,49 +1424,21 @@ function irAMesaDesdeInput() {
     }
     
     const valor = inputMesa.value.trim();
-    
-    // Validar que no esté vacío
+
     if (valor === '') {
-        Swal.fire({
-            icon: 'error',
-            title: 'Mesa inválida',
-            text: 'Número de mesa inválido',
-            confirmButtonColor: '#667eea'
-        });
-        inputMesa.focus();
-        inputMesa.select();
+        enfocarBuscarMesaSeleccionar();
         return;
     }
-    
+
     const numeroMesa = parseInt(valor);
-    
-    // Validar que sea un número válido y mayor a 0 (incluye el caso de 0)
+
     if (isNaN(numeroMesa) || numeroMesa <= 0) {
-        Swal.fire({
-            icon: 'error',
-            title: 'Mesa inválida',
-            text: 'Número de mesa inválido',
-            confirmButtonColor: '#667eea'
-        });
-        inputMesa.focus();
-        inputMesa.select();
+        enfocarBuscarMesaSeleccionar();
         return;
     }
-    
-    // Validar el valor antes de proceder (validación completa)
+
     if (!validarNumeroMesa(inputMesa)) {
-        // Si la validación falla, mostrar mensaje de error
-        const mensajeError = inputMesa.validationMessage || inputMesa.getAttribute('data-error') || 'Número de mesa inválido';
-        
-        Swal.fire({
-            icon: 'error',
-            title: 'Mesa inválida',
-            text: mensajeError,
-            confirmButtonColor: '#667eea'
-        });
-        
-        inputMesa.focus();
-        inputMesa.select();
+        enfocarBuscarMesaSeleccionar();
         return;
     }
     const torneoId = <?php echo $torneo['id']; ?>;
@@ -1630,22 +1618,27 @@ const SANCION_MAXIMA = 80;
 function validarSancionYTarjeta(index) {
     const input = document.querySelector('input[name="jugadores[' + index + '][sancion]"]');
     if (!input) return;
-    let val = parseInt(input.value, 10);
-    if (isNaN(val) || val < 0) val = 0;
-    if (val > SANCION_MAXIMA) {
-        val = SANCION_MAXIMA;
-        input.value = val;
-        if (typeof Swal !== 'undefined') {
-            Swal.fire({
-                icon: 'warning',
-                title: 'Límite de sanción',
-                text: 'Las sanciones no pueden superar los ' + SANCION_MAXIMA + ' puntos.',
-                confirmButtonColor: '#667eea',
-                timer: 2500,
-                timerProgressBar: true
-            });
+
+    const parsed = parseInt(String(input.value).trim(), 10);
+    if (!isNaN(parsed) && parsed > SANCION_MAXIMA) {
+        input.classList.add('is-invalid', 'border-danger');
+        input.classList.remove('is-valid');
+        input.setCustomValidity('Máximo ' + SANCION_MAXIMA + ' puntos');
+        enfocarSinScroll(input, true);
+        const indicadorPre = document.getElementById('indicador_tarjeta_80_' + index);
+        if (indicadorPre) {
+            indicadorPre.textContent = '';
+            indicadorPre.style.display = 'none';
         }
+        validarPuntosEnTiempoReal();
+        actualizarEstadoBotonGuardar();
+        return;
     }
+
+    input.classList.remove('is-invalid', 'border-danger');
+    input.setCustomValidity('');
+
+    let val = isNaN(parsed) || parsed < 0 ? 0 : parsed;
     const campoHidden = document.getElementById('tarjeta_' + index);
     const tarjetaForm = campoHidden ? parseInt(campoHidden.value, 10) || 0 : 0;
     const tdSancion = input.closest('td.columna-sancion');
@@ -1746,28 +1739,32 @@ async function limpiarFormulario() {
 }
 
 // Función para limpiar formulario sin confirmación (usado después de guardar)
-function limpiarFormularioSilencioso() {
-    // Limpiar el textbox "Ir a Mesa" estableciéndolo en 0
+// enfocarBuscarMesa: tras guardar por AJAX, volver al campo "Ir a mesa" para la siguiente mesa
+function limpiarFormularioSilencioso(enfocarBuscarMesa) {
+    enfocarBuscarMesa = !!enfocarBuscarMesa;
     const inputMesa = document.getElementById('input_ir_mesa');
     if (inputMesa) {
         inputMesa.value = '0';
         inputMesa.classList.remove('is-invalid', 'is-valid');
         inputMesa.setCustomValidity('');
     }
-    
+
     const puntosA = document.getElementById('puntos_pareja_A');
     const puntosB = document.getElementById('puntos_pareja_B');
     if (puntosA) puntosA.value = '0';
     if (puntosB) puntosB.value = '0';
     distribuirPuntos('todas');
-    
-    // Limpiar tarjetas
+
     for (let i = 0; i < 4; i++) {
         const botones = document.querySelectorAll('[data-index="' + i + '"].tarjeta-btn');
         botones.forEach(btn => btn.classList.remove('activo'));
         document.getElementById('tarjeta_' + i).value = 0;
         const sancion = document.querySelector('input[name="jugadores[' + i + '][sancion]"]');
-        if (sancion) sancion.value = '0';
+        if (sancion) {
+            sancion.value = '0';
+            sancion.classList.remove('is-invalid', 'border-danger', 'is-valid');
+            sancion.setCustomValidity('');
+        }
         const ff = document.getElementById('ff_' + i);
         if (ff) ff.checked = false;
     }
@@ -1775,31 +1772,26 @@ function limpiarFormularioSilencioso() {
     const penaMesaZ = document.getElementById('pena_mesa_zapato');
     if (penaMesaC) penaMesaC.checked = false;
     if (penaMesaZ) penaMesaZ.checked = false;
-    
+
     procesarPena();
     const observaciones = document.querySelector('textarea[name="observaciones"]');
     if (observaciones) observaciones.value = '';
-    
-    // Enfocar el primer campo después de limpiar
-    if (puntosA) {
-        setTimeout(() => {
-            puntosA.focus();
-            puntosA.select();
-        }, 100);
-    }
-    
+
+    setTimeout(function() {
+        if (enfocarBuscarMesa && inputMesa) {
+            enfocarSinScroll(inputMesa, false);
+        } else if (puntosA) {
+            enfocarSinScroll(puntosA, true);
+        }
+    }, 100);
+
     validarPuntosEnTiempoReal();
     actualizarEstadoPorMesa();
 }
 
 async function guardarManoDesierta() {
     if (!esMesaValidaEnInput()) {
-        Swal.fire({
-            icon: 'error',
-            title: 'Mesa no válida',
-            text: 'Seleccione una mesa válida antes de registrar Mano Desierta.',
-            confirmButtonColor: '#667eea'
-        });
+        enfocarBuscarMesaSeleccionar();
         return;
     }
 
@@ -1835,7 +1827,11 @@ async function guardarManoDesierta() {
         const tarjeta = document.getElementById('tarjeta_' + i);
         if (tarjeta) tarjeta.value = '0';
         const sancion = document.querySelector('input[name="jugadores[' + i + '][sancion]"]');
-        if (sancion) sancion.value = '0';
+        if (sancion) {
+            sancion.value = '0';
+            sancion.classList.remove('is-invalid', 'border-danger', 'is-valid');
+            sancion.setCustomValidity('');
+        }
         const botones = document.querySelectorAll('[data-index="' + i + '"].tarjeta-btn');
         botones.forEach(btn => btn.classList.remove('activo'));
     }
@@ -1885,9 +1881,8 @@ function validarPuntosInmediato(event) {
         });
         
         // Enfocar y seleccionar el campo
-        setTimeout(() => {
-            campo.focus();
-            campo.select();
+        setTimeout(function() {
+            enfocarSinScroll(campo, true);
         }, 100);
     } else {
         campo.classList.remove('is-invalid');
@@ -1970,17 +1965,20 @@ function validarResultados() {
     const mesa = mesaInput ? parseInt(mesaInput.value) || 0 : 0;
     
     if (mesa <= 0) {
-        Swal.fire({
-            icon: 'error',
-            title: 'Mesa no válida',
-            text: 'No hay una mesa válida seleccionada. Seleccione una mesa de la lista antes de guardar.',
-            confirmButtonColor: '#667eea'
-        });
-        const inputIrMesa = document.getElementById('input_ir_mesa');
-        if (inputIrMesa) inputIrMesa.focus();
+        enfocarBuscarMesaSeleccionar();
         return false;
     }
-    
+
+    for (let si = 0; si < 4; si++) {
+        const sin = document.querySelector('input[name="jugadores[' + si + '][sancion]"]');
+        if (!sin) continue;
+        const sp = parseInt(String(sin.value).trim(), 10);
+        if (!isNaN(sp) && sp > SANCION_MAXIMA) {
+            validarSancionYTarjeta(si);
+            return false;
+        }
+    }
+
     const puntosA = parseInt(document.getElementById('puntos_pareja_A').value) || 0;
     const puntosB = parseInt(document.getElementById('puntos_pareja_B').value) || 0;
     const puntosTorneo = <?php echo (int)($torneo['puntos'] ?? 100); ?>;
@@ -2012,8 +2010,7 @@ function validarResultados() {
         });
         const campoA = document.getElementById('puntos_pareja_A');
         if (campoA) {
-            campoA.focus();
-            campoA.select();
+            enfocarSinScroll(campoA, true);
         }
         return false;
     }
@@ -2026,8 +2023,7 @@ function validarResultados() {
         });
         const campoB = document.getElementById('puntos_pareja_B');
         if (campoB) {
-            campoB.focus();
-            campoB.select();
+            enfocarSinScroll(campoB, true);
         }
         return false;
     }
@@ -2050,13 +2046,32 @@ function validarResultados() {
         });
         const campoActivo = document.activeElement;
         if (campoActivo && (campoActivo.id === 'puntos_pareja_A' || campoActivo.id === 'puntos_pareja_B')) {
-            campoActivo.focus();
-            campoActivo.select();
+            enfocarSinScroll(campoActivo, true);
         }
         return false;
     }
     
     return true;
+}
+
+/** Tras guardado AJAX: badge Cerrada y quitar mesa de la lista pendiente sin recargar. */
+function marcarMesaGuardadaEnInterfaz(mesaNum) {
+    var badge = document.querySelector('.mesa-nav-compacto .badge-mesa-estado');
+    if (badge) {
+        badge.textContent = 'Cerrada';
+        badge.classList.remove('text-bg-primary');
+        badge.classList.add('text-bg-secondary');
+        badge.setAttribute('title', 'Resultados ya registrados en esta mesa');
+    }
+    var link = document.querySelector('#sidebar-mesas a.mesa-item[data-mesa="' + mesaNum + '"]');
+    if (link) link.remove();
+    var wrap = document.querySelector('#sidebar-mesas .list-group-flush');
+    if (wrap && !wrap.querySelector('a.mesa-item')) {
+        var empty = wrap.querySelector('.list-group-item.text-center.text-success');
+        if (!empty) {
+            wrap.innerHTML = '<div class="list-group-item text-center text-success py-3 small"><i class="fas fa-check-circle fa-2x mb-2"></i><div>Todas las mesas completadas</div></div>';
+        }
+    }
 }
 
 // Event listener para submit del formulario
@@ -2084,28 +2099,64 @@ document.addEventListener('DOMContentLoaded', function() {
     const form = document.getElementById('formResultados');
     if (form) {
         form.addEventListener('submit', function(e) {
-            // No prevenir el submit normal, solo validar y procesar
             if (!validarResultados()) {
                 e.preventDefault();
                 return false;
             }
-            
-            // Procesar radio buttons de pena
             procesarPena();
-            
-            // Distribuir puntos antes de enviar - asegurar que ambas parejas estén sincronizadas
             distribuirPuntos('todas');
-            
-            // Verificar que todos los campos estén correctamente actualizados
-            for (let i = 0; i < 4; i++) {
-                const r1 = document.getElementById('resultado1_' + i);
-                const r2 = document.getElementById('resultado2_' + i);
-                if (r1 && r2) {
-                    console.log('Antes de enviar - Jugador ' + (i + 1) + ': r1=' + r1.value + ', r2=' + r2.value);
+            e.preventDefault();
+
+            const fd = new FormData(form);
+            fd.set('ajax', '1');
+            const btnGuardar = document.getElementById('btn-guardar');
+            if (btnGuardar) btnGuardar.disabled = true;
+
+            fetch(form.action, {
+                method: 'POST',
+                body: fd,
+                credentials: 'same-origin',
+                redirect: 'manual',
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'Accept': 'application/json'
                 }
-            }
-            
-            console.log('Formulario enviado con datos actualizados');
+            })
+                .then(function(r) {
+                    if (r.type === 'opaqueredirect' || (r.status >= 300 && r.status < 400)) {
+                        throw new Error('Sesión caducada o redirección del servidor. Recarga la página e intenta de nuevo.');
+                    }
+                    return r.text().then(function(text) {
+                        var data;
+                        try {
+                            data = text ? JSON.parse(text) : null;
+                        } catch (parseErr) {
+                            var preview = (text || '').replace(/\s+/g, ' ').trim().substring(0, 120);
+                            throw new Error(preview ? ('El servidor devolvió una página en lugar de JSON. ' + preview) : ('Respuesta vacía (HTTP ' + r.status + ')'));
+                        }
+                        if (!r.ok || !data || data.ok !== true) {
+                            var err = (data && data.error) ? data.error : ('HTTP ' + r.status);
+                            throw new Error(err);
+                        }
+                        return data;
+                    });
+                })
+                .then(function(data) {
+                    var mesaNum = parseInt(form.getAttribute('data-mesa') || '0', 10) || (data.mesa ? parseInt(data.mesa, 10) : 0);
+                    if (mesaNum) {
+                        marcarMesaGuardadaEnInterfaz(mesaNum);
+                    }
+                    limpiarFormularioSilencioso(true);
+                })
+                .catch(function(err) {
+                    Swal.fire({ icon: 'error', title: 'No se pudo guardar', text: err.message || String(err), confirmButtonColor: '#667eea' });
+                })
+                .finally(function() {
+                    if (btnGuardar) btnGuardar.disabled = false;
+                    if (typeof actualizarEstadoBotonGuardar === 'function') actualizarEstadoBotonGuardar();
+                });
+
+            return false;
         });
     }
     
@@ -2150,13 +2201,13 @@ document.addEventListener('DOMContentLoaded', function() {
     // Si se acaba de guardar, enfocar el textbox "ir a mesa" y limpiarlo
     <?php if (isset($_SESSION['resultados_guardados'])): ?>
         <?php unset($_SESSION['resultados_guardados']); ?>
-        setTimeout(() => {
+        setTimeout(function() {
             const inputMesa = document.getElementById('input_ir_mesa');
             if (inputMesa) {
                 inputMesa.value = '0';
                 inputMesa.classList.remove('is-invalid', 'is-valid');
                 inputMesa.setCustomValidity('');
-                inputMesa.focus();
+                enfocarSinScroll(inputMesa, false);
                 actualizarEstadoPorMesa();
             }
         }, 100);
@@ -2164,9 +2215,8 @@ document.addEventListener('DOMContentLoaded', function() {
         // Enfocar el primer campo de puntos al cargar la página si no se acaba de guardar
         const puntosA = document.getElementById('puntos_pareja_A');
         if (puntosA) {
-            setTimeout(() => {
-                puntosA.focus();
-                puntosA.select();
+            setTimeout(function() {
+                enfocarSinScroll(puntosA, true);
             }, 100);
         }
     <?php endif; ?>

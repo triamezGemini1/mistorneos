@@ -195,8 +195,15 @@ if ($user['role'] === 'usuario' && (($user['role_original'] ?? '') !== 'admin_ge
     }
 }
 
-// Obtener página solicitada
-$page = $_GET['page'] ?? 'home';
+// Obtener página solicitada (POST a index.php a veces llega sin query string; el cuerpo puede traer page)
+$raw_page = (string) ($_GET['page'] ?? '');
+if ($raw_page === '' && ($_SERVER['REQUEST_METHOD'] ?? '') === 'POST') {
+    $raw_page = (string) ($_POST['page'] ?? '');
+    if ($raw_page === '' && (string) ($_POST['action'] ?? '') === 'guardar_resultados') {
+        $raw_page = 'torneo_gestion';
+    }
+}
+$page = $raw_page !== '' ? $raw_page : 'home';
 
 // Sanitizar nombre de página (solo letras, números, guiones y barras)
 $page = preg_replace('/[^a-zA-Z0-9_\/\-]/', '', $page);

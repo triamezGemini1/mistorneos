@@ -131,44 +131,30 @@ $base_url = $use_standalone ? $script_actual : 'index.php?page=torneo_gestion';
                 <div class="card-header bg-success text-white py-2">
                     <h6 class="mb-0"><i class="fas fa-chart-line mr-2"></i> Estadísticas Generales</h6>
                 </div>
-                <div class="card-body p-3">
-                    <div class="row text-center">
-                        <div class="col-2">
-                            <div class="border rounded p-3 bg-light">
-                                <h3 class="text-primary mb-0"><?php echo (int)($inscrito['posicion'] ?? 0); ?>°</h3>
-                                <small class="text-muted">Posición</small>
-                            </div>
-                        </div>
-                        <div class="col-2">
-                            <div class="border rounded p-3 bg-light">
-                                <h3 class="text-success mb-0"><?php echo (int)($inscrito['ganados'] ?? 0); ?></h3>
-                                <small class="text-muted">Ganados</small>
-                            </div>
-                        </div>
-                        <div class="col-2">
-                            <div class="border rounded p-3 bg-light">
-                                <h3 class="text-danger mb-0"><?php echo (int)($inscrito['perdidos'] ?? 0); ?></h3>
-                                <small class="text-muted">Perdidos</small>
-                            </div>
-                        </div>
-                        <div class="col-2">
-                            <div class="border rounded p-3 bg-light">
-                                <h3 class="text-info mb-0"><?php echo (int)($inscrito['efectividad'] ?? 0); ?></h3>
-                                <small class="text-muted">Efectividad</small>
-                            </div>
-                        </div>
-                        <div class="col-2">
-                            <div class="border rounded p-3 bg-light">
-                                <h3 class="text-primary mb-0"><?php echo (int)($inscrito['puntos'] ?? 0); ?></h3>
-                                <small class="text-muted">Puntos</small>
-                            </div>
-                        </div>
-                        <div class="col-2">
-                            <div class="border rounded p-3 bg-warning">
-                                <h3 class="text-dark mb-0"><?php echo (int)($inscrito['sancion'] ?? 0); ?></h3>
-                                <small class="text-muted">Sanciones</small>
-                            </div>
-                        </div>
+                <div class="card-body p-2 p-md-3">
+                    <div class="table-responsive mb-0">
+                        <table class="table table-sm table-bordered mb-0 text-center align-middle estadisticas-generales-jugador">
+                            <thead>
+                                <tr class="small text-muted">
+                                    <th scope="col" class="py-1" title="Posición">Pos</th>
+                                    <th scope="col" class="py-1" title="Ganados">Gan</th>
+                                    <th scope="col" class="py-1" title="Perdidos">Per</th>
+                                    <th scope="col" class="py-1" title="Efectividad">Efec</th>
+                                    <th scope="col" class="py-1" title="Puntos">Pts</th>
+                                    <th scope="col" class="py-1" title="Sanciones">Sanc</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td class="fw-bold py-2"><?php echo (int)($inscrito['posicion'] ?? 0); ?>°</td>
+                                    <td class="fw-bold py-2 text-success"><?php echo (int)($inscrito['ganados'] ?? 0); ?></td>
+                                    <td class="fw-bold py-2 text-danger"><?php echo (int)($inscrito['perdidos'] ?? 0); ?></td>
+                                    <td class="fw-bold py-2 text-info"><?php echo (int)($inscrito['efectividad'] ?? 0); ?></td>
+                                    <td class="fw-bold py-2"><?php echo (int)($inscrito['puntos'] ?? 0); ?></td>
+                                    <td class="fw-bold py-2 table-warning"><?php echo (int)($inscrito['sancion'] ?? 0); ?></td>
+                                </tr>
+                            </tbody>
+                        </table>
                     </div>
                 </div>
             </div>

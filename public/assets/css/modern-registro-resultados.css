@@ -114,6 +114,12 @@ body {
   margin-right: auto;
 }
 
+/* Reserva de altura: menos “push” del contenido inferior al montar tabla + acciones */
+.registrar-resultados-wrap .formulario-resultados-sticky > .card-body.registro-resultados-reserva {
+  min-height: clamp(26rem, 48vh, 38rem);
+  box-sizing: border-box;
+}
+
 .registrar-resultados-wrap #formResultados .table-responsive {
   display: grid;
   gap: 6px;

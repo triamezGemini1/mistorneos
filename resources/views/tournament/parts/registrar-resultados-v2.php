@@ -22,18 +22,18 @@ $esTorneoParejas = in_array((int)($torneo['modalidad'] ?? 0), [2, 4], true);
         margin-right: auto;
     }
     
-    /* Navegación de partidas: 10% del ancho de pantalla (solo pantallas >= 14") */
+    /* Navegación de partidas: 11% del ancho (+10% sobre el 10% anterior; pantallas >= 14") */
     @media (min-width: 769px) {
         .registrar-resultados-wrap #sidebar-mesas {
-            flex: 0 0 10%;
-            max-width: 10%;
+            flex: 0 0 11%;
+            max-width: 11%;
         }
         .registrar-resultados-wrap #sidebar-mesas .card {
             max-width: 100%;
         }
         .registrar-resultados-wrap .col-form-registro {
-            flex: 0 0 90%;
-            max-width: 90%;
+            flex: 0 0 89%;
+            max-width: 89%;
         }
     }
     /* Pantallas menores a 14": suprimir navegador de mesas */
@@ -235,9 +235,9 @@ $esTorneoParejas = in_array((int)($torneo['modalidad'] ?? 0), [2, 4], true);
         -webkit-overflow-scrolling: touch;
     }
     
-    /* Lista mesas pendientes: máx. ~6 visibles, scroll si hay más */
+    /* Lista mesas pendientes: máx. ~12 visibles, scroll si hay más */
     .lista-mesas-scroll {
-        max-height: 16.5rem;
+        max-height: 33rem;
         overflow-y: auto;
         -webkit-overflow-scrolling: touch;
         scrollbar-width: thin;
@@ -259,6 +259,10 @@ $esTorneoParejas = in_array((int)($torneo['modalidad'] ?? 0), [2, 4], true);
         position: sticky;
         top: 0.5rem;
         align-self: flex-start;
+    }
+    .registrar-resultados-wrap .formulario-resultados-sticky > .card-body.registro-resultados-reserva {
+        min-height: clamp(26rem, 48vh, 38rem);
+        box-sizing: border-box;
     }
     
     /* Ancla del formulario: al volver tras guardar, la vista se mantiene en el formulario */
@@ -545,21 +549,8 @@ $esTorneoParejas = in_array((int)($torneo['modalidad'] ?? 0), [2, 4], true);
         <!-- Panel Lateral - Lista de Mesas (ancho reducido 50%) -->
         <div class="col-md-2 col-lg-1" id="sidebar-mesas">
             <div class="card sidebar-sticky">
-                <!-- Selector de Ronda/Partida -->
-                <div class="card-body p-3 border-bottom bg-light rounded-top">
-                    <select id="selector-ronda" 
-                            onchange="cambiarRonda(<?php echo $torneo['id']; ?>, this.value)"
-                            class="form-control form-control-sm">
-                        <?php foreach ($todasLasRondas as $r): ?>
-                            <option value="<?php echo $r['partida']; ?>" <?php echo $r['partida'] == $ronda ? 'selected' : ''; ?>>
-                                Ronda <?php echo $r['partida']; ?>
-                            </option>
-                        <?php endforeach; ?>
-                    </select>
-                </div>
-
                 <!-- Estadísticas de Mesas: total y faltantes en la misma fila -->
-                <div class="card-body p-3 border-bottom bg-light">
+                <div class="card-body p-3 border-bottom bg-light rounded-top">
                     <div class="d-flex justify-content-between align-items-center flex-wrap gap-1 small">
                         <span class="text-muted">
                             <i class="fas fa-table mr-1"></i>Total: <strong><?php echo $totalMesas; ?></strong> mesas
@@ -577,9 +568,9 @@ $esTorneoParejas = in_array((int)($torneo['modalidad'] ?? 0), [2, 4], true);
                 ?>
                 <div class="card-body p-2">
                     <h6 class="small font-weight-bold mb-2">
-                        <i class="fas fa-table mr-1"></i>Mesas pendientes (Ronda <?php echo $ronda; ?>)
+                        <i class="fas fa-table mr-1"></i>Mesas pendientes
                     </h6>
-                    <div class="<?php echo count($mesasPendientesLista) > 6 ? 'lista-mesas-scroll' : ''; ?>">
+                    <div class="<?php echo count($mesasPendientesLista) > 12 ? 'lista-mesas-scroll' : ''; ?>">
                     <div class="list-group list-group-flush">
                         <?php if (empty($mesasPendientesLista)): ?>
                             <div class="list-group-item text-center text-success py-3 small">
@@ -652,7 +643,7 @@ $esTorneoParejas = in_array((int)($torneo['modalidad'] ?? 0), [2, 4], true);
                     </div>
                 </div>
                 
-                <div class="card-body">
+                <div class="card-body registro-resultados-reserva">
                     <!-- Mensajes -->
                     <?php if (isset($_SESSION['success'])): ?>
                         <div class="alert alert-success alert-dismissible fade show">
@@ -687,7 +678,7 @@ $esTorneoParejas = in_array((int)($torneo['modalidad'] ?? 0), [2, 4], true);
                     <div class="mb-3">
                         <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
                             <div>
-                                <div class="text-muted font-weight-bold" style="font-size: clamp(2.625rem, 4.5vw, 3rem); font-weight: bold;">
+                                <div class="text-body" style="font-size: clamp(2.559375rem, 4.3875vw, 2.925rem); font-weight: 800;">
                                     Ronda <?php echo $ronda ?? 0; ?> - Mesa <?php echo $mesaActual ?? 0; ?>
                                 </div>
                             </div>
@@ -765,7 +756,7 @@ $esTorneoParejas = in_array((int)($torneo['modalidad'] ?? 0), [2, 4], true);
                                             <th rowspan="2" class="text-center align-middle columna-sancion">Sanción</th>
                                             <th rowspan="2" class="text-center align-middle columna-forfait">Forfait</th>
                                             <th rowspan="2" class="text-center align-middle columna-tarjeta">Tarjeta</th>
-                                            <th rowspan="2" class="text-center align-middle columna-estadisticas">Estadísticas</th>
+                                            <th rowspan="2" class="text-center align-middle columna-estadisticas" title="Pos, Gan, Per, Efec, Pts, Sanc">Est.</th>
                                         </tr>
                                     </thead>
                                     <tbody>
@@ -870,15 +861,18 @@ $esTorneoParejas = in_array((int)($torneo['modalidad'] ?? 0), [2, 4], true);
                                                     </div>
                                                 </td>
                                                 
-                                                <!-- Estadísticas: pos - gan - per - efect (≤10% ancho) -->
+                                                <!-- Estadísticas resumidas: Pos, Gan, Per, Efec, Pts, Sanc -->
                                                 <?php 
                                                 $pos = (int)($jugador['inscrito']['posicion'] ?? 0);
                                                 $gan = (int)($jugador['inscrito']['ganados'] ?? 0);
                                                 $per = (int)($jugador['inscrito']['perdidos'] ?? 0);
                                                 $efec = (int)($jugador['inscrito']['efectividad'] ?? 0);
-                                                $estadisticas_linea = $pos . ' - ' . $gan . ' - ' . $per . ' - ' . $efec;
+                                                $pts = (int)($jugador['inscrito']['puntos'] ?? 0);
+                                                $sanc = (int)($jugador['inscrito']['sancion'] ?? 0);
+                                                $estadisticas_linea = $pos . '° ' . $gan . ' ' . $per . ' ' . $efec . ' ' . $pts . ' ' . $sanc;
+                                                $estadisticas_title = 'Pos ' . $pos . '° · Gan ' . $gan . ' · Per ' . $per . ' · Efec ' . $efec . ' · Pts ' . $pts . ' · Sanc ' . $sanc;
                                                 ?>
-                                                <td class="text-center bg-light columna-estadisticas"><span class="estadisticas-valores"><?php echo htmlspecialchars($estadisticas_linea); ?></span></td>
+                                                <td class="text-center bg-light columna-estadisticas"><span class="estadisticas-valores" title="<?php echo htmlspecialchars($estadisticas_title, ENT_QUOTES, 'UTF-8'); ?>"><?php echo htmlspecialchars($estadisticas_linea); ?></span></td>
                                                 
                                                 <!-- Campos Hidden -->
                                                 <input type="hidden" name="jugadores[<?php echo $indiceArray; ?>][id]" 
@@ -987,15 +981,18 @@ $esTorneoParejas = in_array((int)($torneo['modalidad'] ?? 0), [2, 4], true);
                                                     </div>
                                                 </td>
                                                 
-                                                <!-- Estadísticas: pos - gan - per - efect (≤10% ancho) -->
+                                                <!-- Estadísticas resumidas: Pos, Gan, Per, Efec, Pts, Sanc -->
                                                 <?php 
                                                 $pos = (int)($jugador['inscrito']['posicion'] ?? 0);
                                                 $gan = (int)($jugador['inscrito']['ganados'] ?? 0);
                                                 $per = (int)($jugador['inscrito']['perdidos'] ?? 0);
                                                 $efec = (int)($jugador['inscrito']['efectividad'] ?? 0);
-                                                $estadisticas_linea = $pos . ' - ' . $gan . ' - ' . $per . ' - ' . $efec;
+                                                $pts = (int)($jugador['inscrito']['puntos'] ?? 0);
+                                                $sanc = (int)($jugador['inscrito']['sancion'] ?? 0);
+                                                $estadisticas_linea = $pos . '° ' . $gan . ' ' . $per . ' ' . $efec . ' ' . $pts . ' ' . $sanc;
+                                                $estadisticas_title = 'Pos ' . $pos . '° · Gan ' . $gan . ' · Per ' . $per . ' · Efec ' . $efec . ' · Pts ' . $pts . ' · Sanc ' . $sanc;
                                                 ?>
-                                                <td class="text-center bg-light columna-estadisticas"><span class="estadisticas-valores"><?php echo htmlspecialchars($estadisticas_linea); ?></span></td>
+                                                <td class="text-center bg-light columna-estadisticas"><span class="estadisticas-valores" title="<?php echo htmlspecialchars($estadisticas_title, ENT_QUOTES, 'UTF-8'); ?>"><?php echo htmlspecialchars($estadisticas_linea); ?></span></td>
                                                 
                                                 <!-- Campos Hidden -->
                                                 <input type="hidden" name="jugadores[<?php echo $indiceArray; ?>][id]" 
@@ -1131,15 +1128,24 @@ document.addEventListener('click', function(event) {
     }
 });
 
-// Función para cambiar de ronda
-function cambiarRonda(torneoId, ronda) {
-    window.location.href = '<?php echo $base_url . $action_param; ?>action=mesas&torneo_id=' + torneoId + '&ronda=' + ronda;
-}
-
 // Función para limitar dígitos
 function limitardigitos(input, max) {
     if (input.value.length > max) {
         input.value = input.value.slice(0, max);
+    }
+}
+
+function enfocarSinScroll(el, conSelect) {
+    if (!el || typeof el.focus !== 'function') {
+        return;
+    }
+    try {
+        el.focus({ preventScroll: true });
+    } catch (err) {
+        el.focus();
+    }
+    if (conSelect && typeof el.select === 'function') {
+        el.select();
     }
 }
 
@@ -1153,14 +1159,13 @@ function manejarEnterPuntos(event, parejaActual, siguienteAccion) {
             // Si es el último campo, solo enfocar el botón de guardar (NO guardar)
             const btnGuardar = document.getElementById('btn-guardar');
             if (btnGuardar) {
-                btnGuardar.focus();
+                enfocarSinScroll(btnGuardar, false);
             }
         } else {
             // Ir al siguiente campo de puntos
             const siguienteCampo = document.getElementById('puntos_pareja_' + siguienteAccion);
             if (siguienteCampo) {
-                siguienteCampo.focus();
-                siguienteCampo.select();
+                enfocarSinScroll(siguienteCampo, true);
             }
         }
     }
@@ -1259,8 +1264,7 @@ function irAMesaDesdeInput() {
             text: 'Número de mesa inválido',
             confirmButtonColor: '#667eea'
         });
-        inputMesa.focus();
-        inputMesa.select();
+        enfocarSinScroll(inputMesa, true);
         return;
     }
     
@@ -1274,8 +1278,7 @@ function irAMesaDesdeInput() {
             text: 'Número de mesa inválido',
             confirmButtonColor: '#667eea'
         });
-        inputMesa.focus();
-        inputMesa.select();
+        enfocarSinScroll(inputMesa, true);
         return;
     }
     
@@ -1291,8 +1294,7 @@ function irAMesaDesdeInput() {
             confirmButtonColor: '#667eea'
         });
         
-        inputMesa.focus();
-        inputMesa.select();
+        enfocarSinScroll(inputMesa, true);
         return;
     }
     const torneoId = <?php echo $torneo['id']; ?>;
@@ -1624,9 +1626,8 @@ function limpiarFormularioSilencioso() {
     
     // Enfocar el primer campo después de limpiar
     if (puntosA) {
-        setTimeout(() => {
-            puntosA.focus();
-            puntosA.select();
+        setTimeout(function() {
+            enfocarSinScroll(puntosA, true);
         }, 100);
     }
     
@@ -1727,9 +1728,8 @@ function validarPuntosInmediato(event) {
         });
         
         // Enfocar y seleccionar el campo
-        setTimeout(() => {
-            campo.focus();
-            campo.select();
+        setTimeout(function() {
+            enfocarSinScroll(campo, true);
         }, 100);
     } else {
         campo.classList.remove('is-invalid');
@@ -1819,7 +1819,7 @@ function validarResultados() {
             confirmButtonColor: '#667eea'
         });
         const inputIrMesa = document.getElementById('input_ir_mesa');
-        if (inputIrMesa) inputIrMesa.focus();
+        if (inputIrMesa) enfocarSinScroll(inputIrMesa, false);
         return false;
     }
     
@@ -1854,8 +1854,7 @@ function validarResultados() {
         });
         const campoA = document.getElementById('puntos_pareja_A');
         if (campoA) {
-            campoA.focus();
-            campoA.select();
+            enfocarSinScroll(campoA, true);
         }
         return false;
     }
@@ -1868,8 +1867,7 @@ function validarResultados() {
         });
         const campoB = document.getElementById('puntos_pareja_B');
         if (campoB) {
-            campoB.focus();
-            campoB.select();
+            enfocarSinScroll(campoB, true);
         }
         return false;
     }
@@ -1892,8 +1890,7 @@ function validarResultados() {
         });
         const campoActivo = document.activeElement;
         if (campoActivo && (campoActivo.id === 'puntos_pareja_A' || campoActivo.id === 'puntos_pareja_B')) {
-            campoActivo.focus();
-            campoActivo.select();
+            enfocarSinScroll(campoActivo, true);
         }
         return false;
     }
@@ -1992,13 +1989,13 @@ document.addEventListener('DOMContentLoaded', function() {
     // Si se acaba de guardar, enfocar el textbox "ir a mesa" y limpiarlo
     <?php if (isset($_SESSION['resultados_guardados'])): ?>
         <?php unset($_SESSION['resultados_guardados']); ?>
-        setTimeout(() => {
+        setTimeout(function() {
             const inputMesa = document.getElementById('input_ir_mesa');
             if (inputMesa) {
                 inputMesa.value = '0';
                 inputMesa.classList.remove('is-invalid', 'is-valid');
                 inputMesa.setCustomValidity('');
-                inputMesa.focus();
+                enfocarSinScroll(inputMesa, false);
                 actualizarEstadoPorMesa();
             }
         }, 100);
@@ -2006,9 +2003,8 @@ document.addEventListener('DOMContentLoaded', function() {
         // Enfocar el primer campo de puntos al cargar la página si no se acaba de guardar
         const puntosA = document.getElementById('puntos_pareja_A');
         if (puntosA) {
-            setTimeout(() => {
-                puntosA.focus();
-                puntosA.select();
+            setTimeout(function() {
+                enfocarSinScroll(puntosA, true);
             }, 100);
         }
     <?php endif; ?>

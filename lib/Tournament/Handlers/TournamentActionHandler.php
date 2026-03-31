@@ -95,6 +95,35 @@ final class TournamentActionHandler
                 throw new Exception("La mesa #{$mesa} no existe. El número máximo de mesa asignada es {$maxMesa}.");
             }
 
+            $idsUsuariosValidar = [];
+            foreach ($jugadores as $jVal) {
+                $iu = (int) ($jVal['id_usuario'] ?? 0);
+                if ($iu > 0) {
+                    $idsUsuariosValidar[] = $iu;
+                }
+            }
+            $idsUsuariosValidar = array_values(array_unique($idsUsuariosValidar));
+            if ($idsUsuariosValidar !== []) {
+                $phCe = implode(',', array_fill(0, count($idsUsuariosValidar), '?'));
+                $stCe = $pdo->prepare("SELECT id_usuario, TRIM(COALESCE(codigo_equipo, '')) AS ce FROM inscritos WHERE torneo_id = ? AND id_usuario IN ($phCe)");
+                $stCe->execute(array_merge([$torneo_id], $idsUsuariosValidar));
+                $codigoDbPorUsuario = [];
+                foreach ($stCe->fetchAll(PDO::FETCH_ASSOC) as $rowCe) {
+                    $codigoDbPorUsuario[(int) $rowCe['id_usuario']] = (string) ($rowCe['ce'] ?? '');
+                }
+                foreach ($jugadores as $jVal) {
+                    $iu = (int) ($jVal['id_usuario'] ?? 0);
+                    if ($iu <= 0) {
+                        continue;
+                    }
+                    $postCod = trim((string) ($jVal['codigo_equipo'] ?? ''));
+                    $dbCod = $codigoDbPorUsuario[$iu] ?? '';
+                    if ($postCod !== '' && $dbCod !== '' && $postCod !== $dbCod) {
+                        throw new Exception('Datos de equipo inconsistentes (codigo_equipo). Recargue la página e intente de nuevo.');
+                    }
+                }
+            }
+
             $pdo->beginTransaction();
 
             $stmt = $pdo->prepare('SELECT modalidad, puntos FROM tournaments WHERE id = ?');

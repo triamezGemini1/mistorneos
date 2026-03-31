@@ -1022,13 +1022,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     }
     
-    // Verificar CSRF
+    // Verificar CSRF (AJAX debe recibir JSON; no redirigir o fetch seguiría la Location y devolvería HTML)
     $csrf_token = $_POST['csrf_token'] ?? '';
     $session_token = $_SESSION['csrf_token'] ?? '';
     if (!$csrf_token || !$session_token || !hash_equals($session_token, $csrf_token)) {
-        $_SESSION['error'] = 'Token de seguridad inválido. Por favor, recarga la página e intenta nuevamente.';
-        // Si hay torneo_id en POST, redirigir al panel; de lo contrario, al índice
-        $redirect_torneo_id = (int)($_POST['torneo_id'] ?? 0);
+        $msg = 'Token de seguridad inválido. Por favor, recarga la página e intenta nuevamente.';
+        if (isset($_POST['ajax']) && (string) $_POST['ajax'] === '1') {
+            header('Content-Type: application/json; charset=utf-8');
+            http_response_code(403);
+            echo json_encode(['ok' => false, 'error' => $msg], JSON_UNESCAPED_UNICODE);
+            exit;
+        }
+        $_SESSION['error'] = $msg;
+        $redirect_torneo_id = (int) ($_POST['torneo_id'] ?? 0);
         if ($redirect_torneo_id > 0) {
             header('Location: ' . buildRedirectUrl('panel', ['torneo_id' => $redirect_torneo_id]));
         } else {
@@ -1041,7 +1047,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $torneo_id_check = (int)($_POST['torneo_id'] ?? 0);
     $post_json_carga_masiva = in_array($post_action, ['carga_masiva_equipos_validar', 'carga_masiva_equipos_sitio'], true);
     if ($torneo_id_check && isTorneoLocked($torneo_id_check) && ($post_action !== 'cerrar_torneo') && !$post_json_carga_masiva) {
-        $_SESSION['error'] = 'Este torneo está cerrado y no admite modificaciones.';
+        $msgLocked = 'Este torneo está cerrado y no admite modificaciones.';
+        if (isset($_POST['ajax']) && (string) $_POST['ajax'] === '1') {
+            header('Content-Type: application/json; charset=utf-8');
+            http_response_code(403);
+            echo json_encode(['ok' => false, 'error' => $msgLocked], JSON_UNESCAPED_UNICODE);
+            exit;
+        }
+        $_SESSION['error'] = $msgLocked;
         header('Location: ' . buildRedirectUrl('panel', ['torneo_id' => $torneo_id_check]));
         exit;
     }
@@ -1424,6 +1437,19 @@ try {
             $view_data['torneo_id'] = $torneo_id;
             $view_data['context_switcher'] = obtenerContextoTorneoUnificado((int)$torneo_id);
             $view_data['paired_tournaments_status'] = obtenerEstadoParTorneosUnificado((int)$torneo_id);
+            break;
+
+        case 'reportes_inscritos':
+            if (!$torneo_id) {
+                throw new Exception('Debe especificar un torneo');
+            }
+            verificarPermisosTorneo($torneo_id, $user_id, $is_admin_general);
+            $torneo = obtenerTorneo($torneo_id, $user_id, $is_admin_general);
+            if (!$torneo) {
+                throw new Exception('Torneo no encontrado o sin permisos');
+            }
+            $view_file = __DIR__ . '/gestion_torneos/reportes_inscritos.php';
+            $view_data = ['torneo' => $torneo, 'torneo_id' => $torneo_id];
             break;
         
         case 'vincular_torneos':
@@ -3809,7 +3835,8 @@ function obtenerDatosRegistroResultados($torneo_id, $ronda, $mesa, $user_id = 0,
                 i.efectividad,
                 i.puntos as puntos_acumulados,
                 i.sancion as sancion_acumulada,
-                COALESCE(i.tarjeta, 0) AS tarjeta_inscritos
+                COALESCE(i.tarjeta, 0) AS tarjeta_inscritos,
+                i.codigo_equipo AS codigo_equipo_inscrito
             FROM partiresul pr
             INNER JOIN usuarios u ON (
                 u.id = pr.id_usuario
@@ -3836,6 +3863,8 @@ function obtenerDatosRegistroResultados($torneo_id, $ronda, $mesa, $user_id = 0,
     $tarjetaPreviaPorUsuario = SancionesHelper::getTarjetaPreviaDesdePartidasAnteriores($pdo, $torneo_id, $ronda, $idsJugadores);
     foreach ($jugadores as &$jugador) {
         $tarjetaPrevia = (int)($tarjetaPreviaPorUsuario[$jugador['id_usuario']] ?? 0);
+        $jugador['codigo_equipo'] = trim((string) ($jugador['codigo_equipo_inscrito'] ?? ''));
+        unset($jugador['codigo_equipo_inscrito']);
         $jugador['inscrito'] = [
             'posicion' => (int)($jugador['posicion'] ?? 0),
             'ganados' => (int)($jugador['ganados'] ?? 0),
@@ -3843,7 +3872,8 @@ function obtenerDatosRegistroResultados($torneo_id, $ronda, $mesa, $user_id = 0,
             'efectividad' => (int)($jugador['efectividad'] ?? 0),
             'puntos' => (int)($jugador['puntos'] ?? 0),
             'tarjeta' => (int)($jugador['tarjeta_inscritos'] ?? 0),
-            'tarjeta_previa' => $tarjetaPrevia
+            'tarjeta_previa' => $tarjetaPrevia,
+            'codigo_equipo' => $jugador['codigo_equipo'],
         ];
     }
     
@@ -4860,12 +4890,43 @@ function guardarResultados($user_id, $is_admin_general) {
     $torneo_id = (int)($_POST['torneo_id'] ?? 0);
     $ronda = (int)($_POST['ronda'] ?? 0);
     $mesa = (int)($_POST['mesa'] ?? 0);
+    $ajax = isset($_POST['ajax']) && (string) $_POST['ajax'] === '1';
+
     $resultado = \Tournament\Handlers\TournamentActionHandler::guardarResultados(
         $torneo_id,
         $_POST,
         $user_id,
         $is_admin_general
     );
+
+    if ($ajax) {
+        header('Content-Type: application/json; charset=utf-8');
+        if (! empty($resultado['session_error'])) {
+            http_response_code(422);
+            echo json_encode([
+                'ok' => false,
+                'error' => $resultado['session_error'],
+            ], JSON_UNESCAPED_UNICODE);
+            exit;
+        }
+        if (! empty($resultado['success']) || ! empty($resultado['resultados_guardados'])) {
+            echo json_encode([
+                'ok' => true,
+                'mesa' => $mesa,
+                'ronda' => $ronda,
+                'torneo_id' => $torneo_id,
+                'info' => $resultado['session_info'] ?? null,
+            ], JSON_UNESCAPED_UNICODE);
+            exit;
+        }
+        http_response_code(500);
+        echo json_encode([
+            'ok' => false,
+            'error' => 'Respuesta inesperada al guardar resultados.',
+        ], JSON_UNESCAPED_UNICODE);
+        exit;
+    }
+
     if (!empty($resultado['session_error'])) {
         $_SESSION['error'] = $resultado['session_error'];
     }

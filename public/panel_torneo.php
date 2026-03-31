@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 require_once __DIR__ . '/../config/session_start_early.php';
 /**
  * Panel de Control del Torneo. Patrón en bloque: db_config → auth_service → requireAuth.
@@ -42,9 +42,13 @@ if (in_array($action, $vistas_independientes)) {
 }
 
 $dashboard_url = AppHelpers::dashboard();
-$page_title = in_array($action, ['registrar_resultados', 'registrar_resultados_v2']) 
-    ? 'Registrar Resultados' 
-    : (($view_data['torneo']['nombre'] ?? 'Panel') . ' - Panel de Control');
+if (in_array($action, ['registrar_resultados', 'registrar_resultados_v2'], true)) {
+    $page_title = 'Registrar Resultados';
+} elseif ($action === 'reportes_inscritos') {
+    $page_title = 'Reportes de inscritos - ' . ($view_data['torneo']['nombre'] ?? 'Torneo');
+} else {
+    $page_title = ($view_data['torneo']['nombre'] ?? 'Panel') . ' - Panel de Control';
+}
 
 $torneo_data = $view_data['torneo'] ?? [];
 $org_nombre = $torneo_data['organizacion_nombre'] ?? 'N/A';
