@@ -64,6 +64,13 @@ body {
   line-height: 1.4;
 }
 
+/* Título "Ronda X - Mesa Y": sin !important — el inline del PHP debe poder ganar (antes !important en hoja pisaba style="") */
+.registrar-resultados-wrap .titulo-ronda-mesa {
+  font-size: clamp(1.584rem, 2.688vw, 1.8rem);
+  line-height: 1.1;
+  font-weight: 700;
+}
+
 .registrar-resultados-wrap .form-control,
 .registrar-resultados-wrap input[type="number"],
 .registrar-resultados-wrap input[type="text"],
@@ -72,10 +79,10 @@ body {
 }
 .registrar-resultados-wrap #formResultados th,
 .registrar-resultados-wrap #formResultados td {
-  padding: 5px 10px !important;
+  padding: 4px 8px !important;
   border: 1px solid #e0e0e0;
   font-weight: 300;
-  line-height: 1.4;
+  line-height: 1.12;
 }
 .registrar-resultados-wrap #formResultados tbody td,
 .registrar-resultados-wrap #formResultados .estadisticas-valores,
@@ -122,7 +129,7 @@ body {
 
 .registrar-resultados-wrap #formResultados .table-responsive {
   display: grid;
-  gap: 6px;
+  gap: 5px;
   grid-template-columns: 1fr;
   overflow: visible;
   max-width: 100%;
@@ -163,7 +170,7 @@ body {
   border-radius: 0.35rem;
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
   margin-bottom: 0;
-  padding: 5px 10px;
+  padding: 4px 8px;
   background: #fff;
   page-break-inside: avoid;
 }
@@ -182,7 +189,7 @@ body {
 
 .registrar-resultados-wrap #formResultados tbody td {
   border: none;
-  padding: 0.5rem 0;
+  padding: 0.4rem 0;
   padding-left: 0;
   text-align: left;
   vertical-align: middle;
@@ -199,7 +206,7 @@ body {
   font-weight: 500;
   display: inline-block;
   min-width: 7rem;
-  line-height: 1.4;
+  line-height: 1.12;
 }
 
 .registrar-resultados-wrap #formResultados tbody td.columna-id::before { content: "ID"; }
@@ -208,10 +215,10 @@ body {
 .registrar-resultados-wrap #formResultados tbody td.columna-sancion::before { content: "Sanción"; }
 .registrar-resultados-wrap #formResultados tbody td.columna-forfait::before { content: "Forfait"; }
 .registrar-resultados-wrap #formResultados tbody td.columna-tarjeta::before { content: "Tarjeta"; }
-.registrar-resultados-wrap #formResultados tbody td.columna-estadisticas::before { content: "Estadísticas"; }
+.registrar-resultados-wrap #formResultados tbody td.columna-estadisticas::before { content: "Ga Pe EF PU"; }
 
 .registrar-resultados-wrap #formResultados tbody td.columna-puntos {
-  padding: 0.75rem 0;
+  padding: 0.6rem 0;
 }
 
 .registrar-resultados-wrap .estadisticas-valores {
@@ -228,9 +235,9 @@ body {
   width: 100% !important;
   max-width: 100% !important;
   min-width: 0 !important;
-  min-height: 2.75rem !important;
+  min-height: 2.2rem !important;
   font-size: clamp(1rem, 4vw, 1.25rem) !important;
-  padding: 0.75rem 1rem !important;
+  padding: 0.6rem 0.8rem !important;
   box-sizing: border-box;
 }
 
@@ -240,11 +247,11 @@ body {
   width: 3.25rem !important;
   min-width: 3rem !important;
   max-width: 4rem !important;
-  height: 35px !important;
-  min-height: 35px !important;
-  max-height: 35px !important;
+  height: 28px !important;
+  min-height: 28px !important;
+  max-height: 28px !important;
   font-size: 1.1rem !important;
-  padding: 0.12rem 0.28rem !important;
+  padding: 0.096rem 0.224rem !important;
 }
 
 .registrar-resultados-wrap #input_ir_mesa {
@@ -345,7 +352,7 @@ body {
 @media (min-width: 600px) {
   .registrar-resultados-wrap #formResultados .table-responsive {
     grid-template-columns: 1fr 1fr;
-    gap: 10px;
+    gap: 8px;
   }
 }
 
@@ -362,7 +369,7 @@ body {
   }
 
   .registrar-resultados-wrap #formResultados .table-responsive {
-    gap: 6px;
+    gap: 5px;
   }
 
   .registrar-resultados-wrap .form-control,
@@ -370,7 +377,7 @@ body {
   .registrar-resultados-wrap input[type="text"],
   .registrar-resultados-wrap #formResultados th,
   .registrar-resultados-wrap #formResultados td {
-    padding: 5px 10px !important;
+    padding: 4px 8px !important;
   }
 }
 
@@ -418,12 +425,13 @@ body {
   .registrar-resultados-wrap #formResultados td {
     display: table-cell;
     text-align: center;
-    padding: 5px 10px;
+    padding: 3px 6px; /* ~20% más compacto que 4px 8px */
     vertical-align: middle;
     border: 1px solid #e0e0e0;
+    line-height: 0.88;
   }
   .registrar-resultados-wrap #formResultados thead th { font-weight: bold !important; }
-  .registrar-resultados-wrap #formResultados .columna-id { width: 1.65%; max-width: 1.65%; }
+  .registrar-resultados-wrap #formResultados .columna-id { width: 1.16%; max-width: 1.16%; }
   .registrar-resultados-wrap #formResultados .columna-nombre { width: 28.35%; }
   .registrar-resultados-wrap #formResultados .columna-puntos { width: 10%; }
   .registrar-resultados-wrap #formResultados .columna-puntos.columna-puntos-combinada {
@@ -441,20 +449,33 @@ body {
     width: 3.25rem !important;
     min-width: 3rem !important;
     max-width: 4rem !important;
-    height: 35px !important;
-    min-height: 35px !important;
-    max-height: 35px !important;
+    height: 28px !important;
+    min-height: 28px !important;
+    max-height: 28px !important;
     font-size: 1.1rem !important;
-    padding: 0.12rem 0.28rem !important;
+    padding: 0.096rem 0.224rem !important;
     box-sizing: border-box !important;
   }
   .registrar-resultados-wrap #formResultados .columna-sancion { width: 5%; }
-  .registrar-resultados-wrap #formResultados .columna-forfait { width: 4%; max-width: 4%; }
+  .registrar-resultados-wrap #formResultados .columna-forfait { width: 3.2%; max-width: 3.2%; }
   .registrar-resultados-wrap #formResultados .columna-tarjeta { width: 15%; overflow: hidden; min-width: 0; }
   .registrar-resultados-wrap #formResultados .columna-tarjeta .d-flex { overflow: hidden; min-width: 0; }
-  /* Estadísticas: 9% del ancho */
-  .registrar-resultados-wrap #formResultados .columna-estadisticas { width: 9%; max-width: 9%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .registrar-resultados-wrap #formResultados .columna-estadisticas .estadisticas-valores { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  /* Estadísticas: ~10,35% del ancho */
+  .registrar-resultados-wrap #formResultados .columna-estadisticas { width: 10.35%; max-width: 10.35%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .registrar-resultados-wrap #formResultados .columna-estadisticas .estadisticas-valores {
+    display: grid !important;
+    grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+    gap: 0.16rem !important;
+    align-items: center !important;
+    text-align: center !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+  }
+  .registrar-resultados-wrap #formResultados .columna-estadisticas .estadisticas-valores > span {
+    display: block;
+    text-align: center;
+  }
   .registrar-resultados-wrap #formResultados .columna-tarjeta .tarjeta-btn { width: 33.33%; min-width: 1.5rem; max-width: 33.33%; box-sizing: border-box; flex-shrink: 0; border: none; }
   .registrar-resultados-wrap #formResultados .tarjeta-btn { border: none; }
   .registrar-resultados-wrap #formResultados tbody td,
@@ -469,8 +490,8 @@ body {
     padding: 0;
   }
   .registrar-resultados-wrap #formResultados .tabla-resultados-densa tbody tr td {
-    padding: 0.104rem 0.25rem !important;
-    line-height: 1.27 !important;
+    padding: 0.083rem 0.2rem !important;
+    line-height: 1.02 !important;
   }
 
   .registrar-resultados-wrap #formResultados tbody td::before {

@@ -183,19 +183,19 @@ $esTorneoParejas = in_array((int)($torneo['modalidad'] ?? 0), [2, 4], true);
         table-layout: fixed;
         width: 100%;
     }
-    .columna-id { width: 5%; }
+    .columna-id { width: 3.5%; }
     .columna-nombre { width: 25%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-weight: 300; }
     .columna-puntos { width: 10%; }
     .columna-sancion { width: 5%; }
-    .columna-forfait { width: 4%; }
+    .columna-forfait { width: 3.2%; }
     .columna-tarjeta { width: 15%; overflow: hidden; }
-    /* Estadísticas: una columna, 9% del ancho */
-    .columna-estadisticas { width: 9%; max-width: 9%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .columna-estadisticas .estadisticas-valores { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    /* Estadísticas: una columna, ~10,35% del ancho */
+    .columna-estadisticas { width: 10.35%; max-width: 10.35%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .columna-estadisticas .estadisticas-valores { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 0.16rem; align-items: center; text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .columna-tarjeta .tarjeta-btn { width: 33.33%; min-width: 1.5rem; max-width: 33.33%; box-sizing: border-box; flex-shrink: 0; }
-    .estadisticas-valores { font-size: clamp(0.75rem, 1.5vw, 0.875rem); font-weight: 300; color: #111827; white-space: nowrap; line-height: 1.5; }
+    .estadisticas-valores { font-size: clamp(0.75rem, 1.5vw, 0.875rem); font-weight: 300; color: #111827; white-space: nowrap; line-height: 1.2; }
     /* Títulos de columna (ID, nombre, puntos, etc.) en negrita; filas ~10% más compactas */
-    #formResultados thead th { font-weight: bold !important; padding: 0.18rem 0.32rem !important; }
+    #formResultados thead th { font-weight: bold !important; padding: 0.144rem 0.256rem !important; line-height: 1.12 !important; }
     /* Contenedor de la información: reducir tamaño de letra y negrita */
     .registrar-resultados-wrap #formResultados tbody td,
     .registrar-resultados-wrap .estadisticas-valores,
@@ -205,14 +205,15 @@ $esTorneoParejas = in_array((int)($torneo['modalidad'] ?? 0), [2, 4], true);
     .registrar-resultados-wrap input[type="number"]::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
     .registrar-resultados-wrap input[type="number"] { -moz-appearance: textfield; appearance: textfield; }
     
-    /* Filas de jugadores: altura reducida y bordes sólidos (~15% más compacto) */
+    /* Filas de jugadores: altura reducida y bordes sólidos (~20% más compactas vs. versión anterior) */
     #formResultados tbody tr {
         border: 2px solid #333 !important;
     }
     #formResultados tbody tr td {
-        padding: 0.18rem 0.32rem !important;
+        padding: 0.144rem 0.256rem !important;
         vertical-align: middle;
         border: 1px solid #666;
+        line-height: 1.12 !important;
     }
     #formResultados tbody tr.table-info,
     #formResultados tbody tr.table-success {
@@ -286,7 +287,7 @@ $esTorneoParejas = in_array((int)($torneo['modalidad'] ?? 0), [2, 4], true);
     /* Filas del formulario ~10% más compactas: navegación, botones */
     .registrar-resultados-wrap .formulario-resultados-sticky .form-botones-row .gap-2 { gap: 0.45rem !important; }
     .registrar-resultados-wrap .formulario-resultados-sticky .form-botones-row { gap: 0.65rem !important; }
-    .registrar-resultados-wrap .formulario-resultados-sticky .text-muted.font-weight-bold { font-size: clamp(2.36rem, 4.05vw, 2.7rem) !important; }
+    /* No aplicar font gigante a .text-muted.font-weight-bold: el título "Ronda X - Mesa Y" usa esas clases; tamaño en .titulo-ronda-mesa + CSS externo */
     
     /* Mensaje de validación */
     #mensaje-validacion {
@@ -387,7 +388,7 @@ $esTorneoParejas = in_array((int)($torneo['modalidad'] ?? 0), [2, 4], true);
         
         .table th,
         .table td {
-            padding: 0.28rem 0.2rem;
+            padding: 0.224rem 0.16rem;
             font-size: clamp(0.62rem, 1.7vw, 0.78rem);
         }
         
@@ -396,8 +397,8 @@ $esTorneoParejas = in_array((int)($torneo['modalidad'] ?? 0), [2, 4], true);
             max-width: 7.2rem;
         }
         .columna-forfait {
-            min-width: 1.8rem;
-            max-width: 2rem;
+            min-width: 1.44rem;
+            max-width: 1.6rem;
         }
         
         .columna-sancion {
@@ -411,7 +412,7 @@ $esTorneoParejas = in_array((int)($torneo['modalidad'] ?? 0), [2, 4], true);
         }
         
         .columna-estadisticas {
-            min-width: 4.7rem;
+            min-width: 5.4rem;
             font-size: clamp(0.6rem, 1.5vw, 0.75rem);
         }
         
@@ -465,7 +466,7 @@ $esTorneoParejas = in_array((int)($torneo['modalidad'] ?? 0), [2, 4], true);
         
         .table th,
         .table td {
-            padding: 0.25rem 0.15rem;
+            padding: 0.2rem 0.12rem;
         }
         
         .columna-puntos {
@@ -473,8 +474,8 @@ $esTorneoParejas = in_array((int)($torneo['modalidad'] ?? 0), [2, 4], true);
             max-width: 6rem;
         }
         .columna-forfait {
-            min-width: 1.6rem;
-            max-width: 2rem;
+            min-width: 1.28rem;
+            max-width: 1.6rem;
         }
         
         .columna-sancion {
@@ -488,7 +489,7 @@ $esTorneoParejas = in_array((int)($torneo['modalidad'] ?? 0), [2, 4], true);
         }
         
         .columna-estadisticas {
-            min-width: 3.4rem;
+            min-width: 3.9rem;
         }
         
         .tarjeta-btn {
@@ -523,7 +524,11 @@ $esTorneoParejas = in_array((int)($torneo['modalidad'] ?? 0), [2, 4], true);
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Lato:wght@400;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="assets/css/modern-registro-resultados.css">
+<?php
+$_css_mrr = __DIR__ . '/../../public/assets/css/modern-registro-resultados.css';
+$_v_mrr = is_file($_css_mrr) ? (string) @filemtime($_css_mrr) : '1';
+?>
+<link rel="stylesheet" href="assets/css/modern-registro-resultados.css?v=<?php echo htmlspecialchars($_v_mrr, ENT_QUOTES, 'UTF-8'); ?>">
 
 <div class="container-fluid registrar-resultados-wrap">
     <?php if (!empty($es_operador_ambito) && !empty($mesas_ambito)): ?>
@@ -542,35 +547,14 @@ $esTorneoParejas = in_array((int)($torneo['modalidad'] ?? 0), [2, 4], true);
     
     <div class="row align-items-start">
         <!-- Panel Lateral - Lista de Mesas (ancho reducido 50%) -->
-        <div class="col-md-2 col-lg-1" id="sidebar-mesas">
+        <div class="col-md-2 col-lg-1" id="sidebar-mesas" style="flex: 0 0 12.8%; max-width: 12.8%;">
             <div class="card sidebar-sticky">
-                <div class="card-header" style="background-color: #e3f2fd; color: #1565c0;">
-                    <h6 class="mb-0">
-                        <i class="fas fa-clipboard-list mr-2"></i>Navegación de Partidas
-                    </h6>
-                </div>
-
-                <!-- Selector de Ronda/Partida -->
-                <div class="card-body p-3 border-bottom bg-light">
-                    <select id="selector-ronda" 
-                            onchange="cambiarRonda(<?php echo $torneo['id']; ?>, this.value)"
-                            class="form-control form-control-sm">
-                        <?php foreach ($todasLasRondas as $r): ?>
-                            <option value="<?php echo $r['partida']; ?>" <?php echo $r['partida'] == $ronda ? 'selected' : ''; ?>>
-                                Ronda <?php echo $r['partida']; ?>
-                            </option>
-                        <?php endforeach; ?>
-                    </select>
-                </div>
 
                 <!-- Estadísticas de Mesas: total y faltantes en la misma fila -->
                 <div class="card-body p-3 border-bottom bg-light">
                     <div class="d-flex justify-content-between align-items-center flex-wrap gap-1 small">
-                        <span class="text-muted">
-                            <i class="fas fa-table mr-1"></i>Total: <strong><?php echo $totalMesas; ?></strong> mesas
-                        </span>
                         <span class="badge bg-warning text-dark px-2 py-1">
-                            Faltantes: <strong><?php echo $mesasPendientes; ?></strong>
+                            Faltan: <strong><?php echo $mesasPendientes; ?></strong>
                         </span>
                     </div>
                 </div>
@@ -581,9 +565,6 @@ $esTorneoParejas = in_array((int)($torneo['modalidad'] ?? 0), [2, 4], true);
                 $mesasPendientesLista = array_values($mesasPendientesLista);
                 ?>
                 <div class="card-body p-2">
-                    <h6 class="small font-weight-bold mb-2">
-                        <i class="fas fa-table mr-1"></i>Mesas pendientes (Ronda <?php echo $ronda; ?>)
-                    </h6>
                     <div class="<?php echo count($mesasPendientesLista) > 10 ? 'lista-mesas-scroll' : ''; ?>">
                     <div class="list-group list-group-flush">
                         <?php if (empty($mesasPendientesLista)): ?>
@@ -610,7 +591,7 @@ $esTorneoParejas = in_array((int)($torneo['modalidad'] ?? 0), [2, 4], true);
         </div>
 
         <!-- Área Principal - Formulario (ampliada 20%) -->
-        <div class="col-md-10 col-lg-11 col-form-registro">
+        <div class="col-md-10 col-lg-11 col-form-registro" style="flex: 0 0 87.2%; max-width: 87.2%;">
             <div class="card formulario-resultados-sticky">
                 <div class="card-header d-flex flex-row justify-content-between align-items-center flex-wrap gap-2" style="background-color: #e3f2fd; color: #1565c0;">
                     <div class="d-flex flex-column align-items-start">
@@ -674,7 +655,7 @@ $esTorneoParejas = in_array((int)($torneo['modalidad'] ?? 0), [2, 4], true);
                     <div class="mb-3">
                         <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
                             <div>
-                                <div class="text-muted font-weight-bold" style="font-size: clamp(2.625rem, 4.5vw, 3rem); font-weight: bold;">
+                                <div class="text-muted font-weight-bold titulo-ronda-mesa" style="font-size: clamp(1.575rem, 2.7vw, 1.8rem); font-weight: bold;">
                                     Ronda <?php echo $ronda ?? 0; ?> - Mesa <?php echo $mesaActual ?? 0; ?>
                                 </div>
                             </div>
@@ -767,7 +748,7 @@ $esTorneoParejas = in_array((int)($torneo['modalidad'] ?? 0), [2, 4], true);
                                             <th rowspan="2" class="text-center align-middle columna-sancion">Sanción</th>
                                             <th rowspan="2" class="text-center align-middle columna-forfait">Forfait</th>
                                             <th rowspan="2" class="text-center align-middle columna-tarjeta">Tarjeta</th>
-                                            <th rowspan="2" class="text-center align-middle columna-estadisticas">Estadísticas</th>
+                                            <th rowspan="2" class="text-center align-middle columna-estadisticas" title="Ga, Pe, EF, PU">Ga&nbsp;&nbsp;Pe&nbsp;&nbsp;EF&nbsp;&nbsp;PU</th>
                                         </tr>
                                     </thead>
                                     <tbody>
@@ -872,15 +853,22 @@ $esTorneoParejas = in_array((int)($torneo['modalidad'] ?? 0), [2, 4], true);
                                                     </div>
                                                 </td>
                                                 
-                                                <!-- Estadísticas: pos - gan - per - efect (≤10% ancho) -->
+                                                <!-- Estadísticas: Ga, Pe, EF, PU -->
                                                 <?php 
-                                                $pos = (int)($jugador['inscrito']['posicion'] ?? 0);
                                                 $gan = (int)($jugador['inscrito']['ganados'] ?? 0);
                                                 $per = (int)($jugador['inscrito']['perdidos'] ?? 0);
                                                 $efec = (int)($jugador['inscrito']['efectividad'] ?? 0);
-                                                $estadisticas_linea = $pos . ' - ' . $gan . ' - ' . $per . ' - ' . $efec;
+                                                $pts = (int)($jugador['inscrito']['puntos'] ?? 0);
                                                 ?>
-                                                <td class="text-center bg-light columna-estadisticas"><span class="estadisticas-valores"><?php echo htmlspecialchars($estadisticas_linea); ?></span></td>
+                                                <?php $estadisticas_title = 'Ga ' . $gan . ' · Pe ' . $per . ' · EF ' . $efec . ' · PU ' . $pts; ?>
+                                                <td class="text-center bg-light columna-estadisticas">
+                                                    <span class="estadisticas-valores" title="<?php echo htmlspecialchars($estadisticas_title, ENT_QUOTES, 'UTF-8'); ?>">
+                                                        <span><?php echo $gan; ?></span>
+                                                        <span><?php echo $per; ?></span>
+                                                        <span><?php echo $efec; ?></span>
+                                                        <span><?php echo $pts; ?></span>
+                                                    </span>
+                                                </td>
                                                 
                                                 <!-- Campos Hidden -->
                                                 <input type="hidden" name="jugadores[<?php echo $indiceArray; ?>][id]" 
@@ -989,15 +977,22 @@ $esTorneoParejas = in_array((int)($torneo['modalidad'] ?? 0), [2, 4], true);
                                                     </div>
                                                 </td>
                                                 
-                                                <!-- Estadísticas: pos - gan - per - efect (≤10% ancho) -->
+                                                <!-- Estadísticas: Ga, Pe, EF, PU -->
                                                 <?php 
-                                                $pos = (int)($jugador['inscrito']['posicion'] ?? 0);
                                                 $gan = (int)($jugador['inscrito']['ganados'] ?? 0);
                                                 $per = (int)($jugador['inscrito']['perdidos'] ?? 0);
                                                 $efec = (int)($jugador['inscrito']['efectividad'] ?? 0);
-                                                $estadisticas_linea = $pos . ' - ' . $gan . ' - ' . $per . ' - ' . $efec;
+                                                $pts = (int)($jugador['inscrito']['puntos'] ?? 0);
                                                 ?>
-                                                <td class="text-center bg-light columna-estadisticas"><span class="estadisticas-valores"><?php echo htmlspecialchars($estadisticas_linea); ?></span></td>
+                                                <?php $estadisticas_title = 'Ga ' . $gan . ' · Pe ' . $per . ' · EF ' . $efec . ' · PU ' . $pts; ?>
+                                                <td class="text-center bg-light columna-estadisticas">
+                                                    <span class="estadisticas-valores" title="<?php echo htmlspecialchars($estadisticas_title, ENT_QUOTES, 'UTF-8'); ?>">
+                                                        <span><?php echo $gan; ?></span>
+                                                        <span><?php echo $per; ?></span>
+                                                        <span><?php echo $efec; ?></span>
+                                                        <span><?php echo $pts; ?></span>
+                                                    </span>
+                                                </td>
                                                 
                                                 <!-- Campos Hidden -->
                                                 <input type="hidden" name="jugadores[<?php echo $indiceArray; ?>][id]" 
