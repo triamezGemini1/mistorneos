@@ -6,6 +6,9 @@
  * Diseño con Tailwind CSS - 3 columnas organizadas
  */
 require_once __DIR__ . '/../../config/db.php';
+if (!class_exists('AppHelpers', false)) {
+    require_once __DIR__ . '/../../lib/app_helpers.php';
+}
 
 $script_actual = basename($_SERVER['PHP_SELF'] ?? '');
 $use_standalone = in_array($script_actual, ['admin_torneo.php', 'panel_torneo.php']);
@@ -42,6 +45,9 @@ $es_modalidad_equipos = ($modalidad_num_panel === 3);
 $es_modalidad_parejas = ($modalidad_num_panel === 2); // Parejas por equipos (mismo flujo que equipos de 4)
 $es_modalidad_parejas_fijas = ($modalidad_num_panel === 4);
 $es_modalidad_equipos_o_parejas = ($es_modalidad_equipos || $es_modalidad_parejas);
+$context_switcher = isset($context_switcher) && is_array($context_switcher) ? $context_switcher : ['active_tournament_id' => (int)($torneo['id'] ?? 0), 'items' => []];
+$paired_tournaments_status = isset($paired_tournaments_status) && is_array($paired_tournaments_status) ? $paired_tournaments_status : ['enabled' => false, 'items' => [], 'bloqueo' => null];
+$bloqueo_cierre_total = $paired_tournaments_status['bloqueo'] ?? null;
 
 // Lógica de bloqueo de inscripciones: equipos, parejas y parejas fijas bloquean desde ronda >=1; otros desde ronda >=2
 $torneo_bloqueado_inscripciones = false;
@@ -106,6 +112,7 @@ if ($ultima_ronda > 0 && isset($torneo['id'])) {
 
 <link rel="stylesheet" href="assets/css/design-system.css">
 <link rel="stylesheet" href="assets/css/modern-panel.css">
+<link rel="stylesheet" href="assets/css/torneo-context-switch.css">
 <?php if ($use_standalone): ?>
 <!-- Tailwind CSS solo en modo standalone para no romper el layout del dashboard -->
 <link rel="stylesheet" href="assets/dist/output.css">
@@ -166,6 +173,35 @@ tailwind.config = {
                     <span><i class="fas fa-layer-group mr-1"></i> <?php echo ($torneo['rondas'] ?? 0); ?> rondas</span>
                 </div>
             </div>
+            <?php if (!empty($context_switcher['items'])): ?>
+            <div class="text-right flex-shrink-0 panel-header-actions">
+                    <?php
+                    $ids_ctx_panel = [];
+                    foreach ($context_switcher['items'] as $_it) {
+                        $ids_ctx_panel[] = (int) ($_it['id'] ?? 0);
+                    }
+                    $map_ctx_panel = ($ids_ctx_panel !== [] && function_exists('torneoGestionMapaMaxPartidasPorTorneo'))
+                        ? torneoGestionMapaMaxPartidasPorTorneo($ids_ctx_panel)
+                        : [];
+                    $tcs = [
+                        'items' => $context_switcher['items'],
+                        'active_id' => (int) ($context_switcher['active_tournament_id'] ?? 0),
+                        'base_url' => $base_url,
+                        'sep' => $use_standalone ? '?' : '&',
+                        'ronda_base' => (int) ($ultima_ronda ?? 0),
+                        'map_max' => $map_ctx_panel,
+                        'mode' => 'panel',
+                        'theme' => 'on_dark',
+                        'select_id' => 'torneo-asociado-select-panel',
+                        'show_info' => false,
+                        'show_pills' => false,
+                        'aria_label' => 'Torneos asociados (mismo evento)',
+                        'pill_row_class' => 'mb-2',
+                    ];
+                    require __DIR__ . '/../../resources/views/partials/torneo_context_switch.php';
+                    ?>
+            </div>
+            <?php endif; ?>
             <div class="text-right flex-shrink-0">
                 <div class="torneo-id text-4xl font-extrabold opacity-80">#<?php echo $torneo['id']; ?></div>
                 <div class="text-sm opacity-70">ID del Torneo</div>
@@ -211,6 +247,45 @@ tailwind.config = {
                 <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800">
                     <i class="fas fa-keyboard mr-1"></i>Digitadas (admin): <?= $mesas_digitadas_count ?>
                 </span>
+            </div>
+        </div>
+    <?php endif; ?>
+
+    <?php
+    $panel_show_cierre = !empty($paired_tournaments_status['enabled']) && !empty($paired_tournaments_status['items']);
+    ?>
+    <?php if ($panel_show_cierre): ?>
+        <div class="flex flex-wrap items-start justify-end gap-4 mb-4 w-full">
+            <div class="panel-slate-auditoria-cierre panel-ac-badge-col panel-ac-badge-col--der bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 shadow-sm max-w-full ml-auto">
+                <div class="mb-3 flex justify-end">
+                    <span class="panel-ac-head font-semibold text-slate-800 inline-flex items-center">
+                        <i class="fas fa-link mr-2 text-indigo-600"></i>Cierre total del grupo
+                    </span>
+                </div>
+                <div class="flex flex-col gap-2 items-end text-right">
+                    <div class="flex flex-wrap gap-3 justify-end">
+                        <?php foreach ($paired_tournaments_status['items'] as $stItem): ?>
+                            <?php
+                            $g = strtoupper((string)($stItem['genero'] ?? 'M'));
+                            $gLabel = $g === 'F' ? 'Femenino' : 'Masculino';
+                            $p = (int)($stItem['mesas_pendientes'] ?? 0);
+                            ?>
+                            <div class="px-3 py-2 rounded-lg border text-left <?php echo !empty($stItem['activo']) ? 'border-emerald-500 bg-emerald-100 shadow-sm' : 'border-slate-200 bg-slate-100 text-slate-600'; ?>">
+                                <div class="panel-ac-paired-title text-sm font-semibold <?php echo !empty($stItem['activo']) ? 'text-emerald-900' : 'text-slate-700'; ?>">
+                                    <?php echo htmlspecialchars($gLabel, ENT_QUOTES, 'UTF-8'); ?><?php echo !empty($stItem['activo']) ? ' · Activo' : ''; ?>
+                                </div>
+                                <div class="panel-ac-paired-sub text-xs <?php echo !empty($stItem['activo']) ? 'text-emerald-800' : 'text-slate-500'; ?>">
+                                    Ronda <?php echo (int)($stItem['ronda_actual'] ?? 0); ?> · <strong><?php echo $p; ?></strong> mesas
+                                </div>
+                            </div>
+                        <?php endforeach; ?>
+                    </div>
+                    <?php if (!empty($bloqueo_cierre_total['mensaje'])): ?>
+                        <div class="panel-ac-bloqueo text-sm text-amber-700 font-semibold max-w-md">
+                            <i class="fas fa-exclamation-triangle mr-1"></i><?php echo htmlspecialchars((string)$bloqueo_cierre_total['mensaje'], ENT_QUOTES, 'UTF-8'); ?>
+                        </div>
+                    <?php endif; ?>
+                </div>
             </div>
         </div>
     <?php endif; ?>
