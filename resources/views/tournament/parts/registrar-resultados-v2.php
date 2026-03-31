@@ -7,6 +7,13 @@ $use_standalone = in_array($script_actual, ['admin_torneo.php', 'panel_torneo.ph
 $base_url = $use_standalone ? $script_actual : 'index.php?page=torneo_gestion';
 $action_param = $use_standalone ? '?' : '&';
 $esTorneoParejas = in_array((int)($torneo['modalidad'] ?? 0), [2, 4], true);
+
+$context_switcher = isset($context_switcher) && is_array($context_switcher)
+    ? $context_switcher
+    : ['active_tournament_id' => (int)($torneo['id'] ?? 0), 'items' => []];
+$map_max_partida_switch = isset($map_max_partida_switch) && is_array($map_max_partida_switch)
+    ? $map_max_partida_switch
+    : [];
 ?>
 
 <style>
@@ -20,6 +27,17 @@ $esTorneoParejas = in_array((int)($torneo['modalidad'] ?? 0), [2, 4], true);
         max-width: 100%;
         margin-left: auto;
         margin-right: auto;
+    }
+    .registro-context-switch {
+        min-width: 0;
+    }
+    .registro-context-switch .torneo-asociado-select-wrap {
+        margin-bottom: 0 !important;
+    }
+    .registro-context-switch .torneo-asociado-select-wrap label {
+        color: #1565c0;
+        font-size: 0.75rem;
+        font-weight: 600;
     }
     
     /* Navegación de partidas: 11% del ancho (+10% sobre el 10% anterior; pantallas >= 14") */
@@ -533,6 +551,7 @@ $_css_mrr = __DIR__ . '/../../../../public/assets/css/modern-registro-resultados
 $_v_mrr = is_file($_css_mrr) ? (string) @filemtime($_css_mrr) : '1';
 ?>
 <link rel="stylesheet" href="assets/css/modern-registro-resultados.css?v=<?php echo htmlspecialchars($_v_mrr, ENT_QUOTES, 'UTF-8'); ?>">
+<link rel="stylesheet" href="assets/css/torneo-context-switch.css">
 
 <div class="container-fluid registrar-resultados-wrap">
     <?php if (!empty($es_operador_ambito) && !empty($mesas_ambito)): ?>
@@ -624,6 +643,28 @@ $_v_mrr = is_file($_css_mrr) ? (string) @filemtime($_css_mrr) : '1';
                         <i class="fas fa-arrow-left mr-2"></i>Volver al Panel
                     </a>
                     </div>
+                    <?php if (!empty($context_switcher['items'])): ?>
+                    <div class="d-flex align-items-center justify-content-center flex-grow-1 min-w-0 registro-context-switch">
+                        <?php
+                        $tcs = [
+                            'items' => $context_switcher['items'],
+                            'active_id' => (int) ($context_switcher['active_tournament_id'] ?? 0),
+                            'base_url' => $base_url,
+                            'sep' => $use_standalone ? '?' : '&',
+                            'ronda_base' => (int) ($ronda ?? 0),
+                            'map_max' => $map_max_partida_switch,
+                            'mode' => 'registrar_resultados',
+                            'theme' => 'on_light',
+                            'select_id' => 'torneo-asociado-select-registro',
+                            'show_info' => false,
+                            'show_pills' => false,
+                            'aria_label' => 'Torneos asociados (mismo evento)',
+                            'extra' => ['mesa' => (int) ($mesaActual ?? 0)],
+                        ];
+                        require __DIR__ . '/../../partials/torneo_context_switch.php';
+                        ?>
+                    </div>
+                    <?php endif; ?>
                     <div class="d-flex align-items-center flex-shrink-0 flex-wrap gap-2 justify-content-end">
                         <?php if (!empty($puede_cerrar_torneo)): ?>
                         <form method="POST" action="<?php echo $use_standalone ? $base_url : 'index.php?page=torneo_gestion'; ?>" class="mb-0" onsubmit="return confirm('¿Finalizar el torneo? A partir de ese momento no se podrán modificar datos.');">

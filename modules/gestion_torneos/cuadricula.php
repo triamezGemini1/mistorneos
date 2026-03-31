@@ -86,9 +86,6 @@ $href_custom_13 = AppHelpers::url('assets/css/custom-13inch.css');
 $href_torneo_context_switch = AppHelpers::url('assets/css/torneo-context-switch.css');
 $pageTitle = isset($titulo) ? (string) $titulo : ('Cuadrícula - Ronda ' . (int) ($numRonda ?? 0));
 $href_panel = $base_url . ($use_standalone ? '?' : '&') . 'action=panel&torneo_id=' . (int) ($torneo['id'] ?? 0);
-$tid_export = (int) ($torneo['id'] ?? 0);
-$href_export_xls = $tid_export > 0 ? AppHelpers::torneoGestionUrl('inscripciones_export_xls', $tid_export) : '';
-$href_export_pdf = $tid_export > 0 ? AppHelpers::torneoGestionUrl('inscripciones_export_pdf', $tid_export) : '';
 ?>
 <!DOCTYPE html>
 <html lang="es" class="cuadricula-scroll-root">
@@ -171,23 +168,14 @@ $href_export_pdf = $tid_export > 0 ? AppHelpers::torneoGestionUrl('inscripciones
                         'theme' => 'on_dark',
                         'select_id' => 'torneo-asociado-select-cuad',
                         'show_info' => false,
+                        'show_pills' => false,
                         'pill_row_class' => '',
                     ];
                     require __DIR__ . '/../../resources/views/partials/torneo_context_switch.php';
                     ?>
                 </div>
                 <?php endif; ?>
-                <div class="cuadricula-header-actions" title="PDF, Excel, Volver al panel e imprimir cuadrícula">
-                    <?php if ($href_export_pdf !== ''): ?>
-                    <a href="<?php echo htmlspecialchars($href_export_pdf, ENT_QUOTES, 'UTF-8'); ?>" class="btn btn-outline-danger btn-sm" target="_blank" rel="noopener">
-                        <i class="fas fa-file-pdf"></i> PDF
-                    </a>
-                    <?php endif; ?>
-                    <?php if ($href_export_xls !== ''): ?>
-                    <a href="<?php echo htmlspecialchars($href_export_xls, ENT_QUOTES, 'UTF-8'); ?>" class="btn btn-outline-success btn-sm" target="_blank" rel="noopener">
-                        <i class="fas fa-file-excel"></i> Excel
-                    </a>
-                    <?php endif; ?>
+                <div class="cuadricula-header-actions" title="Volver al panel e imprimir cuadrícula">
                     <a href="<?php echo htmlspecialchars($href_panel, ENT_QUOTES, 'UTF-8'); ?>" class="btn btn-secondary btn-sm">
                         <i class="fas fa-arrow-left"></i> Volver
                     </a>
