@@ -2,12 +2,23 @@
 $logo_url = !empty($organizacion['logo'])
     ? AppHelpers::imageUrl($organizacion['logo'])
     : AppHelpers::getAppLogo();
+$clubes_paginados = $clubes_paginados ?? $clubes ?? [];
+$clubes_page = isset($clubes_page) ? (int)$clubes_page : 1;
+$clubes_total_pages = isset($clubes_total_pages) ? (int)$clubes_total_pages : 1;
+$clubes_total_rows = isset($clubes_total_rows) ? (int)$clubes_total_rows : count($clubes ?? []);
+$clubes_per_page = isset($clubes_per_page) ? (int)$clubes_per_page : 15;
+$qsBase = 'index.php?page=organizaciones&id=' . (int)$organizacion['id'];
 $stats_clubes = count($clubes);
 $stats_torneos = 0;
 $stats_afiliados = 0;
 foreach ($clubes as $c) {
     $stats_afiliados += (int)($c['total_afiliados'] ?? 0);
 }
+$stats_afiliados_sin_club = isset($stats_afiliados_sin_club) ? (int)$stats_afiliados_sin_club : 0;
+$stats_afiliados_total = isset($stats_afiliados_total) ? (int)$stats_afiliados_total : ($stats_afiliados + $stats_afiliados_sin_club);
+$stats_hombres_total = isset($stats_hombres_total) ? (int)$stats_hombres_total : 0;
+$stats_mujeres_total = isset($stats_mujeres_total) ? (int)$stats_mujeres_total : 0;
+$stats_otros_total = isset($stats_otros_total) ? (int)$stats_otros_total : 0;
 try {
     $stmt = $pdo->prepare("SELECT COUNT(*) FROM tournaments WHERE club_responsable = ?");
     $stmt->execute([$organizacion['id']]);
@@ -16,7 +27,7 @@ try {
 $stats_operadores = isset($stats_operadores) ? (int)$stats_operadores : 0;
 $stats_admin_torneo = isset($stats_admin_torneo) ? (int)$stats_admin_torneo : 0;
 ?>
-<div class="container-fluid py-4">
+<div class="container-fluid py-4" id="top-page">
     <nav aria-label="breadcrumb" class="mb-3">
         <ol class="breadcrumb">
             <li class="breadcrumb-item"><a href="index.php?page=home">Inicio</a></li>
@@ -103,8 +114,9 @@ $stats_admin_torneo = isset($stats_admin_torneo) ? (int)$stats_admin_torneo : 0;
                             <div class="d-flex align-items-center p-2 bg-light rounded">
                                 <i class="fas fa-users fa-2x text-info me-2"></i>
                                 <div>
-                                    <strong><?= $stats_afiliados ?></strong>
+                                    <strong><?= $stats_afiliados_total ?></strong>
                                     <span class="d-block small text-muted">Afiliados</span>
+                                    <small class="text-muted">M: <?= $stats_hombres_total ?> | F: <?= $stats_mujeres_total ?> | O: <?= $stats_otros_total ?></small>
                                 </div>
                             </div>
                         </div>
@@ -137,6 +149,12 @@ $stats_admin_torneo = isset($stats_admin_torneo) ? (int)$stats_admin_torneo : 0;
             <h5 class="mb-0"><i class="fas fa-sitemap me-2"></i>Clubes de la organización</h5>
         </div>
         <div class="card-body p-0">
+            <?php if ($stats_afiliados_sin_club > 0): ?>
+                <div class="alert alert-warning rounded-0 mb-0">
+                    <i class="fas fa-info-circle me-1"></i>
+                    Afiliados sumados a la organización sin club asignado: <strong><?= (int)$stats_afiliados_sin_club ?></strong>
+                </div>
+            <?php endif; ?>
             <?php if (empty($clubes)): ?>
                 <div class="text-center py-4 text-muted">
                     <i class="fas fa-sitemap fa-2x mb-2"></i>
@@ -156,7 +174,7 @@ $stats_admin_torneo = isset($stats_admin_torneo) ? (int)$stats_admin_torneo : 0;
                             </tr>
                         </thead>
                         <tbody>
-                            <?php foreach ($clubes as $c): ?>
+                            <?php foreach ($clubes_paginados as $c): ?>
                                 <tr>
                                     <td><strong><?= htmlspecialchars($c['nombre']) ?></strong></td>
                                     <td><?= htmlspecialchars($c['delegado'] ?? '-') ?></td>
@@ -164,26 +182,64 @@ $stats_admin_torneo = isset($stats_admin_torneo) ? (int)$stats_admin_torneo : 0;
                                     <td class="text-center"><span class="badge bg-primary"><?= (int)($c['hombres'] ?? 0) ?></span></td>
                                     <td class="text-center"><span class="badge bg-danger"><?= (int)($c['mujeres'] ?? 0) ?></span></td>
                                     <td>
-                                        <a href="index.php?page=organizaciones&id=<?= (int)$organizacion['id'] ?>&club_id=<?= (int)$c['id'] ?>" class="btn btn-sm btn-outline-primary">
-                                            <i class="fas fa-eye me-1"></i>Ver detalle y afiliados
-                                        </a>
-                                        <a href="<?= htmlspecialchars(AppHelpers::dashboard('clubes_asociados', ['club_id' => $c['id']])) ?>" class="btn btn-sm btn-outline-secondary ms-1" title="Editar club">
-                                            <i class="fas fa-edit me-1"></i>Editar Club
-                                        </a>
+                                        <?php if ((int)($c['id'] ?? 0) > 0): ?>
+                                            <a href="index.php?page=organizaciones&id=<?= (int)$organizacion['id'] ?>&club_id=<?= (int)$c['id'] ?>" class="btn btn-sm btn-outline-primary">
+                                                <i class="fas fa-eye me-1"></i>Ver detalle y afiliados
+                                            </a>
+                                            <a href="<?= htmlspecialchars(AppHelpers::dashboard('clubes_asociados', ['club_id' => $c['id']])) ?>" class="btn btn-sm btn-outline-secondary ms-1" title="Editar club">
+                                                <i class="fas fa-edit me-1"></i>Editar Club
+                                            </a>
+                                        <?php else: ?>
+                                            <span class="badge bg-secondary">Asociación sin ficha de club</span>
+                                        <?php endif; ?>
                                     </td>
                                 </tr>
                             <?php endforeach; ?>
                         </tbody>
                     </table>
                 </div>
+                <?php if ($clubes_total_pages > 1): ?>
+                    <div class="border-top p-3 d-flex flex-wrap justify-content-between align-items-center gap-2">
+                        <small class="text-muted">
+                            Mostrando <?= (int)(($clubes_page - 1) * $clubes_per_page + 1) ?>-<?= (int)min($clubes_page * $clubes_per_page, $clubes_total_rows) ?>
+                            de <?= (int)$clubes_total_rows ?> clubes
+                        </small>
+                        <nav aria-label="Paginación de clubes">
+                            <ul class="pagination pagination-sm mb-0">
+                                <li class="page-item <?= $clubes_page <= 1 ? 'disabled' : '' ?>">
+                                    <a class="page-link" href="<?= htmlspecialchars($qsBase . '&clubes_page=1') ?>">«</a>
+                                </li>
+                                <li class="page-item <?= $clubes_page <= 1 ? 'disabled' : '' ?>">
+                                    <a class="page-link" href="<?= htmlspecialchars($qsBase . '&clubes_page=' . max(1, $clubes_page - 1)) ?>">‹</a>
+                                </li>
+                                <li class="page-item disabled"><span class="page-link"><?= (int)$clubes_page ?> / <?= (int)$clubes_total_pages ?></span></li>
+                                <li class="page-item <?= $clubes_page >= $clubes_total_pages ? 'disabled' : '' ?>">
+                                    <a class="page-link" href="<?= htmlspecialchars($qsBase . '&clubes_page=' . min($clubes_total_pages, $clubes_page + 1)) ?>">›</a>
+                                </li>
+                                <li class="page-item <?= $clubes_page >= $clubes_total_pages ? 'disabled' : '' ?>">
+                                    <a class="page-link" href="<?= htmlspecialchars($qsBase . '&clubes_page=' . $clubes_total_pages) ?>">»</a>
+                                </li>
+                            </ul>
+                        </nav>
+                    </div>
+                <?php endif; ?>
             <?php endif; ?>
         </div>
     </div>
 
-    <div class="mt-3">
+    <div class="mt-3" id="bottom-page">
         <a href="index.php?page=organizaciones" class="btn btn-outline-secondary"><i class="fas fa-arrow-left me-1"></i>Volver al listado</a>
         <?php if ($is_admin_general): ?>
             <a href="index.php?page=mi_organizacion&id=<?= (int)$organizacion['id'] ?>" class="btn btn-outline-primary ms-2"><i class="fas fa-edit me-1"></i>Editar organización</a>
         <?php endif; ?>
+        <button type="button" class="btn btn-outline-dark ms-2" onclick="window.scrollTo({top:0,behavior:'smooth'})">
+            <i class="fas fa-arrow-up me-1"></i>Ir al inicio
+        </button>
+        <button type="button" class="btn btn-outline-dark ms-2" onclick="window.scrollTo({top:document.body.scrollHeight,behavior:'smooth'})">
+            <i class="fas fa-arrow-down me-1"></i>Ir al final
+        </button>
+        <button type="button" class="btn btn-outline-secondary ms-2" onclick="history.back()">
+            <i class="fas fa-reply me-1"></i>Regresar
+        </button>
     </div>
 </div>

@@ -6,18 +6,31 @@
  */
 
 require_once __DIR__ . '/../../lib/app_helpers.php';
+require_once __DIR__ . '/../../lib/Tournament/Handlers/TeamPerformanceHandler.php';
+require_once __DIR__ . '/../../lib/Tournament/Services/PaginationService.php';
 
 // Asegurar que las posiciones estén actualizadas
 if (function_exists('recalcularPosiciones')) {
     recalcularPosiciones($torneo_id);
 }
 
-// Configuración de paginación
 $items_por_pagina = 10; // Equipos por página
-$pagina_actual = isset($_GET['pagina']) ? max(1, (int)$_GET['pagina']) : 1;
-$offset = ($pagina_actual - 1) * $items_por_pagina;
+$pagina_raw = isset($_GET['pagina']) ? (int) $_GET['pagina'] : 1;
 
 $pdo = DB::pdo();
+
+try {
+    $equipos = \Tournament\Handlers\TeamPerformanceHandler::getRankingPorEquipos((int) $torneo_id, 'detallado');
+} catch (\Exception $e) {
+    error_log('Error obteniendo resultados detallados de equipos: ' . $e->getMessage());
+    $equipos = [];
+}
+
+$total_equipos_ranking = count($equipos);
+$p_pag = \Tournament\Services\PaginationService::getParams($total_equipos_ranking, $pagina_raw, $items_por_pagina);
+$pagina_actual = $p_pag['page'];
+$total_paginas = $p_pag['total_pages'];
+$equipos = array_slice($equipos, $p_pag['offset'], $p_pag['per_page']);
 
 // Función helper para generar HTML del paginador
 function generarPaginador($pagina_actual, $total_paginas, $base_url, $parametros_get = []) {
@@ -103,270 +116,6 @@ function generarPaginador($pagina_actual, $total_paginas, $base_url, $parametros
     $html .= '</div>';
     
     return $html;
-}
-
-// Obtener equipos con sus jugadores detallados
-// LÓGICA: Leer primero equipos desde tabla equipos ordenados por ganados DESC, efectividad DESC, puntos DESC
-// Luego para cada equipo buscar sus jugadores ordenados por los mismos criterios
-$resultados_equipos = [];
-
-try {
-    // Paso 1: Leer equipos desde tabla equipos ordenados por clasificación (ganados DESC, efectividad DESC, puntos DESC)
-    // LÓGICA INVERTIDA: Leer primero desde equipos para mostrar en orden de clasificación
-    $sql_equipos = "
-        SELECT 
-            e.id as equipo_id,
-            e.codigo_equipo,
-            e.nombre_equipo,
-            e.id_club,
-            c.nombre as club_nombre,
-            e.posicion,
-            e.ganados,
-            e.perdidos,
-            e.efectividad,
-            e.puntos,
-            e.sancion,
-            e.gff
-        FROM equipos e
-        LEFT JOIN clubes c ON e.id_club = c.id
-        WHERE e.id_torneo = ? 
-            AND e.estatus = 0
-            AND e.codigo_equipo IS NOT NULL
-            AND e.codigo_equipo != ''
-        ORDER BY 
-            e.ganados DESC,
-            e.efectividad DESC,
-            e.puntos DESC,
-            e.codigo_equipo ASC
-    ";
-    
-    // Contar total de equipos para paginación
-    $sql_count = "
-        SELECT COUNT(*) as total
-        FROM equipos e
-        WHERE e.id_torneo = ? 
-            AND e.estatus = 0
-            AND e.codigo_equipo IS NOT NULL
-            AND e.codigo_equipo != ''
-    ";
-    $stmt_count = $pdo->prepare($sql_count);
-    $stmt_count->execute([$torneo_id]);
-    $total_equipos = (int)$stmt_count->fetchColumn();
-    
-    // Si no hay equipos en la tabla equipos, contar desde inscritos para paginación en fallback
-    if ($total_equipos == 0) {
-        $sql_codigos_count = "
-            SELECT COUNT(DISTINCT i.codigo_equipo) as total
-            FROM inscritos i
-            WHERE i.torneo_id = ? 
-                AND i.codigo_equipo IS NOT NULL 
-                AND i.codigo_equipo != ''
-                AND i.estatus != 'retirado'
-        ";
-        $stmt_codigos_count = $pdo->prepare($sql_codigos_count);
-        $stmt_codigos_count->execute([$torneo_id]);
-        $total_equipos = (int)$stmt_codigos_count->fetchColumn();
-    }
-    
-    $total_paginas = max(1, ceil($total_equipos / $items_por_pagina));
-    
-    // Ajustar página actual si excede el total
-    if ($pagina_actual > $total_paginas) {
-        $pagina_actual = $total_paginas;
-        $offset = ($pagina_actual - 1) * $items_por_pagina;
-    }
-    
-    // Obtener equipos con paginación (LIMIT y OFFSET deben ser enteros validados)
-    $items_por_pagina_int = (int)$items_por_pagina;
-    $offset_int = (int)$offset;
-    $sql_equipos .= " LIMIT " . $items_por_pagina_int . " OFFSET " . $offset_int;
-    $stmt_equipos = $pdo->prepare($sql_equipos);
-    $stmt_equipos->execute([$torneo_id]);
-    $equipos_todos = $stmt_equipos->fetchAll(PDO::FETCH_ASSOC);
-    
-    // Si no hay equipos en la tabla equipos, buscar códigos desde inscritos y crear estructura
-    if (empty($equipos_todos)) {
-        
-        $sql_codigos = "
-            SELECT DISTINCT i.codigo_equipo
-            FROM inscritos i
-            WHERE i.torneo_id = ? 
-                AND i.codigo_equipo IS NOT NULL 
-                AND i.codigo_equipo != ''
-                AND i.estatus != 'retirado'
-            ORDER BY i.codigo_equipo ASC
-            LIMIT " . $items_por_pagina_int . " OFFSET " . $offset_int . "
-        ";
-        
-        $stmt_codigos = $pdo->prepare($sql_codigos);
-        $stmt_codigos->execute([$torneo_id]);
-        $codigos_inscritos = $stmt_codigos->fetchAll(PDO::FETCH_COLUMN);
-        
-        // Crear estructura de equipos desde inscritos (con estadísticas calculadas)
-        foreach ($codigos_inscritos as $codigo) {
-            // Calcular estadísticas del equipo desde inscritos
-            // NOTA: gff no existe en inscritos, solo en equipos
-            $sql_stats_equipo = "
-                SELECT 
-                    SUM(i.ganados) as ganados,
-                    SUM(i.perdidos) as perdidos,
-                    SUM(i.efectividad) as efectividad,
-                    SUM(i.puntos) as puntos,
-                    SUM(i.sancion) as sancion,
-                    MIN(i.id_club) as id_club
-                FROM inscritos i
-                WHERE i.torneo_id = ? 
-                    AND i.codigo_equipo = ?
-                    AND i.estatus != 'retirado'
-            ";
-            
-            $stmt_stats = $pdo->prepare($sql_stats_equipo);
-            $stmt_stats->execute([$torneo_id, $codigo]);
-            $stats = $stmt_stats->fetch(PDO::FETCH_ASSOC);
-            
-            if ($stats) {
-                // Obtener club del primer jugador
-                $sql_club = "
-                    SELECT c.nombre as club_nombre
-                    FROM inscritos i
-                    LEFT JOIN clubes c ON i.id_club = c.id
-                    WHERE i.torneo_id = ? 
-                        AND i.codigo_equipo = ?
-                        AND i.estatus != 'retirado'
-                    LIMIT 1
-                ";
-                $stmt_club = $pdo->prepare($sql_club);
-                $stmt_club->execute([$torneo_id, $codigo]);
-                $club_data = $stmt_club->fetch(PDO::FETCH_ASSOC);
-                
-                $equipos_todos[] = [
-                    'equipo_id' => null,
-                    'codigo_equipo' => $codigo,
-                    'nombre_equipo' => 'Equipo ' . $codigo,
-                    'id_club' => (int)($stats['id_club'] ?? 0),
-                    'club_nombre' => $club_data['club_nombre'] ?? 'Sin Club',
-                    'posicion' => 0,
-                    'ganados' => (int)($stats['ganados'] ?? 0),
-                    'perdidos' => (int)($stats['perdidos'] ?? 0),
-                    'efectividad' => (int)($stats['efectividad'] ?? 0),
-                    'puntos' => (int)($stats['puntos'] ?? 0),
-                    'sancion' => (int)($stats['sancion'] ?? 0),
-                    'gff' => 0  // gff solo existe en tabla equipos, no en inscritos
-                ];
-            }
-        }
-        
-        // Ordenar equipos calculados por clasificación (ganados DESC, efectividad DESC, puntos DESC)
-        usort($equipos_todos, function($a, $b) {
-            $ganados_a = (int)($a['ganados'] ?? 0);
-            $ganados_b = (int)($b['ganados'] ?? 0);
-            if ($ganados_a != $ganados_b) {
-                return $ganados_b <=> $ganados_a;
-            }
-            
-            $efec_a = (int)($a['efectividad'] ?? 0);
-            $efec_b = (int)($b['efectividad'] ?? 0);
-            if ($efec_a != $efec_b) {
-                return $efec_b <=> $efec_a;
-            }
-            
-            $pts_a = (int)($a['puntos'] ?? 0);
-            $pts_b = (int)($b['puntos'] ?? 0);
-            if ($pts_a != $pts_b) {
-                return $pts_b <=> $pts_a;
-            }
-            
-            return strcmp($a['codigo_equipo'] ?? '', $b['codigo_equipo'] ?? '');
-        });
-        
-        // Asignar posiciones basadas en el orden de clasificación después de ordenar
-        $posicion_actual = 1;
-        foreach ($equipos_todos as &$equipo_temp) {
-            $equipo_temp['posicion'] = $posicion_actual;
-            $posicion_actual++;
-        }
-        unset($equipo_temp);
-    } else {
-        // Si hay equipos en la tabla, también asignar posiciones basadas en el orden
-        $posicion_actual = 1;
-        foreach ($equipos_todos as &$equipo_temp) {
-            $equipo_temp['posicion'] = $posicion_actual;
-            $posicion_actual++;
-        }
-        unset($equipo_temp);
-    }
-    
-    // Paso 2: Para cada equipo, buscar sus jugadores ordenados por ganados DESC, efectividad DESC, puntos DESC
-    foreach ($equipos_todos as $equipo_data) {
-        $codigo_equipo = $equipo_data['codigo_equipo'];
-        
-        // Buscar jugadores del equipo ordenados por ganados DESC, efectividad DESC, puntos DESC
-        // NOTA: gff no existe en inscritos, solo en equipos
-        $sql_jugadores = "
-            SELECT 
-                i.id,
-                i.id_usuario,
-                i.posicion,
-                i.ganados,
-                i.perdidos,
-                i.efectividad,
-                i.puntos,
-                i.ptosrnk,
-                0 as gff,
-                COALESCE(i.zapatos, 0) as zapatos,
-                COALESCE(i.chancletas, 0) as chancletas,
-                COALESCE(i.sancion, 0) as sancion,
-                COALESCE(i.tarjeta, 0) as tarjeta,
-                u.nombre as nombre_completo,
-                u.cedula,
-                c.nombre as club_nombre
-            FROM inscritos i
-            INNER JOIN usuarios u ON i.id_usuario = u.id
-            LEFT JOIN clubes c ON i.id_club = c.id
-            WHERE i.torneo_id = ? 
-                AND i.codigo_equipo = ?
-                AND i.estatus != 'retirado'
-            ORDER BY 
-                i.ganados DESC,
-                i.efectividad DESC,
-                i.puntos DESC,
-                i.id_usuario ASC
-        ";
-        
-        $stmt_jugadores = $pdo->prepare($sql_jugadores);
-        $stmt_jugadores->execute([$torneo_id, $codigo_equipo]);
-        $jugadores_equipo = $stmt_jugadores->fetchAll(PDO::FETCH_ASSOC);
-        
-        // Asignar posiciones dentro del equipo basadas en la clasificación (1, 2, 3, 4)
-        $posicion_equipo = 1;
-        foreach ($jugadores_equipo as &$jug) {
-            $jug['posicion_equipo'] = $posicion_equipo;
-            $jug['posicion_display'] = $posicion_equipo;
-            $posicion_equipo++;
-        }
-        unset($jug);
-        
-        $resultados_equipos[] = [
-            'equipo_id' => isset($equipo_data['equipo_id']) ? (int)$equipo_data['equipo_id'] : 0,
-            'codigo_equipo' => $codigo_equipo,
-            'nombre_equipo' => $equipo_data['nombre_equipo'],
-            'id_club' => (int)($equipo_data['id_club'] ?? 0),
-            'club_nombre' => $equipo_data['club_nombre'] ?? 'Sin Club',
-            'posicion' => (int)($equipo_data['posicion'] ?? 0),
-            'ganados' => (int)($equipo_data['ganados'] ?? 0),
-            'perdidos' => (int)($equipo_data['perdidos'] ?? 0),
-            'efectividad' => (int)($equipo_data['efectividad'] ?? 0),
-            'puntos' => (int)($equipo_data['puntos'] ?? 0),
-            'sancion' => (int)($equipo_data['sancion'] ?? 0),
-            'gff' => (int)($equipo_data['gff'] ?? 0),
-            'total_jugadores' => count($jugadores_equipo),
-            'jugadores' => $jugadores_equipo
-        ];
-    }
-    
-} catch (Exception $e) {
-    error_log("Error obteniendo resultados detallados de equipos: " . $e->getMessage());
-    $resultados_equipos = [];
 }
 
 // Obtener información del club responsable con logo
@@ -482,7 +231,7 @@ $base_url_return = $use_standalone ? $script_actual : 'index.php?page=torneo_ges
         
         <div class="p-6">
             <?php 
-            foreach ($resultados_equipos as $equipo): 
+            foreach ($equipos as $equipo): 
                 $posicion_display = $equipo['posicion'] > 0 ? $equipo['posicion'] : '-';
             ?>
                 <!-- Rompe Control por Equipo -->
@@ -707,19 +456,16 @@ $base_url_return = $use_standalone ? $script_actual : 'index.php?page=torneo_ges
                 </div>
             <?php endforeach; ?>
             
-            <?php if (empty($resultados_equipos)): ?>
+            <?php if ($total_equipos_ranking === 0): ?>
                 <div class="bg-gray-50 rounded-lg p-8 text-center">
                     <i class="fas fa-info-circle text-4xl text-gray-400 mb-4"></i>
                     <p class="text-lg text-gray-600">No hay equipos registrados en este torneo</p>
                 </div>
-            <?php else: ?>
+            <?php elseif ($total_equipos_ranking > 0 && isset($total_paginas) && $total_paginas > 1): ?>
                 <!-- Paginador -->
                 <?php 
-                // Construir URL base para el paginador
-                $use_standalone_pag = $use_standalone;
                 $base_url_pag = $base_url_return;
                 $parametros_get = ['action' => 'resultados_equipos_detallado', 'torneo_id' => $torneo_id];
-                // Preservar otros parámetros GET si existen
                 foreach ($_GET as $key => $value) {
                     if ($key !== 'pagina' && $key !== 'action' && $key !== 'torneo_id') {
                         $parametros_get[$key] = $value;

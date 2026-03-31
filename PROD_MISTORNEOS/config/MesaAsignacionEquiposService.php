@@ -1,23 +1,190 @@
 <?php
 /**
- * Servicio de Asignación de Mesas para Torneos de Equipos de Dominó
- * Algoritmos matemáticos especializados para equipos de 4 jugadores
- * 
- * Características:
- * - Cada equipo = 4 jugadores = 1 mesa
- * - Ronda 1: Distribución secuencial cíclica
- * - Rondas 2+: Agrupación por bloques de 4 equipos con evasión de compañeros anteriores
- * - Soporte para asignaciones alternativas (intercaladas, por rendimiento)
+ * Servicio de Asignación de Mesas para Torneos de Equipos de Dominó — V3
+ *
+ * Mesa siempre 4 jugadores. Datos del torneo indicado (id_torneo).
+ *
+ * Ronda 1 — Lista global ordenada por id de equipo (equipos.id) y id de usuario; 4 segmentos de
+ * tamaño N = Total/4; mesa i = jugador i de cada segmento.
+ *
+ * Rondas 2+ — Equipos ordenados por G/E/P (ganados, efectividad, puntos). Lotes de 4 equipos;
+ * residuo &lt; 4 se suma al último lote. Por lote: si hay 4 equipos, mesas por homólogo (1 vs 1…).
+ * Si hay &gt;4 equipos, mesas de 4 integrantes mediante cruce por posición (asignación latina por
+ * mesa × posición).
+ *
+ * V3.1 — Inconsistencias de género: no se excluye por sexo; se marca {@see alerta_genero} en filas
+ * de jugador cuando el sexo del usuario no coincide con el género inferido del nombre del torneo.
+ *
+ * V3.2 — Homólogos rondas 2+: equipos por G/E/P (ganados, efectividad, puntos; menos perdidos);
+ * jugadores 1–4 por rendimiento individual. Lotes 4–7 equipos. k=4: mesas puras homólogo (rangos
+ * 1–4). k≥5: asignación latina en el lote (cruce de rangos) para mesas de 4 con equipos distintos
+ * y sin dejar jugadores fuera. Restricción: mismo id_equipo no se repite en la misma mesa.
+ *
+ * V3.3 — Tras formar cada mesa (4 jugadores de equipos distintos), se ordenan asientos 1–4
+ * (secuencia) por rendimiento individual (mismo criterio: ganados, efectividad, puntos, perdidos);
+ * el de peor rendimiento queda en la última secuencia, sin mezclar equipos en la mesa.
  */
 
-require_once __DIR__ . '/db.php';
-require_once __DIR__ . '/../lib/InscritosHelper.php';
+if (!class_exists('DB', false)) {
+    require_once __DIR__ . '/db.php';
+}
 
 class MesaAsignacionEquiposService
 {
     private $pdo;
     private const JUGADORES_POR_EQUIPO = 4;
     private const JUGADORES_POR_MESA = 4;
+
+    /** @var array<int, string> género esperado M/F/'' por torneo_id (cache por request) */
+    private $generoTorneoInferidoCache = [];
+
+    /** @var bool */
+    private static $partiresulColIdEquipoCacheListo = false;
+
+    /** @var string|null id_equipo, equipo_codigo o null si no hay columna */
+    private static $partiresulColIdEquipo = null;
+
+    /**
+     * Columna en partiresul donde guardar el id numérico de equipos.id, si existe en el esquema.
+     */
+    private function partiresulColumnaIdEquipo(): ?string
+    {
+        if (self::$partiresulColIdEquipoCacheListo) {
+            return self::$partiresulColIdEquipo;
+        }
+        self::$partiresulColIdEquipoCacheListo = true;
+        self::$partiresulColIdEquipo = null;
+        try {
+            $st = $this->pdo->query("SHOW COLUMNS FROM partiresul LIKE 'id_equipo'");
+            if ($st && $st->rowCount() > 0) {
+                self::$partiresulColIdEquipo = 'id_equipo';
+
+                return 'id_equipo';
+            }
+            $st = $this->pdo->query("SHOW COLUMNS FROM partiresul LIKE 'equipo_codigo'");
+            if ($st && $st->rowCount() > 0) {
+                self::$partiresulColIdEquipo = 'equipo_codigo';
+
+                return 'equipo_codigo';
+            }
+        } catch (Exception $e) {
+            // sin columna
+        }
+
+        return null;
+    }
+
+    private function detectarGeneroTorneoPorNombreLocal(string $nombre): string
+    {
+        $txt = mb_strtolower($nombre, 'UTF-8');
+        if (preg_match('/\b(femenino|fem|damas)\b/ui', $txt)) {
+            return 'F';
+        }
+        if (preg_match('/\b(masculino|masc|caballeros)\b/ui', $txt)) {
+            return 'M';
+        }
+
+        return '';
+    }
+
+    private function obtenerGeneroTorneoInferido(int $torneoId): string
+    {
+        if (isset($this->generoTorneoInferidoCache[$torneoId])) {
+            return $this->generoTorneoInferidoCache[$torneoId];
+        }
+        $st = $this->pdo->prepare('SELECT nombre FROM tournaments WHERE id = ? LIMIT 1');
+        $st->execute([$torneoId]);
+        $n = (string) ($st->fetchColumn() ?: '');
+        $g = $this->detectarGeneroTorneoPorNombreLocal($n);
+        $this->generoTorneoInferidoCache[$torneoId] = $g;
+
+        return $g;
+    }
+
+    /**
+     * @param array<int, array<string, mixed>> $jugadores
+     * @return array<int, array<string, mixed>>
+     */
+    private function marcarAlertaGeneroEnJugadores(int $torneoId, array $jugadores): array
+    {
+        $gTorneo = $this->obtenerGeneroTorneoInferido($torneoId);
+        if ($gTorneo !== 'M' && $gTorneo !== 'F') {
+            foreach ($jugadores as &$j) {
+                $j['alerta_genero'] = false;
+            }
+            unset($j);
+
+            return $jugadores;
+        }
+        foreach ($jugadores as &$j) {
+            $x = is_string($j['sexo'] ?? null) ? strtoupper(trim((string) $j['sexo'])) : (is_numeric($j['sexo'] ?? null) ? (string) $j['sexo'] : '');
+            if ($x === '1' || $x === 'M') {
+                $u = 'M';
+            } elseif ($x === '2' || $x === 'F') {
+                $u = 'F';
+            } else {
+                $j['alerta_genero'] = false;
+                continue;
+            }
+            $j['alerta_genero'] = ($u !== $gTorneo);
+        }
+        unset($j);
+
+        return $jugadores;
+    }
+
+    /**
+     * Fragmento JOIN usuarios: solo filas coherentes con el equipo (torneo + club).
+     *
+     * Requiere alias eq para equipos e i para inscritos.
+     */
+    private function sqlJoinUsuarioInscritoEquipo(): string
+    {
+        return 'INNER JOIN usuarios u ON (
+                u.id = i.id_usuario
+                OR (
+                    u.numfvd = i.id_usuario
+                    AND EXISTS (
+                        SELECT 1 FROM tournaments t
+                        WHERE t.id = i.torneo_id AND t.club_responsable = 7
+                    )
+                    AND u.club_id = eq.id_club
+                )
+            )';
+    }
+
+    /**
+     * El JOIN usuarios con OR (id vs numfvd) puede duplicar filas por inscrito;
+     * LIMIT 4 entonces deja menos de 4 inscritos distintos y la cíclica repite equipo en mesa.
+     * Se prioriza la fila donde u.id = i.id_usuario.
+     *
+     * @param array<int, array<string, mixed>> $rows
+     * @return array<int, array<string, mixed>>
+     */
+    private function deduplicarJugadoresPorInscrito(array $rows): array
+    {
+        usort($rows, static function ($a, $b) {
+            $ca = ((int)($a['usuario_id'] ?? 0) === (int)($a['id_usuario'] ?? 0)) ? 0 : 1;
+            $cb = ((int)($b['usuario_id'] ?? 0) === (int)($b['id_usuario'] ?? 0)) ? 0 : 1;
+            if ($ca !== $cb) {
+                return $ca <=> $cb;
+            }
+
+            return ((int)($a['id_inscrito'] ?? 0)) <=> ((int)($b['id_inscrito'] ?? 0));
+        });
+        $porInscrito = [];
+        foreach ($rows as $r) {
+            $iid = (int)($r['id_inscrito'] ?? 0);
+            if ($iid <= 0) {
+                continue;
+            }
+            if (!isset($porInscrito[$iid])) {
+                $porInscrito[$iid] = $r;
+            }
+        }
+
+        return array_values($porInscrito);
+    }
 
     public function __construct()
     {
@@ -37,123 +204,303 @@ class MesaAsignacionEquiposService
     }
 
     /**
-     * RONDA 1: Distribución secuencial cíclica
-     * PASO 1: Clasificar equipos dentro del club (ordenar por club, luego por código)
-     * PASO 2: Distribuir secuencialmente los jugadores de cada equipo en forma cíclica
-     * 
-     * Ejemplo con 9 mesas:
-     * - Equipo 1: Jug1→Mesa1, Jug2→Mesa2, Jug3→Mesa3, Jug4→Mesa4
-     * - Equipo 2: Jug1→Mesa5, Jug2→Mesa6, Jug3→Mesa7, Jug4→Mesa8
-     * - Equipo 3: Jug1→Mesa9, Jug2→Mesa1 (reinicia), Jug3→Mesa2, Jug4→Mesa3
-     * Y así sucesivamente hasta completar todas las mesas
-     * 
-     * La cantidad de equipos = cantidad de mesas (cada equipo = 1 mesa)
-     * Los jugadores deben ser siempre múltiplos de 4
+     * Ronda 1: 4 segmentos de N jugadores; mesa i = [seg0[i], seg1[i], seg2[i], seg3[i]].
+     *
+     * @param array<int, array<string, mixed>> $jugadoresOrdenados Exactamente 4*N filas
+     * @return array<int, array<int, array<string, mixed>>>|null
      */
-    private function generarRonda1($torneoId, $estrategia)
+    private function distribuirCuatroSegmentos(array $jugadoresOrdenados, int $N): ?array
     {
-        // Obtener equipos con sus jugadores
-        $equipos = $this->obtenerEquiposConJugadores($torneoId);
-        
-        if (empty($equipos)) {
-            return [
-                'success' => false,
-                'message' => 'No hay equipos inscritos en el torneo'
+        $total = count($jugadoresOrdenados);
+        if ($N <= 0 || $total !== 4 * $N) {
+            return null;
+        }
+        $mesas = [];
+        for ($i = 0; $i < $N; $i++) {
+            $mesas[] = [
+                $jugadoresOrdenados[$i],
+                $jugadoresOrdenados[$N + $i],
+                $jugadoresOrdenados[2 * $N + $i],
+                $jugadoresOrdenados[3 * $N + $i],
             ];
         }
 
-        // Verificar que todos los equipos tengan 4 jugadores completos
+        return $mesas;
+    }
+
+    /**
+     * Parte la lista de equipos ya ordenada en lotes de 4; el residuo &lt; 4 se fusiona con el último lote
+     * (5, 6 o 7 equipos en el último lote cuando aplica).
+     *
+     * @param array<int, array<string, mixed>> $equiposOrdenados
+     * @return array<int, array<int, array<string, mixed>>>
+     */
+    private function partirEquiposEnLotes(array $equiposOrdenados): array
+    {
+        $equiposOrdenados = array_values($equiposOrdenados);
+        $n = count($equiposOrdenados);
+        if ($n === 0) {
+            return [];
+        }
+        $lotes = [];
+        $i = 0;
+        while ($i < $n) {
+            $remaining = $n - $i;
+            if ($remaining <= 4) {
+                $lotes[] = array_slice($equiposOrdenados, $i);
+                break;
+            }
+            $remAfter = $remaining - 4;
+            if ($remAfter > 0 && $remAfter < 4) {
+                $lotes[] = array_slice($equiposOrdenados, $i);
+                break;
+            }
+            $lotes[] = array_slice($equiposOrdenados, $i, 4);
+            $i += 4;
+        }
+
+        return $lotes;
+    }
+
+    /**
+     * Ordena los 4 jugadores de una mesa para asignación de secuencias: mejor rendimiento → secuencia 1,
+     * peor → secuencia 4 (ganados, efectividad, puntos; menos perdidos).
+     *
+     * @param array<int, array<string, mixed>> $mesa
+     * @return array<int, array<string, mixed>>
+     */
+    private function ordenarMesaPorRendimientoIndividual(array $mesa): array
+    {
+        $mesa = array_values($mesa);
+        if (count($mesa) !== self::JUGADORES_POR_MESA) {
+            return $mesa;
+        }
+        usort($mesa, function (array $a, array $b): int {
+            return $this->compararRendimientoJugadorIndividual($a, $b);
+        });
+
+        return $mesa;
+    }
+
+    /**
+     * Comparación para ordenar jugadores en la mesa: mejor (mayor mérito) primero.
+     * Criterio alineado a equipos: ganados, efectividad, puntos DESC; perdidos ASC.
+     */
+    private function compararRendimientoJugadorIndividual(array $a, array $b): int
+    {
+        $ga = (int) ($a['ganados'] ?? 0);
+        $gb = (int) ($b['ganados'] ?? 0);
+        if ($ga !== $gb) {
+            return $gb <=> $ga;
+        }
+        $ea = (float) ($a['efectividad'] ?? 0);
+        $eb = (float) ($b['efectividad'] ?? 0);
+        if ($ea != $eb) {
+            return $eb <=> $ea;
+        }
+        $pa = (int) ($a['puntos'] ?? 0);
+        $pb = (int) ($b['puntos'] ?? 0);
+        if ($pa !== $pb) {
+            return $pb <=> $pa;
+        }
+        $pra = (int) ($a['perdidos'] ?? 0);
+        $prb = (int) ($b['perdidos'] ?? 0);
+        if ($pra !== $prb) {
+            return $pra <=> $prb;
+        }
+
+        return ((int) ($a['id_usuario'] ?? 0)) <=> ((int) ($b['id_usuario'] ?? 0));
+    }
+
+    /**
+     * V3.2 / V3.3 — Por lote: k=4 → 4 mesas (rangos homólogos: 1 vs 1, 2 vs 2…).
+     * k≥5 → k mesas; en cada mesa m hay un jugador de rango p del equipo índice ((m-(p-1)) mod k),
+     * cubriendo todos los jugadores del lote sin saltos (redistribución dentro del lote).
+     * V3.3: en cada mesa, los 4 asientos se ordenan por rendimiento individual (no por orden del equipo en el lote).
+     *
+     * @param array<int, array<int, array<string, mixed>>> $lotes
+     * @return array<int, array<int, array<string, mixed>>>
+     */
+    private function construirMesasDesdeLotesHomologos(array $lotes): array
+    {
+        $mesas = [];
+        foreach ($lotes as $lote) {
+            $lote = array_values($lote);
+            $k = count($lote);
+            if ($k === 0) {
+                continue;
+            }
+            if ($k === 4) {
+                for ($pos = 1; $pos <= 4; $pos++) {
+                    $fila = [];
+                    foreach ($lote as $equipo) {
+                        $j = $this->buscarJugadorPorPosicion($equipo, $pos);
+                        if ($j) {
+                            $fila[] = $j;
+                        }
+                    }
+                    if (count($fila) === self::JUGADORES_POR_MESA) {
+                        $mesas[] = $this->ordenarMesaPorRendimientoIndividual($fila);
+                    }
+                }
+                continue;
+            }
+            if ($k >= 5) {
+                for ($m = 0; $m < $k; $m++) {
+                    $fila = [];
+                    for ($p = 1; $p <= 4; $p++) {
+                        $teamIndex = (($m - ($p - 1)) % $k + $k) % $k;
+                        $equipo = $lote[$teamIndex];
+                        $j = $this->buscarJugadorPorPosicion($equipo, $p);
+                        if ($j) {
+                            $fila[] = $j;
+                        }
+                    }
+                    if (count($fila) === self::JUGADORES_POR_MESA) {
+                        $mesas[] = $this->ordenarMesaPorRendimientoIndividual($fila);
+                    }
+                }
+            }
+        }
+
+        return $mesas;
+    }
+
+    /**
+     * Rondas 2+: lotes (residuo fusionado al último) y mesas por homólogo.
+     */
+    private function construirMesasRonda2DesdeEquiposOrdenados(array $equipos): array
+    {
+        $equipos = array_values($equipos);
+        if ($equipos === []) {
+            return [];
+        }
+        $lotes = $this->partirEquiposEnLotes($equipos);
+
+        return $this->construirMesasDesdeLotesHomologos($lotes);
+    }
+
+    /**
+     * V3.2: en cada mesa, 4 jugadores; codigo_equipo distintos; id_equipo distinto si está informado.
+     */
+    private function mesasTienenEquiposTodosDistintos(array $mesas): bool
+    {
+        foreach ($mesas as $mesa) {
+            $n = count($mesa);
+            if ($n !== self::JUGADORES_POR_MESA) {
+                return false;
+            }
+            $codes = [];
+            $idsEq = [];
+            foreach ($mesa as $j) {
+                $c = trim((string)($j['codigo_equipo'] ?? ''));
+                if ($c === '') {
+                    return false;
+                }
+                if (isset($codes[$c])) {
+                    return false;
+                }
+                $codes[$c] = true;
+                $idEq = (int) ($j['id_equipo'] ?? 0);
+                if ($idEq > 0) {
+                    if (isset($idsEq[$idEq])) {
+                        return false;
+                    }
+                    $idsEq[$idEq] = true;
+                }
+            }
+            if (count($codes) !== $n) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    /**
+     * Todos los jugadores de los equipos clasificados deben aparecer en alguna mesa (sin saltos).
+     *
+     * @param array<int, array<string, mixed>> $equipos
+     * @param array<int, array<int, array<string, mixed>>> $mesas
+     */
+    private function coberturaTotalJugadoresRonda2(array $equipos, array $mesas): bool
+    {
+        $esperados = 0;
+        foreach ($equipos as $eq) {
+            $esperados += count($eq['jugadores'] ?? []);
+        }
+        $asignados = 0;
+        foreach ($mesas as $mesa) {
+            $asignados += count($mesa);
+        }
+
+        return $esperados > 0 && $esperados === $asignados;
+    }
+
+    /**
+     * RONDA 1: matriz de segmentos (torneo_id, club, código de equipo, integrantes; 4 segmentos × N → mesas).
+     */
+    private function generarRonda1($torneoId, $estrategia)
+    {
+        $equipos = $this->obtenerEquiposConJugadores($torneoId);
+
+        if (empty($equipos)) {
+            return [
+                'success' => false,
+                'message' => 'No hay equipos inscritos en el torneo',
+            ];
+        }
+
         foreach ($equipos as $equipo) {
             if (count($equipo['jugadores']) !== self::JUGADORES_POR_EQUIPO) {
                 return [
                     'success' => false,
-                    'message' => "El equipo '{$equipo['nombre_equipo']}' no tiene " . self::JUGADORES_POR_EQUIPO . " jugadores completos"
+                    'message' => "El equipo '{$equipo['nombre_equipo']}' no tiene " . self::JUGADORES_POR_EQUIPO . ' jugadores completos',
                 ];
             }
         }
 
-        // PASO 1: Clasificar equipos dentro del club
-        // Los equipos ya vienen ordenados por club desde la consulta SQL
-        // Pero por si acaso, reordenamos para asegurar el orden correcto:
-        // Primero por club, luego por código del equipo dentro del club
-        usort($equipos, function($a, $b) {
-            // Primero por club (id_club)
-            $clubA = (int)($a['id_club'] ?? 0);
-            $clubB = (int)($b['id_club'] ?? 0);
-            if ($clubA != $clubB) {
-                return $clubA <=> $clubB;
-            }
-            // Si mismo club, ordenar por código del equipo
-            $codigoA = $a['codigo_equipo'] ?? '';
-            $codigoB = $b['codigo_equipo'] ?? '';
-            return strcmp($codigoA, $codigoB);
-        });
-
-        // Verificar que el total de jugadores sea múltiplo de 4
-        $totalJugadores = count($equipos) * self::JUGADORES_POR_EQUIPO;
-        if ($totalJugadores % self::JUGADORES_POR_MESA !== 0) {
+        $totalEquipos = count($equipos);
+        $N = $totalEquipos;
+        $listaGlobal = $this->obtenerListaJugadoresRonda1Ordenada($torneoId);
+        if ($listaGlobal === null) {
             return [
                 'success' => false,
-                'message' => "El total de jugadores ({$totalJugadores}) debe ser múltiplo de " . self::JUGADORES_POR_MESA . " para asignar correctamente las mesas"
+                'message' => 'No se pudo formar la lista global (torneo activo): revise que cada equipo tenga exactamente 4 inscritos y que usuario/club/equipo coincidan.',
+            ];
+        }
+        $totalJugadores = count($listaGlobal);
+        if ($totalJugadores !== $N * self::JUGADORES_POR_EQUIPO) {
+            return [
+                'success' => false,
+                'message' => "Inconsistencia de plantilla: hay {$totalJugadores} jugadores activos; se esperaban " . ($N * self::JUGADORES_POR_EQUIPO) . " ({$N} equipos de 4).",
             ];
         }
 
-        // Calcular total de mesas (equivalente a número de equipos)
-        $totalEquipos = count($equipos);
-        $totalMesas = $totalEquipos;
-
-        // PASO 2: Distribución secuencial cíclica
-        // La cantidad de equipos = cantidad de mesas
-        // Cada equipo distribuye sus 4 jugadores secuencialmente de forma cíclica:
-        // Equipo 1: Jug1→Mesa1, Jug2→Mesa2, Jug3→Mesa3, Jug4→Mesa4
-        // Equipo 2: Jug1→Mesa5, Jug2→Mesa6, Jug3→Mesa7, Jug4→Mesa8
-        // Equipo 3: Jug1→Mesa9, Jug2→Mesa1 (reinicia), Jug3→Mesa2, Jug4→Mesa3
-        // Y así hasta completar todos los equipos
-        
-        // Crear estructura de mesas vacías (indexadas desde 1)
-        $mesas = [];
-        for ($mesa = 1; $mesa <= $totalMesas; $mesa++) {
-            $mesas[$mesa] = [];
-        }
-
-        // Contador global para la siguiente mesa disponible (empieza en 1)
-        // Se incrementa secuencialmente y usa módulo para reiniciar cíclicamente
-        $mesaActual = 1;
-        
-        // Recorrer cada equipo y asignar sus jugadores secuencialmente
-        foreach ($equipos as $indiceEquipo => $equipo) {
-            // Ordenar jugadores del equipo por posicion_equipo (1, 2, 3, 4)
-            usort($equipo['jugadores'], function($a, $b) {
-                return ($a['posicion_equipo'] ?? 999) <=> ($b['posicion_equipo'] ?? 999);
-            });
-            
-            // Asignar cada jugador del equipo a una mesa secuencial
-            foreach ($equipo['jugadores'] as $jugador) {
-                // Calcular la mesa asignada usando módulo para ciclo
-                // (mesaActual - 1) % totalMesas + 1 convierte cualquier número a rango 1..totalMesas
-                // Ejemplo con 9 mesas: 1→1, 9→9, 10→1, 11→2, 12→3, 13→4, etc.
-                $mesaAsignar = (($mesaActual - 1) % $totalMesas) + 1;
-                
-                // Asignar jugador a la mesa calculada
-                $mesas[$mesaAsignar][] = $jugador;
-                
-                // Avanzar al siguiente número de mesa
-                $mesaActual++;
-            }
+        $mesasArray = $this->distribuirCuatroSegmentos($listaGlobal, $N);
+        if ($mesasArray === null) {
+            return [
+                'success' => false,
+                'message' => 'Error al formar la matriz de segmentos (4×N). Revise inscripciones duplicadas o equipos incompletos.',
+            ];
         }
 
         // Verificar que cada mesa tenga exactamente 4 jugadores
-        foreach ($mesas as $numMesa => $mesa) {
+        foreach ($mesasArray as $idx => $mesa) {
             if (count($mesa) !== self::JUGADORES_POR_MESA) {
                 return [
                     'success' => false,
-                    'message' => "Error en asignación: La mesa {$numMesa} tiene " . count($mesa) . " jugadores en lugar de " . self::JUGADORES_POR_MESA . ". Esto indica que el total de jugadores no es múltiplo de 4 o hay un error en el algoritmo."
+                    'message' => 'Error en asignación: La mesa ' . ($idx + 1) . ' tiene ' . count($mesa) . ' jugadores en lugar de ' . self::JUGADORES_POR_MESA . '.',
                 ];
             }
         }
 
-        // Convertir a array indexado numéricamente
-        $mesasArray = array_values($mesas);
+        if (!$this->mesasTienenEquiposTodosDistintos($mesasArray)) {
+            return [
+                'success' => false,
+                'message' => 'La matriz secuencial dejó jugadores del mismo equipo en la misma mesa o datos inconsistentes. Revise inscripciones, codigo_equipo y duplicados.',
+            ];
+        }
 
         // Debug: listar mesas y jugadores asignados (ronda 1)
         error_log("ASIGNACION RONDA1: Total mesas=" . count($mesasArray));
@@ -174,12 +521,19 @@ class MesaAsignacionEquiposService
             error_log("  Mesa " . ($idx + 1) . ": " . implode(", ", $jugStr));
         }
 
-        // Guardar asignación
-        $this->guardarAsignacionRonda($torneoId, 1, $mesasArray);
+        // Guardar asignación (validación + borrado ronda + insert)
+        try {
+            $this->guardarAsignacionRonda($torneoId, 1, $mesasArray);
+        } catch (Throwable $e) {
+            return [
+                'success' => false,
+                'message' => $e->getMessage(),
+            ];
+        }
 
         return [
             'success' => true,
-            'message' => 'Primera ronda generada exitosamente (distribución secuencial cíclica)',
+            'message' => 'Primera ronda generada exitosamente (segmentos por id de equipo y usuario; mesas de 4).',
             'total_equipos' => $totalEquipos,
             'total_mesas' => count($mesasArray),
             'jugadores_bye' => 0,
@@ -188,10 +542,8 @@ class MesaAsignacionEquiposService
     }
 
     /**
-     * RONDAS 2+: Agrupación por bloques de 4 equipos
-     * Si hay fracción, el último grupo tendrá 4+equipos restantes
-     * Dentro de cada grupo: jugadores posición 1 juntos, posición 2 juntos, etc.
-     * Evita compañeros anteriores cuando es posible
+     * RONDAS 2+: equipos ordenados por resultados; jugadores por rendimiento dentro del equipo;
+     * bloques de 4 equipos con homólogos (1…4); segmentos clasificación 1–4 vs 5+; fallback cíclico.
      */
     private function generarRonda2Plus($torneoId, $numRonda, $estrategia)
     {
@@ -213,15 +565,30 @@ class MesaAsignacionEquiposService
             }
         }
 
-        // Para rondas 2+, usar directamente las ventanas solicitadas:
-        //  - Primer bloque: clasiequi < 5 (equipos 1..4) ordenado por numero ASC, clasiequi ASC
-        //  - Resto: clasiequi > 4 con el mismo orden
-        $mesasTop = $this->crearMesasDesdeConsulta($torneoId, '< 5');
-        $mesasResto = $this->crearMesasDesdeConsulta($torneoId, '> 4');
-        $mesas = array_merge($mesasTop, $mesasResto);
+        $mesas = $this->construirMesasRonda2DesdeEquiposOrdenados($equipos);
 
-        // Guardar asignación
-        $this->guardarAsignacionRonda($torneoId, $numRonda, $mesas);
+        if ($mesas === [] || !$this->coberturaTotalJugadoresRonda2($equipos, $mesas)) {
+            return [
+                'success' => false,
+                'message' => 'No se pudo asignar todos los jugadores de los equipos clasificados a mesas (V3.2). Revise equipos e inscripciones.',
+            ];
+        }
+
+        if (!$this->mesasTienenEquiposTodosDistintos($mesas)) {
+            return [
+                'success' => false,
+                'message' => 'No se pudo generar mesas: en alguna mesa se repite el mismo equipo (id/código). Revise la asignación homóloga.',
+            ];
+        }
+
+        try {
+            $this->guardarAsignacionRonda($torneoId, $numRonda, $mesas);
+        } catch (Throwable $e) {
+            return [
+                'success' => false,
+                'message' => $e->getMessage(),
+            ];
+        }
 
         return [
             'success' => true,
@@ -300,7 +667,7 @@ class MesaAsignacionEquiposService
                 i.id as id_inscrito
             FROM inscritos i
             WHERE i.torneo_id = ? 
-              AND " . InscritosHelper::sqlWhereSoloConfirmadoConAlias('i') . "
+              AND i.estatus != 4
               AND i.clasiequi $condicionClasiequi
             ORDER BY 
               i.numero ASC,
@@ -352,25 +719,121 @@ class MesaAsignacionEquiposService
     // ========================================================================
 
     /**
-     * Obtiene equipos con sus jugadores ordenados
-     * Primero por club, luego por código del equipo dentro del club
+     * Ronda 1: todos los inscritos del torneo, orden estricto club_id, numfvd, id inscrito.
+     * Devuelve null si no hay exactamente 4 filas por codigo_equipo tras deduplicar.
+     *
+     * @return array<int, array<string, mixed>>|null
+     */
+    private function obtenerListaJugadoresRonda1Ordenada(int $torneoId): ?array
+    {
+        $sql = "SELECT i.id as id_inscrito, i.torneo_id, i.id_usuario, i.codigo_equipo,
+                       u.cedula, u.nombre, u.id as usuario_id, u.numfvd, u.sexo,
+                       eq.id AS id_equipo, eq.id_club,
+                       i.puntos, i.ganados, i.perdidos, i.efectividad, i.posicion, i.numero,
+                       (SELECT COUNT(*) FROM partiresul pr_gff WHERE pr_gff.id_usuario = i.id_usuario AND pr_gff.id_torneo = i.torneo_id AND pr_gff.ff = 1) AS gff, i.sancion, i.tarjeta
+                FROM inscritos i
+                INNER JOIN equipos eq ON eq.id_torneo = i.torneo_id AND eq.codigo_equipo = i.codigo_equipo AND eq.estatus = 0
+                " . $this->sqlJoinUsuarioInscritoEquipo() . "
+                WHERE i.torneo_id = ? AND i.estatus != 4
+                  AND i.codigo_equipo IS NOT NULL AND TRIM(i.codigo_equipo) != ''
+                ORDER BY eq.id ASC, u.id ASC";
+        try {
+            $stmt = $this->pdo->prepare($sql);
+            $stmt->execute([$torneoId]);
+            $jugadores = $this->deduplicarJugadoresPorInscrito($stmt->fetchAll(PDO::FETCH_ASSOC));
+            $porEq = [];
+            foreach ($jugadores as $row) {
+                $c = trim((string)($row['codigo_equipo'] ?? ''));
+                if ($c === '') {
+                    return null;
+                }
+                $porEq[$c] = ($porEq[$c] ?? 0) + 1;
+            }
+            foreach ($porEq as $cnt) {
+                if ($cnt !== self::JUGADORES_POR_EQUIPO) {
+                    return null;
+                }
+            }
+
+            return $this->marcarAlertaGeneroEnJugadores($torneoId, array_values($jugadores));
+        } catch (Exception $e) {
+            error_log('obtenerListaJugadoresRonda1Ordenada: ' . $e->getMessage());
+
+            return null;
+        }
+    }
+
+    /**
+     * Todos los jugadores del torneo (equipos activos), orden global: club ASC, nombre ASC.
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    private function obtenerTodosJugadoresOrdenClubNombre(int $torneoId): array
+    {
+        $sql = "SELECT i.id AS id_inscrito, i.id_usuario, i.codigo_equipo,
+                       u.cedula, u.nombre, u.id AS usuario_id,
+                       COALESCE(e.id_club, i.id_club, 0) AS id_club_ord,
+                       i.puntos, i.ganados, i.perdidos, i.efectividad, i.posicion, i.numero
+                FROM inscritos i
+                INNER JOIN equipos e ON e.id_torneo = i.torneo_id AND e.codigo_equipo = i.codigo_equipo AND e.estatus = 0
+                INNER JOIN usuarios u ON (
+                    u.id = i.id_usuario
+                    OR (
+                        u.numfvd = i.id_usuario
+                        AND EXISTS (
+                            SELECT 1 FROM tournaments tx
+                            WHERE tx.id = i.torneo_id AND tx.club_responsable = 7
+                        )
+                    )
+                )
+                WHERE i.torneo_id = ? AND i.estatus != 4
+                  AND i.codigo_equipo IS NOT NULL AND TRIM(i.codigo_equipo) != ''
+                ORDER BY COALESCE(e.id_club, 0) ASC, u.nombre ASC, i.id ASC";
+
+        try {
+            $stmt = $this->pdo->prepare($sql);
+            $stmt->execute([$torneoId]);
+            $jugadores = $this->deduplicarJugadoresPorInscrito($stmt->fetchAll(PDO::FETCH_ASSOC));
+            usort($jugadores, static function ($a, $b) {
+                $ca = (int)($a['id_club_ord'] ?? 0);
+                $cb = (int)($b['id_club_ord'] ?? 0);
+                if ($ca !== $cb) {
+                    return $ca <=> $cb;
+                }
+                $na = mb_strtolower(trim((string)($a['nombre'] ?? '')), 'UTF-8');
+                $nb = mb_strtolower(trim((string)($b['nombre'] ?? '')), 'UTF-8');
+                if ($na !== $nb) {
+                    return $na <=> $nb;
+                }
+
+                return ((int)($a['id_inscrito'] ?? 0)) <=> ((int)($b['id_inscrito'] ?? 0));
+            });
+
+            return array_values($jugadores);
+        } catch (Exception $e) {
+            error_log('obtenerTodosJugadoresOrdenClubNombre: ' . $e->getMessage());
+
+            return [];
+        }
+    }
+
+    /**
+     * Equipos con jugadores para ronda 1: torneo_id, club (id_club), código de equipo, nombre de equipo.
      */
     private function obtenerEquiposConJugadores($torneoId)
     {
-        $sql = "SELECT e.id, e.codigo_equipo, e.nombre_equipo, e.id_club, c.nombre as nombre_club
+        $sql = "SELECT e.id, e.id_torneo, e.codigo_equipo, e.nombre_equipo, e.id_club, c.nombre AS nombre_club
                 FROM equipos e
                 LEFT JOIN clubes c ON e.id_club = c.id
                 WHERE e.id_torneo = ? AND e.estatus = 0
-                ORDER BY COALESCE(e.id_club, 0) ASC, e.codigo_equipo ASC, e.nombre_equipo ASC";
+                ORDER BY e.id_torneo ASC, COALESCE(e.id_club, 0) ASC, e.codigo_equipo ASC, e.nombre_equipo ASC";
         
         $stmt = $this->pdo->prepare($sql);
         $stmt->execute([$torneoId]);
         $equipos = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-        // Agregar jugadores a cada equipo
         foreach ($equipos as &$equipo) {
-            $jugadores = $this->obtenerJugadoresEquipo($torneoId, $equipo['codigo_equipo']);
-            $equipo['jugadores'] = $jugadores;
+            $equipo['jugadores'] = $this->obtenerJugadoresEquipo($torneoId, $equipo['codigo_equipo']);
         }
         unset($equipo);
 
@@ -378,45 +841,46 @@ class MesaAsignacionEquiposService
     }
 
     /**
-     * Obtiene equipos con jugadores y clasificación del torneo
+     * Equipos y clasificación para rondas 2+.
+     * Orden G/E/P: ganados, efectividad, puntos; menos perdidos (P); desempate código.
      */
     private function obtenerEquiposConJugadoresYClasificacion($torneoId, $hastaRonda)
     {
         $sql = "SELECT e.id, e.codigo_equipo, e.nombre_equipo, e.id_club, c.nombre as nombre_club,
-                       COALESCE(SUM(i.puntos), 0) as puntos_equipo,
-                       COALESCE(SUM(i.ganados), 0) as ganados_equipo,
-                       COALESCE(AVG(i.efectividad), 0) as efectividad_equipo
+                       COALESCE(e.puntos, 0) AS puntos_equipo,
+                       COALESCE(e.ganados, 0) AS ganados_equipo,
+                       COALESCE(e.perdidos, 0) AS perdidos_equipo,
+                       COALESCE(e.efectividad, 0) AS efectividad_equipo,
+                       (COALESCE(e.ganados, 0) - COALESCE(e.perdidos, 0)) AS diferencia_equipo
                 FROM equipos e
                 LEFT JOIN clubes c ON e.id_club = c.id
-                LEFT JOIN inscritos i ON i.torneo_id = e.id_torneo 
-                    AND i.codigo_equipo = e.codigo_equipo 
-                    AND " . InscritosHelper::sqlWhereSoloConfirmadoConAlias('i') . "
                 WHERE e.id_torneo = ? AND e.estatus = 0
-                GROUP BY e.id, e.codigo_equipo, e.nombre_equipo, e.id_club, c.nombre
-                ORDER BY puntos_equipo DESC, ganados_equipo DESC, efectividad_equipo DESC, e.codigo_equipo ASC";
+                ORDER BY
+                    COALESCE(e.ganados, 0) DESC,
+                    COALESCE(e.efectividad, 0) DESC,
+                    COALESCE(e.puntos, 0) DESC,
+                    COALESCE(e.perdidos, 0) ASC,
+                    e.codigo_equipo ASC";
         
         $stmt = $this->pdo->prepare($sql);
         $stmt->execute([$torneoId]);
         $equipos = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-        // Agregar jugadores con su clasificación individual
+        $rank = 1;
         foreach ($equipos as &$equipo) {
+            $equipo['clasificacion_equipo'] = $rank;
+            $rank++;
             $jugadores = $this->obtenerJugadoresEquipoConClasificacion($torneoId, $equipo['codigo_equipo']);
             $equipo['jugadores'] = $jugadores;
-            $equipo['clasificacion_equipo'] = $this->calcularPosicionEquipo($equipos, $equipo);
         }
         unset($equipo);
-
-        // Reordenar por clasificación calculada
-        usort($equipos, function($a, $b) {
-            return ($a['clasificacion_equipo'] ?? 999) <=> ($b['clasificacion_equipo'] ?? 999);
-        });
 
         return $equipos;
     }
 
     /**
-     * Obtiene jugadores de un equipo con su posición en el equipo
+     * Jugadores de un equipo para ronda 1: no se usa rendimiento (no hay resultados).
+     * Orden fijo: número de tablero si está definido; si no, orden de inscripción (id inscrito).
      */
     private function obtenerJugadoresEquipo($torneoId, $codigoEquipo)
     {
@@ -424,30 +888,44 @@ class MesaAsignacionEquiposService
             return [];
         }
         
-        // Obtener jugadores directamente desde inscritos usando codigo_equipo
-        // La tabla equipo_jugadores no existe en este sistema, usamos inscritos directamente
-        // El campo codigo_equipo en inscritos identifica a qué equipo pertenece cada jugador
-        $sql = "SELECT i.id as id_inscrito, i.id_usuario, i.codigo_equipo, 
-                       u.cedula, u.nombre, u.id as usuario_id,
-                       i.puntos, i.ganados, i.perdidos, i.efectividad, i.posicion,
-                       i.gff, i.sancion, i.tarjeta
+        $sql = "SELECT i.id as id_inscrito, i.torneo_id, i.id_usuario, i.codigo_equipo,
+                       eq.id AS id_equipo,
+                       u.cedula, u.nombre, u.id as usuario_id, u.sexo,
+                       i.puntos, i.ganados, i.perdidos, i.efectividad, i.posicion, i.numero,
+                       (SELECT COUNT(*) FROM partiresul pr_gff WHERE pr_gff.id_usuario = i.id_usuario AND pr_gff.id_torneo = i.torneo_id AND pr_gff.ff = 1) AS gff, i.sancion, i.tarjeta
                 FROM inscritos i
-                INNER JOIN usuarios u ON i.id_usuario = u.id
-                WHERE i.torneo_id = ? AND i.codigo_equipo = ? AND " . InscritosHelper::sqlWhereSoloConfirmadoConAlias('i') . "
+                INNER JOIN equipos eq ON eq.id_torneo = i.torneo_id AND eq.codigo_equipo = i.codigo_equipo AND eq.estatus = 0
+                " . $this->sqlJoinUsuarioInscritoEquipo() . "
+                WHERE i.torneo_id = ? AND i.codigo_equipo = ? AND i.estatus != 4
                 ORDER BY 
-                    CASE WHEN i.posicion = 0 OR i.posicion IS NULL THEN 9999 ELSE i.posicion END ASC,
-                    i.ganados DESC,
-                    i.efectividad DESC,
-                    i.puntos DESC,
-                    i.id_usuario ASC
-                LIMIT 4";
+                    i.torneo_id ASC,
+                    CASE WHEN u.id = i.id_usuario THEN 0 ELSE 1 END ASC,
+                    CASE WHEN COALESCE(i.numero, 0) = 0 THEN 999 ELSE i.numero END ASC,
+                    i.id ASC";
         
         try {
             $stmt = $this->pdo->prepare($sql);
             $stmt->execute([$torneoId, $codigoEquipo]);
-            $jugadores = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            $jugadores = $this->deduplicarJugadoresPorInscrito($stmt->fetchAll(PDO::FETCH_ASSOC));
+            usort($jugadores, static function ($a, $b) {
+                $ta = (int)($a['torneo_id'] ?? 0);
+                $tb = (int)($b['torneo_id'] ?? 0);
+                if ($ta !== $tb) {
+                    return $ta <=> $tb;
+                }
+                $na = (int)($a['numero'] ?? 0);
+                $nb = (int)($b['numero'] ?? 0);
+                if ($na > 0 && $nb > 0) {
+                    return $na <=> $nb;
+                }
+                if ($na > 0 xor $nb > 0) {
+                    return $na > 0 ? -1 : 1;
+                }
+
+                return ((int)($a['id_inscrito'] ?? 0)) <=> ((int)($b['id_inscrito'] ?? 0));
+            });
+            $jugadores = array_slice($jugadores, 0, self::JUGADORES_POR_EQUIPO);
             
-            // Asignar posición dentro del equipo basada en el orden de clasificación individual
             $pos = 1;
             foreach ($jugadores as &$jugador) {
                 $jugador['posicion_equipo'] = $pos;
@@ -455,7 +933,7 @@ class MesaAsignacionEquiposService
             }
             unset($jugador);
             
-            return $jugadores;
+            return $this->marcarAlertaGeneroEnJugadores($torneoId, $jugadores);
         } catch (Exception $e) {
             error_log("Error en obtenerJugadoresEquipo: " . $e->getMessage());
             return [];
@@ -463,7 +941,7 @@ class MesaAsignacionEquiposService
     }
 
     /**
-     * Obtiene jugadores de un equipo con su clasificación individual
+     * Jugadores del equipo para rondas 2+ — homólogos 1…4 por puntos DESC, efectividad DESC.
      */
     private function obtenerJugadoresEquipoConClasificacion($torneoId, $codigoEquipo)
     {
@@ -471,30 +949,53 @@ class MesaAsignacionEquiposService
             return [];
         }
         
-        // Obtener jugadores directamente desde inscritos usando codigo_equipo
-        // La tabla equipo_jugadores no existe en este sistema, usamos inscritos directamente
-        // El campo codigo_equipo en inscritos identifica a qué equipo pertenece cada jugador
-        $sql = "SELECT i.id as id_inscrito, i.id_usuario, i.codigo_equipo, 
-                       u.cedula, u.nombre, u.id as usuario_id,
-                       i.puntos, i.ganados, i.perdidos, i.efectividad, i.posicion,
-                       i.gff, i.sancion, i.tarjeta
+        $sql = "SELECT i.id as id_inscrito, i.id_usuario, i.codigo_equipo,
+                       eq.id AS id_equipo,
+                       u.cedula, u.nombre, u.id as usuario_id, u.sexo,
+                       i.puntos, i.ganados, i.perdidos, i.efectividad, i.posicion, i.numero,
+                       (SELECT COUNT(*) FROM partiresul pr_gff WHERE pr_gff.id_usuario = i.id_usuario AND pr_gff.id_torneo = i.torneo_id AND pr_gff.ff = 1) AS gff, i.sancion, i.tarjeta
                 FROM inscritos i
-                INNER JOIN usuarios u ON i.id_usuario = u.id
-                WHERE i.torneo_id = ? AND i.codigo_equipo = ? AND " . InscritosHelper::sqlWhereSoloConfirmadoConAlias('i') . "
+                INNER JOIN equipos eq ON eq.id_torneo = i.torneo_id AND eq.codigo_equipo = i.codigo_equipo AND eq.estatus = 0
+                " . $this->sqlJoinUsuarioInscritoEquipo() . "
+                WHERE i.torneo_id = ? AND i.codigo_equipo = ? AND i.estatus != 4
                 ORDER BY 
-                    CASE WHEN i.posicion = 0 OR i.posicion IS NULL THEN 9999 ELSE i.posicion END ASC,
-                    i.ganados DESC,
-                    i.efectividad DESC,
-                    i.puntos DESC,
-                    i.id_usuario ASC
-                LIMIT 4";
+                    CASE WHEN u.id = i.id_usuario THEN 0 ELSE 1 END ASC,
+                    CAST(i.ganados AS SIGNED) DESC,
+                    CAST(i.efectividad AS SIGNED) DESC,
+                    CAST(i.puntos AS SIGNED) DESC,
+                    CAST(i.perdidos AS SIGNED) ASC,
+                    i.id_usuario ASC";
         
         try {
             $stmt = $this->pdo->prepare($sql);
             $stmt->execute([$torneoId, $codigoEquipo]);
-            $jugadores = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            $jugadores = $this->deduplicarJugadoresPorInscrito($stmt->fetchAll(PDO::FETCH_ASSOC));
+            usort($jugadores, static function ($a, $b) {
+                $ga = (int) ($a['ganados'] ?? 0);
+                $gb = (int) ($b['ganados'] ?? 0);
+                if ($ga !== $gb) {
+                    return $gb <=> $ga;
+                }
+                $ea = (float) ($a['efectividad'] ?? 0);
+                $eb = (float) ($b['efectividad'] ?? 0);
+                if ($ea != $eb) {
+                    return $eb <=> $ea;
+                }
+                $pa = (int) ($a['puntos'] ?? 0);
+                $pb = (int) ($b['puntos'] ?? 0);
+                if ($pa !== $pb) {
+                    return $pb <=> $pa;
+                }
+                $pra = (int) ($a['perdidos'] ?? 0);
+                $prb = (int) ($b['perdidos'] ?? 0);
+                if ($pra !== $prb) {
+                    return $pra <=> $prb;
+                }
+
+                return ((int) ($a['id_usuario'] ?? 0)) <=> ((int) ($b['id_usuario'] ?? 0));
+            });
+            $jugadores = array_slice($jugadores, 0, self::JUGADORES_POR_EQUIPO);
             
-            // Asignar posición dentro del equipo basada en el orden de clasificación individual
             $pos = 1;
             foreach ($jugadores as &$jugador) {
                 $jugador['posicion_equipo'] = $pos;
@@ -503,32 +1004,11 @@ class MesaAsignacionEquiposService
             }
             unset($jugador);
             
-            return $jugadores;
+            return $this->marcarAlertaGeneroEnJugadores($torneoId, $jugadores);
         } catch (Exception $e) {
             error_log("Error en obtenerJugadoresEquipoConClasificacion: " . $e->getMessage());
             return [];
         }
-    }
-
-    /**
-     * Calcula la posición del equipo en la clasificación
-     */
-    private function calcularPosicionEquipo($todosEquipos, $equipo)
-    {
-        $posicion = 1;
-        foreach ($todosEquipos as $e) {
-            if ($e['id'] == $equipo['id']) {
-                break;
-            }
-            // Comparar por puntos, ganados, efectividad
-            if ($e['puntos_equipo'] > $equipo['puntos_equipo'] ||
-                ($e['puntos_equipo'] == $equipo['puntos_equipo'] && $e['ganados_equipo'] > $equipo['ganados_equipo']) ||
-                ($e['puntos_equipo'] == $equipo['puntos_equipo'] && $e['ganados_equipo'] == $equipo['ganados_equipo'] && 
-                 $e['efectividad_equipo'] > $equipo['efectividad_equipo'])) {
-                $posicion++;
-            }
-        }
-        return $posicion;
     }
 
     /**
@@ -707,10 +1187,60 @@ class MesaAsignacionEquiposService
     }
 
     /**
+     * Nombre + id equipo coherentes con inscripción vigente antes de grabar partiresul.
+     * V3.1: el género del usuario vs. torneo no bloquea el grabado (solo alerta en UI).
+     */
+    private function validarConsistenciaJugadoresParaGrabado(int $torneoId, array $mesas): ?string
+    {
+        $normNombre = static function ($s): string {
+            return mb_strtolower(preg_replace('/\s+/u', ' ', trim((string) $s)), 'UTF-8');
+        };
+        foreach ($mesas as $mesa) {
+            if (count($mesa) !== self::JUGADORES_POR_MESA) {
+                return 'Cada mesa debe tener exactamente 4 jugadores para grabar.';
+            }
+        }
+        foreach ($mesas as $mesa) {
+            foreach ($mesa as $jug) {
+                $iid = (int) ($jug['id_inscrito'] ?? 0);
+                if ($iid <= 0) {
+                    return 'Falta id de inscripción en un jugador; no se puede validar.';
+                }
+                $sql = 'SELECT u.nombre AS nombre_u, eq.id AS id_equipo_db
+                        FROM inscritos i
+                        INNER JOIN usuarios u ON u.id = i.id_usuario
+                        INNER JOIN equipos eq ON eq.id_torneo = i.torneo_id AND eq.codigo_equipo = i.codigo_equipo AND eq.estatus = 0
+                        WHERE i.torneo_id = ? AND i.id = ? AND i.estatus != 4';
+                $st = $this->pdo->prepare($sql);
+                $st->execute([$torneoId, $iid]);
+                $row = $st->fetch(PDO::FETCH_ASSOC);
+                if (!$row) {
+                    return 'Inscripción no válida para este torneo (datos de jugador/equipo).';
+                }
+                $idEqDb = (int) ($row['id_equipo_db'] ?? 0);
+                $idEqJug = (int) ($jug['id_equipo'] ?? 0);
+                if ($idEqDb > 0 && $idEqJug > 0 && $idEqDb !== $idEqJug) {
+                    return 'Inconsistencia de equipo: revise código de equipo e id de equipo.';
+                }
+                if ($normNombre($row['nombre_u'] ?? '') !== $normNombre($jug['nombre'] ?? '')) {
+                    return 'Inconsistencia de nombre: revise datos del usuario y la inscripción.';
+                }
+            }
+        }
+
+        return null;
+    }
+
+    /**
      * Guarda la asignación de mesas en la base de datos
      */
     private function guardarAsignacionRonda($torneoId, $ronda, $mesas)
     {
+        $err = $this->validarConsistenciaJugadoresParaGrabado((int) $torneoId, $mesas);
+        if ($err !== null) {
+            throw new RuntimeException($err);
+        }
+
         $this->pdo->beginTransaction();
 
         try {
@@ -718,32 +1248,120 @@ class MesaAsignacionEquiposService
             $stmt = $this->pdo->prepare("DELETE FROM partiresul WHERE id_torneo = ? AND partida = ?");
             $stmt->execute([$torneoId, $ronda]);
 
+            $colEq = $this->partiresulColumnaIdEquipo();
             $numeroMesa = 1;
             foreach ($mesas as $mesa) {
                 $secuencia = 1;
                 foreach ($mesa as $jugador) {
-                    $sql = "INSERT INTO partiresul 
-                            (id_torneo, id_usuario, partida, mesa, secuencia, fecha_partida, registrado,
-                             resultado1, resultado2, efectividad, ff)
-                            VALUES (?, ?, ?, ?, ?, NOW(), 0, 0, 0, 0, 0)";
-                    
-                    $stmt = $this->pdo->prepare($sql);
-                    $stmt->execute([
-                        $torneoId,
-                        $jugador['id_usuario'],
-                        $ronda,
-                        $numeroMesa,
-                        $secuencia
-                    ]);
+                    $registrado_por = (class_exists('Auth') && method_exists('Auth', 'id')) ? ((int)Auth::id() ?: 1) : 1;
+                    $idUsuarioPartida = (int)($jugador['usuario_id'] ?? $jugador['id_usuario'] ?? 0);
+                    $idEq = (int)($jugador['id_equipo'] ?? 0);
+                    if ($colEq === 'id_equipo') {
+                        $sql = "INSERT INTO partiresul 
+                                (id_torneo, id_usuario, partida, mesa, secuencia, fecha_partida, registrado, registrado_por,
+                                 resultado1, resultado2, efectividad, ff, id_equipo)
+                                VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP, 0, ?, 0, 0, 0, 0, ?)";
+                        $stmt = $this->pdo->prepare($sql);
+                        $stmt->execute([
+                            $torneoId,
+                            $idUsuarioPartida,
+                            $ronda,
+                            $numeroMesa,
+                            $secuencia,
+                            $registrado_por,
+                            $idEq > 0 ? $idEq : null,
+                        ]);
+                    } elseif ($colEq === 'equipo_codigo') {
+                        $codEqIns = trim((string) ($jugador['codigo_equipo'] ?? ''));
+                        $sql = "INSERT INTO partiresul 
+                                (id_torneo, id_usuario, partida, mesa, secuencia, fecha_partida, registrado, registrado_por,
+                                 resultado1, resultado2, efectividad, ff, equipo_codigo)
+                                VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP, 0, ?, 0, 0, 0, 0, ?)";
+                        $stmt = $this->pdo->prepare($sql);
+                        $stmt->execute([
+                            $torneoId,
+                            $idUsuarioPartida,
+                            $ronda,
+                            $numeroMesa,
+                            $secuencia,
+                            $registrado_por,
+                            $codEqIns !== '' ? $codEqIns : null,
+                        ]);
+                    } else {
+                        $sql = "INSERT INTO partiresul 
+                                (id_torneo, id_usuario, partida, mesa, secuencia, fecha_partida, registrado, registrado_por,
+                                 resultado1, resultado2, efectividad, ff)
+                                VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP, 0, ?, 0, 0, 0, 0)";
+                        $stmt = $this->pdo->prepare($sql);
+                        $stmt->execute([
+                            $torneoId,
+                            $idUsuarioPartida,
+                            $ronda,
+                            $numeroMesa,
+                            $secuencia,
+                            $registrado_por,
+                        ]);
+                    }
                     $secuencia++;
                 }
                 $numeroMesa++;
             }
 
+            $this->sincronizarMesasAsignacion((int) $torneoId, (int) $ronda, $mesas);
+
             $this->pdo->commit();
         } catch (Exception $e) {
             $this->pdo->rollBack();
             throw $e;
+        }
+    }
+
+    /**
+     * Copia la asignación a mesas_asignacion si la tabla existe (mismo tournament_id que partiresul).
+     */
+    private function tablaMesasAsignacionExiste(): bool
+    {
+        static $cache = null;
+        if ($cache !== null) {
+            return $cache;
+        }
+        try {
+            $st = $this->pdo->query("SHOW TABLES LIKE 'mesas_asignacion'");
+            $cache = $st && $st->rowCount() > 0;
+        } catch (Exception $e) {
+            $cache = false;
+        }
+
+        return $cache;
+    }
+
+    /**
+     * @param array<int, array<int, array<string, mixed>>> $mesas
+     */
+    private function sincronizarMesasAsignacion(int $tournamentId, int $ronda, array $mesas): void
+    {
+        if (!$this->tablaMesasAsignacionExiste()) {
+            return;
+        }
+        $del = $this->pdo->prepare('DELETE FROM mesas_asignacion WHERE tournament_id = ? AND ronda = ?');
+        $del->execute([$tournamentId, $ronda]);
+
+        $ins = $this->pdo->prepare(
+            'INSERT INTO mesas_asignacion (tournament_id, ronda, mesa, secuencia, id_usuario, codigo_equipo) VALUES (?, ?, ?, ?, ?, ?)'
+        );
+        $numeroMesa = 1;
+        foreach ($mesas as $mesa) {
+            $secuencia = 1;
+            foreach ($mesa as $jugador) {
+                $uid = (int)($jugador['usuario_id'] ?? $jugador['id_usuario'] ?? 0);
+                if ($uid <= 0) {
+                    continue;
+                }
+                $cod = trim((string)($jugador['codigo_equipo'] ?? ''));
+                $ins->execute([$tournamentId, $ronda, $numeroMesa, $secuencia, $uid, $cod !== '' ? $cod : null]);
+                $secuencia++;
+            }
+            $numeroMesa++;
         }
     }
 

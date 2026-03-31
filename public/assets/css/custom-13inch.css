@@ -1,0 +1,365 @@
+/**
+ * Panel ~13" (1200px–1440px) y cuadrícula 10".
+ * Cargar después de Bootstrap.
+ */
+
+@media (min-width: 1200px) and (max-width: 1440px) {
+  .table > :not(caption) > * > *,
+  .table td,
+  .table th {
+    padding-top: 0.25rem !important;
+    padding-bottom: 0.25rem !important;
+    padding-left: 0.35rem !important;
+    padding-right: 0.35rem !important;
+  }
+
+  .table tbody,
+  table.table tbody {
+    font-size: 0.875rem;
+  }
+
+  #page-content-wrapper > nav.navbar {
+    padding-top: 0.4rem !important;
+    padding-bottom: 0.4rem !important;
+    min-height: auto !important;
+  }
+
+  #page-content-wrapper > nav.navbar .navbar-nav img.me-2,
+  #page-content-wrapper > nav.navbar .navbar-nav img[height="32"] {
+    height: 26px !important;
+  }
+
+  #page-content-wrapper > nav.navbar h5,
+  #page-content-wrapper > nav.navbar h6 {
+    line-height: 1.2;
+  }
+
+  #sidebar .sidebar-header {
+    padding: 1.2rem !important;
+  }
+
+  #sidebar .sidebar-header h4 {
+    font-size: 1rem;
+  }
+
+  .admin-sidebar .sidebar-header {
+    padding: 1.2rem !important;
+  }
+
+  .admin-sidebar .sidebar-brand {
+    font-size: 1.1rem;
+  }
+
+  .btn:not(.btn-lg):not(.btn-close) {
+    padding: 0.375rem 0.65rem;
+    min-height: 2.5rem;
+    line-height: 1.25;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .btn-sm:not(.btn-close) {
+    min-height: 2.25rem;
+    padding: 0.3rem 0.55rem;
+  }
+
+  .btn-group-sm > .btn {
+    min-height: 2.25rem;
+  }
+}
+
+/* Colores originales (resources/views/tournament/parts/cuadricula.php) */
+html.cuadricula-scroll-root {
+  --color-bg: #f4f6f8;
+  --color-surface: #ffffff;
+  --color-iden-bg: #4ade80;
+  --color-iden-text: #000000;
+  --color-mesa-bg: #60a5fa;
+  --color-mesa-text: #000000;
+  --color-border: #0f172a;
+  --color-separator: #fb923c;
+  --color-row-hover: #e2e8f0;
+  --color-bye-bg: #fef08a;
+}
+
+html.cuadricula-scroll-root,
+html.cuadricula-scroll-root body {
+  height: 100dvh !important;
+  max-height: 100dvh !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  overflow: hidden !important;
+  overflow-x: hidden !important;
+  overflow-y: hidden !important;
+  background: var(--color-bg) !important;
+}
+
+.cuadricula-shell {
+  height: 100dvh !important;
+  max-height: 100dvh !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  overflow: hidden !important;
+  overflow-x: hidden !important;
+  overflow-y: hidden !important;
+  display: flex !important;
+  flex-direction: column !important;
+  min-height: 0 !important;
+  box-sizing: border-box !important;
+  background: var(--color-surface) !important;
+}
+
+.cuadricula-shell .cuadricula-header,
+.cuadricula-shell .cuadricula-meta {
+  flex-shrink: 0 !important;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+.matrix-scroll {
+  flex: 1 1 0 !important;
+  min-height: 0 !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  overflow: hidden !important;
+  overflow-x: hidden !important;
+  overflow-y: hidden !important;
+  display: flex !important;
+  flex-direction: column !important;
+}
+
+#matrixMount {
+  flex: 1 1 0 !important;
+  min-height: 0 !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  overflow: hidden !important;
+  overflow-x: hidden !important;
+  overflow-y: hidden !important;
+  display: flex !important;
+  flex-direction: column !important;
+}
+
+.cuadricula-shell .cuadricula-serie {
+  flex: 1 1 0 !important;
+  min-height: 0 !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  overflow: hidden !important;
+  overflow-x: hidden !important;
+  overflow-y: hidden !important;
+  display: flex !important;
+  flex-direction: column !important;
+}
+
+.cuadricula-shell .cuadricula-grid-wrap {
+  flex: 1 1 0 !important;
+  min-height: 0 !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  overflow: hidden !important;
+  overflow-x: hidden !important;
+  overflow-y: hidden !important;
+  display: flex !important;
+  flex-direction: column !important;
+}
+
+@media screen {
+  .cuadricula-serie.is-hidden-screen {
+    display: none !important;
+  }
+}
+
+.matrix-header {
+  height: calc(4.5vh * 0.855) !important;
+  min-height: calc(4.5vh * 0.855) !important;
+  max-height: calc(4.5vh * 0.855) !important;
+}
+
+.matrix-row {
+  height: calc(5.8vh * 0.855) !important;
+  min-height: calc(5.8vh * 0.855) !important;
+  max-height: calc(5.8vh * 0.855) !important;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+.cuadricula-matrix-grid.grilla-pantalla {
+  display: grid !important;
+  box-sizing: border-box !important;
+  width: 100% !important;
+  flex: 0 0 auto !important;
+  flex-shrink: 0 !important;
+  align-self: stretch !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  grid-template-columns: repeat(16, 1fr) !important;
+  grid-template-rows: calc(4.5vh * 0.855) repeat(12, calc(5.8vh * 0.855)) !important;
+  grid-auto-rows: calc(5.8vh * 0.855) !important;
+  gap: 0 !important;
+  row-gap: 0 !important;
+  column-gap: 0 !important;
+  overflow: hidden !important;
+  overflow-x: hidden !important;
+  overflow-y: hidden !important;
+}
+
+/* Contenedor principal de la rejilla */
+.matrix-grid {
+  height: 98vh !important;
+  max-height: 98vh !important;
+  gap: 0 !important;
+  row-gap: 0 !important;
+  column-gap: 0 !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  overflow: hidden !important;
+  overflow-x: hidden !important;
+  overflow-y: hidden !important;
+  box-sizing: border-box !important;
+}
+
+/* Pantalla de cuadrícula: el header ya ocupa altura; 98vh aquí recorta la rejilla (p. ej. 14"). */
+.cuadricula-shell .cuadricula-matrix-grid.matrix-grid.grilla-pantalla {
+  height: 100% !important;
+  max-height: 100% !important;
+  min-height: 0 !important;
+  flex: 1 1 0 !important;
+  align-self: stretch !important;
+}
+
+.cuadricula-matrix-grid.grilla-pantalla .matrix-cell {
+  margin: 0 !important;
+  padding: 0 !important;
+  border: none !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  text-align: center !important;
+  font-size: 2.16vh !important;
+  font-weight: 600 !important;
+  box-sizing: border-box !important;
+  min-height: 0 !important;
+  line-height: 1.05 !important;
+  white-space: nowrap !important;
+  overflow: visible !important;
+  box-shadow:
+    inset 0 -0.5px 0 0 var(--color-border),
+    inset -0.5px 0 0 0 var(--color-border) !important;
+}
+
+/* ID de jugador (no cabecera IDEN/MESA): máximo contraste */
+.cuadricula-matrix-grid.grilla-pantalla .matrix-cell.matrix-iden:not(.matrix-header) {
+  font-weight: 800 !important;
+}
+
+.cuadricula-matrix-grid.grilla-pantalla .matrix-iden {
+  background: var(--color-iden-bg) !important;
+  color: var(--color-iden-text) !important;
+}
+
+.cuadricula-matrix-grid.grilla-pantalla .matrix-mesa {
+  background: var(--color-mesa-bg) !important;
+  color: var(--color-mesa-text) !important;
+}
+
+.cuadricula-matrix-grid.grilla-pantalla .matrix-bye {
+  background: var(--color-bye-bg) !important;
+  font-style: italic !important;
+}
+
+.cuadricula-matrix-grid.grilla-pantalla .matrix-cell:nth-child(2n) {
+  box-shadow:
+    inset 0 -0.5px 0 0 var(--color-border),
+    inset -2px 0 0 0 var(--color-separator) !important;
+}
+
+.cuadricula-matrix-grid.grilla-pantalla .matrix-cell.is-row-hover {
+  filter: brightness(0.94);
+}
+
+/* Legacy: grilla-agil / grilla-master */
+.matrix-grid.grilla-agil .matrix-row,
+.matrix-grid.grilla-master .matrix-row {
+  display: grid !important;
+  width: 100% !important;
+  height: calc(5.8vh * 0.855) !important;
+  min-height: calc(5.8vh * 0.855) !important;
+  max-height: calc(5.8vh * 0.855) !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  gap: 0 !important;
+  align-items: center !important;
+  overflow: hidden !important;
+}
+
+.matrix-grid.grilla-agil .matrix-row:first-child,
+.matrix-grid.grilla-master .matrix-row:first-child {
+  height: calc(4.5vh * 0.855) !important;
+  min-height: calc(4.5vh * 0.855) !important;
+  max-height: calc(4.5vh * 0.855) !important;
+}
+
+.matrix-grid.grilla-agil .matrix-row {
+  grid-template-columns: repeat(6, 1fr) !important;
+}
+
+.matrix-grid.grilla-master .matrix-row {
+  grid-template-columns: repeat(8, 1fr) !important;
+}
+
+.matrix-grid.grilla-agil .matrix-cell,
+.matrix-grid.grilla-master .matrix-cell {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  text-align: center !important;
+  font-size: 2.16vh !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  overflow: visible !important;
+  border: none !important;
+  box-shadow:
+    inset 0 -0.5px 0 0 var(--color-border),
+    inset -0.5px 0 0 0 var(--color-border) !important;
+}
+
+.matrix-grid.grilla-agil .matrix-cell.matrix-iden:not(.matrix-header),
+.matrix-grid.grilla-master .matrix-cell.matrix-iden:not(.matrix-header) {
+  font-weight: 800 !important;
+}
+
+.matrix-grid.grilla-agil .matrix-iden {
+  background: var(--color-iden-bg) !important;
+  color: var(--color-iden-text) !important;
+}
+
+.matrix-grid.grilla-agil .matrix-mesa {
+  background: var(--color-mesa-bg) !important;
+  color: var(--color-mesa-text) !important;
+}
+
+.matrix-grid.grilla-master .matrix-iden {
+  background: var(--color-iden-bg) !important;
+  color: var(--color-iden-text) !important;
+}
+
+.matrix-grid.grilla-master .matrix-mesa {
+  background: var(--color-mesa-bg) !important;
+  color: var(--color-mesa-text) !important;
+}
+
+/* Cuadrícula equipos / pantallas 1366×768: tipografía más compacta, sin scroll horizontal */
+@media (max-width: 1366px) and (max-height: 768px) {
+  .cuadricula-matrix-grid.grilla-pantalla .matrix-cell {
+    font-size: 1.575vh !important;
+    font-weight: 600 !important;
+  }
+  .cuadricula-matrix-grid.grilla-pantalla .matrix-header {
+    font-size: 1.395vh !important;
+  }
+  body.cuadricula-equipos-v3 .cuadricula-matrix-grid.grilla-pantalla .matrix-cell {
+    font-size: 1.485vh !important;
+  }
+}

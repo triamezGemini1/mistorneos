@@ -120,26 +120,20 @@ if (!empty($filter_torneo)) {
         error_log("Error al cargar estadísticas: " . $e->getMessage());
     }
 }
+
+$href_panel_torneo = !empty($filter_torneo)
+    ? 'index.php?page=torneo_gestion&action=panel&torneo_id=' . (int) $filter_torneo
+    : '';
 ?>
 
 <div class="container-fluid">
     <div class="row">
         <div class="col-12">
-            <div class="d-flex justify-content-between align-items-center mb-4">
-                <div>
-                    <h1 class="h3 mb-0">
-                        <i class="fas fa-file-alt me-2"></i>Reporte de Inscritos
-                    </h1>
-                    <p class="text-muted mb-0">Genera reportes de jugadores inscritos con filtros personalizados</p>
-                </div>
-                <div>
-                    <a href="index.php?page=registrants" class="btn btn-secondary me-2">
-                        <i class="fas fa-arrow-left me-2"></i>Volver a Inscritos
-                    </a>
-                    <a href="index.php?page=registrants_report_retirados<?= !empty($filter_torneo) ? '&filter_torneo=' . (int)$filter_torneo : '' ?><?= !empty($filter_clubs) ? '&' . http_build_query(['filter_clubs' => $filter_clubs]) : '' ?>" class="btn btn-warning text-dark">
-                        <i class="fas fa-user-minus me-2"></i>Reporte Retirados
-                    </a>
-                </div>
+            <div class="mb-4">
+                <h1 class="h3 mb-0">
+                    <i class="fas fa-file-alt me-2"></i>Reporte de Inscritos
+                </h1>
+                <p class="text-muted mb-0">Genera reportes de jugadores inscritos con filtros personalizados</p>
             </div>
         </div>
     </div>
@@ -203,29 +197,71 @@ if (!empty($filter_torneo)) {
                 </div>
             </div>
             
-            <div class="row mt-3">
+            <div class="row mt-2">
                 <div class="col-12">
-                    <div class="d-flex gap-2 flex-wrap">
-                        <button type="submit" class="btn btn-primary">
-                            <i class="fas fa-filter me-2"></i>Aplicar Filtros
+                    <div class="d-flex gap-2 flex-wrap align-items-center">
+                        <button type="button" class="btn btn-sm btn-outline-secondary" onclick="window.print();">
+                            <i class="fas fa-print me-1"></i>Imprimir
                         </button>
-                        <a href="index.php?page=registrants_report" class="btn btn-secondary">
-                            <i class="fas fa-times me-2"></i>Limpiar Filtros
+                        <?php if ($href_panel_torneo !== ''): ?>
+                        <a href="<?= htmlspecialchars($href_panel_torneo, ENT_QUOTES, 'UTF-8') ?>" class="btn btn-sm btn-outline-primary">
+                            <i class="fas fa-th-large me-1"></i>Regresar al panel
                         </a>
-                        
-                        <div class="vr"></div>
-                        
-                        <button type="button" class="btn btn-success" onclick="exportarExcel()" 
-                                id="btnExportarExcel" disabled>
-                            <i class="fas fa-file-excel me-2"></i>Exportar Excel
+                        <?php endif; ?>
+                        <span class="d-inline-flex flex-nowrap align-items-center gap-1 border-start ps-2 ms-1">
+                            <a href="index.php?page=registrants" class="btn btn-sm btn-secondary">
+                                <i class="fas fa-arrow-left me-1"></i>Volver
+                            </a>
+                            <button type="button" class="btn btn-sm btn-success" onclick="exportarExcel()"
+                                    id="btnExportarExcel" disabled>
+                                <i class="fas fa-file-excel me-1"></i>Excel
+                            </button>
+                            <button type="button" class="btn btn-sm btn-danger" onclick="exportarPDF()"
+                                    id="btnExportarPDF" disabled>
+                                <i class="fas fa-file-pdf me-1"></i>PDF
+                            </button>
+                        </span>
+                        <div class="vr d-none d-sm-block"></div>
+                        <button type="submit" class="btn btn-sm btn-primary">
+                            <i class="fas fa-filter me-1"></i>Aplicar Filtros
                         </button>
-                        <button type="button" class="btn btn-danger" onclick="exportarPDF()"
-                                id="btnExportarPDF" disabled>
-                            <i class="fas fa-file-pdf me-2"></i>Exportar PDF
-                        </button>
+                        <a href="index.php?page=registrants_report" class="btn btn-sm btn-secondary">
+                            <i class="fas fa-times me-1"></i>Limpiar Filtros
+                        </a>
+                        <a href="index.php?page=registrants_report_retirados<?= !empty($filter_torneo) ? '&filter_torneo=' . (int)$filter_torneo : '' ?><?= !empty($filter_clubs) ? '&' . http_build_query(['filter_clubs' => $filter_clubs]) : '' ?>" class="btn btn-sm btn-warning text-dark">
+                            <i class="fas fa-user-minus me-1"></i>Reporte Retirados
+                        </a>
                     </div>
                 </div>
             </div>
+            <?php if (!empty($filter_torneo) && class_exists('AppHelpers')): ?>
+            <div class="row mt-3">
+                <div class="col-12">
+                    <div class="alert alert-light border border-primary mb-0">
+                        <strong class="d-block mb-2"><i class="fas fa-layer-group me-2 text-primary"></i>Reporte detallado (asociación / equipos, logo organizador)</strong>
+                        <div class="d-flex flex-wrap gap-2">
+                            <a class="btn btn-danger btn-sm" target="_blank" rel="noopener"
+                               href="<?= htmlspecialchars(AppHelpers::torneoGestionUrl('inscripciones_reporte_detallado_pdf', (int)$filter_torneo)) ?>">
+                                <i class="fas fa-file-pdf me-1"></i>Abrir PDF detallado
+                            </a>
+                            <a class="btn btn-success btn-sm" target="_blank" rel="noopener"
+                               href="<?= htmlspecialchars(AppHelpers::torneoGestionUrl('inscripciones_reporte_detallado_xls', (int)$filter_torneo)) ?>">
+                                <i class="fas fa-file-excel me-1"></i>Descargar Excel detallado
+                            </a>
+                        </div>
+                        <small class="text-muted d-block mt-2 mb-0">Los botones “PDF/Excel listado simple” arriba son el formato compacto; el detallado incluye encabezado con logo y nombre del club organizador.</small>
+                    </div>
+                </div>
+            </div>
+            <?php elseif (empty($filter_torneo)): ?>
+            <div class="row mt-3">
+                <div class="col-12">
+                    <div class="alert alert-warning mb-0">
+                        <i class="fas fa-info-circle me-2"></i>Elija un <strong>torneo</strong> arriba para habilitar exportaciones y el reporte detallado.
+                    </div>
+                </div>
+            </div>
+            <?php endif; ?>
         </form>
     </div>
 </div>
@@ -324,68 +360,28 @@ if (!empty($filter_torneo)) {
 <script>
 // Función para exportar a PDF
 function exportarPDF() {
-    const params = new URLSearchParams();
-    
-    <?php if (!empty($filter_torneo)): ?>
-    params.append('torneo_id', '<?= (int)$filter_torneo ?>');
-    <?php endif; ?>
-    
-    <?php if (!empty($filter_clubs)): ?>
-    <?php foreach ($filter_clubs as $club_id): ?>
-    params.append('club_id[]', '<?= (int)$club_id ?>');
-    <?php endforeach; ?>
-    <?php endif; ?>
-    
-    <?php if (!empty($filter_sexo)): ?>
-    params.append('sexo', '<?= htmlspecialchars($filter_sexo) ?>');
-    <?php endif; ?>
-    
-    <?php if (!empty($search)): ?>
-    params.append('q', '<?= htmlspecialchars($search) ?>');
-    <?php endif; ?>
-    
-    window.location.href = 'modules/registrants/report_pdf.php?' + params.toString();
+    const torneoId = '<?= (int)$filter_torneo ?>';
+    if (!torneoId || torneoId === '0') return;
+    const base = '<?= rtrim(AppHelpers::getPublicUrl(), '/') ?>/index.php';
+    window.location.href = base + '?page=torneo_gestion&action=inscripciones_export_pdf&torneo_id=' + encodeURIComponent(torneoId);
 }
 
 // Función para exportar a Excel
 function exportarExcel() {
-    const params = new URLSearchParams();
-    
-    <?php if (!empty($filter_torneo)): ?>
-    params.append('torneo_id', '<?= (int)$filter_torneo ?>');
-    <?php endif; ?>
-    
-    <?php if (!empty($filter_clubs)): ?>
-    <?php foreach ($filter_clubs as $club_id): ?>
-    params.append('club_id[]', '<?= (int)$club_id ?>');
-    <?php endforeach; ?>
-    <?php endif; ?>
-    
-    <?php if (!empty($filter_sexo)): ?>
-    params.append('sexo', '<?= htmlspecialchars($filter_sexo) ?>');
-    <?php endif; ?>
-    
-    <?php if (!empty($search)): ?>
-    params.append('q', '<?= htmlspecialchars($search) ?>');
-    <?php endif; ?>
-    
-    window.location.href = 'modules/registrants/export_excel.php?' + params.toString();
+    const torneoId = '<?= (int)$filter_torneo ?>';
+    if (!torneoId || torneoId === '0') return;
+    const base = '<?= rtrim(AppHelpers::getPublicUrl(), '/') ?>/index.php';
+    window.location.href = base + '?page=torneo_gestion&action=inscripciones_export_xls&torneo_id=' + encodeURIComponent(torneoId);
 }
 
 // Función para exportar PDF por club
 function exportarClubPDF(club_id) {
-    const params = new URLSearchParams();
-    params.append('torneo_id', '<?= (int)$filter_torneo ?>');
-    params.append('club_id', club_id);
-    window.location.href = 'modules/registrants/report_pdf.php?' + params.toString();
+    exportarPDF();
 }
 
 // Función para exportar Excel por club
 function exportarClubExcel(club_id) {
-    const params = new URLSearchParams();
-    params.append('torneo_id', '<?= (int)$filter_torneo ?>');
-    params.append('club_id[]', club_id);
-    window.location.href = 'modules/registrants/export_excel.php?' + params.toString();
+    exportarExcel();
 }
 
 // Habilitar botones de exportación si hay filtros aplicados

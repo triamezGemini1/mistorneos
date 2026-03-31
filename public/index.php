@@ -195,8 +195,15 @@ if ($user['role'] === 'usuario' && (($user['role_original'] ?? '') !== 'admin_ge
     }
 }
 
-// Obtener página solicitada
-$page = $_GET['page'] ?? 'home';
+// Obtener página solicitada (POST a index.php a veces llega sin query string; el cuerpo puede traer page)
+$raw_page = (string) ($_GET['page'] ?? '');
+if ($raw_page === '' && ($_SERVER['REQUEST_METHOD'] ?? '') === 'POST') {
+    $raw_page = (string) ($_POST['page'] ?? '');
+    if ($raw_page === '' && (string) ($_POST['action'] ?? '') === 'guardar_resultados') {
+        $raw_page = 'torneo_gestion';
+    }
+}
+$page = $raw_page !== '' ? $raw_page : 'home';
 
 // Sanitizar nombre de página (solo letras, números, guiones y barras)
 $page = preg_replace('/[^a-zA-Z0-9_\/\-]/', '', $page);
@@ -423,6 +430,31 @@ if ($page === 'tournaments' && ($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'GET') 
 if ($page === 'torneo_gestion' && ($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
     require_once __DIR__ . '/../modules/torneo_gestion.php';
     exit;
+}
+
+// torneo_gestion GET — acciones que solo envían cabeceras o redirigen: sin layout (el módulo dentro del <main> ya imprimió HTML arriba)
+if ($page === 'torneo_gestion' && ($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'GET') {
+    $tg_get = trim((string)($_GET['action'] ?? ''));
+    $tg_tid = (int)($_GET['torneo_id'] ?? 0);
+    $tg_switch = (int)($_GET['switch_torneo_id'] ?? 0);
+    $tg_early = $tg_switch > 0
+        || ($tg_get === 'carga_masiva_equipos_plantilla' && $tg_tid > 0)
+        || ($tg_get === 'carga_masiva_equipos_reporte_pdf' && $tg_tid > 0)
+        || ($tg_get === 'inscripciones_export_xls' && $tg_tid > 0)
+        || ($tg_get === 'inscripciones_export_pdf' && $tg_tid > 0)
+        || ($tg_get === 'inscripciones_reporte_detallado_pdf' && $tg_tid > 0)
+        || ($tg_get === 'inscripciones_reporte_detallado_xls' && $tg_tid > 0)
+        || in_array($tg_get, ['panel_equipos', 'dashboard'], true);
+    if ($tg_early) {
+        require_once __DIR__ . '/../modules/torneo_gestion.php';
+        exit;
+    }
+}
+
+// torneo_gestion GET: el módulo se incluye desde layout.php (después de que el sidebar/top ya imprimió HTML).
+// Buffer ayuda con redirecciones internas del switch (p. ej. registrar_resultados sin ronda); las rutas críticas van despachadas arriba.
+if ($page === 'torneo_gestion' && ob_get_level() === 0) {
+    ob_start();
 }
 
 // Incluir layout principal (para GET normal y páginas de visualización). $page ya está definida y saneada; el layout la usa para incluir el módulo correcto.

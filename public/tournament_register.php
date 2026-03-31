@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 /**
  * Página Pública de Inscripción en Torneo
  * Permite a usuarios registrados inscribirse en un torneo
@@ -661,9 +661,35 @@ $clases = [1 => 'Torneo', 2 => 'Campeonato'];
                                 <label class="form-label">Club de la organización *</label>
                                 <select name="club_id" class="form-select" required>
                                     <option value="">— Seleccione su club —</option>
-                                    <?php foreach ($clubes_organizacion as $c): ?>
-                                        <option value="<?= (int)$c['id'] ?>"><?= htmlspecialchars($c['nombre']) ?></option>
-                                    <?php endforeach; ?>
+                                    <?php
+                                    $asociacionesFvd = [];
+                                    $clubesAfiliados = [];
+                                    foreach ($clubes_organizacion as $c) {
+                                        if ((int)($c['id'] ?? 0) >= 1 && (int)($c['id'] ?? 0) <= 39) {
+                                            $asociacionesFvd[] = $c;
+                                        } else {
+                                            $clubesAfiliados[] = $c;
+                                        }
+                                    }
+                                    ?>
+                                    <optgroup label="Asociaciones Estadales (FVD)">
+                                        <?php if (empty($asociacionesFvd)): ?>
+                                            <option value="" disabled>Sin asociaciones disponibles</option>
+                                        <?php else: ?>
+                                            <?php foreach ($asociacionesFvd as $c): ?>
+                                                <option value="<?= (int)$c['id'] ?>"><?= htmlspecialchars($c['nombre']) ?></option>
+                                            <?php endforeach; ?>
+                                        <?php endif; ?>
+                                    </optgroup>
+                                    <optgroup label="Clubes Afiliados">
+                                        <?php if (empty($clubesAfiliados)): ?>
+                                            <option value="" disabled>Sin clubes afiliados disponibles</option>
+                                        <?php else: ?>
+                                            <?php foreach ($clubesAfiliados as $c): ?>
+                                                <option value="<?= (int)$c['id'] ?>"><?= htmlspecialchars($c['nombre']) ?></option>
+                                            <?php endforeach; ?>
+                                        <?php endif; ?>
+                                    </optgroup>
                                 </select>
                             </div>
                             <div class="col-md-6 mb-3">

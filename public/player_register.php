@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 /**
  * Inscripción Directa de Jugador desde Link de WhatsApp
  */
@@ -338,13 +338,38 @@ $clases = [1 => 'Abierto', 2 => 'Por Categorías'];
                                         <select name="club_inscripcion" class="form-select">
                                             <?php
                                             $clubes_disponibles = ClubHelper::getClubesSupervisedWithData($jugador_data['club_id']);
-                                            foreach ($clubes_disponibles as $club):
+                                            $asociacionesFvd = [];
+                                            $clubesAfiliados = [];
+                                            foreach ($clubes_disponibles as $club) {
+                                                if ((int)($club['id'] ?? 0) >= 1 && (int)($club['id'] ?? 0) <= 39) {
+                                                    $asociacionesFvd[] = $club;
+                                                } else {
+                                                    $clubesAfiliados[] = $club;
+                                                }
+                                            }
                                             ?>
-                                                <option value="<?= $club['id'] ?>" <?= $club['id'] == $jugador_data['club_id'] ? 'selected' : '' ?>>
-                                                    <?= htmlspecialchars($club['nombre']) ?>
-                                                    <?= $club['es_principal'] ? ' (Principal)' : '' ?>
-                                                </option>
-                                            <?php endforeach; ?>
+                                            <optgroup label="Asociaciones Estadales (FVD)">
+                                                <?php if (empty($asociacionesFvd)): ?>
+                                                    <option value="" disabled>Sin asociaciones disponibles</option>
+                                                <?php else: ?>
+                                                    <?php foreach ($asociacionesFvd as $club): ?>
+                                                        <option value="<?= (int)$club['id'] ?>" <?= (int)$club['id'] === (int)$jugador_data['club_id'] ? 'selected' : '' ?>>
+                                                            <?= htmlspecialchars($club['nombre']) ?><?= !empty($club['es_principal']) ? ' (Principal)' : '' ?>
+                                                        </option>
+                                                    <?php endforeach; ?>
+                                                <?php endif; ?>
+                                            </optgroup>
+                                            <optgroup label="Clubes Afiliados">
+                                                <?php if (empty($clubesAfiliados)): ?>
+                                                    <option value="" disabled>Sin clubes afiliados disponibles</option>
+                                                <?php else: ?>
+                                                    <?php foreach ($clubesAfiliados as $club): ?>
+                                                        <option value="<?= (int)$club['id'] ?>" <?= (int)$club['id'] === (int)$jugador_data['club_id'] ? 'selected' : '' ?>>
+                                                            <?= htmlspecialchars($club['nombre']) ?><?= !empty($club['es_principal']) ? ' (Principal)' : '' ?>
+                                                        </option>
+                                                    <?php endforeach; ?>
+                                                <?php endif; ?>
+                                            </optgroup>
                                         </select>
                                     </div>
                                 <?php endif; ?>

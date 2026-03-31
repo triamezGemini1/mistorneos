@@ -74,8 +74,13 @@ if (!defined('URL_BASE')) {
     }
     if ($url_base_path === '' && !empty($_SERVER['SCRIPT_NAME'])) {
         $dir = dirname($_SERVER['SCRIPT_NAME']);
+        $dir = str_replace('\\', '/', $dir);
+        // Scripts bajo …/public/api/ deben compartir la misma cookie de sesión que …/public/
+        if (preg_match('#^(.+?/public)/api$#', $dir, $m)) {
+            $dir = $m[1];
+        }
         if ($dir !== '.' && $dir !== '' && $dir !== '/') {
-            $url_base_path = '/' . trim(str_replace('\\', '/', $dir), '/') . '/';
+            $url_base_path = '/' . trim($dir, '/') . '/';
         }
     }
     if ($url_base_path === '') {

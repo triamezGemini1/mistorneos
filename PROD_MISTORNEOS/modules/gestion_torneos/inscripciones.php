@@ -8,6 +8,7 @@ $base_url = $use_standalone ? $script_actual : 'index.php?page=torneo_gestion';
 $url_panel = $base_url . ($use_standalone ? '?' : '&') . 'action=panel&torneo_id=' . (int)($torneo['id'] ?? 0);
 $total_inscritos = isset($total_inscritos) ? (int)$total_inscritos : 0;
 $confirmados = isset($confirmados) ? (int)$confirmados : 0;
+$contadores_inscripcion = isset($contadores_inscripcion) && is_array($contadores_inscripcion) ? $contadores_inscripcion : ['inscritos_total' => $total_inscritos, 'jugadores_confirmados' => $confirmados, 'equipos_activos' => 0];
 $hombres = isset($hombres) ? (int)$hombres : 0;
 $mujeres = isset($mujeres) ? (int)$mujeres : 0;
 $resumen_clubes = $resumen_clubes ?? [];
@@ -35,6 +36,7 @@ $puede_confirmar_retirar = isset($puede_confirmar_retirar) ? $puede_confirmar_re
                 <span><i class="fas fa-calendar-alt me-1"></i> <?php echo date('d/m/Y', strtotime($torneo['fechator'] ?? 'now')); ?></span>
                 <span><i class="fas fa-building me-1"></i> <?php echo htmlspecialchars($torneo['club_nombre'] ?? 'N/A'); ?></span>
             </div>
+            <?php require __DIR__ . '/../../resources/views/partials/torneo_inscripcion_badges_bs5.php'; ?>
         </div>
         <div class="text-end">
             <a href="<?php echo htmlspecialchars($url_panel); ?>" class="btn btn-light btn-sm">
@@ -93,6 +95,18 @@ $puede_confirmar_retirar = isset($puede_confirmar_retirar) ? $puede_confirmar_re
 <div class="alert alert-info mb-4">
     <i class="fas fa-info-circle me-2"></i>
     <strong>El torneo ya ha iniciado.</strong> No se pueden agregar nuevos jugadores.
+    <?php
+    $retirados = $retirados ?? [];
+    $es_modalidad_equipos = isset($torneo['modalidad']) && (int)$torneo['modalidad'] === 3;
+    if (!empty($retirados) && !$es_modalidad_equipos):
+        $url_sustituir = $base_url . ($use_standalone ? '?' : '&') . 'action=sustituir_jugador&torneo_id=' . (int)$torneo['id'];
+    ?>
+    <span class="ms-2">
+        <a href="<?= htmlspecialchars($url_sustituir) ?>" class="btn btn-warning btn-sm ms-2">
+            <i class="fas fa-user-exchange me-1"></i> Sustituir jugador retirado
+        </a>
+    </span>
+    <?php endif; ?>
 </div>
 <?php endif; ?>
 

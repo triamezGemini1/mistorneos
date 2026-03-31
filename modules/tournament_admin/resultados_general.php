@@ -7,6 +7,7 @@
 
 require_once __DIR__ . '/../../lib/app_helpers.php';
 require_once __DIR__ . '/../../lib/ResultadosReporteData.php';
+require_once __DIR__ . '/../../lib/Tournament/Services/PaginationService.php';
 
 // Asegurar que las posiciones estén actualizadas
 if (function_exists('recalcularPosiciones')) {
@@ -18,8 +19,7 @@ $es_parejas = in_array((int)($torneo['modalidad'] ?? 0), [2, 4], true);
 
 // Configuración de paginación
 $items_por_pagina = 30; // Jugadores por página
-$pagina_actual = isset($_GET['pagina']) ? max(1, (int)$_GET['pagina']) : 1;
-$offset = ($pagina_actual - 1) * $items_por_pagina;
+$pagina_raw_general = isset($_GET['pagina']) ? (int) $_GET['pagina'] : 1;
 
 // Función helper para generar HTML del paginador
 function generarPaginador($pagina_actual, $total_paginas, $base_url, $parametros_get = []) {
@@ -126,17 +126,11 @@ try {
     $stmt_count = $pdo->prepare($sql_count);
     $stmt_count->execute([$torneo_id]);
     $total_participantes = (int)$stmt_count->fetchColumn();
-    $total_paginas = max(1, ceil($total_participantes / $items_por_pagina));
-    
-    // Ajustar página actual si excede el total
-    if ($pagina_actual > $total_paginas) {
-        $pagina_actual = $total_paginas;
-        $offset = ($pagina_actual - 1) * $items_por_pagina;
-    }
-    
-    // Obtener jugadores del torneo con paginación
-    $items_por_pagina_int = (int)$items_por_pagina;
-    $offset_int = (int)$offset;
+    $p_gen = \Tournament\Services\PaginationService::getParams($total_participantes, $pagina_raw_general, $items_por_pagina);
+    $pagina_actual = $p_gen['page'];
+    $total_paginas = $p_gen['total_pages'];
+    $items_por_pagina_int = (int) $p_gen['per_page'];
+    $offset_int = (int) $p_gen['offset'];
     $sql = "
         SELECT 
             i.id,
@@ -241,6 +235,7 @@ try {
     error_log("Error obteniendo resultados generales: " . $e->getMessage());
     $participantes = [];
     $total_paginas = 1;
+    $pagina_actual = max(1, $pagina_raw_general);
 }
 
 // Obtener información del club responsable con logo

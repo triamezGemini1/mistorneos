@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 /**
  * Layout mínimo para la vista Podios / Podios Equipos.
  * Se usa cuando se accede a Podios desde el dashboard para mostrar solo la página
@@ -15,6 +15,7 @@ $page_title = 'Podios';
   <title><?= htmlspecialchars($page_title) ?></title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  <link rel="stylesheet" href="assets/css/custom-13inch.css">
 </head>
 <body>
 <?php require_once __DIR__ . '/../../modules/torneo_gestion.php'; ?>

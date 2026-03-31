@@ -257,6 +257,13 @@ html {
   min-width: 0;
 }
 
+.tw-panel .panel-header-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.2rem;
+}
+
 .tw-panel .panel-breadcrumb .panel-breadcrumb-current {
   font-weight: 500;
 }
@@ -323,40 +330,43 @@ html {
 }
 
 .tw-panel .cronometro-finalizar-torneo {
-  background: linear-gradient(135deg, #0f766e 0%, #0d9488 50%, #14b8a6 100%) !important;
-  color: #fff !important;
-  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: linear-gradient(180deg, #d1fae5 0%, #a7f3d0 100%) !important;
+  color: #064e3b !important;
+  border: 1px solid #34d399;
   border-radius: 0.4rem;
   padding: 0.5rem 0.75rem;
   margin-bottom: 0.5rem;
   text-align: center;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
+  box-shadow: 0 1px 2px rgba(6, 78, 59, 0.12);
   transition: box-shadow 0.2s ease;
 }
 
 .tw-panel .cronometro-finalizar-torneo:hover {
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+  box-shadow: 0 2px 8px rgba(6, 78, 59, 0.15);
 }
 
 .tw-panel .cronometro-finalizar-torneo .cron-finalizar-label {
   font-size: 1em;
-  font-weight: 500;
-  opacity: 0.95;
+  font-weight: 600;
+  color: #065f46 !important;
+  opacity: 1;
   margin-bottom: 0.25rem;
   line-height: 1.4;
 }
 
 .tw-panel .cronometro-finalizar-torneo .countdown-tiempo-restante {
   font-size: 1.5em;
-  font-weight: 400;
+  font-weight: 800;
   letter-spacing: 0.05em;
   margin: 0.2rem 0;
   line-height: 1.4;
+  color: #047857 !important;
 }
 
 .tw-panel .cronometro-finalizar-torneo .cron-finalizar-hint {
   font-size: 0.9em;
-  opacity: 0.9;
+  color: #047857 !important;
+  opacity: 0.92;
   margin-top: 0.2rem;
   line-height: 1.4;
 }
@@ -780,15 +790,16 @@ html {
 .tw-panel #btnCronometro i { margin-right: 0.75rem; }
 
 .tw-panel .cronometro-finalizar-torneo {
-  background: linear-gradient(135deg, #0f766e 0%, #0d9488 50%, #14b8a6 100%) !important;
-  color: #ffffff !important; border: none; border-radius: 0.5rem;
+  background: linear-gradient(180deg, #d1fae5 0%, #a7f3d0 100%) !important;
+  color: #064e3b !important;
+  border: 1px solid #34d399; border-radius: 0.5rem;
   padding: 1rem 1.25rem; margin-bottom: 0.5rem; text-align: center;
-  box-shadow: 0 4px 14px rgba(0,0,0,0.2); transition: transform 0.2s, box-shadow 0.2s;
+  box-shadow: 0 4px 14px rgba(6, 78, 59, 0.15); transition: transform 0.2s, box-shadow 0.2s;
 }
-.tw-panel .cronometro-finalizar-torneo:hover { box-shadow: 0 20px 25px -5px rgba(0,0,0,0.25); }
-.tw-panel .cronometro-finalizar-torneo .cron-finalizar-label { font-size: 0.9rem; font-weight: 600; opacity: 0.95; margin-bottom: 0.35rem; }
-.tw-panel .cronometro-finalizar-torneo .countdown-tiempo-restante { font-size: 2.5rem; font-weight: 800; letter-spacing: 0.05em; margin: 0.25rem 0; }
-.tw-panel .cronometro-finalizar-torneo .cron-finalizar-hint { font-size: 0.75rem; opacity: 0.9; margin-top: 0.25rem; }
+.tw-panel .cronometro-finalizar-torneo:hover { box-shadow: 0 8px 20px rgba(6, 78, 59, 0.2); }
+.tw-panel .cronometro-finalizar-torneo .cron-finalizar-label { font-size: 0.9rem; font-weight: 600; color: #065f46 !important; opacity: 1; margin-bottom: 0.35rem; }
+.tw-panel .cronometro-finalizar-torneo .countdown-tiempo-restante { font-size: 2.5rem; font-weight: 800; letter-spacing: 0.05em; margin: 0.25rem 0; color: #047857 !important; }
+.tw-panel .cronometro-finalizar-torneo .cron-finalizar-hint { font-size: 0.75rem; color: #047857 !important; opacity: 0.92; margin-top: 0.25rem; }
 
 /* Cronómetro: ventana flotante desvinculada, redimensionable y con +40% fuente bold */
 #cronometroOverlay {
@@ -1012,14 +1023,17 @@ html {
 .tw-panel .cronometro-finalizar-torneo .cron-finalizar-label {
   font-size: 0.756rem !important;
   font-weight: 700 !important;
+  color: #065f46 !important;
 }
 .tw-panel .cronometro-finalizar-torneo .countdown-tiempo-restante {
   font-size: 2.1rem !important;
   font-weight: 800 !important;
+  color: #047857 !important;
 }
 .tw-panel .cronometro-finalizar-torneo .cron-finalizar-hint {
   font-size: 0.63rem !important;
   font-weight: 700 !important;
+  color: #047857 !important;
 }
 .tw-panel #btnCronometro {
   font-size: 0.616rem !important;
@@ -1043,7 +1057,7 @@ html {
 /* ========== Panel: incrementos de fuente (nombre/logo +100%, breadcrumb +150%, meta +100%, ronda +150%, tarjetas +100%, cronómetro +100%) ========== */
 /* Nombre del torneo y logo / ID: +100% */
 .tw-panel .panel-header .titulo-torneo {
-  font-size: 2.52rem !important;
+  font-size: calc(2.52rem * 0.6) !important;
 }
 .tw-panel .panel-header .torneo-id {
   font-size: 3.22rem !important;
@@ -1061,6 +1075,67 @@ html {
 .tw-panel .panel-header .meta {
   font-size: 1.23rem !important;
 }
+/* Fila badges (Ronda, mesas, equipos…) + botón cronómetro: 120% texto en badges, cronómetro a la derecha */
+.tw-panel .panel-stats-crono-row {
+  width: 100% !important;
+  max-width: 100% !important;
+  display: flex !important;
+  flex-wrap: wrap !important;
+  align-items: center !important;
+  gap: 0.5rem 1rem !important;
+  box-sizing: border-box !important;
+}
+.tw-panel .panel-stats-crono-row .panel-stats-badges {
+  display: flex !important;
+  flex-wrap: wrap !important;
+  align-items: center !important;
+  gap: 0.5rem !important;
+  flex: 1 1 auto !important;
+  min-width: 0 !important;
+}
+.tw-panel .panel-stats-crono-row .panel-stats-badges > span {
+  font-size: calc(0.875rem * 1.2) !important;
+  line-height: 1.35 !important;
+}
+.tw-panel .panel-stats-crono-row .panel-stats-crono-btn,
+.tw-panel .panel-stats-crono-row #btnCronometroVentana {
+  flex-shrink: 0 !important;
+  margin-left: auto !important;
+}
+
+/* Auditoría (izq) y cierre total (der): bloques independientes */
+.tw-panel .panel-slate-ac-split {
+  display: flex !important;
+  flex-wrap: wrap !important;
+  align-items: flex-start !important;
+  justify-content: space-between !important;
+  width: 100% !important;
+  box-sizing: border-box !important;
+}
+.tw-panel .panel-ac-badge-col--izq {
+  flex: 0 1 auto !important;
+}
+.tw-panel .panel-ac-badge-col--der {
+  flex: 0 1 auto !important;
+}
+
+/* Auditoría + cierre de grupo emparejado: +60% sobre tamaño base */
+.tw-panel .panel-slate-auditoria-cierre .panel-ac-head {
+  font-size: calc((0.875rem + 0.5rem) * 1.6) !important;
+}
+.tw-panel .panel-slate-auditoria-cierre .panel-ac-pill {
+  font-size: calc(0.875rem * 1.6) !important;
+}
+.tw-panel .panel-slate-auditoria-cierre .panel-ac-paired-title {
+  font-size: calc(0.875rem * 1.6) !important;
+}
+.tw-panel .panel-slate-auditoria-cierre .panel-ac-paired-sub {
+  font-size: calc(0.75rem * 1.6) !important;
+}
+.tw-panel .panel-slate-auditoria-cierre .panel-ac-bloqueo {
+  font-size: calc(0.875rem * 1.6) !important;
+}
+
 /* Información ronda actual, mesas, inscritos, pendientes: +150% */
 .tw-panel .ronda-info {
   font-size: 1.54rem !important;

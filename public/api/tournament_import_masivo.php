@@ -72,6 +72,7 @@ try {
             'procesados' => $result['procesados'],
             'nuevos' => $result['nuevos'],
             'omitidos' => $result['omitidos'],
+            'usuarios_actualizados' => $result['usuarios_actualizados'] ?? 0,
             'errores' => $result['errores'],
         ];
         if (isset($result['txt_errores']) && $result['txt_errores'] !== '') {

@@ -4,7 +4,10 @@
 <IfModule mod_rewrite.c>
     RewriteEngine On
 
-    # Subcarpeta: descomenta y ajusta según la URL real (evita que las rutas se resuelvan en la raíz del dominio)
+    # Subcarpeta WAMP: http://localhost/mistorneos/public/
+    RewriteBase /mistorneos/public/
+
+    # Producción (ej. pruebas): descomenta la que corresponda y comenta la de arriba
     # RewriteBase /pruebas/public/
     # RewriteBase /mistorneos_beta/public/
 

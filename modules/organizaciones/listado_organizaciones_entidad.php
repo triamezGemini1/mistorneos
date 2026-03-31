@@ -41,6 +41,13 @@ $page_title = 'Organizaciones - ' . ($entidad_nombre ?? 'Entidad');
             <div class="card-header bg-light">
                 <h5 class="mb-0"><i class="fas fa-map-marker-alt me-2"></i><?= htmlspecialchars($entidad_nombre ?? 'Entidad') ?></h5>
                 <p class="text-muted small mb-0 mt-1">Organizaciones con resumen de clubes, afiliados y torneos</p>
+                <?php if (!empty($entidad_totales)): ?>
+                    <div class="small mt-2">
+                        <span class="badge bg-info me-2">Afiliados entidad: <?= (int)($entidad_totales['afiliados'] ?? 0) ?></span>
+                        <span class="badge bg-primary me-2">Hombres: <?= (int)($entidad_totales['hombres'] ?? 0) ?></span>
+                        <span class="badge bg-danger">Mujeres: <?= (int)($entidad_totales['mujeres'] ?? 0) ?></span>
+                    </div>
+                <?php endif; ?>
             </div>
             <div class="card-body p-0">
                 <div class="table-responsive">
@@ -51,6 +58,8 @@ $page_title = 'Organizaciones - ' . ($entidad_nombre ?? 'Entidad');
                                 <th class="text-center">Estado</th>
                                 <th class="text-center">Clubes</th>
                                 <th class="text-center">Afiliados</th>
+                                <th class="text-center">Hombres</th>
+                                <th class="text-center">Mujeres</th>
                                 <th class="text-center">Torneos</th>
                                 <th class="text-end">Acción</th>
                             </tr>
@@ -73,19 +82,25 @@ $page_title = 'Organizaciones - ' . ($entidad_nombre ?? 'Entidad');
                                     </td>
                                     <td class="text-center"><span class="badge bg-secondary"><?= (int)($org['total_clubes'] ?? 0) ?></span></td>
                                     <td class="text-center"><span class="badge bg-info"><?= (int)($org['total_afiliados'] ?? 0) ?></span></td>
+                                    <td class="text-center"><span class="badge bg-primary"><?= (int)($org['hombres'] ?? 0) ?></span></td>
+                                    <td class="text-center"><span class="badge bg-danger"><?= (int)($org['mujeres'] ?? 0) ?></span></td>
                                     <td class="text-center"><span class="badge bg-success"><?= (int)($org['total_torneos'] ?? 0) ?></span></td>
                                     <td class="text-end">
-                                        <a href="index.php?page=organizaciones&id=<?= (int)$org['id'] ?>" class="btn btn-sm btn-outline-primary" title="Ver detalle">
-                                            <i class="fas fa-eye me-1"></i>Ver detalle
-                                        </a>
-                                        <a href="index.php?page=mi_organizacion&id=<?= (int)$org['id'] ?>" class="btn btn-sm btn-outline-secondary ms-1" title="Editar">
-                                            <i class="fas fa-edit"></i>
-                                        </a>
-                                        <?php if ($esta_activa): ?>
+                                        <?php if ((int)($org['id'] ?? 0) > 0): ?>
+                                            <a href="index.php?page=organizaciones&id=<?= (int)$org['id'] ?>" class="btn btn-sm btn-outline-primary" title="Ver detalle">
+                                                <i class="fas fa-eye me-1"></i>Ver detalle
+                                            </a>
+                                            <a href="index.php?page=mi_organizacion&id=<?= (int)$org['id'] ?>" class="btn btn-sm btn-outline-secondary ms-1" title="Editar">
+                                                <i class="fas fa-edit"></i>
+                                            </a>
+                                        <?php else: ?>
+                                            <span class="badge bg-secondary">Asociación estadística</span>
+                                        <?php endif; ?>
+                                        <?php if ((int)($org['id'] ?? 0) > 0 && $esta_activa): ?>
                                             <a href="index.php?page=mi_organizacion&action=desactivar&id=<?= (int)$org['id'] ?><?= $return_entidad ?>" class="btn btn-sm btn-outline-danger ms-1" title="Desactivar" onclick="return confirm('¿Desactivar esta organización?');">
                                                 <i class="fas fa-ban"></i>
                                             </a>
-                                        <?php else: ?>
+                                        <?php elseif ((int)($org['id'] ?? 0) > 0): ?>
                                             <a href="index.php?page=mi_organizacion&action=reactivar&id=<?= (int)$org['id'] ?><?= $return_entidad ?>" class="btn btn-sm btn-outline-success ms-1" title="Reactivar" onclick="return confirm('¿Reactivar esta organización?');">
                                                 <i class="fas fa-check-circle"></i>
                                             </a>

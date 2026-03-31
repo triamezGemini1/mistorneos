@@ -128,6 +128,8 @@ if (!function_exists('obtenerTopJugadoresPorClub')) {
                     'ptosrnk' => $ptosrnk,
                     'gff' => $gff,
                     'posicion' => $posicion,
+                    'zapato' => (int)($jugador['zapato'] ?? $jugador['zapatos'] ?? 0),
+                    'chancletas' => (int)($jugador['chancletas'] ?? 0),
                     'sancion' => (int)($jugador['sancion'] ?? 0),
                     'tarjeta' => (int)($jugador['tarjeta'] ?? 0),
                 ];

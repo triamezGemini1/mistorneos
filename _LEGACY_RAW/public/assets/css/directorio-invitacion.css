@@ -1,0 +1,113 @@
+/**
+ * Directorio de Clubes y vistas de Invitación
+ * Design System: cards, border-radius 12px, sombras suaves, mobile-first.
+ * Sin modificar lógica PHP ni id/name de formularios.
+ */
+
+/* Contenedor principal */
+.ds-directorio .container-fluid {
+  max-width: 100%;
+  padding-left: 1rem;
+  padding-right: 1rem;
+}
+
+.ds-directorio .card {
+  border: 1px solid var(--ds-gray-200, #e5e7eb);
+  border-radius: 12px;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -2px rgba(0, 0, 0, 0.05);
+  overflow: hidden;
+  transition: box-shadow 0.2s ease;
+}
+.ds-directorio .card:hover {
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.08), 0 4px 6px -4px rgba(0, 0, 0, 0.05);
+}
+
+.ds-directorio .card-header {
+  border-radius: 12px 12px 0 0;
+  font-weight: 600;
+  padding: 1rem 1.25rem;
+}
+
+.ds-directorio .card-body {
+  padding: 1.25rem;
+}
+
+.ds-directorio .card-footer {
+  padding: 1rem 1.25rem;
+  border-top: 1px solid var(--ds-gray-200, #e5e7eb);
+}
+
+/* Tabla: móvil = scroll horizontal o cards; tablet/desktop = tabla */
+.ds-directorio .table-responsive {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  margin: 0 -0.25rem;
+}
+
+.ds-directorio .table {
+  font-size: 0.875rem;
+}
+.ds-directorio .table thead th {
+  font-weight: 600;
+  color: var(--ds-gray-700, #374151);
+  border-bottom: 2px solid var(--ds-gray-200, #e5e7eb);
+  padding: 0.75rem 0.5rem;
+}
+.ds-directorio .table td {
+  padding: 0.75rem 0.5rem;
+  vertical-align: middle;
+}
+
+/* Columnas: anchos en CSS (sin inline) */
+.ds-directorio .dc-col-logo { width: 50px; min-width: 50px; }
+.ds-directorio .dc-col-nombre { width: 22%; max-width: 200px; }
+.ds-directorio .dc-col-delegado { width: 14%; max-width: 120px; }
+.ds-directorio .dc-col-telefono { width: 12%; max-width: 110px; }
+.ds-directorio .dc-col-estado { width: 70px; text-align: center; }
+.ds-directorio .dc-col-usuario { width: 140px; text-align: center; }
+.ds-directorio .dc-col-acciones { width: 180px; white-space: nowrap; }
+
+.ds-directorio .text-truncate {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Botones alineados al Design System */
+.ds-directorio .btn {
+  border-radius: 8px;
+  font-weight: 500;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+.ds-directorio .btn:hover {
+  transform: translateY(-1px);
+}
+.ds-directorio .btn-sm {
+  padding: 0.35rem 0.65rem;
+  font-size: 0.8125rem;
+}
+
+/* Alertas */
+.ds-directorio .alert {
+  border-radius: 12px;
+  border: 1px solid transparent;
+}
+
+/* Título y página */
+.ds-directorio h1.h3 {
+  font-weight: 600;
+  color: var(--ds-gray-900, #111827);
+}
+
+@media (max-width: 768px) {
+  .ds-directorio .dc-col-nombre,
+  .ds-directorio .dc-col-delegado,
+  .ds-directorio .dc-col-telefono {
+    max-width: 140px;
+  }
+  .ds-directorio .table thead th,
+  .ds-directorio .table td {
+    padding: 0.5rem 0.35rem;
+    font-size: 0.8125rem;
+  }
+}

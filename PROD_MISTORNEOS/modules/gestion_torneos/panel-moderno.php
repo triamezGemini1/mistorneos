@@ -6,6 +6,9 @@
  * Diseño con Tailwind CSS - 3 columnas organizadas
  */
 require_once __DIR__ . '/../../config/db.php';
+if (!class_exists('AppHelpers', false)) {
+    require_once __DIR__ . '/../../lib/app_helpers.php';
+}
 
 $script_actual = basename($_SERVER['PHP_SELF'] ?? '');
 $use_standalone = in_array($script_actual, ['admin_torneo.php', 'panel_torneo.php']);
@@ -36,13 +39,20 @@ if (!isset($torneo) || empty($torneo) || !is_array($torneo)) {
 
 $page_title = 'Panel de Control - ' . htmlspecialchars($torneo['nombre'] ?? 'Torneo');
 
-// Detectar modalidad del torneo (3 = Equipos)
-$es_modalidad_equipos = isset($torneo['modalidad']) && (int)$torneo['modalidad'] === 3;
+// Detectar modalidad del torneo (2 = Parejas, 3 = Equipos, 4 = Parejas fijas)
+$modalidad_num_panel = (int)($torneo['modalidad'] ?? 0);
+$es_modalidad_equipos = ($modalidad_num_panel === 3);
+$es_modalidad_parejas = ($modalidad_num_panel === 2); // Parejas por equipos (mismo flujo que equipos de 4)
+$es_modalidad_parejas_fijas = ($modalidad_num_panel === 4);
+$es_modalidad_equipos_o_parejas = ($es_modalidad_equipos || $es_modalidad_parejas);
+$context_switcher = isset($context_switcher) && is_array($context_switcher) ? $context_switcher : ['active_tournament_id' => (int)($torneo['id'] ?? 0), 'items' => []];
+$paired_tournaments_status = isset($paired_tournaments_status) && is_array($paired_tournaments_status) ? $paired_tournaments_status : ['enabled' => false, 'items' => [], 'bloqueo' => null];
+$bloqueo_cierre_total = $paired_tournaments_status['bloqueo'] ?? null;
 
-// Lógica de bloqueo de inscripciones: equipos bloquea desde ronda >=1; otros desde ronda >=2
+// Lógica de bloqueo de inscripciones: equipos, parejas y parejas fijas bloquean desde ronda >=1; otros desde ronda >=2
 $torneo_bloqueado_inscripciones = false;
 if ($ultima_ronda > 0) {
-    $torneo_bloqueado_inscripciones = $es_modalidad_equipos ? ($ultima_ronda >= 1) : ($ultima_ronda >= 2);
+    $torneo_bloqueado_inscripciones = ($es_modalidad_equipos || $es_modalidad_parejas || $es_modalidad_parejas_fijas) ? ($ultima_ronda >= 1) : ($ultima_ronda >= 2);
 }
 
 // Variables de estado (asegurar que estén disponibles desde view_data después del extract)
@@ -100,6 +110,9 @@ if ($ultima_ronda > 0 && isset($torneo['id'])) {
 }
 ?>
 
+<link rel="stylesheet" href="assets/css/design-system.css">
+<link rel="stylesheet" href="assets/css/modern-panel.css">
+<link rel="stylesheet" href="assets/css/torneo-context-switch.css">
 <?php if ($use_standalone): ?>
 <!-- Tailwind CSS solo en modo standalone para no romper el layout del dashboard -->
 <link rel="stylesheet" href="assets/dist/output.css">
@@ -122,204 +135,9 @@ tailwind.config = {
 }
 </script>
 <?php endif; ?>
+<?php /* Estilos del panel movidos a assets/css/modern-panel.css (Design System + Panel) */ ?>
 
-<style>
-    /* Reset y base - 15% más compacto para caber en pantalla */
-    .tw-panel * { box-sizing: border-box; }
-    .tw-panel .tw-btn {
-        display: flex; align-items: center; justify-content: center; width: 100%;
-        padding: 0.77rem 1rem; font-size: 0.9rem; font-weight: 600;
-        border-radius: 0.5rem; text-decoration: none; transition: all 0.2s ease;
-        border: none; cursor: pointer;
-    }
-    .tw-panel .tw-btn:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.2); }
-    .tw-panel .tw-btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none !important; }
-    .tw-panel .tw-btn i { margin-right: 0.5rem; font-size: 0.9rem; }
-    
-    /* Fallback CSS - colores y fuentes sin depender de Tailwind CDN */
-    .tw-panel .mb-4 { margin-bottom: 0.85rem; }
-    .tw-panel .mb-6 { margin-bottom: 1.28rem; }
-    .tw-panel nav ol { display: flex; align-items: center; gap: 0.43rem; font-size: 0.74rem; color: #6b7280; margin: 0; padding: 0; list-style: none; }
-    .tw-panel nav a { color: #4b5563; text-decoration: none; }
-    .tw-panel nav a:hover { color: #2563eb; }
-    .tw-panel nav .text-gray-700 { color: #374151; font-weight: 500; }
-    
-    /* Header del torneo - gradiente índigo/púrpura (compacto) */
-    .tw-panel .panel-header {
-        background: linear-gradient(to right, #4f46e5, #7c3aed);
-        border-radius: 0.43rem; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);
-        padding: 0.64rem 0.85rem; margin-bottom: 0.64rem; color: white;
-    }
-    .tw-panel .panel-header-inner { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.85rem; }
-    .tw-panel .panel-header .titulo-torneo { font-size: calc(1.5rem * 1.3); font-weight: 700; margin: 0 0 0.35rem 0; text-align: center; text-transform: uppercase; }
-    .tw-panel .panel-header .meta { display: flex; flex-wrap: wrap; justify-content: center; gap: 0.85rem; font-size: calc(0.74rem + 1px); font-weight: bold; opacity: 0.95; padding-top: 0.35rem; border-top: 2px solid rgba(255,255,255,0.6); }
-    .tw-panel .panel-header .meta i { margin-right: 0.21rem; }
-    .tw-panel .panel-header .torneo-id { font-size: 1.91rem; font-weight: 800; opacity: 0.8; text-align: right; }
-    
-    /* Botón activar/retornar cronómetro - fondo y texto diferenciados */
-    .tw-panel #btnCronometro {
-        background: linear-gradient(135deg, #0f766e 0%, #0d9488 50%, #14b8a6 100%) !important;
-        color: #ffffff !important;
-        border: none;
-    }
-    .tw-panel #btnCronometro:hover {
-        background: linear-gradient(135deg, #0d5d56 0%, #0f766e 50%, #0d9488 100%) !important;
-        color: #ffffff !important;
-        transform: scale(1.02);
-        box-shadow: 0 20px 25px -5px rgba(0,0,0,0.25);
-    }
-    .tw-panel #btnCronometro i { margin-right: 0.75rem; }
-    
-    /* Cronómetro finalizar torneo: mismo diseño que botón cronómetro de ronda */
-    .tw-panel .cronometro-finalizar-torneo {
-        background: linear-gradient(135deg, #0f766e 0%, #0d9488 50%, #14b8a6 100%) !important;
-        color: #ffffff !important;
-        border: none;
-        border-radius: 0.5rem;
-        padding: 1rem 1.25rem;
-        margin-bottom: 0.5rem;
-        text-align: center;
-        box-shadow: 0 4px 14px rgba(0,0,0,0.2);
-        transition: transform 0.2s, box-shadow 0.2s;
-    }
-    .tw-panel .cronometro-finalizar-torneo:hover { box-shadow: 0 20px 25px -5px rgba(0,0,0,0.25); }
-    .tw-panel .cronometro-finalizar-torneo .cron-finalizar-label { font-size: 0.9rem; font-weight: 600; opacity: 0.95; margin-bottom: 0.35rem; }
-    .tw-panel .cronometro-finalizar-torneo .countdown-tiempo-restante { font-size: 2.5rem; font-weight: 800; letter-spacing: 0.05em; margin: 0.25rem 0; }
-    .tw-panel .cronometro-finalizar-torneo .cron-finalizar-hint { font-size: 0.75rem; opacity: 0.9; margin-top: 0.25rem; }
-    
-    /* Overlay cronómetro - pantalla completa en la misma página */
-    #cronometroOverlay {
-        position: fixed; top: 0; left: 0; right: 0; bottom: 0;
-        z-index: 99999;
-        background: linear-gradient(135deg, #1e1b4b 0%, #4c1d95 50%, #831843 100%);
-        display: none; align-items: center; justify-content: center;
-        color: white; font-family: 'Segoe UI', system-ui, sans-serif;
-    }
-    #cronometroOverlay .cron-box {
-        width: 90%; max-width: 805px;
-        background: rgba(0,0,0,0.3); border-radius: 1.5rem; padding: 2rem;
-        box-shadow: 0 25px 50px rgba(0,0,0,0.4);
-    }
-    #cronometroOverlay .cron-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; }
-    #cronometroOverlay .cron-header h1 { font-size: 1.5rem; font-weight: 700; margin: 0; }
-    #cronometroOverlay .btn-retornar { background: #3b82f6; color: white; padding: 0.6rem 1.2rem; border-radius: 0.5rem; border: none; font-weight: 600; cursor: pointer; }
-    #cronometroOverlay .btn-retornar:hover { background: #2563eb; }
-    #cronometroOverlay #configPanelCron { background: rgba(255,255,255,0.1); border-radius: 1rem; padding: 1.5rem; margin-bottom: 1.5rem; display: none; }
-    #cronometroOverlay .config-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem; }
-    #cronometroOverlay .config-grid label { display: block; font-weight: 700; margin-bottom: 0.5rem; font-size: 1.25rem; }
-    #cronometroOverlay .config-grid input { width: 100%; padding: 0.75rem; border-radius: 0.5rem; font-size: 1.5rem; font-weight: 700; text-align: center; background: rgba(255,255,255,0.2); color: white; border: 2px solid rgba(255,255,255,0.3); }
-    #cronometroOverlay .cron-display { text-align: center; padding: 2rem 0; }
-    #cronometroOverlay #tiempoDisplayCron { font-family: 'Arial Black', sans-serif; font-size: clamp(4.6rem, 17.25vw, 11.5rem); font-weight: 900; line-height: 1.1; text-shadow: 0 4px 20px rgba(0,0,0,0.5); }
-    #cronometroOverlay #estadoDisplayCron { font-size: 1.725rem; opacity: 0.9; margin-top: 0.5rem; }
-    #cronometroOverlay .cron-controles { display: flex; gap: 1rem; justify-content: center; margin-top: 2rem; }
-    #cronometroOverlay .cron-controles button { padding: 1.15rem 1.725rem; border-radius: 0.75rem; border: none; font-size: 1.725rem; cursor: pointer; transition: all 0.2s; }
-    #cronometroOverlay .cron-controles #btnIniciarCron { background: #22c55e; color: white; }
-    #cronometroOverlay .cron-controles #btnIniciarCron:hover:not(:disabled) { background: #16a34a; transform: scale(1.05); }
-    #cronometroOverlay .cron-controles #btnDetenerCron { background: #ef4444; color: white; }
-    #cronometroOverlay .cron-controles #btnDetenerCron:hover:not(:disabled) { background: #dc2626; transform: scale(1.05); }
-    #cronometroOverlay .cron-controles button:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
-    @keyframes cronPulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:0.7;transform:scale(1.05)} }
-    
-    /* Mensajes éxito/error */
-    .tw-panel .alert-success { background: #dcfce7; border: 1px solid #22c55e; color: #166534; padding: 0.64rem 0.85rem; border-radius: 0.43rem; margin-bottom: 0.85rem; display: flex; align-items: center; justify-content: space-between; font-size: 0.9rem; }
-    .tw-panel .alert-error { background: #fee2e2; border: 1px solid #ef4444; color: #991b1b; padding: 0.64rem 0.85rem; border-radius: 0.43rem; margin-bottom: 0.85rem; display: flex; align-items: center; justify-content: space-between; font-size: 0.9rem; }
-    
-    /* Estado ronda (compacto) */
-    .tw-panel .ronda-info { background: #eff6ff; border-left: 4px solid #3b82f6; border-radius: 0.43rem; padding: 0.43rem 0.64rem; margin-bottom: 0.64rem; }
-    
-    /* FALLBACK: Layout 3 columnas - funciona sin Tailwind (Chrome/Edge) */
-    .tw-panel .tw-columns { display: flex; gap: 0.85rem; flex-wrap: wrap; }
-    .tw-panel .tw-column { flex: 1; min-width: 238px; }
-    .tw-panel .w-1\/3 { width: 33.333%; min-width: 238px; }
-    
-    /* FALLBACK: Cards y contenedores */
-    .tw-panel .bg-white { background-color: #fff; }
-    .tw-panel .rounded-xl { border-radius: 0.64rem; }
-    .tw-panel .shadow-md { box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -2px rgba(0,0,0,0.1); }
-    .tw-panel .border-gray-200 { border: 1px solid #e5e7eb; }
-    .tw-panel .overflow-hidden { overflow: hidden; }
-    .tw-panel .h-full { min-height: 100%; }
-    .tw-panel .p-5 { padding: 0.64rem 0.85rem; }
-    .tw-panel .space-y-4 > * + * { margin-top: 0.43rem; }
-    .tw-panel .space-y-4 { display: flex; flex-direction: column; gap: 0.43rem; }
-    
-    /* FALLBACK: Encabezados de columnas con gradientes */
-    .tw-panel .from-emerald-500 { background: linear-gradient(to right, #10b981, #14b8a6); }
-    .tw-panel .from-blue-500 { background: linear-gradient(to right, #3b82f6, #6366f1); }
-    .tw-panel .from-amber-500 { background: linear-gradient(to right, #f59e0b, #f97316); }
-    .tw-panel [class*="from-emerald"] { background: linear-gradient(to right, #10b981, #14b8a6) !important; }
-    .tw-panel [class*="from-blue"] { background: linear-gradient(to right, #3b82f6, #6366f1) !important; }
-    .tw-panel [class*="from-amber"] { background: linear-gradient(to right, #f59e0b, #f97316) !important; }
-    .tw-panel div[class*="bg-gradient-to-r"] { padding: 0.85rem 1.06rem; color: white; }
-    .tw-panel .text-white { color: white !important; }
-    .tw-panel .text-xl { font-size: 1.06rem; }
-    .tw-panel .font-bold { font-weight: 700; }
-    .tw-panel .flex { display: flex; }
-    .tw-panel .items-center { align-items: center; }
-    .tw-panel .mr-3 { margin-right: 0.75rem; }
-    
-    /* FALLBACK: Colores de botones .tw-btn */
-    .tw-panel .tw-btn.bg-blue-500,
-    .tw-panel a.tw-btn[class*="bg-blue"] { background-color: #3b82f6 !important; color: white !important; }
-    .tw-panel .tw-btn.bg-blue-500:hover,
-    .tw-panel a.tw-btn[class*="bg-blue"]:hover { background-color: #2563eb !important; }
-    .tw-panel .tw-btn.bg-amber-500,
-    .tw-panel a.tw-btn[class*="bg-amber"] { background-color: #f59e0b !important; color: white !important; }
-    .tw-panel .tw-btn.bg-amber-500:hover,
-    .tw-panel a.tw-btn[class*="bg-amber"]:hover { background-color: #d97706 !important; }
-    .tw-panel .tw-btn.bg-emerald-500,
-    .tw-panel a.tw-btn[class*="bg-emerald"] { background-color: #10b981 !important; color: white !important; }
-    .tw-panel .tw-btn.bg-emerald-500:hover,
-    .tw-panel a.tw-btn[class*="bg-emerald"]:hover { background-color: #059669 !important; }
-    .tw-panel .tw-btn.bg-cyan-500,
-    .tw-panel a.tw-btn[class*="bg-cyan"] { background-color: #06b6d4 !important; color: white !important; }
-    .tw-panel .tw-btn.bg-cyan-500:hover,
-    .tw-panel a.tw-btn[class*="bg-cyan"]:hover { background-color: #0891b2 !important; }
-    .tw-panel .tw-btn.bg-red-500,
-    .tw-panel a.tw-btn[class*="bg-red"] { background-color: #ef4444 !important; color: white !important; }
-    .tw-panel .tw-btn.bg-red-500:hover,
-    .tw-panel a.tw-btn[class*="bg-red"]:hover { background-color: #dc2626 !important; }
-    .tw-panel .tw-btn.bg-gray-400 { background-color: #9ca3af !important; color: white !important; }
-    .tw-panel .tw-btn.bg-purple-500,
-    .tw-panel a.tw-btn[class*="bg-purple"] { background-color: #a855f7 !important; color: white !important; }
-    .tw-panel .tw-btn.bg-purple-500:hover,
-    .tw-panel a.tw-btn[class*="bg-purple"]:hover { background-color: #9333ea !important; }
-    .tw-panel .tw-btn.bg-indigo-500,
-    .tw-panel a.tw-btn[class*="bg-indigo"] { background-color: #6366f1 !important; color: white !important; }
-    .tw-panel .tw-btn.bg-indigo-500:hover,
-    .tw-panel a.tw-btn[class*="bg-indigo"]:hover { background-color: #4f46e5 !important; }
-    .tw-panel .tw-btn.bg-teal-500,
-    .tw-panel a.tw-btn[class*="bg-teal"] { background-color: #14b8a6 !important; color: white !important; }
-    .tw-panel .tw-btn.bg-teal-500:hover,
-    .tw-panel a.tw-btn[class*="bg-teal"]:hover { background-color: #0d9488 !important; }
-    .tw-panel .tw-btn.bg-rose-500,
-    .tw-panel a.tw-btn[class*="bg-rose"] { background-color: #f43f5e !important; color: white !important; }
-    .tw-panel .tw-btn.bg-rose-500:hover,
-    .tw-panel a.tw-btn[class*="bg-rose"]:hover { background-color: #e11d48 !important; }
-    
-    /* FALLBACK: Alerta torneo cerrado */
-    .tw-panel .bg-gray-100 { background-color: #f3f4f6; }
-    .tw-panel .border-l-4 { border-left-width: 4px; }
-    .tw-panel .border-gray-500 { border-color: #6b7280; }
-    .tw-panel .text-gray-700 { color: #374151; }
-    .tw-panel .font-semibold { font-weight: 600; }
-    
-    /* FALLBACK: Todas las rondas generadas */
-    .tw-panel .bg-green-100 { background-color: #dcfce7; }
-    .tw-panel .text-green-700 { color: #15803d; }
-    
-    /* FALLBACK: Sin rondas */
-    .tw-panel .bg-gray-50 { background-color: #f9fafb; }
-    .tw-panel .text-gray-500 { color: #6b7280; }
-    .tw-panel .text-sm { font-size: 0.74rem; }
-    
-    @media (max-width: 1024px) {
-        .tw-panel .tw-columns { flex-direction: column !important; }
-        .tw-panel .tw-column { width: 100% !important; margin-bottom: 1rem; }
-    }
-</style>
-
-<div class="tw-panel">
+<div class="tw-panel ds-root">
     <!-- Breadcrumb (compacto) -->
     <nav aria-label="breadcrumb" class="mb-2">
         <ol class="flex items-center space-x-2 text-sm text-gray-500">
@@ -332,7 +150,7 @@ tailwind.config = {
     <!-- Header del Torneo (compacto) -->
     <div class="panel-header bg-gradient-to-r from-indigo-600 to-purple-600 rounded-xl shadow-lg p-4 mb-3 text-white">
         <div class="panel-header-inner flex justify-between items-center flex-wrap gap-4">
-            <div class="flex-grow-1" style="flex: 1; min-width: 0;">
+            <div class="flex-grow-1 panel-header-grow">
                 <h2 class="titulo-torneo">
                     <?php echo htmlspecialchars($torneo['nombre'] ?? 'Torneo'); ?>
                 </h2>
@@ -343,6 +161,8 @@ tailwind.config = {
                         $modalidad_num = (int)($torneo['modalidad'] ?? 0);
                         if ($modalidad_num === 3) {
                             echo 'Equipos';
+                        } else if ($modalidad_num === 4) {
+                            echo 'Parejas fijas';
                         } else if ($modalidad_num === 2) {
                             echo 'Parejas';
                         } else {
@@ -353,10 +173,28 @@ tailwind.config = {
                     <span><i class="fas fa-layer-group mr-1"></i> <?php echo ($torneo['rondas'] ?? 0); ?> rondas</span>
                 </div>
             </div>
-            <div class="text-right flex-shrink-0">
-                <div class="torneo-id text-4xl font-extrabold opacity-80">#<?php echo $torneo['id']; ?></div>
-                <div class="text-sm opacity-70">ID del Torneo</div>
+            <?php if (!empty($context_switcher['items'])): ?>
+            <div class="text-right flex-shrink-0 panel-header-actions">
+                    <?php
+                    $tcs = [
+                        'items' => $context_switcher['items'],
+                        'active_id' => (int) ($context_switcher['active_tournament_id'] ?? 0),
+                        'base_url' => $base_url,
+                        'sep' => $use_standalone ? '?' : '&',
+                        'ronda_base' => 0,
+                        'map_max' => [],
+                        'mode' => 'panel',
+                        'theme' => 'on_dark',
+                        'select_id' => 'torneo-asociado-select-panel',
+                        'show_info' => false,
+                        'show_pills' => false,
+                        'aria_label' => 'Selector de contexto del torneo',
+                        'pill_row_class' => 'mb-2',
+                    ];
+                    require __DIR__ . '/../../resources/views/partials/torneo_context_switch.php';
+                    ?>
             </div>
+            <?php endif; ?>
         </div>
     </div>
 
@@ -388,59 +226,125 @@ tailwind.config = {
         </div>
     <?php endif; ?>
 
-    <?php if (($mesas_verificadas_count + $mesas_digitadas_count) > 0): ?>
-        <div class="bg-slate-50 border border-slate-200 rounded-lg px-4 py-3 mb-4">
-            <h5 class="text-slate-700 font-semibold mb-2"><i class="fas fa-chart-bar mr-2"></i>Auditoría de Resultados</h5>
-            <div class="flex flex-wrap gap-4">
-                <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-emerald-100 text-emerald-800">
-                    <i class="fas fa-camera mr-1"></i>Verificadas (QR): <?= $mesas_verificadas_count ?>
-                </span>
-                <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800">
-                    <i class="fas fa-keyboard mr-1"></i>Digitadas (admin): <?= $mesas_digitadas_count ?>
-                </span>
-            </div>
+    <?php
+    $return_to_panel = $use_standalone
+        ? ($base_url . '?action=panel&torneo_id=' . (int)$torneo['id'])
+        : ('index.php?page=torneo_gestion&action=panel&torneo_id=' . (int)$torneo['id']);
+    $url_cronometro = $base_url
+        . ($use_standalone ? '?' : '&')
+        . 'action=cronometro&torneo_id=' . (int)$torneo['id']
+        . '&return_to=' . urlencode($return_to_panel);
+    $panel_show_auditoria = ($mesas_verificadas_count + $mesas_digitadas_count) > 0;
+    $panel_show_cierre = !empty($paired_tournaments_status['enabled']) && !empty($paired_tournaments_status['items']);
+    $panel_slate_bar = $panel_show_auditoria || $panel_show_cierre;
+    ?>
+    <div class="flex flex-wrap items-center justify-between gap-2 mb-4 w-full panel-stats-crono-row">
+        <div class="flex flex-wrap items-center gap-2 panel-stats-badges">
+        <?php if ($ultima_ronda > 0): ?>
+            <span class="inline-flex items-center px-3 py-1.5 rounded-full text-sm font-semibold bg-blue-100 text-blue-800 border border-blue-200"><?php echo 'Ronda ' . (int) $ultima_ronda; ?></span>
+            <?php if (isset($estadisticas['mesas_ronda'])): ?>
+            <span class="inline-flex items-center px-3 py-1.5 rounded-full text-sm font-semibold bg-sky-100 text-sky-900 border border-sky-200"><?php echo (int) $estadisticas['mesas_ronda']; ?> mesas</span>
+            <?php endif; ?>
+            <?php if ($es_modalidad_equipos): ?>
+                <?php if (isset($total_equipos) && $total_equipos > 0): ?>
+                <span class="inline-flex items-center px-3 py-1.5 rounded-full text-sm font-semibold bg-indigo-100 text-indigo-900 border border-indigo-200"><?php echo (int) $total_equipos; ?> equipos</span>
+                <?php endif; ?>
+                <?php if (isset($estadisticas['total_jugadores_inscritos']) && (int) $estadisticas['total_jugadores_inscritos'] > 0): ?>
+                <span class="inline-flex items-center px-3 py-1.5 rounded-full text-sm font-semibold bg-green-100 text-green-900 border border-green-200"><?php echo (int) $estadisticas['total_jugadores_inscritos']; ?> jugadores</span>
+                <?php endif; ?>
+            <?php else: ?>
+                <?php if (isset($inscritos_para_rondas) && (int) $inscritos_para_rondas > 0): ?>
+                <span class="inline-flex items-center px-3 py-1.5 rounded-full text-sm font-semibold bg-green-100 text-green-900 border border-green-200"><?php echo (int) $inscritos_para_rondas; ?><?php if ($total_inscritos !== $inscritos_para_rondas): ?><span class="opacity-75 font-normal"> / <?php echo (int) $total_inscritos; ?></span><?php endif; ?></span>
+                <?php endif; ?>
+            <?php endif; ?>
+            <?php if (!$puedeGenerar && $ultima_ronda > 0 && $mesasInc > 0): ?>
+            <span class="inline-flex items-center px-3 py-1.5 rounded-full text-sm font-bold bg-amber-100 text-amber-900 border border-amber-300" title="Mesas sin resultado"><?php echo (int) $mesasInc; ?></span>
+            <?php endif; ?>
+        <?php endif; ?>
         </div>
-    <?php endif; ?>
-
-    <!-- Estado de Ronda Actual -->
-    <?php if ($ultima_ronda > 0): ?>
-        <div class="ronda-info bg-blue-50 border-l-4 border-blue-500 rounded-lg p-4 mb-6">
-            <div class="flex items-center justify-between flex-wrap gap-2">
-                <div class="flex items-center gap-4">
-                    <span class="text-gray-600 font-semibold">
-                        Ronda Actual: <span class="text-blue-600 text-xl font-bold"><?php echo $ultima_ronda; ?></span>
+        <button type="button" id="btnCronometroVentana"
+            class="inline-flex items-center font-bold py-2 px-4 rounded-lg shadow border-0 bg-violet-600 hover:bg-violet-700 text-white transition-colors panel-stats-crono-btn flex-shrink-0"
+            style="font-size: calc(0.875rem + 0.5rem); cursor: pointer;">
+            <i class="fas fa-external-link-alt mr-2"></i><span>ABRIR CRONÓMETRO DE RONDA</span>
+        </button>
+    </div>
+    <?php if ($panel_slate_bar): ?>
+        <div class="flex flex-wrap items-start justify-between gap-4 mb-4 w-full panel-slate-ac-split">
+            <?php if ($panel_show_auditoria): ?>
+            <div class="panel-slate-auditoria-cierre panel-ac-badge-col panel-ac-badge-col--izq bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 shadow-sm max-w-full">
+                <div class="mb-3 flex justify-start">
+                    <span class="panel-ac-head font-semibold text-slate-800 inline-flex items-center">
+                        <i class="fas fa-chart-bar mr-2 text-slate-600"></i>Auditoría de Resultados
                     </span>
-                    <?php if (isset($estadisticas['mesas_ronda'])): ?>
-                        <span class="text-blue-600 font-semibold"><?php echo $estadisticas['mesas_ronda']; ?> mesas</span>
-                    <?php endif; ?>
-                    <?php if ($es_modalidad_equipos): ?>
-                        <?php if (isset($total_equipos) && $total_equipos > 0): ?>
-                            <span class="text-indigo-600 font-semibold ml-4">
-                                <i class="fas fa-users mr-1"></i> <?php echo $total_equipos; ?> equipos inscritos
-                            </span>
-                        <?php endif; ?>
-                        <?php if (isset($estadisticas['total_jugadores_inscritos']) && $estadisticas['total_jugadores_inscritos'] > 0): ?>
-                            <span class="text-green-600 font-semibold ml-4">
-                                <i class="fas fa-user-friends mr-1"></i> <?php echo $estadisticas['total_jugadores_inscritos']; ?> jugadores
-                            </span>
-                        <?php endif; ?>
-                    <?php else: ?>
-                        <?php if (isset($inscritos_para_rondas) && $inscritos_para_rondas > 0): ?>
-                            <span class="text-green-600 font-semibold ml-4">
-                                <i class="fas fa-user-friends mr-1"></i> <?php echo $inscritos_para_rondas; ?> inscritos<?php if ($total_inscritos !== $inscritos_para_rondas): ?> (<?php echo $total_inscritos; ?> en lista)<?php endif; ?>
-                            </span>
-                        <?php endif; ?>
+                </div>
+                <div class="flex flex-wrap gap-3 justify-start">
+                    <span class="panel-ac-pill inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-emerald-100 text-emerald-800">
+                        <i class="fas fa-camera mr-1"></i>Verificadas (QR): <?= $mesas_verificadas_count ?>
+                    </span>
+                    <span class="panel-ac-pill inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800">
+                        <i class="fas fa-keyboard mr-1"></i>Digitadas (admin): <?= $mesas_digitadas_count ?>
+                    </span>
+                </div>
+            </div>
+            <?php endif; ?>
+
+            <?php if ($panel_show_cierre): ?>
+            <div class="panel-slate-auditoria-cierre panel-ac-badge-col panel-ac-badge-col--der bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 shadow-sm max-w-full <?php echo !$panel_show_auditoria ? 'ml-auto' : ''; ?>">
+                <div class="mb-3 flex justify-end">
+                    <span class="panel-ac-head font-semibold text-slate-800 inline-flex items-center">
+                        <i class="fas fa-link mr-2 text-indigo-600"></i>Cierre total del grupo
+                    </span>
+                </div>
+                <div class="flex flex-col gap-2 items-end text-right">
+                    <div class="flex flex-wrap gap-3 justify-end">
+                        <?php foreach ($paired_tournaments_status['items'] as $stItem): ?>
+                            <?php
+                            $g = strtoupper((string)($stItem['genero'] ?? 'M'));
+                            $gLabel = $g === 'F' ? 'Femenino' : 'Masculino';
+                            $p = (int)($stItem['mesas_pendientes'] ?? 0);
+                            ?>
+                            <div class="px-3 py-2 rounded-lg border text-left <?php echo !empty($stItem['activo']) ? 'border-emerald-500 bg-emerald-100 shadow-sm' : 'border-slate-200 bg-slate-100 text-slate-600'; ?>">
+                                <div class="panel-ac-paired-title text-sm font-semibold <?php echo !empty($stItem['activo']) ? 'text-emerald-900' : 'text-slate-700'; ?>">
+                                    <?php echo htmlspecialchars($gLabel, ENT_QUOTES, 'UTF-8'); ?><?php echo !empty($stItem['activo']) ? ' · Activo' : ''; ?>
+                                </div>
+                                <div class="panel-ac-paired-sub text-xs <?php echo !empty($stItem['activo']) ? 'text-emerald-800' : 'text-slate-500'; ?>">
+                                    Ronda <?php echo (int)($stItem['ronda_actual'] ?? 0); ?> · <strong><?php echo $p; ?></strong> mesas
+                                </div>
+                            </div>
+                        <?php endforeach; ?>
+                    </div>
+                    <?php if (!empty($bloqueo_cierre_total['mensaje'])): ?>
+                        <div class="panel-ac-bloqueo text-sm text-amber-700 font-semibold max-w-md">
+                            <i class="fas fa-exclamation-triangle mr-1"></i><?php echo htmlspecialchars((string)$bloqueo_cierre_total['mensaje'], ENT_QUOTES, 'UTF-8'); ?>
+                        </div>
                     <?php endif; ?>
                 </div>
-                <?php if (!$puedeGenerar && $ultima_ronda > 0 && $mesasInc > 0): ?>
-                    <div class="flex items-center gap-2 text-amber-600">
-                        <i class="fas fa-exclamation-triangle"></i>
-                        <span class="font-semibold"><?php echo $mesasInc; ?> mesa(s) pendiente(s)</span>
-                    </div>
-                <?php endif; ?>
             </div>
+            <?php endif; ?>
         </div>
     <?php endif; ?>
+    <script>
+    (function() {
+        var btnCron = document.getElementById('btnCronometroVentana');
+        if (!btnCron) return;
+        var urlCronometro = <?php echo json_encode($url_cronometro, JSON_UNESCAPED_SLASHES); ?>;
+        btnCron.addEventListener('click', function () {
+            var features = [
+                'popup=yes',
+                'width=1100',
+                'height=820',
+                'resizable=yes',
+                'scrollbars=yes'
+            ].join(',');
+            var win = window.open(urlCronometro, 'cronometro_torneo_<?php echo (int)$torneo['id']; ?>', features);
+            if (win) {
+                win.focus();
+            } else {
+                window.location.href = urlCronometro;
+            }
+        });
+    })();
+    </script>
 
     <!-- Cronómetro Finalizar Torneo (mismo diseño que cronómetro de ronda, encima de él) -->
     <?php if ($mostrar_aviso_20min && $countdown_fin_timestamp): ?>
@@ -456,151 +360,13 @@ tailwind.config = {
             <input type="hidden" name="action" value="cerrar_torneo">
             <input type="hidden" name="csrf_token" value="<?php echo CSRF::token(); ?>">
             <input type="hidden" name="torneo_id" value="<?php echo $torneo['id']; ?>">
-            <button type="submit" class="d-inline-block font-bold py-2 px-5 rounded-lg text-lg border-0 shadow" style="background: rgba(255,255,255,0.25); color: #fff; cursor: pointer;">
+            <button type="submit" class="d-inline-block font-bold py-2 px-5 rounded-lg text-lg border-0 shadow bg-emerald-700 hover:bg-emerald-800 text-white cursor-pointer">
                 <i class="fas fa-lock mr-2"></i>Finalizar torneo
             </button>
         </form>
     </div>
     <?php endif; ?>
 
-    <!-- Botón Activar/Retornar Cronómetro (compacto) -->
-    <div class="mb-2 text-center">
-        <button type="button" id="btnCronometro"
-           class="d-inline-block font-bold py-2 px-5 rounded-lg text-lg transition-all transform shadow border-0" style="cursor: pointer;">
-            <i class="fas fa-clock mr-2"></i><span id="lblCronometro">ACTIVAR CRONÓMETRO DE RONDA</span>
-        </button>
-    </div>
-    
-    <?php $tiempo_ronda_min = (int)($torneo['tiempo'] ?? 35); if ($tiempo_ronda_min < 1) $tiempo_ronda_min = 35; ?>
-    <!-- Overlay Cronómetro - pantalla completa en la misma página (tiempo definido en el torneo) -->
-    <div id="cronometroOverlay" data-tiempo-minutos="<?php echo $tiempo_ronda_min; ?>">
-        <div class="cron-box">
-            <div class="cron-header">
-                <h1><i class="fas fa-clock me-2"></i>Cronómetro - <?= htmlspecialchars($torneo['nombre'] ?? 'Ronda') ?></h1>
-                <div style="display:flex;gap:0.5rem;align-items:center;">
-                    <button type="button" class="btn-retornar" onclick="ocultarCronometroOverlay()">
-                        <i class="fas fa-arrow-left me-1"></i> Retornar al Panel
-                    </button>
-                    <button type="button" class="btn-retornar" style="background:rgba(255,255,255,0.2)" onclick="toggleConfigCron()"><i class="fas fa-cog me-1"></i>Configurar</button>
-                </div>
-            </div>
-            <div id="configPanelCron">
-                <div class="config-grid">
-                    <div><label>Minutos</label><input type="number" id="configMinutosCron" min="1" max="99" value="<?php echo $tiempo_ronda_min; ?>"></div>
-                    <div><label>Segundos</label><input type="number" id="configSegundosCron" min="0" max="59" value="0"></div>
-                </div>
-                <button type="button" class="btn-retornar" style="width:100%;background:#22c55e" onclick="aplicarConfigCron()"><i class="fas fa-check me-1"></i>APLICAR</button>
-            </div>
-            <div class="cron-display">
-                <div id="tiempoDisplayCron"><?php echo str_pad((string)$tiempo_ronda_min, 2, '0', STR_PAD_LEFT); ?>:00</div>
-                <div id="estadoDisplayCron"><i class="fas fa-pause-circle me-1"></i>DETENIDO</div>
-                <div class="cron-controles">
-                    <button id="btnIniciarCron" onclick="iniciarCronometro()" title="Iniciar"><i class="fas fa-play"></i></button>
-                    <button id="btnDetenerCron" onclick="detenerCronometro()" title="Detener" disabled><i class="fas fa-stop"></i></button>
-                </div>
-            </div>
-        </div>
-    </div>
-    
-    <script>
-    (function() {
-        var overlayEl = document.getElementById('cronometroOverlay');
-        var minutosTorneo = overlayEl ? (parseInt(overlayEl.getAttribute('data-tiempo-minutos'), 10) || 35) : 35;
-        if (minutosTorneo < 1) minutosTorneo = 35;
-        var tiempoRestante = minutosTorneo * 60, tiempoOriginal = minutosTorneo * 60, cronometroInterval = null;
-        var estaCorriendo = false, alarmaReproducida = false, alarmaRepetida = false;
-        var overlay = overlayEl;
-        var btnLbl = document.getElementById('lblCronometro');
-        
-        function formatear(s) { var m=Math.floor(s/60),se=s%60; return String(m).padStart(2,'0')+':'+String(se).padStart(2,'0'); }
-        function actualizarDisplayCron() {
-            var d=document.getElementById('tiempoDisplayCron'),e=document.getElementById('estadoDisplayCron');
-            if(!d||!e)return;
-            d.textContent=formatear(tiempoRestante);
-            d.style.color=tiempoRestante<=30?'#ef4444':tiempoRestante<=60?'#fbbf24':'white';
-            d.style.animation=tiempoRestante<=30?'cronPulse 1s infinite':'none';
-            e.innerHTML=estaCorriendo?'<i class="fas fa-play-circle me-1"></i>EN EJECUCIÓN':'<i class="fas fa-pause-circle me-1"></i>DETENIDO';
-            e.style.color=estaCorriendo?'#86efac':'rgba(255,255,255,0.9)';
-            if(btnLbl) btnLbl.textContent=estaCorriendo?'RETORNAR AL CRONÓMETRO':'ACTIVAR CRONÓMETRO DE RONDA';
-        }
-        function reproducirAlarma() {
-            try {
-                var ctx=new(window.AudioContext||window.webkitAudioContext)();
-                for(var i=0;i<5;i++) {
-                    var o=ctx.createOscillator(),g=ctx.createGain();
-                    o.connect(g);g.connect(ctx.destination);
-                    o.frequency.setValueAtTime(400,ctx.currentTime+i*0.8);
-                    o.frequency.exponentialRampToValueAtTime(800,ctx.currentTime+i*0.8+0.6);
-                    o.type='sine';
-                    g.gain.setValueAtTime(0,ctx.currentTime+i*0.8);
-                    g.gain.linearRampToValueAtTime(0.5,ctx.currentTime+i*0.8+0.1);
-                    g.gain.linearRampToValueAtTime(0,ctx.currentTime+i*0.8+0.6);
-                    o.start(ctx.currentTime+i*0.8);o.stop(ctx.currentTime+i*0.8+0.6);
-                }
-            } catch(err){if(navigator.vibrate)navigator.vibrate([300,100,300,100,300]);}
-        }
-        function reproducirAlarma2() {
-            try {
-                var ctx=new(window.AudioContext||window.webkitAudioContext)();
-                for(var i=0;i<3;i++) {
-                    var o=ctx.createOscillator(),g=ctx.createGain();
-                    o.connect(g);g.connect(ctx.destination);
-                    o.frequency.setValueAtTime(60,ctx.currentTime+i*1.2);
-                    o.frequency.exponentialRampToValueAtTime(120,ctx.currentTime+i*1.2+0.5);
-                    o.type='sawtooth';
-                    g.gain.setValueAtTime(0,ctx.currentTime+i*1.2);
-                    g.gain.linearRampToValueAtTime(0.6,ctx.currentTime+i*1.2+0.2);
-                    g.gain.linearRampToValueAtTime(0,ctx.currentTime+i*1.2+1);
-                    o.start(ctx.currentTime+i*1.2);o.stop(ctx.currentTime+i*1.2+1);
-                }
-            } catch(err){if(navigator.vibrate)navigator.vibrate([500,200,500]);}
-        }
-        window.iniciarCronometro=function(){
-            if(tiempoRestante<=0)tiempoRestante=tiempoOriginal;
-            estaCorriendo=true;alarmaReproducida=false;alarmaRepetida=false;
-            document.getElementById('btnIniciarCron').disabled=true;
-            document.getElementById('btnDetenerCron').disabled=false;
-            cronometroInterval=setInterval(function(){
-                tiempoRestante--;actualizarDisplayCron();
-                if(tiempoRestante<=0){
-                    clearInterval(cronometroInterval);cronometroInterval=null;
-                    estaCorriendo=false;
-                    document.getElementById('btnIniciarCron').disabled=false;
-                    document.getElementById('btnDetenerCron').disabled=true;
-                    if(!alarmaReproducida){reproducirAlarma();alarmaReproducida=true;setTimeout(function(){if(!alarmaRepetida){reproducirAlarma2();alarmaRepetida=true;}},180000);}
-                    actualizarDisplayCron();
-                }
-            },1000);
-            actualizarDisplayCron();
-        };
-        window.detenerCronometro=function(){
-            estaCorriendo=false;clearInterval(cronometroInterval);cronometroInterval=null;
-            document.getElementById('btnIniciarCron').disabled=false;
-            document.getElementById('btnDetenerCron').disabled=true;
-            actualizarDisplayCron();
-        };
-        window.toggleConfigCron=function(){
-            var p=document.getElementById('configPanelCron');
-            p.style.display=p.style.display==='none'?'block':'none';
-        };
-        window.aplicarConfigCron=function(){
-            var m=parseInt(document.getElementById('configMinutosCron').value)||minutosTorneo;
-            var s=parseInt(document.getElementById('configSegundosCron').value)||0;
-            tiempoRestante=m*60+s;tiempoOriginal=tiempoRestante;
-            if(!estaCorriendo)actualizarDisplayCron();
-            document.getElementById('configPanelCron').style.display='none';
-        };
-        window.ocultarCronometroOverlay=function(){
-            overlay.style.display='none';
-        };
-        var btnCron=document.getElementById('btnCronometro');
-        if(btnCron) btnCron.onclick=function(){
-            overlay.style.display='flex';
-        };
-        actualizarDisplayCron();
-    })();
-    </script>
-    
     <!-- Alerta de Torneo Cerrado (compacto) -->
     <?php if ($isLocked): ?>
         <div class="bg-gray-100 border-l-4 border-gray-500 rounded-lg p-2 mb-2">
@@ -617,28 +383,11 @@ tailwind.config = {
             <div class="tw-column w-1/3">
                 <div class="bg-white rounded-xl shadow-md border border-gray-200 overflow-hidden h-full">
                     <div class="bg-gradient-to-r from-emerald-500 to-teal-500 px-4 py-2">
-                        <h3 class="text-white font-bold text-lg flex items-center mb-0">
+                        <h3 class="text-white text-lg flex items-center mb-0">
                             <i class="fas fa-table mr-2"></i> Gestión de Mesas
                         </h3>
                     </div>
                     <div class="p-5 space-y-4">
-                        <!-- Inscripciones: un solo bloque (Gestionar + Inscribir en sitio) -->
-                        <?php if ($isLocked || $torneo_bloqueado_inscripciones): ?>
-                            <button type="button" disabled class="tw-btn bg-gray-400 text-white">
-                                <i class="fas fa-lock"></i> Inscripciones (Cerrado)
-                            </button>
-                        <?php else: ?>
-                            <div class="d-flex flex-column gap-1">
-                                <?php if ($es_modalidad_equipos): ?>
-                                    <a href="<?php echo $base_url . ($use_standalone ? '?' : '&'); ?>action=gestionar_inscripciones_equipos&torneo_id=<?php echo $torneo['id']; ?>" class="tw-btn bg-blue-500 hover:bg-blue-600 text-white"><i class="fas fa-clipboard-list"></i> Gestionar Inscripciones</a>
-                                    <a href="<?php echo $base_url . ($use_standalone ? '?' : '&'); ?>action=inscribir_equipo_sitio&torneo_id=<?php echo $torneo['id']; ?>" class="tw-btn bg-amber-500 hover:bg-amber-600 text-white"><i class="fas fa-user-plus"></i> Inscribir en Sitio</a>
-                                <?php else: ?>
-                                    <a href="index.php?page=registrants&torneo_id=<?php echo $torneo['id']; ?><?php echo $use_standalone ? '&return_to=panel_torneo' : ''; ?>" class="tw-btn bg-blue-500 hover:bg-blue-600 text-white"><i class="fas fa-clipboard-list"></i> Gestionar Inscripciones</a>
-                                    <a href="<?php echo $base_url . ($use_standalone ? '?' : '&'); ?>action=inscribir_sitio&torneo_id=<?php echo $torneo['id']; ?>" class="tw-btn bg-amber-500 hover:bg-amber-600 text-white"><i class="fas fa-user-check"></i> Inscripción en Sitio</a>
-                                <?php endif; ?>
-                            </div>
-                        <?php endif; ?>
-                        
                         <!-- Mostrar Asignaciones (solo si hay rondas generadas) -->
                         <?php if ($ultima_ronda > 0): ?>
                             <a href="<?php echo $base_url . ($use_standalone ? '?' : '&'); ?>action=mesas&torneo_id=<?php echo $torneo['id']; ?>&ronda=<?php echo $ultima_ronda; ?>" 
@@ -652,10 +401,14 @@ tailwind.config = {
                                 <i class="fas fa-user-cog"></i> Asignar mesas al operador
                             </a>
                             
-                            <!-- Agregar Mesa -->
+                            <!-- Agregar Mesa: solo habilitado en ronda 1 -->
                             <?php if ($isLocked): ?>
                                 <button type="button" disabled class="tw-btn bg-gray-400 text-white">
                                     <i class="fas fa-lock"></i> Agregar Mesa (Cerrado)
+                                </button>
+                            <?php elseif ($ultima_ronda >= 2): ?>
+                                <button type="button" disabled class="tw-btn bg-gray-400 text-white" title="Solo disponible en la ronda 1">
+                                    <i class="fas fa-plus-circle"></i> Agregar Mesa (solo ronda 1)
                                 </button>
                             <?php else: ?>
                                 <a href="<?php echo $base_url . ($use_standalone ? '?' : '&'); ?>action=agregar_mesa&torneo_id=<?php echo $torneo['id']; ?>&ronda=<?php echo $ultima_ronda; ?>" 
@@ -670,7 +423,7 @@ tailwind.config = {
                                 <input type="hidden" name="action" value="eliminar_ultima_ronda">
                                 <input type="hidden" name="csrf_token" value="<?php echo CSRF::token(); ?>">
                                 <input type="hidden" name="torneo_id" value="<?php echo $torneo['id']; ?>">
-                                <input type="hidden" name="confirmar_eliminar_con_resultados" id="confirmar_eliminar_con_resultados" value="">
+                                <input type="hidden" name="confirmar_eliminar_con_resultados" value="">
                                 <button type="submit" <?php echo $isLocked ? 'disabled' : ''; ?>
                                         class="tw-btn <?php echo $isLocked ? 'bg-gray-400' : 'bg-red-500 hover:bg-red-600'; ?> text-white"
                                         title="<?php echo $isLocked ? 'Torneo cerrado.' : ($ultima_ronda_tiene_resultados ? 'Eliminar ronda (la ronda tiene resultados en mesas; se pedirá confirmación estricta).' : 'Eliminar la última ronda.'); ?>">
@@ -684,6 +437,16 @@ tailwind.config = {
                                 Genera la primera ronda para ver estas opciones
                             </div>
                         <?php endif; ?>
+
+                        <a href="<?php echo $base_url . ($use_standalone ? '?' : '&'); ?>action=reportes_inscritos&torneo_id=<?php echo (int)($torneo['id'] ?? 0); ?>"
+                           class="tw-btn bg-sky-600 hover:bg-sky-700 text-white">
+                            <i class="fas fa-file-alt"></i> Reportes de inscritos
+                        </a>
+
+                        <a href="index.php?page=tournament_admin&torneo_id=<?php echo (int)($torneo['id'] ?? 0); ?>&action=generar_qr"
+                           class="tw-btn bg-emerald-600 hover:bg-emerald-700 text-white" target="_blank" rel="noopener">
+                            <i class="fas fa-qrcode"></i> Generar e imprimir QR del torneo
+                        </a>
                     </div>
                 </div>
             </div>
@@ -692,9 +455,9 @@ tailwind.config = {
             <div class="tw-column w-1/3">
                 <div class="bg-white rounded-xl shadow-md border border-gray-200 overflow-hidden h-full">
                     <div class="bg-gradient-to-r from-blue-500 to-indigo-500 px-4 py-2">
-                        <h3 class="text-white font-bold text-lg flex items-center mb-0">
-                            <i class="fas fa-cogs mr-2"></i> Operaciones
-                        </h3>
+<h3 class="text-white text-lg flex items-center mb-0">
+                        <i class="fas fa-cogs mr-2"></i> Operaciones
+                    </h3>
                     </div>
                     <div class="p-5 space-y-4">
                         <!-- Actualizar Resultados -->
@@ -730,12 +493,21 @@ tailwind.config = {
                                 <input type="hidden" name="csrf_token" value="<?php echo CSRF::token(); ?>">
                                 <input type="hidden" name="torneo_id" value="<?php echo (int)($torneo['id'] ?? 0); ?>">
                                 <button type="submit" id="btn-generar-ronda"
-                                        <?php echo (!$puedeGenerar || $isLocked) ? 'disabled' : ''; ?>
-                                        class="tw-btn <?php echo ($puedeGenerar && !$isLocked) ? 'bg-blue-500 hover:bg-blue-600' : 'bg-gray-400'; ?> text-white">
-                                    <i class="fas fa-<?php echo ($puedeGenerar && !$isLocked) ? 'play' : 'lock'; ?>"></i>
+                                        data-btn-reset-html="<?php echo htmlspecialchars(
+                                            '<i class="fas fa-' . (($puedeGenerar && !$isLocked && empty($bloqueo_cierre_total)) ? 'play' : 'lock') . '"></i> Generar Ronda ' . (int)$proximaRonda,
+                                            ENT_QUOTES, 'UTF-8'
+                                        ); ?>"
+                                        <?php echo (!$puedeGenerar || $isLocked || !empty($bloqueo_cierre_total)) ? 'disabled' : ''; ?>
+                                        class="tw-btn <?php echo ($puedeGenerar && !$isLocked && empty($bloqueo_cierre_total)) ? 'bg-blue-500 hover:bg-blue-600' : 'bg-gray-400'; ?> text-white">
+                                    <i class="fas fa-<?php echo ($puedeGenerar && !$isLocked && empty($bloqueo_cierre_total)) ? 'play' : 'lock'; ?>"></i>
                                     Generar Ronda <?php echo $proximaRonda; ?>
                                 </button>
                             </form>
+                            <?php if (!empty($bloqueo_cierre_total['mensaje'])): ?>
+                                <div class="text-xs text-amber-700 font-semibold">
+                                    <i class="fas fa-ban mr-1"></i><?php echo htmlspecialchars((string)$bloqueo_cierre_total['mensaje'], ENT_QUOTES, 'UTF-8'); ?>
+                                </div>
+                            <?php endif; ?>
                         <?php else: ?>
                             <div class="bg-green-100 text-green-700 rounded-lg p-3 text-center font-semibold">
                                 <i class="fas fa-check-circle mr-2"></i> Todas las rondas generadas
@@ -773,6 +545,11 @@ tailwind.config = {
                                 <i class="fas fa-print"></i> Imprimir Hojas
                             </a>
                         <?php endif; ?>
+                        
+                        <a href="<?php echo $base_url . ($use_standalone ? '?' : '&'); ?>action=vincular_torneos&torneo_id=<?php echo (int)$torneo['id']; ?>"
+                           class="tw-btn bg-slate-600 hover:bg-slate-700 text-white">
+                            <i class="fas fa-sitemap"></i> Vincular Torneos (Evento)
+                        </a>
 
                     </div>
                 </div>
@@ -782,9 +559,9 @@ tailwind.config = {
             <div class="tw-column w-1/3">
                 <div class="bg-white rounded-xl shadow-md border border-gray-200 overflow-hidden h-full">
                     <div class="bg-gradient-to-r from-amber-500 to-orange-500 px-4 py-2">
-                        <h3 class="text-white font-bold text-lg flex items-center mb-0">
-                            <i class="fas fa-trophy mr-2"></i> Resultados
-                        </h3>
+<h3 class="text-white text-lg flex items-center mb-0">
+                        <i class="fas fa-trophy mr-2"></i> Resultados
+                    </h3>
                     </div>
                     <div class="p-5 space-y-4">
                         <!-- Resultados (Adaptado según modalidad) -->
@@ -812,13 +589,17 @@ tailwind.config = {
                             <!-- Mostrar Resultados / Posiciones -->
                             <a href="<?php echo $base_url . ($use_standalone ? '?' : '&'); ?>action=posiciones&torneo_id=<?php echo $torneo['id']; ?>" 
                                class="tw-btn bg-purple-500 hover:bg-purple-600 text-white">
-                                <i class="fas fa-list-ol"></i> Resultados
+                                <i class="fas fa-list-ol"></i> <?php echo ($es_modalidad_parejas || $es_modalidad_parejas_fijas) ? 'Resultados Parejas' : 'Resultados'; ?>
                             </a>
                             
                             <!-- Resultados por Club -->
                             <a href="<?php echo $base_url . ($use_standalone ? '?' : '&'); ?>action=resultados_por_club&torneo_id=<?php echo $torneo['id']; ?>" 
                                class="tw-btn bg-emerald-500 hover:bg-emerald-600 text-white">
                                 <i class="fas fa-building"></i> Resultados Clubes
+                            </a>
+                            <a href="<?php echo $base_url . ($use_standalone ? '?' : '&'); ?>action=resultados_reportes&torneo_id=<?php echo $torneo['id']; ?>" 
+                               class="tw-btn bg-slate-600 hover:bg-slate-700 text-white">
+                                <i class="fas fa-file-alt"></i> Reportes PDF/Excel
                             </a>
                         <?php endif; ?>
                         
@@ -839,14 +620,14 @@ tailwind.config = {
                         
                         <!-- Finalizar Torneo (solo cuando rondas completadas + 20 min desde último resultado) -->
                         <?php if ($mostrar_aviso_20min && $countdown_fin_timestamp): ?>
-                        <div id="countdown-cierre-torneo" class="mb-3 p-3 rounded-lg border-2" style="background-color: #fce7f3; border-color: #c026d3;">
-                            <p class="text-sm font-medium mb-1" style="color: #86198f;">
+                        <div id="countdown-cierre-torneo" class="mb-3 p-3 rounded-lg border-2 border-emerald-400 bg-emerald-50">
+                            <p class="text-sm font-medium mb-1 text-emerald-900">
                                 <i class="fas fa-clock"></i> El torneo se cerrará oficialmente en:
                             </p>
-                            <p class="countdown-tiempo-restante text-2xl font-bold tabular-nums" style="color: #86198f;" data-fin="<?php echo (int)$countdown_fin_timestamp; ?>">
+                            <p class="countdown-tiempo-restante text-2xl font-bold tabular-nums text-emerald-800" data-fin="<?php echo (int)$countdown_fin_timestamp; ?>">
                                 --:--
                             </p>
-                            <p class="text-xs mt-1" style="color: #701a75;">Tras este tiempo se habilitará el botón <strong>Finalizar torneo</strong>.</p>
+                            <p class="text-xs mt-1 text-emerald-800/90">Tras este tiempo se habilitará el botón <strong>Finalizar torneo</strong>.</p>
                         </div>
                         <?php endif; ?>
                         <form method="POST" action="<?php echo $use_standalone ? $base_url : 'index.php?page=torneo_gestion'; ?>" 
@@ -868,18 +649,78 @@ tailwind.config = {
 
 </div>
 
+<!-- Modal Importación Masiva (solo torneos individuales) -->
+<div class="modal fade" id="modalImportacionMasiva" tabindex="-1" aria-labelledby="modalImportacionMasivaLabel" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header bg-indigo-600 text-white">
+                <h5 class="modal-title" id="modalImportacionMasivaLabel"><i class="fas fa-file-csv me-2"></i>Importación masiva</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+            </div>
+            <div class="modal-body">
+                <p class="text-muted small">Cargue <strong>Excel</strong> (.xlsx, .xls, .xlsm) o <strong>CSV</strong>. En el servidor debe existir <code>vendor/</code> (ejecute <code>composer install</code> en la raíz del proyecto) para los formatos modernos de Excel. Campos obligatorios: <strong>nacionalidad, cédula, nombre, club, organización</strong>. Si falta cualquiera, la fila se rechaza. Si aparece sesión expirada, recargue la página (F5) antes de subir.</p>
+                <p class="small mb-2"><strong>Semáforo (tras Validar):</strong> <span class="badge" style="background:#3b82f6">Azul</span> Ya inscrito (omitir) · <span class="badge" style="background:#eab308;color:#000">Amarillo</span> Usuario existe (solo inscribir) · <span class="badge" style="background:#22c55e">Verde</span> Todo nuevo (crear e inscribir) · <span class="badge bg-danger">Rojo</span> Error de datos</p>
+                <div class="mb-3">
+                    <label class="form-label">Archivo CSV</label>
+                    <input type="file" class="form-control" id="importMasivaFile" accept=".xls,.xlsx,.xlsm,.csv,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel.sheet.macroEnabled.12,text/csv">
+                </div>
+                <div id="importMasivaMapping" class="mb-3 d-none">
+                    <h6 class="mb-2">Mapeo de columnas</h6>
+                    <div class="row g-2 flex-wrap" id="importMasivaMappingRow"></div>
+                </div>
+                <div id="importMasivaPreviewWrap" class="mb-3 d-none">
+                    <h6 class="mb-2">Vista previa <span class="badge bg-secondary" id="importMasivaPreviewCount">0</span> filas</h6>
+                    <div class="table-responsive" style="max-height: 280px; overflow-y: auto;">
+                        <table class="table table-sm table-bordered" id="importMasivaPreviewTable"></table>
+                    </div>
+                    <div class="mt-2">
+                        <button type="button" class="btn btn-outline-primary btn-sm" id="btnImportMasivaValidar"><i class="fas fa-check-double me-1"></i>Validar (semáforo)</button>
+                        <button type="button" class="btn btn-success btn-sm ms-2" id="btnImportMasivaProcesar"><i class="fas fa-play me-1"></i>Procesar importación</button>
+                    </div>
+                </div>
+                <div id="importMasivaLoading" class="d-none text-center py-3"><i class="fas fa-spinner fa-spin fa-2x text-primary"></i><p class="mt-2 mb-0">Procesando...</p></div>
+            </div>
+        </div>
+    </div>
+</div>
+
 <script>
+function limpiarSwalUI() {
+    try {
+        document.body.style.removeProperty('padding-right');
+        document.body.style.removeProperty('overflow');
+        document.documentElement.style.removeProperty('overflow');
+        document.body.classList.remove('swal2-shown', 'swal2-height-auto');
+        document.documentElement.classList.remove('swal2-shown');
+        document.querySelectorAll('body > .swal2-container').forEach(function(el) {
+            if (el && el.parentNode) el.parentNode.removeChild(el);
+        });
+    } catch (e) {}
+}
+
 document.addEventListener('DOMContentLoaded', function() {
     const formGenerarRonda = document.getElementById('form-generar-ronda');
     if (formGenerarRonda) {
-        formGenerarRonda.addEventListener('submit', async function(e) {
-            const btnGenerar = document.getElementById('btn-generar-ronda');
+        formGenerarRonda.addEventListener('submit', function() {
+            const btnGenerar = formGenerarRonda.querySelector('button[type="submit"]');
             if (btnGenerar && !btnGenerar.disabled) {
                 btnGenerar.disabled = true;
                 btnGenerar.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> Generando...';
             }
         });
     }
+
+    window.addEventListener('pageshow', function() {
+        var f = document.getElementById('form-generar-ronda');
+        if (!f) return;
+        var btn = f.querySelector('button[type="submit"]');
+        if (!btn || !btn.disabled) return;
+        var reset = btn.getAttribute('data-btn-reset-html');
+        if (reset && btn.querySelector('.fa-spinner')) {
+            btn.disabled = false;
+            btn.innerHTML = reset;
+        }
+    });
 
     // Cuenta regresiva: cierre oficial del torneo en 20 minutos (actualiza todos los .countdown-tiempo-restante)
     const countdownEls = document.querySelectorAll('.countdown-tiempo-restante');
@@ -910,81 +751,92 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 async function actualizarEstadisticasConfirmar(event) {
-    const result = await Swal.fire({
-        title: '¿Actualizar estadísticas?',
-        text: '¿Actualizar estadísticas de todos los inscritos?',
-        icon: 'question',
-        showCancelButton: true,
-        confirmButtonText: 'Sí, actualizar',
-        cancelButtonText: 'Cancelar',
-        confirmButtonColor: '#3b82f6',
-        cancelButtonColor: '#6b7280'
-    });
-    
-    if (result.isConfirmed) {
-        event.target.submit();
+    try {
+        const result = await Swal.fire({
+            title: '¿Actualizar estadísticas?',
+            text: '¿Actualizar estadísticas de todos los inscritos?',
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonText: 'Sí, actualizar',
+            cancelButtonText: 'Cancelar',
+            confirmButtonColor: '#3b82f6',
+            cancelButtonColor: '#6b7280'
+        });
+
+        if (result.isConfirmed) {
+            event.target.submit();
+        }
+    } finally {
+        limpiarSwalUI();
     }
 }
 
 
 async function eliminarRondaConfirmar(event, ronda, tieneResultadosMesas) {
     const form = event.target;
-    const inputConfirmar = document.getElementById('confirmar_eliminar_con_resultados');
+    const inputConfirmar = form.querySelector('input[name="confirmar_eliminar_con_resultados"]');
     if (inputConfirmar) inputConfirmar.value = '';
 
-    // Fallback cuando SweetAlert2 no está cargado (p. ej. panel desde index.php con layout)
     if (typeof Swal === 'undefined') {
+        try {
+            if (tieneResultadosMesas) {
+                var texto = prompt('La ronda ' + ronda + ' tiene resultados registrados. Para eliminar de todas formas escriba exactamente: ELIMINAR');
+                if (texto === 'ELIMINAR' && inputConfirmar) {
+                    inputConfirmar.value = 'ELIMINAR';
+                    form.submit();
+                }
+            } else {
+                if (confirm('¿Eliminar la ronda ' + ronda + '? Se eliminarán las asignaciones de mesas de esta ronda.')) {
+                    form.submit();
+                }
+            }
+        } finally {
+            limpiarSwalUI();
+        }
+        return;
+    }
+
+    try {
         if (tieneResultadosMesas) {
-            var texto = prompt('La ronda ' + ronda + ' tiene resultados registrados. Para eliminar de todas formas escriba exactamente: ELIMINAR');
+            const { value: texto } = await Swal.fire({
+                title: 'Confirmación estricta',
+                html: '<p class="text-left">La ronda <strong>' + ronda + '</strong> tiene <strong>resultados de mesas registrados</strong>.</p>' +
+                      '<p class="text-left text-gray-600">Eliminar borrará todos los resultados y asignaciones de esta ronda. Esta acción no se puede deshacer.</p>' +
+                      '<p class="text-left mt-3 font-semibold">Para continuar, escriba exactamente: <code class="bg-gray-200 px-1">ELIMINAR</code></p>',
+                icon: 'warning',
+                input: 'text',
+                inputPlaceholder: 'Escriba ELIMINAR',
+                inputValidator: (value) => {
+                    if (value !== 'ELIMINAR') return 'Debe escribir exactamente: ELIMINAR';
+                },
+                showCancelButton: true,
+                confirmButtonText: 'Sí, eliminar la ronda',
+                cancelButtonText: 'Cancelar',
+                confirmButtonColor: '#ef4444',
+                cancelButtonColor: '#6b7280'
+            });
             if (texto === 'ELIMINAR' && inputConfirmar) {
                 inputConfirmar.value = 'ELIMINAR';
                 form.submit();
             }
-        } else {
-            if (confirm('¿Eliminar la ronda ' + ronda + '? Se eliminarán las asignaciones de mesas de esta ronda.')) {
-                form.submit();
-            }
+            return;
         }
-        return;
-    }
 
-    if (tieneResultadosMesas) {
-        const { value: texto } = await Swal.fire({
-            title: 'Confirmación estricta',
-            html: '<p class="text-left">La ronda <strong>' + ronda + '</strong> tiene <strong>resultados de mesas registrados</strong>.</p>' +
-                  '<p class="text-left text-gray-600">Eliminar borrará todos los resultados y asignaciones de esta ronda. Esta acción no se puede deshacer.</p>' +
-                  '<p class="text-left mt-3 font-semibold">Para continuar, escriba exactamente: <code class="bg-gray-200 px-1">ELIMINAR</code></p>',
+        const result = await Swal.fire({
+            title: '¿Eliminar ronda?',
+            html: '¿Está seguro de eliminar la ronda <strong>' + ronda + '</strong>?<br><small class="text-gray-500">Se eliminarán las asignaciones de mesas de esta ronda.</small>',
             icon: 'warning',
-            input: 'text',
-            inputPlaceholder: 'Escriba ELIMINAR',
-            inputValidator: (value) => {
-                if (value !== 'ELIMINAR') return 'Debe escribir exactamente: ELIMINAR';
-            },
             showCancelButton: true,
-            confirmButtonText: 'Sí, eliminar la ronda',
+            confirmButtonText: 'Sí, eliminar',
             cancelButtonText: 'Cancelar',
             confirmButtonColor: '#ef4444',
             cancelButtonColor: '#6b7280'
         });
-        if (texto === 'ELIMINAR' && inputConfirmar) {
-            inputConfirmar.value = 'ELIMINAR';
+        if (result.isConfirmed) {
             form.submit();
         }
-        return;
-    }
-
-    const result = await Swal.fire({
-        title: '¿Eliminar ronda?',
-        html: '¿Está seguro de eliminar la ronda <strong>' + ronda + '</strong>?<br><small class="text-gray-500">Se eliminarán las asignaciones de mesas de esta ronda.</small>',
-        icon: 'warning',
-        showCancelButton: true,
-        confirmButtonText: 'Sí, eliminar',
-        cancelButtonText: 'Cancelar',
-        confirmButtonColor: '#ef4444',
-        cancelButtonColor: '#6b7280'
-    });
-    if (result.isConfirmed) {
-        form.submit();
+    } finally {
+        limpiarSwalUI();
     }
 }
 
@@ -1025,4 +877,296 @@ async function confirmarCierreTorneo(event) {
         }
     });
 }
+
+// --- Importación masiva ---
+(function() {
+    const CAMPOS = ['nacionalidad','cedula','nombre','sexo','fecha_nac','telefono','email','club','organizacion'];
+    const CAMPOS_LABEL = { organizacion: 'Organización' };
+    const COLORS = { omitir: '#3b82f6', inscribir: '#eab308', crear_inscribir: '#22c55e', error: '#ef4444' };
+    const CAMPO_ALIASES = {
+        nombre: ['nombre', 'nombres y apellidos', 'nombres', 'nombres y apellido'],
+        cedula: ['cedula', 'cédula', 'cedula de identidad'],
+        organizacion: ['organizacion', 'organización', 'entidad', 'asociacion', 'asociación'],
+        club: ['club', 'club_nombre', 'club nombre']
+    };
+    let importMasivaHeaders = [];
+    let importMasivaRows = [];
+    let importMasivaValidacion = [];
+
+    function detectEncodingAndDecode(buffer) {
+        var bytes = new Uint8Array(buffer);
+        var utf8 = new TextDecoder('utf-8').decode(bytes);
+        var mojibakePattern = /Ã[Âª©®¯°±²³´µ¶·¸¹º»¼½¾¿ÀÁÂÃÄÅÆÇÈÉÊËÌÍÎÏ]/;
+        if (mojibakePattern.test(utf8) || (utf8.indexOf('Ã') !== -1 && utf8.indexOf('©') !== -1)) {
+            try {
+                return new TextDecoder('windows-1252').decode(bytes);
+            } catch (e) {
+                try {
+                    return new TextDecoder('iso-8859-1').decode(bytes);
+                } catch (e2) {
+                    return utf8;
+                }
+            }
+        }
+        return utf8;
+    }
+
+    function parseCSV(text) {
+        const lines = [];
+        let cur = '', inQuotes = false;
+        for (let i = 0; i < text.length; i++) {
+            const c = text[i];
+            if (c === '"') { inQuotes = !inQuotes; continue; }
+            if (!inQuotes && (c === '\n' || c === '\r')) {
+                if (c === '\r' && text[i+1] === '\n') i++;
+                if (cur.trim()) lines.push(cur);
+                cur = '';
+                continue;
+            }
+            cur += c;
+        }
+        if (cur.trim()) lines.push(cur);
+        return lines.map(function(line) {
+            const out = [];
+            let cell = '';
+            inQuotes = false;
+            for (let j = 0; j < line.length; j++) {
+                const c = line[j];
+                if (c === '"') { inQuotes = !inQuotes; continue; }
+                if (!inQuotes && (c === ',' || c === ';')) { out.push(cell.trim()); cell = ''; continue; }
+                cell += c;
+            }
+            out.push(cell.trim());
+            return out;
+        });
+    }
+
+    function getTorneoId() {
+        const m = window.location.href.match(/torneo_id=(\d+)/);
+        return m ? m[1] : (document.querySelector('input[name="torneo_id"]') && document.querySelector('input[name="torneo_id"]').value) || '';
+    }
+
+    function getCsrfToken() {
+        return document.querySelector('input[name="csrf_token"]') && document.querySelector('input[name="csrf_token"]').value || '';
+    }
+
+    /** URL absoluta a /public/api/... (evita fallos si <base> o la ruta relativa no coinciden). */
+    function apiPublicUrl(path) {
+        var p = (path || '').replace(/^\//, '');
+        var base = (typeof window.APP_BASE_URL === 'string' && window.APP_BASE_URL) ? window.APP_BASE_URL.replace(/\/$/, '') : '';
+        return base ? (base + '/' + p) : p;
+    }
+
+    function fetchJsonResponse(r) {
+        return r.text().then(function(text) {
+            try {
+                return JSON.parse(text);
+            } catch (e) {
+                var plain = (text || '').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+                throw new Error('HTTP ' + r.status + (plain ? ': ' + plain.slice(0, 220) : '') + ' (respuesta no JSON; revise sesión o tamaño del archivo).');
+            }
+        });
+    }
+
+    document.getElementById('importMasivaFile').addEventListener('change', function(e) {
+        const file = e.target.files[0];
+        if (!file) return;
+        var ext = (file.name.split('.').pop() || '').toLowerCase();
+        document.getElementById('importMasivaLoading').classList.remove('d-none');
+        if (ext === 'xls' || ext === 'xlsx' || ext === 'xlsm' || ext === 'csv') {
+            var fd = new FormData();
+            fd.append('archivo', file);
+            fd.append('csrf_token', getCsrfToken());
+            fetch(apiPublicUrl('api/tournament_import_parse.php'), { method: 'POST', body: fd, credentials: 'same-origin' })
+                .then(fetchJsonResponse)
+                .then(function(data) {
+                    document.getElementById('importMasivaLoading').classList.add('d-none');
+                    if (!data.success) { alert(data.error || 'Error al leer el archivo'); return; }
+                    importMasivaHeaders = data.headers || [];
+                    importMasivaRows = data.rows || [];
+                    if (importMasivaHeaders.length === 0 || importMasivaRows.length === 0) {
+                        alert('El archivo debe tener cabecera y al menos una fila de datos.');
+                        return;
+                    }
+                    applyParsedData();
+                })
+                .catch(function(err) {
+                    document.getElementById('importMasivaLoading').classList.add('d-none');
+                    alert(err && err.message ? err.message : 'Error de conexión al procesar el archivo.');
+                });
+        } else {
+            var reader = new FileReader();
+            reader.onload = function(ev) {
+                var buffer = ev.target.result;
+                var text = detectEncodingAndDecode(buffer);
+                text = text.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+                var parsed = parseCSV(text);
+                document.getElementById('importMasivaLoading').classList.add('d-none');
+                if (parsed.length < 2) { alert('El archivo debe tener al menos cabecera y una fila.'); return; }
+                importMasivaHeaders = parsed[0];
+                importMasivaRows = parsed.slice(1);
+                applyParsedData();
+            };
+            reader.readAsArrayBuffer(file);
+        }
+    });
+
+    function applyParsedData() {
+        const row = document.getElementById('importMasivaMappingRow');
+        row.innerHTML = '';
+        CAMPOS.forEach(function(campo) {
+            const div = document.createElement('div');
+            div.className = 'col-6 col-md-4 col-lg-3';
+            var label = (CAMPOS_LABEL[campo] || campo);
+            var opts = importMasivaHeaders.map(function(h, i) {
+                var head = (String(h || 'Col ' + (i+1))).trim().toLowerCase();
+                var aliases = CAMPO_ALIASES[campo];
+                var selected = aliases && aliases.indexOf(head) !== -1 ? ' selected' : '';
+                if (!selected && campo === 'organizacion' && (head === 'entidad' || head === 'organizacion' || head === 'organización' || head === 'asociacion' || head === 'asociación')) selected = ' selected';
+                return '<option value="' + i + '"' + selected + '>' + (h || 'Col ' + (i+1)) + '</option>';
+            }).join('');
+            div.innerHTML = '<label class="form-label small mb-0">' + label + '</label><select class="form-select form-select-sm map-select" data-campo="' + campo + '"><option value="">-- No usar --</option>' + opts + '</select>';
+            row.appendChild(div);
+        });
+        document.getElementById('importMasivaMapping').classList.remove('d-none');
+        document.getElementById('importMasivaPreviewWrap').classList.remove('d-none');
+        document.getElementById('importMasivaPreviewCount').textContent = importMasivaRows.length;
+        buildPreviewTable();
+    }
+
+    function buildPreviewTable() {
+        const map = {};
+        document.querySelectorAll('.map-select').forEach(function(s) {
+            const v = s.value;
+            if (v !== '') map[s.dataset.campo] = parseInt(v, 10);
+        });
+        const thead = ['#'].concat(CAMPOS.map(function(c) { return CAMPOS_LABEL[c] || c; }));
+        const tbody = importMasivaRows.map(function(r, i) {
+            const row = [(i+1)];
+            CAMPOS.forEach(function(c) { row.push(map[c] !== undefined ? (r[map[c]] || '') : ''); });
+            return row;
+        });
+        const table = document.getElementById('importMasivaPreviewTable');
+        table.innerHTML = '<thead class="table-light"><tr>' + thead.map(function(h) { return '<th>' + h + '</th>'; }).join('') + '</tr></thead><tbody id="importMasivaTbody"></tbody>';
+        const tbodyEl = document.getElementById('importMasivaTbody');
+        tbody.forEach(function(row, i) {
+            const tr = document.createElement('tr');
+            tr.dataset.index = i;
+            tr.innerHTML = row.map(function(cell) { return '<td>' + (cell !== undefined && cell !== null ? String(cell) : '') + '</td>'; }).join('');
+            tbodyEl.appendChild(tr);
+        });
+        importMasivaValidacion = [];
+    }
+
+    document.querySelector('#importMasivaMappingRow') && document.querySelector('#importMasivaMappingRow').addEventListener('change', function() {
+        if (importMasivaRows.length) buildPreviewTable();
+    });
+
+    function getFilasMapeadas() {
+        const map = {};
+        document.querySelectorAll('.map-select').forEach(function(s) {
+            const v = s.value;
+            if (v !== '') map[s.dataset.campo] = parseInt(v, 10);
+        });
+        return importMasivaRows.map(function(r) {
+            const obj = {};
+            CAMPOS.forEach(function(c) {
+                if (map[c] !== undefined) {
+                    var val = r[map[c]];
+                    val = val != null ? String(val).trim() : '';
+                    obj[c] = val;
+                }
+            });
+            if (obj.nacionalidad === undefined || obj.nacionalidad === '') {
+                obj.nacionalidad = 'V';
+            }
+            return obj;
+        });
+    }
+
+    document.getElementById('btnImportMasivaValidar').addEventListener('click', function() {
+        const filas = getFilasMapeadas();
+        if (!filas.length) { alert('No hay filas para validar.'); return; }
+        const fd = new FormData();
+        fd.append('action', 'validar');
+        fd.append('torneo_id', getTorneoId());
+        fd.append('filas', JSON.stringify(filas));
+        fd.append('csrf_token', getCsrfToken());
+        document.getElementById('importMasivaLoading').classList.remove('d-none');
+        fetch(apiPublicUrl('api/tournament_import_masivo.php'), { method: 'POST', body: fd, credentials: 'same-origin' })
+            .then(fetchJsonResponse)
+            .then(function(data) {
+                document.getElementById('importMasivaLoading').classList.add('d-none');
+                if (!data.success) { alert(data.error || 'Error al validar'); return; }
+                importMasivaValidacion = data.validacion || [];
+                const tbody = document.getElementById('importMasivaTbody');
+                if (tbody) {
+                    [].forEach.call(tbody.querySelectorAll('tr'), function(tr, i) {
+                        const v = importMasivaValidacion[i];
+                        tr.style.backgroundColor = v && COLORS[v.estado] ? COLORS[v.estado] : '';
+                        tr.style.color = v && v.estado === 'error' ? '#fff' : (v && COLORS[v.estado] ? '#fff' : '');
+                        tr.title = v ? v.mensaje : '';
+                    });
+                }
+            })
+            .catch(function(err) {
+                document.getElementById('importMasivaLoading').classList.add('d-none');
+                alert(err && err.message ? err.message : 'Error de conexión');
+            });
+    });
+
+    document.getElementById('btnImportMasivaProcesar').addEventListener('click', function() {
+        const filas = getFilasMapeadas();
+        if (!filas.length) { alert('No hay filas para procesar.'); return; }
+        const fd = new FormData();
+        fd.append('action', 'importar');
+        fd.append('torneo_id', getTorneoId());
+        fd.append('filas', JSON.stringify(filas));
+        fd.append('csrf_token', getCsrfToken());
+        document.getElementById('importMasivaLoading').classList.remove('d-none');
+        fetch(apiPublicUrl('api/tournament_import_masivo.php'), { method: 'POST', body: fd, credentials: 'same-origin' })
+            .then(fetchJsonResponse)
+            .then(function(data) {
+                document.getElementById('importMasivaLoading').classList.add('d-none');
+                if (!data.success) { alert(data.error || 'Error'); return; }
+                const tieneErrores = data.errores && data.errores.length > 0;
+                const html = '<p>Procesados: <strong>' + (data.procesados || 0) + '</strong></p><p>Nuevos (creados e inscritos): <strong>' + (data.nuevos || 0) + '</strong></p><p>Omitidos (ya inscritos): <strong>' + (data.omitidos || 0) + '</strong></p><p>Usuarios actualizados (nombre/sexo): <strong>' + (data.usuarios_actualizados || 0) + '</strong></p>' +
+                    (tieneErrores ? '<p class="text-danger">Errores: ' + data.errores.length + '</p>' : '');
+                const opts = {
+                    title: 'Importación finalizada',
+                    html: html,
+                    icon: tieneErrores ? 'warning' : 'success',
+                    confirmButtonText: 'Aceptar'
+                };
+                if (tieneErrores && data.archivo_errores_base64) {
+                    opts.showDenyButton = true;
+                    opts.denyButtonText = 'Descargar Log de Errores';
+                    opts.denyButtonColor = '#6b7280';
+                }
+                Swal.fire(opts).then(function(res) {
+                    if (res.isDenied && data.archivo_errores_base64) {
+                        var bin = atob(data.archivo_errores_base64);
+                        var blob = new Blob([bin], { type: 'text/plain;charset=utf-8' });
+                        const a = document.createElement('a');
+                        a.href = URL.createObjectURL(blob);
+                        a.download = 'log_errores_importacion_' + (new Date().toISOString().slice(0,10)) + '.txt';
+                        a.click();
+                        URL.revokeObjectURL(a.href);
+                    }
+                    if (data.success && (data.procesados > 0 || data.omitidos > 0)) window.location.reload();
+                });
+            })
+            .catch(function(err) {
+                document.getElementById('importMasivaLoading').classList.add('d-none');
+                alert(err && err.message ? err.message : 'Error de conexión');
+            });
+    });
+
+    if (window.location.hash === '#importacion-masiva') {
+        var btnImp = document.getElementById('btnAbrirImportacionMasiva');
+        if (btnImp) {
+            setTimeout(function() { btnImp.click(); }, 300);
+        }
+    }
+})();
 </script>

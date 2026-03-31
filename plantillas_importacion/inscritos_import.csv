@@ -1,0 +1,4 @@
+nacionalidad,cedula,nombre,sexo,fecha_nac,telefono,email,club,organizacion
+V,12345678,JUAN PEREZ,M,1990-05-10,04141234567,juan@email.com,CLUB CENTRAL,12
+V,87654321,MARIA LOPEZ,F,1992-11-02,04145554444,maria@email.com,CLUB ORIENTE,12
+E,11223344,CARLOS RUIZ,M,1988-01-20,04146667777,,CLUB CENTRAL,5

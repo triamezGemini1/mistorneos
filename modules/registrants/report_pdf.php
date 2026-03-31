@@ -62,7 +62,16 @@ try {
             t.fechator as torneo_fecha,
             c.nombre as club_nombre
         FROM inscritos r
-        LEFT JOIN usuarios u ON r.id_usuario = u.id
+        LEFT JOIN usuarios u ON (
+            u.id = r.id_usuario
+            OR (
+                u.numfvd = r.id_usuario
+                AND EXISTS (
+                    SELECT 1 FROM tournaments tx
+                    WHERE tx.id = r.torneo_id AND tx.club_responsable = 7
+                )
+            )
+        )
         INNER JOIN tournaments t ON r.torneo_id = t.id
         LEFT JOIN clubes c ON r.id_club = c.id
         WHERE {$where_clause}
@@ -83,7 +92,16 @@ try {
             SUM(CASE WHEN u.sexo = 'F' OR u.sexo = 2 THEN 1 ELSE 0 END) as femenino,
             COUNT(DISTINCT r.id_club) as clubes
         FROM inscritos r
-        LEFT JOIN usuarios u ON r.id_usuario = u.id
+        LEFT JOIN usuarios u ON (
+            u.id = r.id_usuario
+            OR (
+                u.numfvd = r.id_usuario
+                AND EXISTS (
+                    SELECT 1 FROM tournaments tx
+                    WHERE tx.id = r.torneo_id AND tx.club_responsable = 7
+                )
+            )
+        )
         {$stats_where}
     ");
     $stats = $stmt->fetch(PDO::FETCH_ASSOC);

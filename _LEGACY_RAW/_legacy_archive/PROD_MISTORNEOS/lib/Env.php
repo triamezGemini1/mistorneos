@@ -1,0 +1,207 @@
+<?php
+
+/**
+ * Env - Carga y gestión de variables de entorno
+ * 
+ * Carga variables desde archivo .env y las hace disponibles
+ * a través de getenv() y $_ENV
+ */
+class Env
+{
+    private static bool $loaded = false;
+    private static array $variables = [];
+
+    /**
+     * Carga variables de entorno desde archivo .env
+     */
+    public static function load(string $path = null): void
+    {
+        if (self::$loaded) {
+            return;
+        }
+
+        $path = $path ?? dirname(__DIR__) . '/.env';
+
+        if (!file_exists($path)) {
+            // Si no existe .env, no cargar nada (usar config.php)
+            self::$loaded = true;
+            return;
+        }
+
+        $lines = file($path, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
+
+        foreach ($lines as $line) {
+            // Ignorar comentarios
+            if (strpos(trim($line), '#') === 0) {
+                continue;
+            }
+
+            // Parsear KEY=VALUE
+            if (strpos($line, '=') !== false) {
+                [$key, $value] = explode('=', $line, 2);
+                $key = trim($key);
+                $value = self::parseValue(trim($value));
+
+                // Establecer en entorno
+                putenv("$key=$value");
+                $_ENV[$key] = $value;
+                self::$variables[$key] = $value;
+            }
+        }
+
+        self::$loaded = true;
+    }
+
+    /**
+     * Obtiene una variable de entorno
+     */
+    public static function get(string $key, $default = null)
+    {
+        // Primero intentar de las variables cargadas
+        if (isset(self::$variables[$key])) {
+            return self::$variables[$key];
+        }
+
+        // Luego de $_ENV
+        if (isset($_ENV[$key])) {
+            return $_ENV[$key];
+        }
+
+        // Finalmente de getenv
+        $value = getenv($key);
+        if ($value !== false) {
+            return $value;
+        }
+
+        return $default;
+    }
+
+    /**
+     * Verifica si una variable existe
+     */
+    public static function has(string $key): bool
+    {
+        return isset(self::$variables[$key]) 
+            || isset($_ENV[$key]) 
+            || getenv($key) !== false;
+    }
+
+    /**
+     * Obtiene variable como booleano
+     */
+    public static function bool(string $key, bool $default = false): bool
+    {
+        $value = self::get($key);
+
+        if ($value === null) {
+            return $default;
+        }
+
+        return in_array(strtolower($value), ['true', '1', 'yes', 'on'], true);
+    }
+
+    /**
+     * Obtiene variable como entero
+     */
+    public static function int(string $key, int $default = 0): int
+    {
+        $value = self::get($key);
+        return $value !== null ? (int) $value : $default;
+    }
+
+    /**
+     * Parsea el valor eliminando comillas y procesando caracteres especiales
+     * Solo expande ${VAR}; el $ suelto no se interpreta (evita que contraseñas con $ fallen)
+     */
+    private static function parseValue(string $value): string
+    {
+        // Eliminar comillas al inicio y final
+        if ((strpos($value, '"') === 0 && substr($value, -1) === '"') ||
+            (strpos($value, "'") === 0 && substr($value, -1) === "'")) {
+            $value = substr($value, 1, -1);
+        }
+
+        // Escapar \$ a $ literal
+        $value = str_replace('\\$', '$', $value);
+
+        // Solo expandir ${VAR}, no $VAR suelto (para que contraseñas como npi$Ya2026 funcionen)
+        $value = preg_replace_callback('/\$\{([^}]+)\}/', function($matches) {
+            return self::get($matches[1], '');
+        }, $value);
+
+        return $value;
+    }
+
+    /**
+     * Obtiene todas las variables cargadas (para debug, no usar en producción)
+     */
+    public static function all(): array
+    {
+        return self::$variables;
+    }
+
+    /**
+     * Verifica si estamos en producción
+     */
+    public static function isProduction(): bool
+    {
+        return self::get('APP_ENV', 'production') === 'production';
+    }
+
+    /**
+     * Verifica si estamos en desarrollo
+     */
+    public static function isDevelopment(): bool
+    {
+        return in_array(self::get('APP_ENV'), ['development', 'local', 'dev'], true);
+    }
+
+    /**
+     * Obtiene el ámbito actual para variables con prefijo (development | production).
+     */
+    public static function scope(): string
+    {
+        $env = self::get('APP_ENV', 'development');
+        return (strtolower($env) === 'production') ? 'production' : 'development';
+    }
+
+    /**
+     * Obtiene una variable de BD según el ámbito (APP_ENV).
+     * Permite tener en .env: DB_DEV_HOST, DB_PROD_HOST y seleccionar con APP_ENV.
+     * Si no existe la variable con prefijo, usa la genérica (ej. DB_HOST) para compatibilidad.
+     *
+     * @param string $key Sin prefijo DB_: HOST, PORT, DATABASE, USERNAME, PASSWORD
+     * @param mixed $default
+     * @return mixed
+     */
+    public static function getDb(string $key, $default = null)
+    {
+        $scope = self::scope();
+        $prefix = ($scope === 'production') ? 'DB_PROD_' : 'DB_DEV_';
+        $scopedKey = $prefix . $key;
+        $legacyKey = 'DB_' . $key;
+        return self::get($scopedKey) ?? self::get($legacyKey) ?? $default;
+    }
+
+    /**
+     * Igual que getDb pero para la conexión secundaria (fvdadmin).
+     * Claves: SECONDARY_HOST, SECONDARY_PORT, SECONDARY_DATABASE, SECONDARY_USERNAME, SECONDARY_PASSWORD
+     */
+    public static function getDbSecondary(string $key, $default = null)
+    {
+        $scope = self::scope();
+        $prefix = ($scope === 'production') ? 'DB_PROD_SECONDARY_' : 'DB_DEV_SECONDARY_';
+        $scopedKey = $prefix . $key;
+        $legacyKey = 'DB_SECONDARY_' . $key;
+        return self::get($scopedKey) ?? self::get($legacyKey) ?? $default;
+    }
+
+    /**
+     * Obtiene URL base de la aplicación
+     */
+    public static function appUrl(): string
+    {
+        return rtrim(self::get('APP_URL', 'http://localhost'), '/');
+    }
+}
+

@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 /**
  * Interfaz de Mesa - Registro de resultados vía QR (La Estación)
  * Acceso: GET ?t=X&m=Y&r=Z&token=HASH
@@ -74,7 +74,7 @@ if ($error === '' && $torneo_id > 0 && $mesa_id > 0 && $ronda > 0) {
         }
 
         if (!$mesa_cerrada) {
-            $stmt = $pdo->prepare("SELECT pr.id_usuario, pr.secuencia, u.nombre FROM partiresul pr INNER JOIN usuarios u ON pr.id_usuario = u.id WHERE pr.id_torneo = ? AND pr.partida = ? AND pr.mesa = ? ORDER BY pr.secuencia ASC");
+            $stmt = $pdo->prepare("SELECT pr.id_usuario, pr.secuencia, u.nombre FROM partiresul pr INNER JOIN usuarios u ON (u.id = pr.id_usuario OR (u.numfvd = pr.id_usuario AND NOT EXISTS (SELECT 1 FROM usuarios u_pr_id WHERE u_pr_id.id = pr.id_usuario) AND EXISTS (SELECT 1 FROM tournaments tx WHERE tx.id = pr.id_torneo AND tx.club_responsable = 7))) WHERE pr.id_torneo = ? AND pr.partida = ? AND pr.mesa = ? ORDER BY pr.secuencia ASC");
             $stmt->execute([$torneo_id, $ronda, $mesa_id]);
             $jugadores = $stmt->fetchAll(PDO::FETCH_ASSOC);
 

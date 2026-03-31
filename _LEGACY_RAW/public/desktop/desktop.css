@@ -1,0 +1,531 @@
+/**
+ * Desktop — Mobile-First, Enterprise White
+ * Cards 12px, FAB azul institucional, breakpoints 576/768/1200, max 1400px, micro-interacciones 0.2s.
+ */
+:root {
+  --desktop-sidebar-bg: #1a365d;
+  --desktop-sidebar-width: 14rem;
+  --desktop-main-bg: #f5f5f5;
+  --desktop-white: #ffffff;
+  --desktop-text: #212529;
+  --desktop-muted: #6c757d;
+  --desktop-border: #E9ECEF;
+  --desktop-border-light: rgba(0,0,0,0.08);
+  --desktop-radius: 0.375rem;
+  --desktop-card-radius: 12px;
+  --desktop-card-shadow: 0 4px 6px rgba(0,0,0,0.05);
+  --desktop-shadow: 0 1px 4px rgba(0,0,0,0.08);
+  --desktop-fab-size: 3.5rem;
+  --desktop-fab-bg: #2563eb;
+  --desktop-fab-shadow: 0 4px 14px rgba(37,99,235,0.4);
+  --desktop-fab-shadow-hover: 0 6px 20px rgba(37,99,235,0.5);
+  --desktop-input-min-font: 16px;
+  --desktop-breakpoint-sm: 576px;
+  --desktop-breakpoint-md: 768px;
+  --desktop-breakpoint-xl: 1200px;
+  --desktop-content-max: 1400px;
+  --desktop-transition: 0.2s ease;
+}
+
+/* Base: contenedores fluidos */
+html {
+  font-size: 16px;
+  -webkit-text-size-adjust: 100%;
+}
+body {
+  margin: 0;
+  min-height: 100vh;
+  min-height: 100dvh;
+  color: var(--desktop-text);
+  background: var(--desktop-main-bg);
+}
+
+/* Wrapper principal */
+.desktop-wrap {
+  display: flex;
+  min-height: 100vh;
+  min-height: 100dvh;
+}
+
+/* ----- Sidebar: móvil primero (oculto por defecto, hamburger) ----- */
+.desktop-sidebar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 1030;
+  width: 100%;
+  max-width: 18rem;
+  height: 100vh;
+  height: 100dvh;
+  min-height: 100%;
+  background: var(--desktop-sidebar-bg);
+  padding: 1rem 0;
+  overflow-y: auto;
+  transform: translateX(-100%);
+  transition: transform 0.25s ease, box-shadow 0.25s ease;
+  box-shadow: none;
+}
+.desktop-sidebar.is-open {
+  transform: translateX(0);
+  box-shadow: 0.25rem 0 1rem rgba(0,0,0,0.2);
+}
+.desktop-sidebar .nav-link {
+  color: rgba(255,255,255,0.85);
+  padding: 0.6rem 1rem;
+}
+.desktop-sidebar .nav-link:hover {
+  color: #fff;
+}
+.desktop-sidebar .nav-link.active {
+  color: #fff;
+  background: rgba(255,255,255,0.15);
+}
+.desktop-sidebar-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  z-index: 1025;
+  background: rgba(0,0,0,0.4);
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+.desktop-sidebar-overlay.is-visible {
+  display: block;
+  opacity: 1;
+}
+
+/* Botón hamburger (solo móvil) */
+.desktop-nav-toggle {
+  position: fixed;
+  top: 0.75rem;
+  left: 0.75rem;
+  z-index: 1040;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.75rem;
+  height: 2.75rem;
+  padding: 0;
+  border: none;
+  border-radius: var(--desktop-radius);
+  background: var(--desktop-sidebar-bg);
+  color: #fff;
+  box-shadow: var(--desktop-shadow);
+  cursor: pointer;
+  transition: background 0.2s;
+}
+.desktop-nav-toggle:hover {
+  background: #2c5282;
+}
+.desktop-nav-toggle:focus {
+  outline: 2px solid var(--desktop-sidebar-bg);
+  outline-offset: 2px;
+}
+.desktop-nav-toggle .fa-bars,
+.desktop-nav-toggle .fa-times {
+  font-size: 1.25rem;
+}
+.desktop-nav-toggle .fa-times {
+  display: none;
+}
+.desktop-sidebar.is-open + .desktop-nav-toggle .fa-bars { display: none; }
+.desktop-sidebar.is-open + .desktop-nav-toggle .fa-times { display: inline-block; }
+
+/* Main: ancho completo en móvil */
+.desktop-main {
+  flex: 1;
+  min-width: 0;
+  min-height: 100vh;
+  min-height: 100dvh;
+  margin-left: 0;
+  padding: 3.5rem 1rem 5rem;
+  background: var(--desktop-main-bg);
+}
+
+/* Desktop: sidebar fija, main con margen */
+@media (min-width: 768px) {
+  .desktop-sidebar {
+    position: fixed;
+    width: var(--desktop-sidebar-width);
+    max-width: none;
+    transform: none;
+    box-shadow: none;
+  }
+  .desktop-sidebar-overlay {
+    display: none !important;
+  }
+  .desktop-nav-toggle {
+    display: none;
+  }
+  .desktop-main {
+    margin-left: var(--desktop-sidebar-width);
+    padding: 1.5rem 1.5rem 2rem;
+  }
+}
+
+/* ≥1200px: contenedor principal max 1400px para legibilidad en pantallas anchas */
+@media (min-width: 1200px) {
+  .desktop-main .container-fluid {
+    max-width: var(--desktop-content-max);
+    margin-left: auto;
+    margin-right: auto;
+  }
+}
+
+/* ----- Micro-interacciones: transición 0.2s en botones e inputs ----- */
+.desktop-main .btn,
+.desktop-main input:not([type="checkbox"]):not([type="radio"]),
+.desktop-main select,
+.desktop-main .form-control,
+.desktop-main .form-select {
+  transition: border-color var(--desktop-transition), box-shadow var(--desktop-transition),
+              background-color var(--desktop-transition), color var(--desktop-transition),
+              transform var(--desktop-transition);
+}
+.desktop-main .btn:hover,
+.desktop-main .btn:focus-visible,
+.desktop-main input:focus,
+.desktop-main select:focus,
+.desktop-main .form-control:focus,
+.desktop-main .form-select:focus {
+  outline: none;
+}
+.desktop-main .btn:hover {
+  transform: translateY(-1px);
+}
+.desktop-main .btn:active {
+  transform: translateY(0);
+}
+
+/* ----- Inputs: mínimo 16px en móvil (evita zoom iOS/Android) ----- */
+@media (max-width: 767px) {
+  .desktop-main input[type="text"],
+  .desktop-main input[type="email"],
+  .desktop-main input[type="number"],
+  .desktop-main input[type="date"],
+  .desktop-main input[type="password"],
+  .desktop-main select.form-select,
+  .desktop-main select.form-control {
+    font-size: var(--desktop-input-min-font) !important;
+    min-height: 2.75rem;
+  }
+}
+
+/* ----- Tablas inteligentes: en móvil → cards ----- */
+.desktop-table-card-wrap {
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+@media (min-width: 768px) {
+  .desktop-table-card-wrap .table {
+    margin-bottom: 0;
+  }
+}
+@media (max-width: 767px) {
+  .desktop-table-card-wrap {
+    overflow: visible;
+  }
+  .desktop-table-card-wrap .table,
+  .desktop-table-card-wrap .table thead,
+  .desktop-table-card-wrap .table tbody,
+  .desktop-table-card-wrap .table tr {
+    display: block;
+  }
+  .desktop-table-card-wrap .table thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0,0,0,0);
+    border: 0;
+  }
+  .desktop-table-card-wrap .table tbody tr {
+    display: block;
+    margin-bottom: 1rem;
+    padding: 1rem;
+    background: var(--desktop-white);
+    border: 1px solid var(--desktop-border);
+    border-radius: var(--desktop-card-radius);
+    box-shadow: var(--desktop-card-shadow);
+    transition: box-shadow var(--desktop-transition);
+  }
+  .desktop-table-card-wrap .table tbody tr:last-child {
+    margin-bottom: 0;
+  }
+  .desktop-table-card-wrap .table tbody tr:hover {
+    box-shadow: 0 6px 10px rgba(0,0,0,0.06);
+  }
+  .desktop-table-card-wrap .table td {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    padding: 0.5rem 0;
+    border: none;
+    border-bottom: 1px solid var(--desktop-border);
+  }
+  .desktop-table-card-wrap .table td:last-child {
+    border-bottom: none;
+    padding-top: 0.75rem;
+    margin-top: 0.25rem;
+    border-top: 1px solid var(--desktop-border);
+    justify-content: flex-end;
+  }
+  .desktop-table-card-wrap .table td::before {
+    content: attr(data-label);
+    font-weight: 600;
+    color: var(--desktop-muted);
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+    flex-shrink: 0;
+  }
+  .desktop-table-card-wrap .table td:last-child::before {
+    display: none;
+  }
+  .desktop-table-card-wrap .table td .btn {
+    flex-shrink: 0;
+  }
+  .desktop-table-card-wrap .table tbody tr td[colspan] {
+    display: block;
+    text-align: center;
+    padding: 1.5rem;
+  }
+  .desktop-table-card-wrap .table tbody tr td[colspan]::before {
+    display: none;
+  }
+}
+
+/* <576px: ocultar columna no esencial (Últ. actualización), mostrar botón Detalles */
+@media (max-width: 575px) {
+  .desktop-table-card-wrap .table td.desktop-col-detail {
+    display: none !important;
+  }
+  .desktop-main .desktop-btn-detalles {
+    display: inline-block !important;
+  }
+}
+@media (min-width: 576px) {
+  .desktop-main .desktop-btn-detalles {
+    display: none !important;
+  }
+}
+
+/* ----- Speed Dial (móvil <768px): FAB principal + acciones hacia arriba ----- */
+:root {
+  --speed-dial-main-size: 3.5rem;
+  --speed-dial-action-size: 2.75rem;
+  --speed-dial-gap: 0.6rem;
+  --speed-dial-sync-bg: #16a34a;
+  --speed-dial-sync-bg-hover: #15803d;
+  --speed-dial-badge-bg: #dc2626;
+}
+
+.desktop-speed-dial {
+  display: none;
+  position: fixed;
+  bottom: 1.5rem;
+  right: 1rem;
+  z-index: 1020;
+  flex-direction: column-reverse;
+  align-items: center;
+  gap: var(--speed-dial-gap);
+}
+@media (max-width: 767px) {
+  .desktop-speed-dial {
+    display: flex;
+  }
+}
+@media (min-width: 768px) {
+  .desktop-speed-dial {
+    display: none !important;
+  }
+}
+
+.desktop-speed-dial-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  z-index: 1018;
+  background: transparent;
+  cursor: default;
+}
+.desktop-speed-dial.is-open .desktop-speed-dial-overlay {
+  display: block;
+}
+
+.desktop-speed-dial-actions {
+  display: flex;
+  flex-direction: column-reverse;
+  align-items: center;
+  gap: var(--speed-dial-gap);
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(0.5rem);
+  pointer-events: none;
+  transition: opacity var(--desktop-transition), transform var(--desktop-transition), visibility 0s linear 0.2s;
+}
+.desktop-speed-dial.is-open .desktop-speed-dial-actions {
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(0);
+  pointer-events: auto;
+  transition: opacity var(--desktop-transition), transform var(--desktop-transition), visibility 0s;
+}
+
+.desktop-speed-dial-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--speed-dial-action-size);
+  height: var(--speed-dial-action-size);
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  color: #fff;
+  text-decoration: none;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+  transition: transform var(--desktop-transition), box-shadow var(--desktop-transition),
+              background-color var(--desktop-transition);
+  position: relative;
+}
+.desktop-speed-dial-btn:hover {
+  color: #fff;
+  transform: scale(1.08);
+  box-shadow: 0 4px 14px rgba(0,0,0,0.25);
+}
+.desktop-speed-dial-sync {
+  background: var(--speed-dial-sync-bg);
+}
+.desktop-speed-dial-sync:hover {
+  background: var(--speed-dial-sync-bg-hover);
+}
+.desktop-speed-dial-new {
+  background: var(--desktop-fab-bg);
+}
+.desktop-speed-dial-new:hover {
+  background: #1d4ed8;
+}
+.desktop-speed-dial-btn .fa {
+  font-size: 1.1rem;
+  margin: 0;
+}
+
+/* Badge de notificación (pendientes de sync) */
+.speed-dial-badge {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--speed-dial-badge-bg);
+  border: 2px solid #fff;
+  display: none;
+  pointer-events: none;
+}
+.speed-dial-badge.is-visible {
+  display: block;
+}
+
+/* Etiquetas de texto (solo visibles cuando el menú está expandido) */
+.speed-dial-label {
+  position: absolute;
+  right: 100%;
+  margin-right: 0.5rem;
+  white-space: nowrap;
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 0.25rem 0.5rem;
+  border-radius: 0.25rem;
+  background: #334155;
+  color: #fff;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity var(--desktop-transition);
+}
+.desktop-speed-dial.is-open .speed-dial-label {
+  opacity: 1;
+}
+
+.desktop-speed-dial-main {
+  width: var(--speed-dial-main-size);
+  height: var(--speed-dial-main-size);
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: var(--desktop-fab-bg);
+  color: #fff;
+  box-shadow: var(--desktop-fab-shadow);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5rem;
+  line-height: 1;
+  cursor: pointer;
+  transition: transform var(--desktop-transition), box-shadow var(--desktop-transition),
+              background-color var(--desktop-transition);
+}
+.desktop-speed-dial-main:hover {
+  background: #1d4ed8;
+  color: #fff;
+  box-shadow: var(--desktop-fab-shadow-hover);
+}
+.desktop-speed-dial.is-open .desktop-speed-dial-main {
+  transform: rotate(45deg);
+}
+.desktop-speed-dial-main .fa {
+  margin: 0;
+}
+
+/* Cards genéricas: mismo estilo Enterprise White (12px, sombra sutil, borde) */
+.desktop-main .card {
+  border-radius: var(--desktop-card-radius);
+  border: 1px solid var(--desktop-border);
+  box-shadow: var(--desktop-card-shadow);
+  transition: box-shadow var(--desktop-transition);
+}
+.desktop-main .card:hover {
+  box-shadow: 0 6px 10px rgba(0,0,0,0.06);
+}
+
+/* Contenedores fluidos en rem */
+.desktop-main .container-fluid {
+  max-width: 100%;
+  padding-left: 0.5rem;
+  padding-right: 0.5rem;
+}
+@media (min-width: 768px) {
+  .desktop-main .container-fluid {
+    padding-left: 1rem;
+    padding-right: 1rem;
+  }
+}
+
+/* Utilidad: ocultar en móvil para no duplicar con FAB */
+@media (max-width: 767px) {
+  .desktop-hide-mobile-actions {
+    display: none !important;
+  }
+}
+
+/* ----- Indicador de conexión (banner) ----- */
+.desktop-connection-banner {
+  padding: 0.35rem 1rem;
+  font-size: 0.8rem;
+  font-weight: 500;
+  text-align: center;
+  border-bottom: 1px solid var(--desktop-border);
+  transition: background-color var(--desktop-transition), color var(--desktop-transition);
+}
+.desktop-connection-online {
+  background: #dcfce7;
+  color: #166534;
+}
+.desktop-connection-offline {
+  background: #ffedd5;
+  color: #c2410c;
+}

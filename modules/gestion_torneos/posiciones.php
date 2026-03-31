@@ -121,11 +121,16 @@ $base_url = $use_standalone ? $script_actual : 'index.php?page=torneo_gestion';
                                     <?php 
                                     // Calcular paginación antes del loop
                                     if (!isset($items_por_pagina_pos)) {
+                                        require_once __DIR__ . '/../../lib/Tournament/Services/PaginationService.php';
                                         $items_por_pagina_pos = 30;
-                                        $pagina_actual_pos = isset($_GET['pagina']) ? max(1, (int)$_GET['pagina']) : 1;
+                                        $pagina_raw_pos = isset($_GET['pagina']) ? (int) $_GET['pagina'] : 1;
                                         $total_posiciones = count($posiciones);
-                                        $total_paginas_pos = max(1, ceil($total_posiciones / $items_por_pagina_pos));
-                                        $posiciones_paginadas = ($total_paginas_pos > 1) ? array_slice($posiciones, ($pagina_actual_pos - 1) * $items_por_pagina_pos, $items_por_pagina_pos) : $posiciones;
+                                        $p_pos = \Tournament\Services\PaginationService::getParams($total_posiciones, $pagina_raw_pos, $items_por_pagina_pos);
+                                        $pagina_actual_pos = $p_pos['page'];
+                                        $total_paginas_pos = $p_pos['total_pages'];
+                                        $posiciones_paginadas = ($total_paginas_pos > 1)
+                                            ? array_slice($posiciones, $p_pos['offset'], $p_pos['per_page'])
+                                            : $posiciones;
                                     }
                                     
                                     foreach ($posiciones_paginadas as $pos): 

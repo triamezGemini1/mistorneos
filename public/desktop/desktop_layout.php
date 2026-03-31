@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 /**
  * Layout desktop: sidebar + área principal. Definir $pageTitle antes de incluir.
  * Mobile-First: sidebar hamburger en móvil, fija en desktop.
@@ -16,6 +16,7 @@ $desktopActive = $desktopActive ?? 'registro';
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
     <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js" defer></script>
     <link href="desktop.css" rel="stylesheet">
+    <link href="../assets/css/custom-13inch.css" rel="stylesheet">
 </head>
 <body>
     <div class="desktop-wrap">

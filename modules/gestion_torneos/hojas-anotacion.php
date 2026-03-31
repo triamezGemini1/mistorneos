@@ -8,7 +8,11 @@
 if (!defined('APP_BOOTSTRAPPED') && file_exists(__DIR__ . '/../../config/bootstrap.php')) {
     require_once __DIR__ . '/../../config/bootstrap.php';
 }
+if (!class_exists('AppHelpers', false)) {
+    require_once __DIR__ . '/../../lib/app_helpers.php';
+}
 require_once __DIR__ . '/../../lib/QrMesaTokenHelper.php';
+$href_torneo_context_switch = AppHelpers::url('assets/css/torneo-context-switch.css');
 $letras_secuencia = [1 => 'A', 2 => 'C', 3 => 'B', 4 => 'D'];
 // URL base: interfaz móvil para carga de actas (formato requerido: ?t=&m=&r=&token=)
 $url_dominio_public = rtrim(function_exists('AppHelpers') ? AppHelpers::getPublicUrl() : (function_exists('app_base_url') ? rtrim(app_base_url(), '/') . '/public' : ''), '/');
@@ -18,6 +22,24 @@ if (!isset($base_url) || !isset($use_standalone)) {
     $use_standalone = in_array($script_actual, ['admin_torneo.php', 'panel_torneo.php']);
     $base_url = $use_standalone ? $script_actual : 'index.php?page=torneo_gestion';
 }
+$context_switcher = isset($context_switcher) && is_array($context_switcher)
+    ? $context_switcher
+    : ['active_tournament_id' => (int)($torneo['id'] ?? 0), 'items' => []];
+$map_max_partida_switch = isset($map_max_partida_switch) && is_array($map_max_partida_switch)
+    ? $map_max_partida_switch
+    : [];
+$activeContextName = (string)($torneo['nombre'] ?? 'Torneo');
+$activeContextViewId = (int)($torneo['id'] ?? 0);
+if (!empty($context_switcher['items']) && is_array($context_switcher['items'])) {
+    $activeContextId = (int)($context_switcher['active_tournament_id'] ?? ($torneo['id'] ?? 0));
+    foreach ($context_switcher['items'] as $ctxItem) {
+        if ((int)($ctxItem['id'] ?? 0) === $activeContextId) {
+            $activeContextName = (string)($ctxItem['nombre'] ?? $activeContextName);
+            $activeContextViewId = (int)($ctxItem['id'] ?? $activeContextViewId);
+            break;
+        }
+    }
+}
 ?>
 <!DOCTYPE html>
 <html lang="es">
@@ -25,6 +47,7 @@ if (!isset($base_url) || !isset($use_standalone)) {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Hojas de Anotación - Ronda <?php echo $ronda; ?></title>
+    <link rel="stylesheet" href="<?php echo htmlspecialchars($href_torneo_context_switch, ENT_QUOTES, 'UTF-8'); ?>">
     <style>
         * {
             margin: 0;
@@ -122,8 +145,12 @@ if (!isset($base_url) || !isset($use_standalone)) {
             border-radius: 12px;
             box-shadow: 0 4px 16px rgba(0,0,0,0.15);
             display: flex;
+            flex-wrap: wrap;
             align-items: center;
+            justify-content: center;
             gap: 12px;
+            max-width: calc(100vw - 32px);
+            overflow: hidden;
         }
         
         .selector-mesas label {
@@ -144,6 +171,12 @@ if (!isset($base_url) || !isset($use_standalone)) {
         .selector-mesas select:focus {
             outline: none;
             border-color: #3b82f6;
+        }
+        @media (max-width: 1366px) {
+            .selector-mesas { gap: 8px; padding: 10px 12px; }
+            .selector-mesas label { font-size: 13px; }
+            .selector-mesas select { min-width: 120px; font-size: 13px; padding: 6px 10px; }
+            .tcs-info { font-size: 11px; }
         }
         
         .hoja-mesa {
@@ -254,28 +287,43 @@ if (!isset($base_url) || !isset($use_standalone)) {
         
         .jugador-izquierda {
             flex: 1;
+            min-width: 0;
             padding-right: 20px;
         }
         
         .jugador-derecha {
             flex: 1;
             padding-left: 20px;
+            min-width: 0;
             text-align: right;
         }
         
         .jugador-id-nombre {
             font-weight: bold;
             margin-bottom: 5px;
+            display: flex;
+            align-items: baseline;
+            gap: 8px;
+            min-width: 0;
+            width: 100%;
+        }
+        /* Columna derecha (B/D): ID junto al borde interno; nombre trunca hacia el centro */
+        .linea-con-qr .col-der .jugador-id-nombre,
+        .jugador-derecha .jugador-id-nombre {
+            flex-direction: row-reverse;
         }
         
         .jugador-id {
-            display: inline-block;
+            flex-shrink: 0;
             font-weight: bold;
-            margin-right: 8px;
         }
         
         .jugador-nombre {
-            display: inline-block;
+            min-width: 0;
+            flex: 1 1 0%;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
         }
         
         /* Estadísticas */
@@ -426,6 +474,29 @@ if (!isset($base_url) || !isset($use_standalone)) {
                 <option value="hoja-mesa-<?php echo $num_mesa; ?>">Mesa <?php echo $num_mesa; ?> (hoja <?php echo $idx + 1; ?>)</option>
             <?php endforeach; ?>
         </select>
+        <span class="tcs-info tcs-info--on-light">
+            <span class="tcs-info__dot" aria-hidden="true"></span>
+            Visualizando: Torneo <?php echo htmlspecialchars($activeContextName, ENT_QUOTES, 'UTF-8'); ?> [#<?php echo $activeContextViewId; ?>]
+        </span>
+        <?php if (!empty($context_switcher['items'])): ?>
+            <?php
+            $tcs = [
+                'items' => $context_switcher['items'],
+                'active_id' => (int) ($context_switcher['active_tournament_id'] ?? 0),
+                'base_url' => $base_url,
+                'sep' => $use_standalone ? '?' : '&',
+                'ronda_base' => (int) $ronda,
+                'map_max' => $map_max_partida_switch,
+                'mode' => 'hojas_anotacion',
+                'theme' => 'on_light',
+                'select_id' => 'torneo-asociado-select-hojas',
+                'show_info' => false,
+                'select_class' => 'tcs-select-control',
+                'select_label_class' => 'mb-0 mr-1',
+            ];
+            require __DIR__ . '/../../resources/views/partials/torneo_context_switch.php';
+            ?>
+        <?php endif; ?>
     </div>
 
     <?php 
@@ -493,7 +564,30 @@ if (!isset($base_url) || !isset($use_standalone)) {
                             <?php 
                             if ($es_torneo_equipos && !empty($jugador1['nombre_equipo'])) { ?>
                             <div class="equipo-info">
-                                <div class="equipo-nombre"><?php if (!empty($jugador1['codigo_equipo_display'])) echo '<span class="equipo-codigo-inline">' . htmlspecialchars($jugador1['codigo_equipo_display']) . '</span> - '; ?><?php echo htmlspecialchars($jugador1['nombre_equipo']); ?><?php $t1=(int)($jugador1['tarjeta']??0); if($t1>0){ $c=''; if($t1==1)$c='Amarilla'; elseif($t1==3)$c='Roja'; elseif($t1==4)$c='Negra'; else $c=''; echo ' -<span class="tarjeta-club">* '.$c.' *</span>'; } ?></div>
+                                <div class="equipo-nombre">
+                                    <?php
+                                    if (!empty($jugador1['codigo_equipo_display'])) {
+                                        echo '<span class="equipo-codigo-inline">' . htmlspecialchars($jugador1['codigo_equipo_display']) . '</span> - ';
+                                    }
+                                    echo htmlspecialchars($jugador1['nombre_equipo']);
+                                    $t1 = (int)($jugador1['tarjeta'] ?? 0);
+                                    if ($t1 > 0) {
+                                        $c = $t1 === 1 ? 'Amarilla' : ($t1 === 3 ? 'Roja' : ($t1 === 4 ? 'Negra' : ''));
+                                        echo ' -<span class="tarjeta-club">* ' . $c . ' *</span>';
+                                    }
+                                    ?>
+                                </div>
+                                <?php if (!empty($jugador1['estadisticas_equipo'])):
+                                    $statsEquipo1 = $jugador1['estadisticas_equipo'];
+                                ?>
+                                <div class="equipo-estadisticas">
+                                    <span class="equipo-stat-item"><span class="equipo-stat-label">Pos:</span><?php echo htmlspecialchars((string)($statsEquipo1['clasiequi'] ?? $statsEquipo1['posicion'] ?? 0), ENT_QUOTES, 'UTF-8'); ?></span>
+                                    <span class="equipo-stat-item"><span class="equipo-stat-label">G:</span><?php echo (int)($statsEquipo1['ganados'] ?? 0); ?></span>
+                                    <span class="equipo-stat-item"><span class="equipo-stat-label">P:</span><?php echo (int)($statsEquipo1['perdidos'] ?? 0); ?></span>
+                                    <span class="equipo-stat-item"><span class="equipo-stat-label">Efect:</span><?php echo (int)($statsEquipo1['efectividad'] ?? 0); ?></span>
+                                    <span class="equipo-stat-item"><span class="equipo-stat-label">Pts:</span><?php echo (int)($statsEquipo1['puntos'] ?? 0); ?></span>
+                                </div>
+                                <?php endif; ?>
                             </div>
                             <?php } else { echo htmlspecialchars($jugador1['nombre_club'] ?? $jugador1['club_nombre'] ?? 'Sin Club'); $t1=(int)($jugador1['tarjeta']??0); if($t1>0){ $c=$t1==1?'Amarilla':($t1==3?'Roja':($t1==4?'Negra':'')); echo ' -<span class="tarjeta-club">* '.$c.' *</span>'; } } ?>
                         </div>
@@ -506,7 +600,7 @@ if (!isset($base_url) || !isset($use_standalone)) {
                         </div>
                     </div>
                     <div class="col-der">
-                        <div class="jugador-id-nombre" style="text-align:right">
+                        <div class="jugador-id-nombre">
                             <span class="jugador-id"><?php echo $jugador3['id_usuario'] ?? 'N/A'; ?></span>
                             <span class="jugador-nombre"><?php echo htmlspecialchars($jugador3['nombre_completo'] ?? $jugador3['nombre'] ?? 'N/A'); ?> (<?php echo $letras_secuencia[3] ?? 'B'; ?>)</span>
                         </div>
@@ -523,7 +617,30 @@ if (!isset($base_url) || !isset($use_standalone)) {
                             <?php 
                             if ($es_torneo_equipos && !empty($jugador3['nombre_equipo'])) { ?>
                             <div class="equipo-info">
-                                <div class="equipo-nombre"><?php if (!empty($jugador3['codigo_equipo_display'])) echo '<span class="equipo-codigo-inline">' . htmlspecialchars($jugador3['codigo_equipo_display']) . '</span> - '; ?><?php echo htmlspecialchars($jugador3['nombre_equipo']); ?><?php $t3=(int)($jugador3['tarjeta']??0); if($t3>0){ $c=$t3==1?'Amarilla':($t3==3?'Roja':($t3==4?'Negra':'')); echo ' -<span class="tarjeta-club">* '.$c.' *</span>'; } ?></div>
+                                <div class="equipo-nombre">
+                                    <?php
+                                    if (!empty($jugador3['codigo_equipo_display'])) {
+                                        echo '<span class="equipo-codigo-inline">' . htmlspecialchars($jugador3['codigo_equipo_display']) . '</span> - ';
+                                    }
+                                    echo htmlspecialchars($jugador3['nombre_equipo']);
+                                    $t3 = (int)($jugador3['tarjeta'] ?? 0);
+                                    if ($t3 > 0) {
+                                        $c = $t3 === 1 ? 'Amarilla' : ($t3 === 3 ? 'Roja' : ($t3 === 4 ? 'Negra' : ''));
+                                        echo ' -<span class="tarjeta-club">* ' . $c . ' *</span>';
+                                    }
+                                    ?>
+                                </div>
+                                <?php if (!empty($jugador3['estadisticas_equipo'])):
+                                    $statsEquipo3 = $jugador3['estadisticas_equipo'];
+                                ?>
+                                <div class="equipo-estadisticas">
+                                    <span class="equipo-stat-item"><span class="equipo-stat-label">Pos:</span><?php echo htmlspecialchars((string)($statsEquipo3['clasiequi'] ?? $statsEquipo3['posicion'] ?? 0), ENT_QUOTES, 'UTF-8'); ?></span>
+                                    <span class="equipo-stat-item"><span class="equipo-stat-label">G:</span><?php echo (int)($statsEquipo3['ganados'] ?? 0); ?></span>
+                                    <span class="equipo-stat-item"><span class="equipo-stat-label">P:</span><?php echo (int)($statsEquipo3['perdidos'] ?? 0); ?></span>
+                                    <span class="equipo-stat-item"><span class="equipo-stat-label">Efect:</span><?php echo (int)($statsEquipo3['efectividad'] ?? 0); ?></span>
+                                    <span class="equipo-stat-item"><span class="equipo-stat-label">Pts:</span><?php echo (int)($statsEquipo3['puntos'] ?? 0); ?></span>
+                                </div>
+                                <?php endif; ?>
                             </div>
                             <?php } else { echo htmlspecialchars($jugador3['nombre_club'] ?? $jugador3['club_nombre'] ?? 'Sin Club'); $t3=(int)($jugador3['tarjeta']??0); if($t3>0){ $c=$t3==1?'Amarilla':($t3==3?'Roja':($t3==4?'Negra':'')); echo ' -<span class="tarjeta-club">* '.$c.' *</span>'; } } ?>
                         </div>
@@ -610,15 +727,15 @@ if (!isset($base_url) || !isset($use_standalone)) {
                                     }
                                     ?>
                                 </div>
-                                <?php if (!empty($jugador2['estadisticas_equipo'])): 
+                                <?php if (!empty($jugador2['estadisticas_equipo'])):
                                     $statsEquipo2 = $jugador2['estadisticas_equipo'];
                                 ?>
                                     <div class="equipo-estadisticas">
-                                        <span class="equipo-stat-item"><span class="equipo-stat-label">Pos:</span><?php echo $statsEquipo2['clasiequi'] ?? $statsEquipo2['posicion'] ?? 0; ?></span>
-                                        <span class="equipo-stat-item"><span class="equipo-stat-label">G:</span><?php echo $statsEquipo2['ganados']; ?></span>
-                                        <span class="equipo-stat-item"><span class="equipo-stat-label">P:</span><?php echo $statsEquipo2['perdidos'] ?? 0; ?></span>
+                                        <span class="equipo-stat-item"><span class="equipo-stat-label">Pos:</span><?php echo htmlspecialchars((string)($statsEquipo2['clasiequi'] ?? $statsEquipo2['posicion'] ?? 0), ENT_QUOTES, 'UTF-8'); ?></span>
+                                        <span class="equipo-stat-item"><span class="equipo-stat-label">G:</span><?php echo (int)($statsEquipo2['ganados'] ?? 0); ?></span>
+                                        <span class="equipo-stat-item"><span class="equipo-stat-label">P:</span><?php echo (int)($statsEquipo2['perdidos'] ?? 0); ?></span>
                                         <span class="equipo-stat-item"><span class="equipo-stat-label">Efect:</span><?php echo (int)($statsEquipo2['efectividad'] ?? 0); ?></span>
-                                        <span class="equipo-stat-item"><span class="equipo-stat-label">Pts:</span><?php echo $statsEquipo2['puntos']; ?></span>
+                                        <span class="equipo-stat-item"><span class="equipo-stat-label">Pts:</span><?php echo (int)($statsEquipo2['puntos'] ?? 0); ?></span>
                                     </div>
                                 <?php endif; ?>
                             </div>
@@ -651,15 +768,15 @@ if (!isset($base_url) || !isset($use_standalone)) {
                                     }
                                     ?>
                                 </div>
-                                <?php if (!empty($jugador4['estadisticas_equipo'])): 
+                                <?php if (!empty($jugador4['estadisticas_equipo'])):
                                     $statsEquipo4 = $jugador4['estadisticas_equipo'];
                                 ?>
                                     <div class="equipo-estadisticas">
-                                        <span class="equipo-stat-item"><span class="equipo-stat-label">Pos:</span><?php echo $statsEquipo4['clasiequi'] ?? $statsEquipo4['posicion'] ?? 0; ?></span>
-                                        <span class="equipo-stat-item"><span class="equipo-stat-label">G:</span><?php echo $statsEquipo4['ganados']; ?></span>
-                                        <span class="equipo-stat-item"><span class="equipo-stat-label">P:</span><?php echo $statsEquipo4['perdidos'] ?? 0; ?></span>
+                                        <span class="equipo-stat-item"><span class="equipo-stat-label">Pos:</span><?php echo htmlspecialchars((string)($statsEquipo4['clasiequi'] ?? $statsEquipo4['posicion'] ?? 0), ENT_QUOTES, 'UTF-8'); ?></span>
+                                        <span class="equipo-stat-item"><span class="equipo-stat-label">G:</span><?php echo (int)($statsEquipo4['ganados'] ?? 0); ?></span>
+                                        <span class="equipo-stat-item"><span class="equipo-stat-label">P:</span><?php echo (int)($statsEquipo4['perdidos'] ?? 0); ?></span>
                                         <span class="equipo-stat-item"><span class="equipo-stat-label">Efect:</span><?php echo (int)($statsEquipo4['efectividad'] ?? 0); ?></span>
-                                        <span class="equipo-stat-item"><span class="equipo-stat-label">Pts:</span><?php echo $statsEquipo4['puntos']; ?></span>
+                                        <span class="equipo-stat-item"><span class="equipo-stat-label">Pts:</span><?php echo (int)($statsEquipo4['puntos'] ?? 0); ?></span>
                                     </div>
                                 <?php endif; ?>
                             </div>
@@ -720,6 +837,7 @@ if (!isset($base_url) || !isset($use_standalone)) {
             window.history.back();
         }
     });
+
     </script>
 </body>
 </html>

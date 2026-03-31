@@ -495,6 +495,11 @@ $header_title = $page_title . ' - La Estación del Dominó';
         /* Panel de Control de Torneos: +1pt en todo el contenido */
         body.page-panel-control-torneos { font-size: 1.083rem; }
     </style>
+    <?php
+    require_once __DIR__ . '/../../lib/app_helpers.php';
+    $_custom13_href = rtrim(AppHelpers::getPublicUrl(), '/') . '/assets/css/custom-13inch.css';
+    ?>
+    <link rel="stylesheet" href="<?= htmlspecialchars($_custom13_href) ?>">
 </head>
 <body class="<?= (isset($action) && in_array($action, ['panel', 'panel_equipos'], true)) ? 'page-panel-control-torneos' : '' ?>">
     <!-- Sidebar -->

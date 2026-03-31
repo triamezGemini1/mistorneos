@@ -5,14 +5,24 @@
 
 require_once __DIR__ . '/../config/bootstrap.php';
 require_once __DIR__ . '/../config/db.php';
-require_once __DIR__ . '/../config/MesaAsignacionService.php';
+require_once __DIR__ . '/../lib/Core/TorneoMesaAsignacionResolver.php';
 
 $torneo_id = 4;
 $ronda = 5;
 
 $pdo = DB::pdo();
 
-echo "=== REGENERANDO RONDA 5 DEL TORNEO ID $torneo_id ===\n\n";
+$stmtT = $pdo->prepare('SELECT modalidad, rondas FROM tournaments WHERE id = ?');
+$stmtT->execute([$torneo_id]);
+$tInfo = $stmtT->fetch(PDO::FETCH_ASSOC);
+if (!$tInfo) {
+    fwrite(STDERR, "Torneo no encontrado.\n");
+    exit(1);
+}
+$modalidad = (int)($tInfo['modalidad'] ?? 0);
+$totalRondas = (int)($tInfo['rondas'] ?? 0);
+
+echo "=== REGENERANDO RONDA $ronda DEL TORNEO ID $torneo_id (modalidad $modalidad) ===\n\n";
 
 // Verificar total de inscritos
 $stmt = $pdo->prepare("
@@ -33,20 +43,15 @@ $stmt = $pdo->prepare("DELETE FROM partiresul WHERE id_torneo = ? AND partida = 
 $stmt->execute([$torneo_id, $ronda]);
 echo "   ✓ Ronda 5 eliminada\n\n";
 
-// Generar nueva ronda 5
-echo "2. Generando nueva ronda 5...\n";
-$mesaService = new MesaAsignacionService();
+echo "2. Generando nueva ronda $ronda...\n";
 
-// Obtener total de rondas del torneo
-$stmt = $pdo->prepare("SELECT rondas FROM tournaments WHERE id = ?");
-$stmt->execute([$torneo_id]);
-$torneo = $stmt->fetch(PDO::FETCH_ASSOC);
-$total_rondas = $torneo['rondas'] ?? 5;
-
-$resultado = $mesaService->generarAsignacionRonda($torneo_id, $ronda, $total_rondas);
+$estrategia = $modalidad === TorneoMesaAsignacionResolver::MODALIDAD_EQUIPOS ? 'secuencial' : 'separar';
+$resultado = $modalidad === TorneoMesaAsignacionResolver::MODALIDAD_EQUIPOS
+    ? TorneoMesaAsignacionResolver::generarAsignacionRondaEquipos($torneo_id, $ronda, $totalRondas, $estrategia)
+    : TorneoMesaAsignacionResolver::servicioPorModalidad($modalidad)->generarAsignacionRonda($torneo_id, $ronda, $totalRondas, $estrategia);
 
 if ($resultado['success']) {
-    echo "   ✓ Ronda 5 generada exitosamente\n";
+    echo "   ✓ Ronda $ronda generada exitosamente\n";
     echo "   - Total de mesas: {$resultado['total_mesas']}\n";
     echo "   - Jugadores con BYE: {$resultado['jugadores_bye']}\n\n";
     
@@ -133,7 +138,7 @@ if ($resultado['success']) {
     }
     
 } else {
-    echo "   ✗ Error al generar ronda 5: {$resultado['message']}\n";
+    echo "   ✗ Error al generar ronda $ronda: {$resultado['message']}\n";
     exit(1);
 }
 

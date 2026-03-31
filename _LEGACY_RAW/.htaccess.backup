@@ -1,0 +1,102 @@
+# ============================================
+# LA ESTACIÓN DEL DOMINÓ - URLs Amigables
+# ============================================
+
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    RewriteBase /mistorneos/
+    
+    # ============================================
+    # URLs AMIGABLES PARA TORNEOS
+    # ============================================
+    # Convierte: /public/torneo/123/torneo-de-domino-2025
+    # A: /public/torneo_detalle.php?torneo_id=123
+    RewriteRule ^public/torneo/([0-9]+)/([a-z0-9-]+)/?$ public/torneo_detalle.php?torneo_id=$1 [L,QSA]
+    
+    # Convierte: /public/resultados/123/torneo-de-domino-2025
+    # A: /public/resultados_detalle.php?torneo_id=123
+    RewriteRule ^public/resultados/([0-9]+)/([a-z0-9-]+)/?$ public/resultados_detalle.php?torneo_id=$1 [L,QSA]
+    
+    # ============================================
+    # REDIRECCIONES PERMANENTES (301) - URLs Antiguas
+    # ============================================
+    # Redirigir URLs antiguas con ?torneo_id= a URLs amigables
+    # Esto se maneja en PHP para mantener compatibilidad
+    
+    # ============================================
+    # SEGURIDAD
+    # ============================================
+    # Bloquear acceso a archivos sensibles
+    <FilesMatch "\.(env|log|sql|md)$">
+        Order allow,deny
+        Deny from all
+    </FilesMatch>
+    
+    # Proteger directorios sensibles
+    RewriteRule ^(config|storage|vendor|tests|cli|database|sql|docs|modules|core|api|scripts)/ - [F,L]
+    
+    # ============================================
+    # OPTIMIZACIÓN
+    # ============================================
+    # Habilitar compresión GZIP
+    <IfModule mod_deflate.c>
+        AddOutputFilterByType DEFLATE text/html text/plain text/xml text/css text/javascript application/javascript application/json
+    </IfModule>
+    
+    # Cache de navegador para recursos estáticos
+    <IfModule mod_expires.c>
+        ExpiresActive On
+        ExpiresByType image/jpeg "access plus 1 year"
+        ExpiresByType image/png "access plus 1 year"
+        ExpiresByType image/webp "access plus 1 year"
+        ExpiresByType image/gif "access plus 1 year"
+        ExpiresByType image/svg+xml "access plus 1 year"
+        ExpiresByType text/css "access plus 1 month"
+        ExpiresByType application/javascript "access plus 1 month"
+        ExpiresByType application/pdf "access plus 1 month"
+    </IfModule>
+    
+    # ============================================
+    # SOPORTE PARA WEBP
+    # ============================================
+    # Si el navegador acepta WebP y existe la versión WebP, servirla
+    <IfModule mod_rewrite.c>
+        RewriteCond %{HTTP_ACCEPT} image/webp
+        RewriteCond %{REQUEST_FILENAME} (.*)\.(jpe?g|png)$
+        RewriteCond %{REQUEST_FILENAME}\.webp -f
+        RewriteRule ^(.*)\.(jpe?g|png)$ $1.$2.webp [T=image/webp,E=accept:1]
+    </IfModule>
+    
+    <IfModule mod_headers.c>
+        Header append Vary Accept env=REDIRECT_accept
+    </IfModule>
+    
+    AddType image/webp .webp
+</IfModule>
+
+# ============================================
+# CONFIGURACIONES ADICIONALES
+# ============================================
+
+# Prevenir listado de directorios
+Options -Indexes
+
+# Página de error personalizada
+ErrorDocument 404 /mistorneos/public/404.php
+
+# Proteger archivos PHP en directorios de upload
+<DirectoryMatch "^.*/upload/">
+    php_flag engine off
+</DirectoryMatch>
+
+
+
+
+
+
+
+
+
+
+
+

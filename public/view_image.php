@@ -11,7 +11,8 @@ $path = $_GET['path'] ?? '';
 $path = str_replace(['../', '..\\'], '', $path);
 $path = ltrim($path, '/\\');
 
-$allowed_prefixes = ['upload/', 'lib/Assets/'];
+// upload/ y uploads/ (raíz del proyecto): logos y adjuntos locales (WAMP: …\mistorneos\upload y …\uploads)
+$allowed_prefixes = ['upload/', 'uploads/', 'lib/Assets/'];
 $allowed = false;
 foreach ($allowed_prefixes as $prefix) {
     if (strpos($path, $prefix) === 0) {

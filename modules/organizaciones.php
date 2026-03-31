@@ -61,14 +61,132 @@ if ($organizacion_id && $club_id) {
         }
     }
     if ($club && $organizacion) {
-        $stmt = $pdo->prepare("
-            SELECT u.id, u.cedula, u.nombre, u.email, u.celular, u.status, u.created_at
-            FROM usuarios u
-            WHERE u.club_id = ? AND u.role = 'usuario'
-            ORDER BY u.nombre ASC
-        ");
-        $stmt->execute([$club_id]);
-        $afiliados = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        $afiliados_page = max(1, (int)($_GET['afiliados_page'] ?? 1));
+        $afiliados_per_page = 15;
+        $sexo = strtolower(trim((string)($_GET['sexo'] ?? 'todos')));
+        if (!in_array($sexo, ['todos', 'm', 'f'], true)) {
+            $sexo = 'todos';
+        }
+        $sexoSql = '';
+        $sexoParams = [];
+        if ($sexo === 'm') {
+            $sexoSql = " AND UPPER(COALESCE(u.sexo,'M')) = 'M'";
+        } elseif ($sexo === 'f') {
+            $sexoSql = " AND UPPER(COALESCE(u.sexo,'M')) = 'F'";
+        }
+
+        $normalizar = static function (string $s): string {
+            $s = trim($s);
+            $s = strtr($s, [
+                'Á' => 'A', 'É' => 'E', 'Í' => 'I', 'Ó' => 'O', 'Ú' => 'U', 'Ñ' => 'N',
+                'á' => 'a', 'é' => 'e', 'í' => 'i', 'ó' => 'o', 'ú' => 'u', 'ñ' => 'n',
+            ]);
+            return strtoupper($s);
+        };
+        $esFvd = strpos($normalizar((string)($organizacion['nombre'] ?? '')), 'FEDERACION VENEZOLANA DE DOMINO') !== false;
+
+        if ($esFvd) {
+            $entidadClub = (int)($club['entidad'] ?? 0);
+            $clubIdReal = (int)$club_id;
+
+            // Preferir club_id real; fallback por entidad si la data histórica usa club_id=código de entidad.
+            // En FVD solo se consideran afiliados con numfvd > 0.
+            $stTry = $pdo->prepare("
+                SELECT COUNT(*)
+                FROM usuarios u
+                WHERE u.organizacion_id = ?
+                  AND COALESCE(u.club_id, 0) = ?
+                  AND COALESCE(u.numfvd, 0) > 0
+            ");
+            $stTry->execute([$organizacion_id, $clubIdReal]);
+            $conteoPorClub = (int)$stTry->fetchColumn();
+
+            if ($conteoPorClub > 0) {
+                $scopeSql = "u.organizacion_id = ? AND COALESCE(u.club_id, 0) = ? AND COALESCE(u.numfvd, 0) > 0";
+                $scopeParams = [$organizacion_id, $clubIdReal];
+            } else {
+                $scopeSql = "u.organizacion_id = ? AND COALESCE(u.entidad, 0) = ? AND COALESCE(u.numfvd, 0) > 0";
+                $scopeParams = [$organizacion_id, $entidadClub];
+            }
+
+            $stResumen = $pdo->prepare("
+                SELECT
+                    COUNT(*) AS total,
+                    SUM(CASE WHEN UPPER(COALESCE(u.sexo,'M'))='M' THEN 1 ELSE 0 END) AS hombres,
+                    SUM(CASE WHEN UPPER(COALESCE(u.sexo,'M'))='F' THEN 1 ELSE 0 END) AS mujeres
+                FROM usuarios u
+                WHERE {$scopeSql}
+            ");
+            $stResumen->execute($scopeParams);
+            $afiliados_resumen = $stResumen->fetch(PDO::FETCH_ASSOC) ?: ['total' => 0, 'hombres' => 0, 'mujeres' => 0];
+
+            $stmtCount = $pdo->prepare("
+                SELECT COUNT(*)
+                FROM usuarios u
+                WHERE {$scopeSql}
+                  {$sexoSql}
+            ");
+            $stmtCount->execute(array_merge($scopeParams, $sexoParams));
+            $afiliados_total_rows = (int)$stmtCount->fetchColumn();
+
+            $offset = ($afiliados_page - 1) * $afiliados_per_page;
+            $stmt = $pdo->prepare("
+                SELECT u.id, u.cedula, u.nombre, u.email, u.celular, u.status, u.created_at
+                FROM usuarios u
+                WHERE {$scopeSql}
+                  {$sexoSql}
+                ORDER BY u.nombre ASC
+                LIMIT ? OFFSET ?
+            ");
+            $bindPos = 1;
+            foreach ($scopeParams as $p) {
+                $stmt->bindValue($bindPos++, (int)$p, PDO::PARAM_INT);
+            }
+            $stmt->bindValue($bindPos++, $afiliados_per_page, PDO::PARAM_INT);
+            $stmt->bindValue($bindPos++, $offset, PDO::PARAM_INT);
+            $stmt->execute();
+            $afiliados = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        } else {
+            $stResumen = $pdo->prepare("
+                SELECT
+                    COUNT(*) AS total,
+                    SUM(CASE WHEN UPPER(COALESCE(u.sexo,'M'))='M' THEN 1 ELSE 0 END) AS hombres,
+                    SUM(CASE WHEN UPPER(COALESCE(u.sexo,'M'))='F' THEN 1 ELSE 0 END) AS mujeres
+                FROM usuarios u
+                WHERE u.club_id = ?
+            ");
+            $stResumen->execute([$club_id]);
+            $afiliados_resumen = $stResumen->fetch(PDO::FETCH_ASSOC) ?: ['total' => 0, 'hombres' => 0, 'mujeres' => 0];
+
+            $stmtCount = $pdo->prepare("
+                SELECT COUNT(*)
+                FROM usuarios u
+                WHERE u.club_id = ?
+                  {$sexoSql}
+            ");
+            $stmtCount->execute(array_merge([$club_id], $sexoParams));
+            $afiliados_total_rows = (int)$stmtCount->fetchColumn();
+
+            $offset = ($afiliados_page - 1) * $afiliados_per_page;
+            $stmt = $pdo->prepare("
+                SELECT u.id, u.cedula, u.nombre, u.email, u.celular, u.status, u.created_at
+                FROM usuarios u
+                WHERE u.club_id = ?
+                  {$sexoSql}
+                ORDER BY u.nombre ASC
+                LIMIT ? OFFSET ?
+            ");
+            $stmt->bindValue(1, $club_id, PDO::PARAM_INT);
+            $stmt->bindValue(2, $afiliados_per_page, PDO::PARAM_INT);
+            $stmt->bindValue(3, $offset, PDO::PARAM_INT);
+            $stmt->execute();
+            $afiliados = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        }
+
+        $afiliados_total_pages = max(1, (int)ceil($afiliados_total_rows / $afiliados_per_page));
+        if ($afiliados_page > $afiliados_total_pages) {
+            $afiliados_page = $afiliados_total_pages;
+        }
     }
     if (!$club || !$organizacion) {
         header('Location: index.php?page=organizaciones&id=' . $organizacion_id);
@@ -110,19 +228,141 @@ if ($organizacion_id) {
         $organizacion_id = null;
     }
     if ($organizacion) {
-    $stmt = $pdo->prepare("
-        SELECT c.id, c.nombre, c.delegado, c.telefono, c.direccion, c.estatus,
-               COUNT(DISTINCT u.id) as total_afiliados,
-               SUM(CASE WHEN u.sexo = 'M' OR UPPER(u.sexo) = 'M' THEN 1 ELSE 0 END) as hombres,
-               SUM(CASE WHEN u.sexo = 'F' OR UPPER(u.sexo) = 'F' THEN 1 ELSE 0 END) as mujeres
-        FROM clubes c
-        LEFT JOIN usuarios u ON u.club_id = c.id AND u.role = 'usuario' AND u.status = 0
-        WHERE c.organizacion_id = ? AND c.estatus = 1
-        GROUP BY c.id, c.nombre, c.delegado, c.telefono, c.direccion, c.estatus
-        ORDER BY c.nombre ASC
-    ");
-    $stmt->execute([$organizacion_id]);
-    $clubes = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    $clubes_page = max(1, (int)($_GET['clubes_page'] ?? 1));
+    $clubes_per_page = 15;
+    $hasUsuariosOrganizacionId = false;
+    try {
+        $hasUsuariosOrganizacionId = (bool)$pdo->query("SHOW COLUMNS FROM usuarios LIKE 'organizacion_id'")->fetch();
+    } catch (Exception $ignored) {
+    }
+
+    $normalizar = static function (string $s): string {
+        $s = trim($s);
+        $s = strtr($s, [
+            'Á' => 'A', 'É' => 'E', 'Í' => 'I', 'Ó' => 'O', 'Ú' => 'U', 'Ñ' => 'N',
+            'á' => 'a', 'é' => 'e', 'í' => 'i', 'ó' => 'o', 'ú' => 'u', 'ñ' => 'n',
+        ]);
+        return strtoupper($s);
+    };
+    $esFvd = strpos($normalizar((string)($organizacion['nombre'] ?? '')), 'FEDERACION VENEZOLANA DE DOMINO') !== false;
+
+    if ($hasUsuariosOrganizacionId && $esFvd) {
+        // Asociaciones FVD: todas las entidades que tengan usuarios de la organización con numfvd > 0.
+        $stmt = $pdo->prepare("
+            SELECT
+                COALESCE(c.id, 0) AS id,
+                COALESCE(NULLIF(TRIM(c.nombre), ''), NULLIF(TRIM(e.nombre), ''), CONCAT('Entidad ', ue.entidad)) AS nombre,
+                c.delegado,
+                c.telefono,
+                c.direccion,
+                COALESCE(c.estatus, 1) AS estatus,
+                ue.entidad AS entidad
+            FROM (
+                SELECT DISTINCT u.entidad
+                FROM usuarios u
+                WHERE u.organizacion_id = ?
+                  AND COALESCE(u.entidad, 0) > 0
+                  AND COALESCE(u.numfvd, 0) > 0
+            ) ue
+            LEFT JOIN clubes c
+                ON c.organizacion_id = ?
+               AND c.entidad = ue.entidad
+               AND c.estatus = 1
+            LEFT JOIN entidad e
+                ON e.id = ue.entidad
+            ORDER BY nombre ASC
+        ");
+        $stmt->execute([$organizacion_id, $organizacion_id]);
+        $clubes = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    } else {
+        $stmt = $pdo->prepare("
+            SELECT c.id, c.nombre, c.delegado, c.telefono, c.direccion, c.estatus, c.entidad
+            FROM clubes c
+            WHERE c.organizacion_id = ? AND c.estatus = 1
+            ORDER BY c.nombre ASC
+        ");
+        $stmt->execute([$organizacion_id]);
+        $clubes = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+    $stats_afiliados_sin_club = 0;
+    $stats_afiliados_total = 0;
+    $stats_hombres_total = 0;
+    $stats_mujeres_total = 0;
+    $stats_otros_total = 0;
+
+    foreach ($clubes as &$club) {
+        $club['total_afiliados'] = 0;
+        $club['hombres'] = 0;
+        $club['mujeres'] = 0;
+
+        if ($hasUsuariosOrganizacionId) {
+            $entidadClub = (int)($club['entidad'] ?? 0);
+            $st = $pdo->prepare("
+                SELECT
+                    COUNT(*) AS total_afiliados,
+                    SUM(CASE WHEN UPPER(COALESCE(u.sexo, 'M')) = 'M' THEN 1 ELSE 0 END) AS hombres,
+                    SUM(CASE WHEN UPPER(COALESCE(u.sexo, 'M')) = 'F' THEN 1 ELSE 0 END) AS mujeres
+                FROM usuarios u
+                WHERE u.organizacion_id = ?
+                  AND COALESCE(u.entidad, 0) = ?
+                  " . ($esFvd ? " AND COALESCE(u.numfvd, 0) > 0 " : "") . "
+            ");
+            $st->execute([$organizacion_id, $entidadClub]);
+        } else {
+            $st = $pdo->prepare("
+                SELECT
+                    COUNT(*) AS total_afiliados,
+                    SUM(CASE WHEN UPPER(COALESCE(u.sexo, 'M')) = 'M' THEN 1 ELSE 0 END) AS hombres,
+                    SUM(CASE WHEN UPPER(COALESCE(u.sexo, 'M')) = 'F' THEN 1 ELSE 0 END) AS mujeres
+                FROM usuarios u
+                WHERE u.club_id = ?
+            ");
+            $st->execute([(int)$club['id']]);
+        }
+
+        $rowClub = $st->fetch(PDO::FETCH_ASSOC) ?: [];
+        $club['total_afiliados'] = (int)($rowClub['total_afiliados'] ?? 0);
+        $club['hombres'] = (int)($rowClub['hombres'] ?? 0);
+        $club['mujeres'] = (int)($rowClub['mujeres'] ?? 0);
+    }
+    unset($club);
+
+    // Total general exactamente igual a la sumatoria de clubes listados.
+    foreach ($clubes as $clubSum) {
+        $stats_afiliados_total += (int)($clubSum['total_afiliados'] ?? 0);
+        $stats_hombres_total += (int)($clubSum['hombres'] ?? 0);
+        $stats_mujeres_total += (int)($clubSum['mujeres'] ?? 0);
+    }
+    $stats_otros_total = max(0, $stats_afiliados_total - $stats_hombres_total - $stats_mujeres_total);
+
+    // Caso especial FVD: el total de organización debe incluir todos sus usuarios por organizacion_id,
+    // independientemente de la entidad; el desglose por "clubes" se mantiene por entidad.
+    if ($hasUsuariosOrganizacionId && $esFvd) {
+        $stTotalFvd = $pdo->prepare("
+            SELECT
+                COUNT(*) AS total,
+                SUM(CASE WHEN UPPER(COALESCE(u.sexo, 'M')) = 'M' THEN 1 ELSE 0 END) AS hombres,
+                SUM(CASE WHEN UPPER(COALESCE(u.sexo, 'M')) = 'F' THEN 1 ELSE 0 END) AS mujeres
+            FROM usuarios u
+            WHERE u.organizacion_id = ?
+              AND COALESCE(u.numfvd, 0) > 0
+        ");
+        $stTotalFvd->execute([$organizacion_id]);
+        $rowFvd = $stTotalFvd->fetch(PDO::FETCH_ASSOC) ?: [];
+        $stats_afiliados_total = (int)($rowFvd['total'] ?? 0);
+        $stats_hombres_total = (int)($rowFvd['hombres'] ?? 0);
+        $stats_mujeres_total = (int)($rowFvd['mujeres'] ?? 0);
+        $stats_otros_total = max(0, $stats_afiliados_total - $stats_hombres_total - $stats_mujeres_total);
+    }
+
+    // Paginación de clubes.
+    $clubes_total_rows = count($clubes);
+    $clubes_total_pages = max(1, (int)ceil($clubes_total_rows / $clubes_per_page));
+    if ($clubes_page > $clubes_total_pages) {
+        $clubes_page = $clubes_total_pages;
+    }
+    $clubes_offset = ($clubes_page - 1) * $clubes_per_page;
+    $clubes_paginados = array_slice($clubes, $clubes_offset, $clubes_per_page);
     $stats_operadores = 0;
     $stats_admin_torneo = 0;
     if (!empty($clubes)) {
@@ -160,26 +400,110 @@ if ($is_admin_general && !$organizacion_id && !$club_id && $entidad_id > 0) {
     } catch (Exception $e) {}
     $organizaciones = [];
     try {
-        $stmt = $pdo->prepare("
-            SELECT o.id, o.nombre, o.estatus,
-                   (SELECT COUNT(*) FROM clubes WHERE organizacion_id = o.id AND estatus = 1) as total_clubes,
-                   (SELECT COUNT(*) FROM tournaments WHERE club_responsable = o.id) as total_torneos
-            FROM organizaciones o
-            WHERE o.entidad = ?
-            ORDER BY o.estatus DESC, o.nombre ASC
-        ");
-        $stmt->execute([$entidad_id]);
-        $organizaciones = $stmt->fetchAll(PDO::FETCH_ASSOC);
-        foreach ($organizaciones as &$org) {
-            $stmt2 = $pdo->prepare("
-                SELECT COUNT(*) FROM usuarios u
-                INNER JOIN clubes c ON u.club_id = c.id
-                WHERE c.organizacion_id = ? AND c.estatus = 1 AND u.role = 'usuario' AND u.status = 0
+        // Caso especial: entidad 32 muestra asociaciones derivadas de usuarios con numfvd > 0
+        // agrupadas por entidad/asociación del usuario.
+        if ($entidad_id === 32) {
+            $stmt = $pdo->query("
+                SELECT
+                    u.entidad AS entidad_asociacion,
+                    COALESCE(NULLIF(TRIM(e.nombre), ''), CONCAT('Entidad ', u.entidad)) AS nombre_asociacion,
+                    COUNT(*) AS total_afiliados,
+                    SUM(CASE WHEN UPPER(COALESCE(u.sexo,'M'))='M' THEN 1 ELSE 0 END) AS hombres,
+                    SUM(CASE WHEN UPPER(COALESCE(u.sexo,'M'))='F' THEN 1 ELSE 0 END) AS mujeres
+                FROM usuarios u
+                LEFT JOIN entidad e ON e.id = u.entidad
+                WHERE COALESCE(u.numfvd, 0) > 0
+                  AND COALESCE(u.entidad, 0) > 0
+                GROUP BY u.entidad, e.nombre
+                ORDER BY nombre_asociacion ASC
             ");
-            $stmt2->execute([$org['id']]);
-            $org['total_afiliados'] = (int)$stmt2->fetchColumn();
+            $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            $organizaciones = [];
+            foreach ($rows as $r) {
+                $organizaciones[] = [
+                    'id' => 0, // fila estadística (sin organización física directa)
+                    'nombre' => (string)($r['nombre_asociacion'] ?? ''),
+                    'estatus' => 1,
+                    'total_clubes' => 1,
+                    'total_torneos' => 0,
+                    'total_afiliados' => (int)($r['total_afiliados'] ?? 0),
+                    'hombres' => (int)($r['hombres'] ?? 0),
+                    'mujeres' => (int)($r['mujeres'] ?? 0),
+                    'entidad_asociacion' => (int)($r['entidad_asociacion'] ?? 0),
+                ];
+            }
+        } else {
+            $stmt = $pdo->prepare("
+                SELECT o.id, o.nombre, o.estatus,
+                       (SELECT COUNT(*) FROM clubes WHERE organizacion_id = o.id AND estatus = 1) as total_clubes,
+                       (SELECT COUNT(*) FROM tournaments WHERE club_responsable = o.id) as total_torneos
+                FROM organizaciones o
+                WHERE o.entidad = ?
+                ORDER BY o.estatus DESC, o.nombre ASC
+            ");
+            $stmt->execute([$entidad_id]);
+            $organizaciones = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        }
+        $hasUsuariosOrganizacionId = false;
+        try {
+            $hasUsuariosOrganizacionId = (bool)$pdo->query("SHOW COLUMNS FROM usuarios LIKE 'organizacion_id'")->fetch();
+        } catch (Exception $ignored) {
+        }
+        $normalizar = static function (string $s): string {
+            $s = trim($s);
+            $s = strtr($s, [
+                'Á' => 'A', 'É' => 'E', 'Í' => 'I', 'Ó' => 'O', 'Ú' => 'U', 'Ñ' => 'N',
+                'á' => 'a', 'é' => 'e', 'í' => 'i', 'ó' => 'o', 'ú' => 'u', 'ñ' => 'n',
+            ]);
+            return strtoupper($s);
+        };
+        foreach ($organizaciones as &$org) {
+            if ($entidad_id === 32) {
+                // Ya viene precalculado por asociación (entidad) para este caso especial.
+                continue;
+            }
+            if ($hasUsuariosOrganizacionId) {
+                $orgId = (int)($org['id'] ?? 0);
+                $orgNombreNorm = $normalizar((string)($org['nombre'] ?? ''));
+                $orgEsFvd = strpos($orgNombreNorm, 'FEDERACION VENEZOLANA DE DOMINO') !== false;
+                $stmt2 = $pdo->prepare("
+                    SELECT
+                        COUNT(*) AS total_afiliados,
+                        SUM(CASE WHEN UPPER(COALESCE(u.sexo,'M'))='M' THEN 1 ELSE 0 END) AS hombres,
+                        SUM(CASE WHEN UPPER(COALESCE(u.sexo,'M'))='F' THEN 1 ELSE 0 END) AS mujeres
+                    FROM usuarios u
+                    WHERE u.organizacion_id = ?
+                      AND COALESCE(u.entidad, 0) = ?
+                      " . ($orgEsFvd ? " AND COALESCE(u.numfvd, 0) > 0 " : "") . "
+                ");
+                $stmt2->execute([$orgId, $entidad_id]);
+                $r2 = $stmt2->fetch(PDO::FETCH_ASSOC) ?: [];
+                $org['total_afiliados'] = (int)($r2['total_afiliados'] ?? 0);
+                $org['hombres'] = (int)($r2['hombres'] ?? 0);
+                $org['mujeres'] = (int)($r2['mujeres'] ?? 0);
+            } else {
+                $stmt2 = $pdo->prepare("
+                    SELECT
+                        COUNT(*) AS total_afiliados,
+                        SUM(CASE WHEN UPPER(COALESCE(u.sexo,'M'))='M' THEN 1 ELSE 0 END) AS hombres,
+                        SUM(CASE WHEN UPPER(COALESCE(u.sexo,'M'))='F' THEN 1 ELSE 0 END) AS mujeres
+                    FROM usuarios u
+                    INNER JOIN clubes c ON u.club_id = c.id
+                    WHERE c.organizacion_id = ? AND c.estatus = 1
+                ");
+                $stmt2->execute([$org['id']]);
+                $r2 = $stmt2->fetch(PDO::FETCH_ASSOC) ?: [];
+                $org['total_afiliados'] = (int)($r2['total_afiliados'] ?? 0);
+                $org['hombres'] = (int)($r2['hombres'] ?? 0);
+                $org['mujeres'] = (int)($r2['mujeres'] ?? 0);
+            }
         }
         unset($org);
+        $entidad_totales = [
+            'afiliados' => (int)array_sum(array_column($organizaciones, 'total_afiliados')),
+            'hombres' => (int)array_sum(array_column($organizaciones, 'hombres')),
+            'mujeres' => (int)array_sum(array_column($organizaciones, 'mujeres')),
+        ];
     } catch (Exception $e) {}
     include __DIR__ . '/organizaciones/listado_organizaciones_entidad.php';
     return;

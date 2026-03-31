@@ -6,11 +6,11 @@
  */
 
 require_once __DIR__ . '/../../lib/app_helpers.php';
+require_once __DIR__ . '/../../lib/Tournament/Services/PaginationService.php';
 
 // Configuración de paginación
 $items_por_pagina_club = 10; // Clubes por página
 $pagina_actual_club = isset($_GET['pagina']) ? max(1, (int)$_GET['pagina']) : 1;
-$offset_club = ($pagina_actual_club - 1) * $items_por_pagina_club;
 
 // Función helper para generar HTML del paginador
 function generarPaginadorClubs($pagina_actual, $total_paginas, $base_url, $parametros_get = []) {
@@ -268,19 +268,19 @@ try {
         if (isset($resultados_por_club[$club_id])) {
             $resultados_por_club[$club_id]['jugadores'][] = [
                 'id_usuario' => $jugador['id_usuario'],
-                'cedula' => $jugador['cedula'],
-                'nombre' => $jugador['nombre'],
-                'posicion' => $jugador['posicion'],
-                'ganados' => $jugador['ganados'],
-                'perdidos' => $jugador['perdidos'],
-                'efectividad' => $jugador['efectividad'],
-                'puntos' => $jugador['puntos'],
-                'ptosrnk' => $jugador['ptosrnk'],
-                'gff' => $jugador['gff'],
-                'zapato' => $jugador['zapato'],
-                'chancletas' => $jugador['chancletas'],
-                'sancion' => $jugador['sancion'],
-                'tarjeta' => $jugador['tarjeta']
+                'cedula' => $jugador['cedula'] ?? '',
+                'nombre' => $jugador['nombre'] ?? 'N/A',
+                'posicion' => (int)($jugador['posicion'] ?? 0),
+                'ganados' => (int)($jugador['ganados'] ?? 0),
+                'perdidos' => (int)($jugador['perdidos'] ?? 0),
+                'efectividad' => (int)($jugador['efectividad'] ?? 0),
+                'puntos' => (int)($jugador['puntos'] ?? 0),
+                'ptosrnk' => (int)($jugador['ptosrnk'] ?? 0),
+                'gff' => (int)($jugador['gff'] ?? 0),
+                'zapato' => (int)($jugador['zapato'] ?? $jugador['zapatos'] ?? 0),
+                'chancletas' => (int)($jugador['chancletas'] ?? 0),
+                'sancion' => (int)($jugador['sancion'] ?? 0),
+                'tarjeta' => (int)($jugador['tarjeta'] ?? 0),
             ];
         }
     }
@@ -317,17 +317,14 @@ try {
     
     // Calcular paginación para clubes
     $total_clubes = count($resultados_por_club);
-    $total_paginas_club = max(1, ceil($total_clubes / $items_por_pagina_club));
-    
-    // Ajustar página actual si excede el total
-    if ($pagina_actual_club > $total_paginas_club) {
-        $pagina_actual_club = $total_paginas_club;
-        $offset_club = ($pagina_actual_club - 1) * $items_por_pagina_club;
-    }
-    
+    $p_club = \Tournament\Services\PaginationService::getParams($total_clubes, $pagina_actual_club, $items_por_pagina_club);
+    $pagina_actual_club = $p_club['page'];
+    $total_paginas_club = $p_club['total_pages'];
+    $offset_club = $p_club['offset'];
+
     // Aplicar paginación a los clubes (convertir a array numérico, paginar, luego convertir de nuevo a asociativo)
     $clubes_array = array_values($resultados_por_club);
-    $clubes_paginados = array_slice($clubes_array, $offset_club, $items_por_pagina_club);
+    $clubes_paginados = array_slice($clubes_array, $offset_club, $p_club['per_page']);
     
     // Reconstruir array asociativo con club_id como key para mantener compatibilidad
     $resultados_por_club_paginados = [];
@@ -364,7 +361,11 @@ if (!isset($total_clubes)) {
     $total_clubes = count($resultados_por_club ?? []);
 }
 if (!isset($total_paginas_club)) {
-    $total_paginas_club = max(1, ceil($total_clubes / ($items_por_pagina_club ?? 10)));
+    $ppc = (int) ($items_por_pagina_club ?? 10);
+    $pac = isset($_GET['pagina']) ? (int) $_GET['pagina'] : 1;
+    $p_fb = \Tournament\Services\PaginationService::getParams((int) $total_clubes, $pac, $ppc);
+    $total_paginas_club = $p_fb['total_pages'];
+    $pagina_actual_club = $p_fb['page'];
 }
 if (!isset($pagina_actual_club)) {
     $pagina_actual_club = isset($_GET['pagina']) ? max(1, (int)$_GET['pagina']) : 1;
@@ -716,10 +717,11 @@ $base_url_return = $use_standalone ? $script_actual : 'index.php?page=torneo_ges
                         <?php foreach ($club_data['jugadores'] as $jugador): ?>
                         <tr class="border-b border-gray-200 hover:bg-gray-50">
                             <td class="px-4 py-3 font-bold text-center">
-                                <?= $jugador['posicion'] > 0 ? $jugador['posicion'] : '-' ?>
-                                <?php if ($jugador['posicion'] == 1): ?>
+                                <?php $posJ = (int)($jugador['posicion'] ?? 0); ?>
+                                <?= $posJ > 0 ? $posJ : '-' ?>
+                                <?php if ($posJ === 1): ?>
                                     <i class="fas fa-trophy text-yellow-500 ml-1"></i>
-                                <?php elseif ($jugador['posicion'] <= 3 && $jugador['posicion'] > 0): ?>
+                                <?php elseif ($posJ <= 3 && $posJ > 0): ?>
                                     <i class="fas fa-medal text-gray-500 ml-1"></i>
                                 <?php endif; ?>
                             </td>
@@ -727,19 +729,19 @@ $base_url_return = $use_standalone ? $script_actual : 'index.php?page=torneo_ges
                                 <code><?= htmlspecialchars($jugador['id_usuario'] ?? 'N/A') ?></code>
                             </td>
                             <td class="px-4 py-3">
-                                <div class="font-semibold"><?= htmlspecialchars($jugador['nombre']) ?></div>
+                                <div class="font-semibold"><?= htmlspecialchars($jugador['nombre'] ?? 'N/A') ?></div>
                             </td>
-                            <td class="px-4 py-3 text-center font-bold text-green-600"><?= $jugador['ganados'] ?></td>
-                            <td class="px-4 py-3 text-center font-bold text-red-600"><?= $jugador['perdidos'] ?></td>
-                            <td class="px-4 py-3 text-center"><?= $jugador['gff'] ?></td>
-                            <td class="px-4 py-3 text-center"><?= $jugador['efectividad'] ?></td>
-                            <td class="px-4 py-3 text-center"><?= $jugador['puntos'] ?></td>
-                            <td class="px-4 py-3 text-center font-bold text-purple-600"><?= $jugador['ptosrnk'] ?></td>
-                            <td class="px-4 py-3 text-center"><?= $jugador['zapato'] ?></td>
-                            <td class="px-4 py-3 text-center"><?= $jugador['chancletas'] ?></td>
-                            <td class="px-4 py-3 text-center"><?= $jugador['sancion'] ?></td>
+                            <td class="px-4 py-3 text-center font-bold text-green-600"><?= (int)($jugador['ganados'] ?? 0) ?></td>
+                            <td class="px-4 py-3 text-center font-bold text-red-600"><?= (int)($jugador['perdidos'] ?? 0) ?></td>
+                            <td class="px-4 py-3 text-center"><?= (int)($jugador['gff'] ?? 0) ?></td>
+                            <td class="px-4 py-3 text-center"><?= (int)($jugador['efectividad'] ?? 0) ?></td>
+                            <td class="px-4 py-3 text-center"><?= (int)($jugador['puntos'] ?? 0) ?></td>
+                            <td class="px-4 py-3 text-center font-bold text-purple-600"><?= (int)($jugador['ptosrnk'] ?? 0) ?></td>
+                            <td class="px-4 py-3 text-center"><?= (int)($jugador['zapato'] ?? $jugador['zapatos'] ?? 0) ?></td>
+                            <td class="px-4 py-3 text-center"><?= (int)($jugador['chancletas'] ?? 0) ?></td>
+                            <td class="px-4 py-3 text-center"><?= (int)($jugador['sancion'] ?? 0) ?></td>
                             <td class="px-4 py-3 text-center">
-                                <span class="text-sm"><?= getTarjetaTexto($jugador['tarjeta']) ?></span>
+                                <span class="text-sm"><?= getTarjetaTexto((int)($jugador['tarjeta'] ?? 0)) ?></span>
                             </td>
                         </tr>
                         <?php endforeach; ?>

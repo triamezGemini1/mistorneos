@@ -57,7 +57,7 @@ class ImportacionMasivaService
         }
         $cedulaRaw = $trim($fila['cedula'] ?? '');
         $cedula = preg_replace('/[^0-9]/', '', $cedulaRaw);
-        $nombre = $trim($fila['nombre'] ?? '');
+        $nombre = self::asegurarUtf8($trim($fila['nombre'] ?? ''));
         $sexo = strtoupper($trim($fila['sexo'] ?? 'M'));
         if (!in_array($sexo, ['M', 'F', 'O'], true)) {
             $sexo = 'M';
@@ -145,13 +145,14 @@ class ImportacionMasivaService
     /**
      * Procesa la importación en lotes. Transacciones por lote.
      * Los fallos de validación (cedula, nombre, club, organizacion) se registran en $errores (errores_importacion).
-     * @return array{procesados: int, nuevos: int, omitidos: int, errores: list<array{fila: int, cedula: string, motivo: string}>, txt_errores: string}
+     * @return array{procesados: int, nuevos: int, omitidos: int, usuarios_actualizados: int, errores: list<array{fila: int, cedula: string, motivo: string}>, txt_errores: string}
      */
     public static function procesarImportacion(PDO $pdo, int $torneoId, array $filas, int $inscritoPor): array
     {
         $procesados = 0;
         $nuevos = 0;
         $omitidos = 0;
+        $usuariosActualizados = 0;
         /** @var list<array{fila: int, cedula: string, motivo: string}> errores de importación por fila */
         $errores = [];
         $clubRepo = new ClubRepository($pdo);
@@ -160,6 +161,7 @@ class ImportacionMasivaService
         foreach ($lotes as $lote) {
             $pdo->beginTransaction();
             try {
+                $stmtUpdateUsuario = $pdo->prepare("UPDATE usuarios SET nombre = ?, sexo = ? WHERE id = ?");
                 foreach ($lote as $idx => $fila) {
                     $filaNum = $idx + 1;
                     $norm = self::normalizarFila($fila, $filaNum);
@@ -181,7 +183,7 @@ class ImportacionMasivaService
                     }
 
                     // b) Buscar en usuarios
-                    $stmt = $pdo->prepare("SELECT id, club_id FROM usuarios WHERE cedula = ? LIMIT 1");
+                    $stmt = $pdo->prepare("SELECT id, club_id, nombre, sexo FROM usuarios WHERE cedula = ? LIMIT 1");
                     $stmt->execute([$cedula]);
                     $rowUser = $stmt->fetch(PDO::FETCH_ASSOC);
                     $idUsuario = $rowUser ? (int) $rowUser['id'] : null;
@@ -254,6 +256,18 @@ class ImportacionMasivaService
                         UserActivationHelper::activateUser($pdo, $idUsuario);
                         $nuevos++;
                         $idClubInscrito = $idClub;
+                    } else {
+                        // Usuario existente: homologar datos clave desde Excel de inscripción masiva.
+                        $nombreExcel = self::asegurarUtf8((string)($n['nombre'] ?? ''));
+                        $sexoExcel = (string)($n['sexo'] ?? 'M');
+                        $nombreActual = self::asegurarUtf8((string)($rowUser['nombre'] ?? ''));
+                        $sexoActual = strtoupper(trim((string)($rowUser['sexo'] ?? 'M')));
+                        if ($nombreExcel !== '' && ($nombreActual !== $nombreExcel || $sexoActual !== $sexoExcel)) {
+                            $stmtUpdateUsuario->execute([$nombreExcel, $sexoExcel, $idUsuario]);
+                            if ($stmtUpdateUsuario->rowCount() > 0) {
+                                $usuariosActualizados++;
+                            }
+                        }
                     }
 
                     try {
@@ -305,6 +319,7 @@ class ImportacionMasivaService
             'procesados' => $procesados,
             'nuevos' => $nuevos,
             'omitidos' => $omitidos,
+            'usuarios_actualizados' => $usuariosActualizados,
             'errores' => $errores,
             'txt_errores' => $txtErrores,
         ];

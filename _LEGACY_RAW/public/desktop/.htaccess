@@ -1,0 +1,19 @@
+# Permitir ejecución de PHP y acceso a los scripts del desktop.
+# Bloquear acceso directo a configuración, datos locales y archivos .db (seguridad SQLite).
+<Files "config_sync.php">
+    Require all denied
+</Files>
+<Files "config_sync.example.php">
+    Require all denied
+</Files>
+<Files "session_context.json">
+    Require all denied
+</Files>
+<FilesMatch "\.db(-journal|-wal|-shm)?$">
+    Require all denied
+</FilesMatch>
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    RewriteRule ^data/ - [F,L]
+</IfModule>
+Options -Indexes
