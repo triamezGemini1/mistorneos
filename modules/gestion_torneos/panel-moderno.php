@@ -251,78 +251,114 @@ tailwind.config = {
     $jugadores_mostrar = $es_modalidad_equipos && $total_jugadores_panel > 0 ? $total_jugadores_panel : (int)$inscritos_para_rondas;
     $mostrar_eq_panel = $es_modalidad_equipos || $es_modalidad_parejas || $es_modalidad_parejas_fijas || ($total_equipos > 0);
     ?>
-    <div class="flex flex-wrap items-stretch gap-3 mb-4 w-full panel-slate-ac-split">
+    <div class="grid grid-cols-5 items-stretch gap-3 mb-4 w-full panel-slate-ac-split">
         <?php if ($panel_show_auditoria): ?>
-        <div class="panel-slate-auditoria-cierre panel-ac-badge-col panel-ac-auditoria-crono flex flex-row flex-wrap items-center gap-2 w-auto bg-slate-50 border border-slate-200 rounded-lg px-2 py-1.5 shadow-sm">
-            <div class="flex flex-col gap-1 justify-start shrink-0 w-[10.5rem] max-w-full">
-                <span class="inline-flex items-center justify-center px-2 py-0.5 rounded-md text-[0.7rem] leading-tight font-medium bg-emerald-100 text-emerald-800 w-full text-center">
-                    <i class="fas fa-camera mr-1 shrink-0 text-[0.65rem]"></i>Verificadas (QR): <?= (int)$mesas_verificadas_count ?>
-                </span>
-                <span class="inline-flex items-center justify-center px-2 py-0.5 rounded-md text-[0.7rem] leading-tight font-medium bg-blue-100 text-blue-800 w-full text-center">
-                    <i class="fas fa-keyboard mr-1 shrink-0 text-[0.65rem]"></i>Digitadas (admin): <?= (int)$mesas_digitadas_count ?>
-                </span>
+        <div class="panel-slate-auditoria-cierre panel-ac-badge-col panel-top-gadget w-full h-full bg-slate-50 border border-slate-200 rounded-lg px-2 py-1.5 shadow-sm" style="order: 1;">
+            <div class="flex flex-col justify-center items-center w-full h-full">
+                <div class="inline-flex flex-col items-center px-2 py-1 rounded-md leading-tight font-medium bg-emerald-100 text-emerald-800 w-full" style="font-size: 0.9rem;">
+                    <div class="inline-flex items-center w-full">
+                        <i class="fas fa-camera mr-1 shrink-0 text-[0.75rem]"></i>Verificadas (QR): <?= (int)$mesas_verificadas_count ?>
+                    </div>
+                    <div class="inline-flex items-center w-full mt-0.5">
+                        <i class="fas fa-keyboard mr-1 shrink-0 text-[0.75rem]"></i>Digitadas (admin): <?= (int)$mesas_digitadas_count ?>
+                    </div>
+                </div>
             </div>
+        </div>
+        <div class="panel-ac-badge-col panel-top-gadget col-start-3 w-full h-full bg-slate-50 border border-slate-200 rounded-lg px-2 py-1.5 shadow-sm" style="grid-column: 3 / 4; order: 3;">
             <button type="button" id="btnCronometroVentana"
-                class="inline-flex flex-col items-center justify-center gap-0.5 shrink-0 font-bold py-2 px-2.5 sm:px-3 rounded-lg bg-green-500 hover:bg-green-400 active:bg-green-600 text-black border-2 border-green-800 shadow-sm text-[0.65rem] sm:text-xs leading-tight transition-colors min-h-[3.25rem] sm:min-h-0"
+                class="inline-flex flex-col items-center justify-center gap-0.5 w-full h-full font-bold py-2 px-2.5 sm:px-3 rounded-lg bg-blue-500 hover:bg-blue-600 active:bg-blue-700 text-white border-2 border-blue-800 shadow-sm text-[0.65rem] sm:text-xs leading-tight transition-colors"
                 style="cursor: pointer;" title="Abrir cronómetro de ronda en ventana nueva">
-                <i class="fas fa-external-link-alt text-sm sm:text-base text-black" aria-hidden="true"></i>
-                <span class="text-center text-black font-bold max-w-[4.5rem] sm:max-w-none leading-tight">Cronómetro</span>
+                <i class="fas fa-external-link-alt text-sm sm:text-base text-white" aria-hidden="true"></i>
+                <span class="text-center text-white font-bold max-w-[4.5rem] sm:max-w-none leading-tight">Cronómetro</span>
             </button>
         </div>
         <?php else: ?>
-        <div class="panel-ac-badge-col w-auto shrink-0">
+        <div class="panel-ac-badge-col panel-top-gadget col-start-3 w-full h-full" style="grid-column: 3 / 4; order: 3;">
             <button type="button" id="btnCronometroVentana"
-                class="inline-flex flex-row items-center justify-center gap-2 font-bold py-2 px-4 rounded-lg bg-green-500 hover:bg-green-400 text-black border-2 border-green-800 shadow-sm text-sm transition-colors"
+                class="inline-flex flex-row items-center justify-center gap-2 font-bold py-2 px-4 rounded-lg bg-blue-500 hover:bg-blue-600 text-white border-2 border-blue-800 shadow-sm text-sm transition-colors"
                 style="cursor: pointer;" title="Abrir cronómetro de ronda en ventana nueva">
-                <i class="fas fa-external-link-alt text-base text-black" aria-hidden="true"></i>
-                <span class="text-black font-bold">Cronómetro de ronda</span>
+                <i class="fas fa-external-link-alt text-base text-white" aria-hidden="true"></i>
+                <span class="text-white font-bold">Cronómetro de ronda</span>
             </button>
         </div>
         <?php endif; ?>
 
-        <?php if ($panel_show_cierre): ?>
-        <div class="panel-slate-auditoria-cierre panel-ac-badge-col flex-1 min-w-[200px] bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 shadow-sm">
-            <div class="flex flex-col gap-1.5 items-stretch text-left">
-                <div class="flex flex-wrap gap-2 justify-start">
-                    <?php foreach ($paired_tournaments_status['items'] as $stItem): ?>
-                        <?php
-                        $g = strtoupper((string)($stItem['genero'] ?? 'M'));
-                        $gLabel = $g === 'F' ? 'Femenino' : 'Masculino';
-                        $p = (int)($stItem['mesas_pendientes'] ?? 0);
-                        ?>
-                        <div class="px-1.5 py-1 rounded-lg border text-left <?php echo !empty($stItem['activo']) ? 'border-emerald-500 bg-emerald-100 shadow-sm' : 'border-slate-200 bg-slate-100 text-slate-600'; ?>">
-                            <div class="panel-ac-paired-title text-[8px] leading-snug font-semibold <?php echo !empty($stItem['activo']) ? 'text-emerald-900' : 'text-slate-700'; ?>">
-                                <?php echo htmlspecialchars($gLabel, ENT_QUOTES, 'UTF-8'); ?><?php echo !empty($stItem['activo']) ? ' · Activo' : ''; ?>
-                            </div>
-                            <div class="panel-ac-paired-sub text-[7px] leading-snug mt-0.5 <?php echo !empty($stItem['activo']) ? 'text-emerald-800' : 'text-slate-500'; ?>">
-                                Ronda <?php echo (int)($stItem['ronda_actual'] ?? 0); ?> · <strong><?php echo $p; ?></strong> mesas
-                            </div>
-                        </div>
-                    <?php endforeach; ?>
-                </div>
-                <?php if (!empty($bloqueo_cierre_total['mensaje'])): ?>
-                    <div class="panel-ac-bloqueo text-[8px] leading-snug text-amber-700 font-semibold">
-                        <i class="fas fa-exclamation-triangle mr-0.5"></i><?php echo htmlspecialchars((string)$bloqueo_cierre_total['mensaje'], ENT_QUOTES, 'UTF-8'); ?>
-                    </div>
-                <?php endif; ?>
-            </div>
-        </div>
-        <?php endif; ?>
-
-        <div class="panel-ac-badge-col flex-1 min-w-[200px] bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 shadow-sm">
-            <div class="mb-2 flex justify-start">
+        <div class="panel-ac-badge-col panel-top-gadget w-full h-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 shadow-sm" style="grid-column: 2 / 3; order: 2;">
+            <div class="top-gadget-core mb-2 flex justify-center">
                 <span class="panel-ac-head text-[1.12rem] leading-tight font-semibold text-slate-800 inline-flex items-center">
                     <i class="fas fa-users mr-1.5 text-[1.04rem] text-slate-600"></i>Jugadores y equipos
                 </span>
             </div>
-            <div class="flex flex-wrap gap-x-2 gap-y-0.5 items-baseline text-[0.98rem] leading-snug text-slate-700">
+            <div class="top-gadget-core top-gadget-text flex flex-col justify-center gap-y-0.5 items-center text-[0.98rem] leading-snug text-slate-700">
                 <span title="Jugadores">Jug. <strong><?php echo $jugadores_mostrar; ?></strong></span>
                 <?php if ($mostrar_eq_panel): ?>
-                <span class="text-slate-300" aria-hidden="true">·</span>
                 <span title="Equipos"><?php echo $es_modalidad_parejas || $es_modalidad_parejas_fijas ? 'Parejas' : 'Eq.'; ?> <strong><?php echo (int)$total_equipos; ?></strong></span>
                 <?php endif; ?>
             </div>
         </div>
+        <?php if ($panel_show_cierre): ?>
+            <?php
+            $paired_items = array_values((array)($paired_tournaments_status['items'] ?? []));
+            $paired_col5 = null;
+            foreach ($paired_items as $it) {
+                $gIt = strtoupper((string)($it['genero'] ?? 'M'));
+                if ($gIt === 'M' && !empty($it['activo'])) {
+                    $paired_col5 = $it;
+                    break;
+                }
+            }
+            if ($paired_col5 === null && !empty($paired_items)) {
+                $paired_col5 = $paired_items[0];
+            }
+            $paired_col4 = null;
+            foreach ($paired_items as $it) {
+                if ($paired_col5 === null || $it !== $paired_col5) {
+                    $paired_col4 = $it;
+                    break;
+                }
+            }
+            ?>
+            <?php if ($paired_col4): ?>
+            <div class="panel-slate-auditoria-cierre panel-ac-badge-col panel-top-gadget w-full h-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 shadow-sm" style="grid-column: 4 / 5; order: 4;">
+                <?php
+                $g = strtoupper((string)($paired_col4['genero'] ?? 'M'));
+                $gLabel = $g === 'F' ? 'Femenino' : 'Masculino';
+                $p = (int)($paired_col4['mesas_pendientes'] ?? 0);
+                ?>
+                <div class="top-gadget-core top-gadget-card px-1.5 py-1 rounded-lg border text-center <?php echo !empty($paired_col4['activo']) ? 'border-emerald-500 bg-emerald-100 shadow-sm' : 'border-slate-200 bg-slate-100 text-slate-600'; ?>">
+                    <div class="panel-ac-paired-title text-[8px] leading-snug font-semibold <?php echo !empty($paired_col4['activo']) ? 'text-emerald-900' : 'text-slate-700'; ?>">
+                        <?php echo htmlspecialchars($gLabel, ENT_QUOTES, 'UTF-8'); ?><?php echo !empty($paired_col4['activo']) ? ' · Activo' : ''; ?>
+                    </div>
+                    <div class="panel-ac-paired-sub text-[7px] leading-snug mt-0.5 <?php echo !empty($paired_col4['activo']) ? 'text-emerald-800' : 'text-slate-500'; ?>">
+                        Ronda <?php echo (int)($paired_col4['ronda_actual'] ?? 0); ?> · <strong><?php echo $p; ?></strong> mesas
+                    </div>
+                </div>
+                <?php if (!empty($bloqueo_cierre_total['mensaje'])): ?>
+                <div class="panel-ac-bloqueo text-[8px] leading-snug text-amber-700 font-semibold mt-1.5">
+                    <i class="fas fa-exclamation-triangle mr-0.5"></i><?php echo htmlspecialchars((string)$bloqueo_cierre_total['mensaje'], ENT_QUOTES, 'UTF-8'); ?>
+                </div>
+                <?php endif; ?>
+            </div>
+            <?php endif; ?>
+            <?php if ($paired_col5): ?>
+            <div class="panel-slate-auditoria-cierre panel-ac-badge-col panel-top-gadget w-full h-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 shadow-sm" style="grid-column: 5 / 6; order: 5;">
+                <?php
+                $g = strtoupper((string)($paired_col5['genero'] ?? 'M'));
+                $gLabel = $g === 'F' ? 'Femenino' : 'Masculino';
+                $p = (int)($paired_col5['mesas_pendientes'] ?? 0);
+                ?>
+                <div class="top-gadget-core top-gadget-card px-1.5 py-1 rounded-lg border text-center <?php echo !empty($paired_col5['activo']) ? 'border-emerald-500 bg-emerald-100 shadow-sm' : 'border-slate-200 bg-slate-100 text-slate-600'; ?>">
+                    <div class="panel-ac-paired-title text-[8px] leading-snug font-semibold <?php echo !empty($paired_col5['activo']) ? 'text-emerald-900' : 'text-slate-700'; ?>">
+                        <?php echo htmlspecialchars($gLabel, ENT_QUOTES, 'UTF-8'); ?><?php echo !empty($paired_col5['activo']) ? ' · Activo' : ''; ?>
+                    </div>
+                    <div class="panel-ac-paired-sub text-[7px] leading-snug mt-0.5 <?php echo !empty($paired_col5['activo']) ? 'text-emerald-800' : 'text-slate-500'; ?>">
+                        Ronda <?php echo (int)($paired_col5['ronda_actual'] ?? 0); ?> · <strong><?php echo $p; ?></strong> mesas
+                    </div>
+                </div>
+            </div>
+            <?php endif; ?>
+        <?php endif; ?>
     </div>
     <script>
     (function() {

@@ -1106,11 +1106,19 @@ html {
 /* Auditoría (izq) y cierre total (der): bloques independientes */
 .tw-panel .panel-slate-ac-split {
   display: flex !important;
-  flex-wrap: wrap !important;
-  align-items: flex-start !important;
+  flex-wrap: nowrap !important;
+  align-items: stretch !important;
   justify-content: space-between !important;
+  gap: 0.35rem !important;
   width: 100% !important;
   box-sizing: border-box !important;
+}
+.tw-panel .panel-slate-ac-split > .panel-ac-badge-col {
+  flex: 0 0 19% !important;
+  width: 19% !important;
+  max-width: 19% !important;
+  min-width: 0 !important;
+  align-self: stretch !important;
 }
 .tw-panel .panel-ac-badge-col--izq {
   flex: 0 1 auto !important;
@@ -1134,6 +1142,97 @@ html {
 }
 .tw-panel .panel-slate-auditoria-cierre .panel-ac-bloqueo {
   font-size: calc(0.875rem * 1.6) !important;
+}
+
+/* Fila superior: 5 gadgets al mismo nivel */
+.tw-panel .panel-slate-ac-split > .panel-top-gadget {
+  min-height: 92px !important;
+  max-height: 92px !important;
+  display: flex !important;
+  flex-direction: column !important;
+  justify-content: center !important;
+  align-items: center !important;
+  padding: 0.32rem 0.4rem !important;
+  overflow: hidden !important;
+  text-align: center !important;
+  max-width: 100% !important;
+}
+.tw-panel .panel-slate-ac-split > .panel-top-gadget > div {
+  width: 100% !important;
+}
+.tw-panel .panel-slate-ac-split .panel-top-gadget .panel-ac-head,
+.tw-panel .panel-slate-ac-split .panel-top-gadget .panel-ac-pill,
+.tw-panel .panel-slate-ac-split .panel-top-gadget .top-gadget-text,
+.tw-panel .panel-slate-ac-split .panel-top-gadget .panel-ac-paired-title,
+.tw-panel .panel-slate-ac-split .panel-top-gadget .panel-ac-paired-sub {
+  font-size: 1.23rem !important;
+  line-height: 1.1 !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+}
+.tw-panel .panel-slate-ac-split .panel-top-gadget .panel-ac-paired-title {
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+}
+.tw-panel .panel-slate-ac-split .panel-top-gadget .panel-ac-paired-sub {
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+}
+.tw-panel .panel-slate-ac-split .panel-top-gadget .panel-ac-bloqueo {
+  font-size: 1.11rem !important;
+  line-height: 1.1 !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+}
+.tw-panel .panel-slate-ac-split .panel-top-gadget > * {
+  width: 100% !important;
+}
+.tw-panel .panel-slate-ac-split .panel-top-gadget .top-gadget-core {
+  width: 100% !important;
+  display: flex !important;
+  justify-content: center !important;
+  align-items: center !important;
+  text-align: center !important;
+  margin: 0 !important;
+}
+.tw-panel .panel-slate-ac-split .panel-top-gadget .mb-2 {
+  margin-bottom: 0 !important;
+}
+.tw-panel .panel-slate-ac-split .panel-top-gadget .mt-0\.5,
+.tw-panel .panel-slate-ac-split .panel-top-gadget .mt-1\.5 {
+  margin-top: 0 !important;
+}
+.tw-panel .panel-slate-ac-split .panel-top-gadget .top-gadget-card {
+  flex-direction: column !important;
+}
+.tw-panel .panel-slate-ac-split .panel-top-gadget #btnCronometroVentana {
+  background: #0d6efd !important;
+  border-color: #0a58ca !important;
+  color: #fff !important;
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: center !important;
+  text-align: center !important;
+  gap: 0.35rem !important;
+  font-size: 1.44rem !important; /* +75% aprox sobre base compacta */
+  line-height: 1.1 !important;
+  padding: 0.35rem 0.5rem !important;
+}
+.tw-panel .panel-slate-ac-split .panel-top-gadget #btnCronometroVentana:hover {
+  background: #0b5ed7 !important;
+}
+.tw-panel .panel-slate-ac-split .panel-top-gadget #btnCronometroVentana span {
+  font-size: 1.44rem !important;
+  line-height: 1.1 !important;
+  max-width: none !important;
+}
+.tw-panel .panel-slate-ac-split .panel-top-gadget #btnCronometroVentana i {
+  font-size: 1.5rem !important;
 }
 
 /* Información ronda actual, mesas, inscritos, pendientes: +150% */
