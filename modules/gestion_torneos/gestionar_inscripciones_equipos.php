@@ -173,6 +173,13 @@ $csrf_token = class_exists('CSRF') ? CSRF::token() : '';
         </ol>
     </nav>
 
+    <?php
+    $inscripciones_finalizadas = !empty($inscripciones_finalizadas);
+    $torneo_iniciado = !empty($torneo_iniciado);
+    $redirect_action = 'gestionar_inscripciones_equipos';
+    require __DIR__ . '/../../resources/views/partials/inscripcion_fase_competencia_banner.php';
+    ?>
+
     <!-- Header -->
     <div class="card mb-4 border-0 shadow-sm">
         <div class="card-body">

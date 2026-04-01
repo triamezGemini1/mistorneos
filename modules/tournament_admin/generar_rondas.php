@@ -18,6 +18,13 @@ if (!$tabla_partiresul_existe) {
 
 require_once __DIR__ . '/../../config/csrf.php';
 
+if (!function_exists('ensureTournamentsInscripcionesFinalizadasColumn')) {
+    if (!defined('TORNEO_GESTION_SKIP_ROUTER')) {
+        define('TORNEO_GESTION_SKIP_ROUTER', true);
+    }
+    require_once __DIR__ . '/../torneo_gestion.php';
+}
+
 // Verificar si el torneo está finalizado
 $torneo_finalizado = isset($torneo['finalizado']) && $torneo['finalizado'] == 1;
 
@@ -51,6 +58,9 @@ $stmt->execute([$torneo_id]);
 $ultima_ronda = (int) $stmt->fetchColumn() ?: 0;
 $siguiente_ronda = $ultima_ronda + 1;
 
+ensureTournamentsInscripcionesFinalizadasColumn();
+$bloqueo_primera_por_inscripcion = ($ultima_ronda === 0 && !torneoInscripcionesFinalizadasParaPrimeraRonda((int) $torneo_id));
+
 // Total inscritos confirmados (mismo criterio que RoundManagerHandler)
 $stmt = $pdo->prepare(
     'SELECT COUNT(*) as total FROM inscritos WHERE torneo_id = ? AND ' . InscritosHelper::SQL_WHERE_SOLO_CONFIRMADO
@@ -80,6 +90,14 @@ if ($modalidad === 3) {
                 <strong>Torneo finalizado:</strong> No se pueden generar rondas.
             </div>
         <?php else: ?>
+        <?php if (!empty($bloqueo_primera_por_inscripcion)): ?>
+            <div class="alert alert-warning">
+                <i class="fas fa-clipboard-list me-2"></i>
+                <strong>Inscripción abierta:</strong> debe cerrar la fase de inscripción en
+                <a href="index.php?page=torneo_gestion&amp;action=inscripciones&amp;torneo_id=<?= (int) $torneo_id ?>" class="alert-link">Inscripciones</a>
+                (o en Gestionar inscripciones si aplica) antes de generar la primera ronda.
+            </div>
+        <?php endif; ?>
         <?php if (!empty($error_message_generar)): ?>
             <div class="alert alert-danger alert-dismissible fade show" role="alert">
                 <i class="fas fa-exclamation-triangle me-2"></i><?= htmlspecialchars($error_message_generar) ?>
@@ -123,7 +141,7 @@ if ($modalidad === 3) {
                    class="btn btn-outline-primary">
                     <i class="fas fa-external-link-alt me-2"></i>Panel de gestión del torneo
                 </a>
-                <button type="submit" class="btn btn-primary"<?= $total_inscritos_confirmados < 4 ? ' disabled title="Se requieren al menos 4 inscritos confirmados"' : '' ?>>
+                <button type="submit" class="btn btn-primary"<?= ($total_inscritos_confirmados < 4 || !empty($bloqueo_primera_por_inscripcion)) ? ' disabled title="' . ($total_inscritos_confirmados < 4 ? 'Se requieren al menos 4 inscritos confirmados' : 'Cierre la fase de inscripción desde torneo_gestion → Inscripciones') . '"' : '' ?>>
                     <i class="fas fa-magic me-2"></i>Generar siguiente ronda
                 </button>
             </div>

@@ -86,6 +86,12 @@ final class RoundManagerHandler
     public static function ejecutarGeneracionRonda(int $torneoId, array $options = []): void
     {
         try {
+            if (!\function_exists('torneoInscripcionesFinalizadasParaPrimeraRonda')) {
+                if (!\defined('TORNEO_GESTION_SKIP_ROUTER')) {
+                    \define('TORNEO_GESTION_SKIP_ROUTER', true);
+                }
+                require_once \dirname(__DIR__, 2) . '/../modules/torneo_gestion.php';
+            }
             require_once __DIR__ . '/../../Core/TorneoMesaAsignacionResolver.php';
             $pdo = \DB::pdo();
 
@@ -112,6 +118,12 @@ final class RoundManagerHandler
 
             // Verificar que la última ronda esté completa
             $ultima_ronda = $mesaService->obtenerUltimaRonda($torneoId);
+
+            if ($ultima_ronda === 0 && \function_exists('torneoInscripcionesFinalizadasParaPrimeraRonda') && !torneoInscripcionesFinalizadasParaPrimeraRonda($torneoId)) {
+                $_SESSION['error'] = 'No se puede generar la primera ronda hasta cerrar la fase de inscripción. En Gestión del torneo → Inscripciones (o Gestionar inscripciones), indique que la inscripción está cerrada para iniciar la competencia.';
+                header('Location: ' . self::redirectUrlPanel($torneoId, $options));
+                exit;
+            }
 
             if ($ultima_ronda > 0) {
                 $todas_completas = $mesaService->todasLasMesasCompletas($torneoId, $ultima_ronda);

@@ -486,18 +486,69 @@ if (isset($_GET['ajax']) && $_GET['ajax'] === 'deuda') {
     exit;
 }
 ?>
+<style>
+/* Cabecera página Inscritos: portátil ~13" (ancho útil con menú lateral) */
+.page-registrants .registrants-page-header {
+    row-gap: 0.35rem;
+    column-gap: 0.5rem;
+}
+.page-registrants .registrants-page-header-title h1 {
+    line-height: 1.25;
+}
+.page-registrants .registrants-page-header-title h1 .fa-users {
+    margin-right: 0.4rem !important;
+    opacity: 0.9;
+}
+.page-registrants .registrants-page-header-actions {
+    gap: 0.35rem !important;
+}
+.page-registrants .registrants-page-header-actions .btn {
+    white-space: nowrap;
+    padding: 0.28rem 0.55rem;
+    font-size: 0.8125rem;
+}
+.page-registrants .registrants-page-header-actions .btn i.me-2 {
+    margin-right: 0.3rem !important;
+}
+@media (min-width: 768px) and (max-width: 1599.98px) {
+    .page-registrants .registrants-page-header {
+        flex-direction: row;
+        flex-wrap: nowrap;
+        align-items: center !important;
+        justify-content: space-between;
+    }
+    .page-registrants .registrants-page-header-title {
+        flex: 1 1 auto;
+        min-width: 0;
+    }
+    .page-registrants .registrants-page-header-title h1 {
+        font-size: 1.15rem;
+    }
+    .page-registrants .registrants-page-header-actions {
+        flex: 0 1 auto;
+        justify-content: flex-end;
+        width: auto !important;
+        max-width: 55%;
+    }
+}
+@media (max-width: 767.98px) {
+    .page-registrants .registrants-page-header-actions {
+        width: 100% !important;
+        justify-content: flex-start;
+    }
+}
+</style>
 
-<div class="container-fluid">
-    <div class="row">
-        <div class="col-12">
-            <div class="d-flex justify-content-between align-items-center <?= $action === 'list' ? 'mb-2' : 'mb-4' ?>">
-                <div>
+<div class="container-fluid page-registrants px-2 px-md-3">
+    <div class="row g-0 mx-0">
+        <div class="col-12 px-1 px-sm-2">
+            <div class="registrants-page-header d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center <?= $action === 'list' ? 'mb-2' : 'mb-4' ?>">
+                <div class="registrants-page-header-title flex-grow-1 min-w-0">
                     <h1 class="<?= $action === 'list' ? 'h4' : 'h3' ?> mb-0">
                         <i class="fas fa-users me-2"></i>Inscritos
                     </h1>
-                    <p class="text-muted mb-0<?= $action === 'list' ? ' small' : '' ?>">Gesti�n de jugadores inscritos en torneos</p>
                 </div>
-                <div class="d-flex flex-wrap gap-2 justify-content-end align-items-center">
+                <div class="registrants-page-header-actions d-flex flex-wrap align-items-center flex-shrink-0 w-100 w-md-auto justify-content-md-end">
                     <?php if ($action === 'list'): ?>
                         <a href="index.php?page=registrants_report<?= !empty($filter_torneo) ? '&filter_torneo=' . (int)$filter_torneo : '' ?><?= !empty($filter_clubs) ? '&' . http_build_query(['filter_clubs' => $filter_clubs]) : '' ?>"
                                class="btn btn-sm btn-info">
@@ -562,8 +613,20 @@ if (isset($_GET['ajax']) && $_GET['ajax'] === 'deuda') {
     }
     .registrants-view-compact .table {
         width: 100%;
-        table-layout: fixed;
         margin-bottom: 0;
+    }
+    .registrants-view-compact .registrants-list-card-body {
+        padding-left: 0.5rem !important;
+        padding-right: 0.5rem !important;
+        padding-top: 0.5rem;
+        padding-bottom: 0.5rem;
+    }
+    .registrants-view-compact .registrants-table-scroll,
+    .registrants-view-compact .registrants-resumen-scroll {
+        margin-left: -0.25rem;
+        margin-right: -0.25rem;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
     }
     .registrants-view-compact .table td,
     .registrants-view-compact .table th {
@@ -581,32 +644,173 @@ if (isset($_GET['ajax']) && $_GET['ajax'] === 'deuda') {
     .registrants-view-compact .table tfoot td {
         padding: 4px 8px;
     }
+    /* Listado principal: menos espacio entre columnas + prioridad sobre .table de Bootstrap */
+    .registrants-view-compact .table-registrants-main {
+        table-layout: auto;
+        width: 100%;
+        border-collapse: collapse !important;
+        --reg-cell-px: 3px;
+    }
+    .registrants-view-compact .table-registrants-main > thead > tr > th,
+    .registrants-view-compact .table-registrants-main > tbody > tr > td {
+        padding: 2px var(--reg-cell-px) !important;
+        line-height: 1.15;
+        font-size: 0.8125rem;
+    }
+    .registrants-view-compact .table-registrants-main > thead > tr > th {
+        font-size: 0.72rem;
+        font-weight: 600;
+        text-transform: none;
+        letter-spacing: 0;
+        padding-top: 3px !important;
+        padding-bottom: 3px !important;
+    }
+    .registrants-view-compact .table-registrants-main tbody td strong:not(.registrants-nombre-text) {
+        font-weight: 600;
+        font-size: 0.8125rem;
+        line-height: 1.15;
+    }
+    /* Nombre del jugador: tamaño legible */
+    .registrants-view-compact .table-registrants-main tbody td.registrants-col-nombre {
+        font-size: 1rem !important;
+        line-height: 1.25;
+        vertical-align: middle;
+    }
+    .registrants-view-compact .table-registrants-main tbody td.registrants-col-nombre .registrants-nombre-text {
+        font-size: 1.05rem;
+        font-weight: 600;
+        line-height: 1.25;
+        display: inline-block;
+        max-width: 100%;
+    }
+    .registrants-view-compact .table-registrants-main .badge {
+        font-size: 0.82rem;
+        padding: 0.28em 0.5em;
+        font-weight: 600;
+        line-height: 1.2;
+        vertical-align: middle;
+    }
+    .registrants-view-compact .table-registrants-main tr.table-secondary td,
+    .registrants-view-compact .table-registrants-main tr.table-group-divider td {
+        padding: 2px var(--reg-cell-px) !important;
+        line-height: 1.25;
+        font-size: 0.95rem;
+    }
+    .registrants-view-compact .table-registrants-main tr.table-secondary .badge {
+        font-size: 0.8rem;
+        padding: 0.26em 0.48em;
+    }
     .registrants-view-compact .table-registrants-main td:nth-child(2),
     .registrants-view-compact .table-registrants-main th:nth-child(2) {
-        word-break: break-word;
-        overflow-wrap: anywhere;
+        width: auto;
+        min-width: 6.5rem;
+        max-width: 20rem;
+        word-break: normal;
+        overflow-wrap: break-word;
+        hyphens: none;
     }
-    .registrants-view-compact .table-registrants-main td:last-child,
     .registrants-view-compact .table-registrants-main th:last-child {
         white-space: nowrap;
         width: 1%;
     }
-    .registrants-view-compact .table-resumen-club td:first-child,
-    .registrants-view-compact .table-resumen-club th:first-child {
-        word-break: break-word;
-        overflow-wrap: anywhere;
+    /* Resumen por club: columnas estrechas para ver toda la fila en pantallas medianas */
+    .registrants-view-compact .table-resumen-club {
+        table-layout: fixed;
+        width: 100%;
+        border-collapse: collapse !important;
     }
-    .registrants-view-compact .table-resumen-club td:last-child,
-    .registrants-view-compact .table-resumen-club th:last-child {
+    .registrants-view-compact .table-resumen-club > thead > tr > th,
+    .registrants-view-compact .table-resumen-club > tbody > tr > td,
+    .registrants-view-compact .table-resumen-club > tfoot > tr > th {
+        padding: 3px 4px !important;
+        font-size: 0.75rem;
+        line-height: 1.2;
+        vertical-align: middle;
+    }
+    .registrants-view-compact .table-resumen-club > thead > tr > th:nth-child(1),
+    .registrants-view-compact .table-resumen-club > tbody > tr > td:nth-child(1),
+    .registrants-view-compact .table-resumen-club > tfoot > tr > th:nth-child(1) {
+        width: 30%;
+        min-width: 5rem;
+        max-width: 32vw;
+    }
+    .registrants-view-compact .table-resumen-club .resumen-club-nombre strong {
+        display: block;
+        overflow: hidden;
+        text-overflow: ellipsis;
         white-space: nowrap;
-        width: 1%;
+        font-weight: 600;
+        font-size: 0.98rem;
+        line-height: 1.3;
+    }
+    .registrants-view-compact .table-resumen-club > tfoot > tr > th:nth-child(1) strong,
+    .registrants-view-compact .table-resumen-club > tfoot > tr > th:nth-child(1) {
+        overflow: visible;
+        white-space: normal;
+        text-overflow: clip;
+    }
+    .registrants-view-compact .table-resumen-club > thead > tr > th:nth-child(2),
+    .registrants-view-compact .table-resumen-club > tbody > tr > td:nth-child(2),
+    .registrants-view-compact .table-resumen-club > thead > tr > th:nth-child(3),
+    .registrants-view-compact .table-resumen-club > tbody > tr > td:nth-child(3),
+    .registrants-view-compact .table-resumen-club > thead > tr > th:nth-child(4),
+    .registrants-view-compact .table-resumen-club > tbody > tr > td:nth-child(4) {
+        width: 9%;
+        min-width: 3.25rem;
+        max-width: 4.75rem;
+        padding-left: 3px !important;
+        padding-right: 3px !important;
+    }
+    .registrants-view-compact .table-resumen-club .badge {
+        font-size: 0.88rem;
+        padding: 0.32em 0.55em;
+        font-weight: 600;
+        line-height: 1.2;
+    }
+    .registrants-view-compact .table-resumen-club > thead > tr > th:nth-child(5),
+    .registrants-view-compact .table-resumen-club > tbody > tr > td:nth-child(5),
+    .registrants-view-compact .table-resumen-club > tfoot > tr > th:nth-child(5) {
+        width: auto;
+        white-space: nowrap;
+    }
+    .registrants-view-compact .table-resumen-club td.resumen-club-actions {
+        text-align: center;
+    }
+    .registrants-view-compact .table-resumen-club .resumen-club-actions-inner {
+        display: inline-flex;
+        flex-direction: row;
+        flex-wrap: nowrap;
+        align-items: center;
+        justify-content: center;
+        gap: 0.2rem;
+        vertical-align: middle;
+    }
+    .registrants-view-compact .table-resumen-club .resumen-club-btn {
+        padding: 0.1rem 0.32rem !important;
+        font-size: 0.68rem !important;
+        line-height: 1.1;
+        min-width: 0;
+    }
+    .registrants-view-compact .table-resumen-club .resumen-club-btn i {
+        margin: 0 !important;
+        font-size: 0.75rem;
     }
     .registrants-view-compact .registrants-list-title {
         margin-bottom: 0.5rem !important;
     }
     .registrants-view-compact .registrants-list-title h3 {
-        font-size: 1.15rem;
+        font-size: 1.28rem;
         margin-bottom: 0 !important;
+        line-height: 1.3;
+    }
+    .registrants-view-compact .registrants-torneo-stats-row .card-body {
+        padding: 0.65rem 0.85rem;
+    }
+    .registrants-view-compact .registrants-torneo-stats-row h2.mb-0 {
+        font-size: 1.25rem;
+    }
+    .registrants-view-compact .registrants-torneo-stats-row .card-title {
+        font-size: 0.85rem;
     }
     .registrants-view-compact .row.mb-4 > .col-md-3 .card-body,
     .registrants-view-compact .row.g-4.mb-4 .card-body {
@@ -625,6 +829,106 @@ if (isset($_GET['ajax']) && $_GET['ajax'] === 'deuda') {
     .registrants-view-compact .row.g-4.mb-4 .card-body.text-center p {
         font-size: 0.75rem;
     }
+    /* Portátiles ~13" y ancho útil con sidebar (aprox. 1024–1366px) */
+    .page-registrants {
+        max-width: 100%;
+        overflow-x: auto;
+    }
+    .registrants-view-compact .registrants-stats-widgets .card-body {
+        padding: 0.45rem 0.5rem;
+    }
+    .registrants-view-compact .registrants-stats-widgets h3 {
+        font-size: 1rem !important;
+    }
+    .registrants-view-compact .registrants-stats-widgets p {
+        font-size: 0.68rem !important;
+        line-height: 1.2;
+    }
+    .registrants-view-compact .registrants-toolbar-export {
+        gap: 0.35rem !important;
+    }
+    .registrants-view-compact .registrants-toolbar-export .btn {
+        font-size: 0.8rem;
+        padding: 0.25rem 0.45rem;
+    }
+    .registrants-view-compact .table-registrants-main th:nth-child(1),
+    .registrants-view-compact .table-registrants-main td:nth-child(1) {
+        width: 2.75rem;
+        max-width: 3.5rem;
+        white-space: nowrap;
+    }
+    .registrants-view-compact .table-registrants-main th:nth-child(3),
+    .registrants-view-compact .table-registrants-main td:nth-child(3) {
+        width: 2.25rem;
+        padding-left: 2px !important;
+        padding-right: 2px !important;
+        text-align: center;
+        white-space: nowrap;
+    }
+    .registrants-view-compact .table-registrants-main th:nth-child(4),
+    .registrants-view-compact .table-registrants-main td:nth-child(4) {
+        width: 1%;
+        min-width: 4.5rem;
+        max-width: none;
+        white-space: nowrap;
+        padding-left: 2px !important;
+        padding-right: 2px !important;
+    }
+    .registrants-view-compact .table-registrants-main th:nth-child(5),
+    .registrants-view-compact .table-registrants-main td:nth-child(5) {
+        width: 1%;
+        min-width: 4.75rem;
+        white-space: nowrap;
+        padding-left: 2px !important;
+        padding-right: 2px !important;
+    }
+    .registrants-view-compact .table-registrants-main td.registrants-actions-cell {
+        white-space: nowrap;
+        vertical-align: middle;
+        width: 1%;
+        min-width: min-content;
+        max-width: none;
+        padding-left: 4px !important;
+        padding-right: 2px !important;
+    }
+    .registrants-view-compact .table-registrants-main .registrants-actions-cell {
+        display: flex;
+        flex-direction: row;
+        flex-wrap: nowrap;
+        align-items: center;
+        justify-content: flex-end;
+        gap: 0.2rem 0.35rem;
+    }
+    .registrants-view-compact .table-registrants-main .registrants-actions-cell form.d-inline {
+        display: inline-flex !important;
+        flex: 0 0 auto;
+        margin: 0;
+        line-height: 1;
+    }
+    .registrants-view-compact .table-registrants-main .registrants-actions-cell .btn,
+    .registrants-view-compact .table-registrants-main .registrants-actions-cell a.btn {
+        margin: 0;
+        flex: 0 0 auto;
+        font-size: 0.6875rem;
+        padding: 0.12rem 0.35rem;
+        line-height: 1.2;
+        min-height: 0;
+    }
+    .registrants-view-compact .table-registrants-main .registrants-actions-cell span.btn {
+        flex: 0 0 auto;
+        padding: 0.12rem 0.3rem;
+        line-height: 1.2;
+    }
+    .registrants-view-compact .table-registrants-main .registrants-actions-cell span.btn .fa-lock {
+        font-size: 0.7rem;
+    }
+    @media (max-width: 991.98px) {
+        .registrants-view-compact .table-registrants-main .registrants-actions-cell {
+            max-width: none;
+            justify-content: flex-end;
+            flex-wrap: nowrap;
+        }
+    }
     </style>
     <div class="registrants-view-compact">
     <?php
@@ -635,9 +939,9 @@ if (isset($_GET['ajax']) && $_GET['ajax'] === 'deuda') {
     // Widget de estadísticas de inscripciones - SOLO mostrar si hay torneo seleccionado
     if (!empty($filter_torneo) && !empty($detailed_stats) && !isset($detailed_stats['error'])):
     ?>
-    <div class="row g-4 mb-4">
+    <div class="row g-3 g-lg-4 mb-4 registrants-stats-widgets">
         <?php if ($user_role === 'admin_general'): ?>
-            <div class="col-md-2">
+            <div class="col-6 col-md-4 col-xl-2">
                 <div class="card border-primary">
                     <div class="card-body text-center">
                         <h3 class="text-primary mb-0"><?= number_format($detailed_stats['total_users'] ?? 0) ?></h3>
@@ -645,7 +949,7 @@ if (isset($_GET['ajax']) && $_GET['ajax'] === 'deuda') {
                     </div>
                 </div>
             </div>
-            <div class="col-md-2">
+            <div class="col-6 col-md-4 col-xl-2">
                 <div class="card border-success">
                     <div class="card-body text-center">
                         <h3 class="text-success mb-0"><?= number_format($detailed_stats['total_active_users'] ?? 0) ?></h3>
@@ -653,7 +957,7 @@ if (isset($_GET['ajax']) && $_GET['ajax'] === 'deuda') {
                     </div>
                 </div>
             </div>
-            <div class="col-md-2">
+            <div class="col-6 col-md-4 col-xl-2">
                 <div class="card border-info">
                     <div class="card-body text-center">
                         <h3 class="text-info mb-0"><?= number_format($detailed_stats['total_clubs'] ?? 0) ?></h3>
@@ -661,7 +965,7 @@ if (isset($_GET['ajax']) && $_GET['ajax'] === 'deuda') {
                     </div>
                 </div>
             </div>
-            <div class="col-md-2">
+            <div class="col-6 col-md-4 col-xl-2">
                 <div class="card border-warning">
                     <div class="card-body text-center">
                         <h3 class="text-warning mb-0"><?= number_format($detailed_stats['total_admin_clubs'] ?? 0) ?></h3>
@@ -669,7 +973,7 @@ if (isset($_GET['ajax']) && $_GET['ajax'] === 'deuda') {
                     </div>
                 </div>
             </div>
-            <div class="col-md-2">
+            <div class="col-6 col-md-4 col-xl-2">
                 <div class="card border-secondary">
                     <div class="card-body text-center">
                         <h3 class="text-secondary mb-0"><?= number_format($detailed_stats['total_admin_torneo'] ?? 0) ?></h3>
@@ -677,7 +981,7 @@ if (isset($_GET['ajax']) && $_GET['ajax'] === 'deuda') {
                     </div>
                 </div>
             </div>
-            <div class="col-md-2">
+            <div class="col-6 col-md-4 col-xl-2">
                 <div class="card border-dark">
                     <div class="card-body text-center">
                         <h3 class="text-dark mb-0"><?= number_format($detailed_stats['total_operadores'] ?? 0) ?></h3>
@@ -686,7 +990,7 @@ if (isset($_GET['ajax']) && $_GET['ajax'] === 'deuda') {
                 </div>
             </div>
         <?php elseif ($user_role === 'admin_club' && !empty($detailed_stats['supervised_clubs'])): ?>
-            <div class="col-md-2">
+            <div class="col-6 col-md-4 col-xl-2">
                 <div class="card border-primary">
                     <div class="card-body text-center">
                         <h3 class="text-primary mb-0"><?= number_format($detailed_stats['total_afiliados'] ?? 0) ?></h3>
@@ -694,7 +998,7 @@ if (isset($_GET['ajax']) && $_GET['ajax'] === 'deuda') {
                     </div>
                 </div>
             </div>
-            <div class="col-md-2">
+            <div class="col-6 col-md-4 col-xl-2">
                 <div class="card border-success">
                     <div class="card-body text-center">
                         <h3 class="text-success mb-0"><?= number_format($detailed_stats['afiliados_by_gender']['hombres'] ?? 0) ?></h3>
@@ -702,7 +1006,7 @@ if (isset($_GET['ajax']) && $_GET['ajax'] === 'deuda') {
                     </div>
                 </div>
             </div>
-            <div class="col-md-2">
+            <div class="col-6 col-md-4 col-xl-2">
                 <div class="card border-danger">
                     <div class="card-body text-center">
                         <h3 class="text-danger mb-0"><?= number_format($detailed_stats['afiliados_by_gender']['mujeres'] ?? 0) ?></h3>
@@ -710,7 +1014,7 @@ if (isset($_GET['ajax']) && $_GET['ajax'] === 'deuda') {
                     </div>
                 </div>
             </div>
-            <div class="col-md-2">
+            <div class="col-6 col-md-4 col-xl-2">
                 <div class="card border-info">
                     <div class="card-body text-center">
                         <h3 class="text-info mb-0"><?= number_format($detailed_stats['active_inscriptions']['total'] ?? 0) ?></h3>
@@ -718,7 +1022,7 @@ if (isset($_GET['ajax']) && $_GET['ajax'] === 'deuda') {
                     </div>
                 </div>
             </div>
-            <div class="col-md-2">
+            <div class="col-6 col-md-4 col-xl-2">
                 <div class="card border-secondary">
                     <div class="card-body text-center">
                         <h3 class="text-secondary mb-0"><?= number_format($detailed_stats['total_admin_torneo'] ?? 0) ?></h3>
@@ -726,7 +1030,7 @@ if (isset($_GET['ajax']) && $_GET['ajax'] === 'deuda') {
                     </div>
                 </div>
             </div>
-            <div class="col-md-2">
+            <div class="col-6 col-md-4 col-xl-2">
                 <div class="card border-dark">
                     <div class="card-body text-center">
                         <h3 class="text-dark mb-0"><?= number_format($detailed_stats['total_operadores'] ?? 0) ?></h3>
@@ -751,7 +1055,7 @@ if (isset($_GET['ajax']) && $_GET['ajax'] === 'deuda') {
                 
                 <div class="row g-3">
                     <!-- Filtro por Torneo -->
-                    <div class="col-md-6">
+                    <div class="col-12 col-lg-6">
                         <label class="form-label"><i class="fas fa-trophy me-1"></i>Torneo</label>
                         <select name="filter_torneo" class="form-select" id="filterTorneo" onchange="this.form.submit()" required>
                             <option value="">-- Seleccione un Torneo --</option>
@@ -771,9 +1075,9 @@ if (isset($_GET['ajax']) && $_GET['ajax'] === 'deuda') {
                     
                     <!-- Filtro por Clubs - Solo mostrar si hay torneo seleccionado -->
                     <?php if (!empty($filter_torneo)): ?>
-                    <div class="col-md-6">
+                    <div class="col-12 col-lg-6">
                         <label class="form-label"><i class="fas fa-users me-1"></i>Clubs</label>
-                        <div class="border rounded p-2" style="max-height: 150px; overflow-y: auto;">
+                        <div class="border rounded p-2" style="max-height: min(28vh, 150px); overflow-y: auto;">
                             <div class="form-check">
                                 <input class="form-check-input" type="checkbox" id="selectAllClubs" onclick="toggleAllClubs(this); this.form.submit();">
                                 <label class="form-check-label fw-bold" for="selectAllClubs">
@@ -796,7 +1100,7 @@ if (isset($_GET['ajax']) && $_GET['ajax'] === 'deuda') {
                         <small class="text-muted">Seleccione uno o varios clubs</small>
                     </div>
                     <?php else: ?>
-                    <div class="col-md-6">
+                    <div class="col-12 col-lg-6">
                         <label class="form-label"><i class="fas fa-users me-1"></i>Clubs</label>
                         <div class="alert alert-secondary mb-0">
                             <i class="fas fa-info-circle me-2"></i>
@@ -849,7 +1153,7 @@ if (isset($_GET['ajax']) && $_GET['ajax'] === 'deuda') {
                             <div class="small text-success fw-bold mb-1">
                                 <i class="fas fa-file-export me-1"></i>Reportes de este torneo
                             </div>
-                            <div class="d-flex flex-wrap gap-2 align-items-center">
+                            <div class="d-flex flex-wrap gap-2 align-items-center registrants-toolbar-export">
                                 <?php
                                 $url_panel_export = ($return_to === 'panel_torneo')
                                     ? ('panel_torneo.php?action=panel&torneo_id=' . (int)$filter_torneo)
@@ -862,7 +1166,7 @@ if (isset($_GET['ajax']) && $_GET['ajax'] === 'deuda') {
                                     <i class="fas fa-th-large me-1"></i>Regresar al panel
                                 </a>
                                 <?php if (class_exists('AppHelpers')): ?>
-                                <span class="d-inline-flex flex-nowrap align-items-center gap-1 border-start border-success ps-2 ms-1">
+                                <span class="d-inline-flex flex-wrap align-items-center gap-1 border-start border-success ps-2 ms-1">
                                     <button type="button" class="btn btn-sm btn-outline-secondary" onclick="if (history.length > 1) { history.back(); } else { window.location.href='index.php?page=registrants'; }">
                                         <i class="fas fa-arrow-left me-1"></i>Volver
                                     </button>
@@ -930,8 +1234,8 @@ if (isset($_GET['ajax']) && $_GET['ajax'] === 'deuda') {
         require __DIR__ . '/../resources/views/partials/torneo_inscripcion_badges_bs5.php';
         ?>
         <!-- Estad�sticas Generales del Torneo -->
-        <div class="row mb-4">
-            <div class="col-md-3">
+        <div class="row mb-4 g-3 registrants-torneo-stats-row">
+            <div class="col-6 col-lg-3">
                 <div class="card bg-primary text-white">
                     <div class="card-body">
                         <h5 class="card-title"><i class="fas fa-users me-2"></i>Total Inscritos</h5>
@@ -939,7 +1243,7 @@ if (isset($_GET['ajax']) && $_GET['ajax'] === 'deuda') {
                     </div>
                 </div>
             </div>
-            <div class="col-md-3">
+            <div class="col-6 col-lg-3">
                 <div class="card bg-success text-white">
                     <div class="card-body">
                         <h5 class="card-title"><i class="fas fa-check-circle me-2"></i>Confirmados</h5>
@@ -947,7 +1251,7 @@ if (isset($_GET['ajax']) && $_GET['ajax'] === 'deuda') {
                     </div>
                 </div>
             </div>
-            <div class="col-md-3">
+            <div class="col-6 col-lg-3">
                 <div class="card bg-info text-white">
                     <div class="card-body">
                         <h5 class="card-title"><i class="fas fa-male me-2"></i>Hombres</h5>
@@ -956,7 +1260,7 @@ if (isset($_GET['ajax']) && $_GET['ajax'] === 'deuda') {
                     </div>
                 </div>
             </div>
-            <div class="col-md-3">
+            <div class="col-6 col-lg-3">
                 <div class="card bg-danger text-white">
                     <div class="card-body">
                         <h5 class="card-title"><i class="fas fa-female me-2"></i>Mujeres</h5>
@@ -975,36 +1279,42 @@ if (isset($_GET['ajax']) && $_GET['ajax'] === 'deuda') {
                         <i class="fas fa-building me-2"></i>Resumen de Inscritos por Club
                     </h5>
                 </div>
-                <div class="card-body">
-                    <div class="table-responsive">
-                        <table class="table table-hover table-resumen-club">
+                <div class="card-body px-2 py-2">
+                    <div class="table-responsive registrants-resumen-scroll">
+                        <table class="table table-hover table-sm table-resumen-club">
                             <thead>
                                 <tr>
                                     <th>Club</th>
                                     <th class="text-center">Total</th>
-                                    <th class="text-center">Hombres</th>
-                                    <th class="text-center">Mujeres</th>
-                                    <th class="text-center">Acciones</th>
+                                    <th class="text-center" title="Hombres">H</th>
+                                    <th class="text-center" title="Mujeres">M</th>
+                                    <th class="text-center" title="Acciones">Acc.</th>
                                 </tr>
                             </thead>
                             <tbody>
-                                <?php foreach ($resumen_por_club as $club): ?>
+                                <?php foreach ($resumen_por_club as $club):
+                                    $club_nombre_display = preg_replace('/[\s\x{00A0}]+/u', ' ', trim((string)($club['club_nombre'] ?? '')));
+                                    ?>
                                     <tr>
-                                        <td><strong><?= htmlspecialchars($club['club_nombre']) ?></strong></td>
+                                        <td class="resumen-club-nombre">
+                                            <strong title="<?= htmlspecialchars($club_nombre_display, ENT_QUOTES, 'UTF-8') ?>"><?= htmlspecialchars($club_nombre_display, ENT_QUOTES, 'UTF-8') ?></strong>
+                                        </td>
                                         <td class="text-center"><span class="badge bg-primary"><?= number_format($club['total_inscritos']) ?></span></td>
                                         <td class="text-center"><span class="badge bg-info"><?= number_format($club['hombres']) ?></span></td>
                                         <td class="text-center"><span class="badge bg-danger"><?= number_format($club['mujeres']) ?></span></td>
-                                        <td class="text-center">
-                                            <a href="index.php?page=registrants&filter_torneo=<?= $filter_torneo ?>&filter_clubs[]=<?= $club['id'] ?>" 
-                                               class="btn btn-sm btn-outline-primary" title="Ver detalle">
-                                                <i class="fas fa-eye me-1"></i>Detalle
+                                        <td class="resumen-club-actions">
+                                            <div class="resumen-club-actions-inner">
+                                            <a href="index.php?page=registrants&filter_torneo=<?= $filter_torneo ?>&filter_clubs[]=<?= $club['id'] ?>"
+                                               class="btn btn-sm btn-outline-primary resumen-club-btn" title="Ver detalle del club">
+                                                <i class="fas fa-eye" aria-hidden="true"></i><span class="visually-hidden">Detalle</span>
                                             </a>
-                                            <button onclick="exportarClubPDF(<?= $club['id'] ?>)" class="btn btn-sm btn-outline-danger" title="Exportar PDF">
-                                                <i class="fas fa-file-pdf me-1"></i>PDF
+                                            <button type="button" onclick="exportarClubPDF(<?= (int)$club['id'] ?>)" class="btn btn-sm btn-outline-danger resumen-club-btn" title="Exportar PDF">
+                                                <i class="fas fa-file-pdf" aria-hidden="true"></i><span class="visually-hidden">PDF</span>
                                             </button>
-                                            <button onclick="exportarClubExcel(<?= $club['id'] ?>)" class="btn btn-sm btn-outline-success" title="Exportar Excel">
-                                                <i class="fas fa-file-excel me-1"></i>Excel
+                                            <button type="button" onclick="exportarClubExcel(<?= (int)$club['id'] ?>)" class="btn btn-sm btn-outline-success resumen-club-btn" title="Exportar Excel">
+                                                <i class="fas fa-file-excel" aria-hidden="true"></i><span class="visually-hidden">Excel</span>
                                             </button>
+                                            </div>
                                         </td>
                                     </tr>
                                 <?php endforeach; ?>
@@ -1026,8 +1336,8 @@ if (isset($_GET['ajax']) && $_GET['ajax'] === 'deuda') {
     <?php endif; ?>
     
     <!-- Vista de Lista -->
-    <div class="card">
-        <div class="card-body">
+    <div class="card registrants-list-card">
+        <div class="card-body registrants-list-card-body">
             <?php if (empty($filter_torneo)): ?>
                 <div class="alert alert-warning">
                     <i class="fas fa-info-circle me-2"></i>
@@ -1136,8 +1446,8 @@ if (isset($_GET['ajax']) && $_GET['ajax'] === 'deuda') {
                     </h3>
                 </div>
                 <?php endif; ?>
-                <div class="table-responsive">
-                    <table class="table table-hover table-registrants-main">
+                <div class="table-responsive registrants-table-scroll">
+                    <table class="table table-hover table-registrants-main table-sm">
                         <thead>
                             <tr>
                                 <th>ID</th>
@@ -1145,7 +1455,7 @@ if (isset($_GET['ajax']) && $_GET['ajax'] === 'deuda') {
                                 <th>Sexo</th>
                                 <th>Celular</th>
                                 <th>Estado</th>
-                                <th class="text-center">Acciones</th>
+                                <th class="text-end">Acciones</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -1192,7 +1502,7 @@ if (isset($_GET['ajax']) && $_GET['ajax'] === 'deuda') {
                             <?php foreach ($datos_club['inscritos'] as $item): ?>
                                 <tr>
                                     <td><?= htmlspecialchars((string)$item['id']) ?></td>
-                                    <td><strong><?= htmlspecialchars($item['nombre']) ?></strong></td>
+                                    <td class="registrants-col-nombre"><strong class="registrants-nombre-text"><?= htmlspecialchars($item['nombre']) ?></strong></td>
                                     <td>
                                         <?php
                                         $sexo_text = $item['sexo'] ?? '';
@@ -1219,7 +1529,7 @@ if (isset($_GET['ajax']) && $_GET['ajax'] === 'deuda') {
                                         }
                                         ?>
                                     </td>
-                                    <td class="text-center">
+                                    <td class="registrants-actions-cell text-end">
                                         <?php
                                         // Confirmar: solo si el torneo no está cerrado. Retirar: siempre permitido durante el torneo.
                                         $puede_confirmar = empty($torneo_cerrado_reg);

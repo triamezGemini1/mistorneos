@@ -247,10 +247,32 @@ function torneoGestionInscripcionesEquiposAgrupadas(PDO $pdo, int $torneoId): ar
 }
 
 /**
+ * Misma consulta que torneoGestionInscripcionesEquiposAgrupadas, pero agrupado solo por asociación
+ * (sin subnivel equipo). Para reportes de torneos individuales: sin filas/columna de equipo.
+ */
+function torneoGestionInscripcionesSoloAsociacion(PDO $pdo, int $torneoId): array {
+    $nested = torneoGestionInscripcionesEquiposAgrupadas($pdo, $torneoId);
+    $out = [];
+    foreach ($nested as $asoc => $equiposAsoc) {
+        $lista = [];
+        foreach ($equiposAsoc as $integrantes) {
+            foreach ($integrantes as $r) {
+                $lista[] = $r;
+            }
+        }
+        usort($lista, static function ($a, $b) {
+            return strcmp((string)($a['usuario_nombre'] ?? ''), (string)($b['usuario_nombre'] ?? ''));
+        });
+        $out[$asoc] = $lista;
+    }
+    return $out;
+}
+
+/**
  * Nombre del torneo, organizador (club responsable) y logo embebible para reportes PDF.
  */
 function torneoGestionDatosEncabezadoReporteInscripciones(PDO $pdo, int $torneoId): ?array {
-    $stmt = $pdo->prepare('SELECT id, nombre, club_responsable FROM tournaments WHERE id = ? LIMIT 1');
+    $stmt = $pdo->prepare('SELECT id, nombre, club_responsable, modalidad FROM tournaments WHERE id = ? LIMIT 1');
     $stmt->execute([$torneoId]);
     $torneo = $stmt->fetch(PDO::FETCH_ASSOC);
     if (!$torneo) {
@@ -278,24 +300,42 @@ function torneoGestionDatosEncabezadoReporteInscripciones(PDO $pdo, int $torneoI
         'torneo_nombre' => (string)($torneo['nombre'] ?? ''),
         'org_nombre' => $orgNombre,
         'org_logo_data_uri' => $orgLogoDataUri,
+        'modalidad' => (int)($torneo['modalidad'] ?? 0),
     ];
 }
 
 /**
  * Tablas agrupadas: asociación → equipo (nombre + código) → atletas (orden de columnas detallado).
+ * Si $mostrarNivelEquipo es false (torneo individual), $agrupado debe ser solo asociación → lista de filas.
  */
-function torneoGestionHtmlCuerpoInscritosDetalladoEquipos(array $agrupado, callable $esc): string {
+function torneoGestionHtmlCuerpoInscritosDetalladoEquipos(array $agrupado, callable $esc, bool $mostrarNivelEquipo = true): string {
     $colspan = 6;
     $html = '';
-    foreach ($agrupado as $asoc => $equiposAsoc) {
+    foreach ($agrupado as $asoc => $nivel2) {
         $html .= '<table style="width:100%;border-collapse:collapse;margin-bottom:12px;">'
             . '<tr class="asoc"><td colspan="' . $colspan . '">ASOCIACIÓN: ' . $esc($asoc) . '</td></tr>';
-        foreach ($equiposAsoc as $equipo => $integrantes) {
-            $codEq = (string)(($integrantes[0]['codigo_equipo'] ?? '') ?: '');
-            $eqLabel = 'EQUIPO: ' . $esc($equipo) . ($codEq !== '' ? ' — Código: ' . $esc($codEq) : '');
-            $html .= '<tr class="equipo"><td colspan="' . $colspan . '">' . $eqLabel . '</td></tr>';
+        if ($mostrarNivelEquipo) {
+            foreach ($nivel2 as $equipo => $integrantes) {
+                $codEq = (string)(($integrantes[0]['codigo_equipo'] ?? '') ?: '');
+                $eqLabel = 'EQUIPO: ' . $esc($equipo) . ($codEq !== '' ? ' — Código: ' . $esc($codEq) : '');
+                $html .= '<tr class="equipo"><td colspan="' . $colspan . '">' . $eqLabel . '</td></tr>';
+                $html .= '<tr><th>Cédula</th><th>id_usuario</th><th>numfvd</th><th>Nombre</th><th>Sexo</th><th>Teléfono / celular</th></tr>';
+                foreach ($integrantes as $r) {
+                    $numfvd = (int)($r['usuario_numfvd'] ?? 0);
+                    if ($numfvd <= 0) {
+                        $numfvd = (int)($r['inscrito_numfvd'] ?? 0);
+                    }
+                    $html .= '<tr><td>' . $esc($r['usuario_cedula'] ?? $r['cedula_inscrita'] ?? '') . '</td>'
+                        . '<td>' . (int)($r['id_usuario'] ?? 0) . '</td>'
+                        . '<td>' . $numfvd . '</td>'
+                        . '<td>' . $esc($r['usuario_nombre'] ?? '') . '</td>'
+                        . '<td>' . $esc($r['usuario_sexo'] ?? '') . '</td>'
+                        . '<td>' . $esc($r['usuario_telefono'] ?? '') . '</td></tr>';
+                }
+            }
+        } else {
             $html .= '<tr><th>Cédula</th><th>id_usuario</th><th>numfvd</th><th>Nombre</th><th>Sexo</th><th>Teléfono / celular</th></tr>';
-            foreach ($integrantes as $r) {
+            foreach ($nivel2 as $r) {
                 $numfvd = (int)($r['usuario_numfvd'] ?? 0);
                 if ($numfvd <= 0) {
                     $numfvd = (int)($r['inscrito_numfvd'] ?? 0);
@@ -668,6 +708,41 @@ function ensureTournamentsCorreccionesCierreColumn(): void {
     }
 }
 
+/**
+ * Cierra la fase de inscripción para permitir generar la ronda 1 (panel).
+ * Torneos que ya tenían partidas reciben 1 automáticamente al crear la columna.
+ */
+function ensureTournamentsInscripcionesFinalizadasColumn(): void {
+    if (!tournamentsColumnExists('inscripciones_finalizadas')) {
+        try {
+            $pdo = DB::pdo();
+            $pdo->exec("ALTER TABLE tournaments ADD COLUMN inscripciones_finalizadas TINYINT(1) NOT NULL DEFAULT 0 COMMENT '1=inscripción cerrada; habilita generar primera ronda'");
+            $pdo->exec('UPDATE tournaments t SET inscripciones_finalizadas = 1 WHERE EXISTS (SELECT 1 FROM partiresul p WHERE p.id_torneo = t.id LIMIT 1)');
+        } catch (Throwable $e) {
+            // Ignorar si falla (permisos, etc.)
+        }
+    }
+}
+
+/**
+ * Indica si el administrador cerró la fase de inscripción (requisito para generar la ronda 1).
+ */
+function torneoInscripcionesFinalizadasParaPrimeraRonda(int $torneoId): bool {
+    ensureTournamentsInscripcionesFinalizadasColumn();
+    if (!tournamentsColumnExists('inscripciones_finalizadas')) {
+        return true;
+    }
+    try {
+        $pdo = DB::pdo();
+        $st = $pdo->prepare('SELECT inscripciones_finalizadas FROM tournaments WHERE id = ?');
+        $st->execute([$torneoId]);
+
+        return (int) $st->fetchColumn() === 1;
+    } catch (Throwable $e) {
+        return true;
+    }
+}
+
 if (!defined('TORNEO_GESTION_SKIP_ROUTER') || !TORNEO_GESTION_SKIP_ROUTER) {
 
 // Obtener acción y parámetros
@@ -720,7 +795,11 @@ if ($action === 'inscripciones_export_xls' && ($_SERVER['REQUEST_METHOD'] ?? '')
         http_response_code(404);
         exit('Torneo no encontrado');
     }
-    $agrupado = torneoGestionInscripcionesEquiposAgrupadas($pdo, $torneo_id);
+    $esIndividual = (int)($torneo['modalidad'] ?? 0) === 1;
+    $agrupado = $esIndividual
+        ? torneoGestionInscripcionesSoloAsociacion($pdo, $torneo_id)
+        : torneoGestionInscripcionesEquiposAgrupadas($pdo, $torneo_id);
+    $colspan = $esIndividual ? 6 : 7;
     $filename = 'inscritos_torneo_' . $torneo_id . '_' . date('Y-m-d_His') . '.xls';
     header('Content-Type: application/vnd.ms-excel; charset=utf-8');
     header('Content-Disposition: attachment; filename="' . $filename . '"');
@@ -728,13 +807,12 @@ if ($action === 'inscripciones_export_xls' && ($_SERVER['REQUEST_METHOD'] ?? '')
     header('Expires: 0');
     $esc = static fn ($v): string => htmlspecialchars((string)$v, ENT_QUOTES, 'UTF-8');
     echo '<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"><title>Inscritos</title></head><body><table border="1" cellpadding="5" cellspacing="0">';
-    echo '<tr><td colspan="7" style="font-weight:bold;text-align:center;background:#e2e8f0;font-size:16px;">' . $esc($torneo['nombre'] ?? '') . '</td></tr>';
-    foreach ($agrupado as $asoc => $equiposAsoc) {
-        echo '<tr><td colspan="7" style="font-weight:bold;background:#dbeafe;">ASOCIACIÓN: ' . $esc($asoc) . '</td></tr>';
-        foreach ($equiposAsoc as $equipo => $integrantes) {
-            echo '<tr><td colspan="7" style="font-weight:bold;background:#f3f4f6;">EQUIPO: ' . $esc($equipo) . '</td></tr>';
-            echo '<tr style="font-weight:bold;background:#f8fafc;"><td>cedula</td><td>nombre</td><td>id_usuario</td><td>numfvd</td><td>codigo_equipo</td><td>sexo</td><td>telefono</td></tr>';
-            foreach ($integrantes as $r) {
+    echo '<tr><td colspan="' . $colspan . '" style="font-weight:bold;text-align:center;background:#e2e8f0;font-size:16px;">' . $esc($torneo['nombre'] ?? '') . '</td></tr>';
+    if ($esIndividual) {
+        foreach ($agrupado as $asoc => $filas) {
+            echo '<tr><td colspan="6" style="font-weight:bold;background:#dbeafe;">ASOCIACIÓN: ' . $esc($asoc) . '</td></tr>';
+            echo '<tr style="font-weight:bold;background:#f8fafc;"><td>cedula</td><td>nombre</td><td>id_usuario</td><td>numfvd</td><td>sexo</td><td>telefono</td></tr>';
+            foreach ($filas as $r) {
                 $numfvd = (int)($r['usuario_numfvd'] ?? 0);
                 if ($numfvd <= 0) {
                     $numfvd = (int)($r['inscrito_numfvd'] ?? 0);
@@ -744,10 +822,32 @@ if ($action === 'inscripciones_export_xls' && ($_SERVER['REQUEST_METHOD'] ?? '')
                     . '<td>' . $esc($r['usuario_nombre'] ?? '') . '</td>'
                     . '<td>' . (int)($r['id_usuario'] ?? 0) . '</td>'
                     . '<td>' . $numfvd . '</td>'
-                    . '<td>' . $esc($r['codigo_equipo'] ?? '') . '</td>'
                     . '<td>' . $esc($r['usuario_sexo'] ?? '') . '</td>'
                     . '<td>' . $esc($r['usuario_telefono'] ?? '') . '</td>'
                     . '</tr>';
+            }
+        }
+    } else {
+        foreach ($agrupado as $asoc => $equiposAsoc) {
+            echo '<tr><td colspan="7" style="font-weight:bold;background:#dbeafe;">ASOCIACIÓN: ' . $esc($asoc) . '</td></tr>';
+            foreach ($equiposAsoc as $equipo => $integrantes) {
+                echo '<tr><td colspan="7" style="font-weight:bold;background:#f3f4f6;">EQUIPO: ' . $esc($equipo) . '</td></tr>';
+                echo '<tr style="font-weight:bold;background:#f8fafc;"><td>cedula</td><td>nombre</td><td>id_usuario</td><td>numfvd</td><td>codigo_equipo</td><td>sexo</td><td>telefono</td></tr>';
+                foreach ($integrantes as $r) {
+                    $numfvd = (int)($r['usuario_numfvd'] ?? 0);
+                    if ($numfvd <= 0) {
+                        $numfvd = (int)($r['inscrito_numfvd'] ?? 0);
+                    }
+                    echo '<tr>'
+                        . '<td>' . $esc($r['usuario_cedula'] ?? $r['cedula_inscrita'] ?? '') . '</td>'
+                        . '<td>' . $esc($r['usuario_nombre'] ?? '') . '</td>'
+                        . '<td>' . (int)($r['id_usuario'] ?? 0) . '</td>'
+                        . '<td>' . $numfvd . '</td>'
+                        . '<td>' . $esc($r['codigo_equipo'] ?? '') . '</td>'
+                        . '<td>' . $esc($r['usuario_sexo'] ?? '') . '</td>'
+                        . '<td>' . $esc($r['usuario_telefono'] ?? '') . '</td>'
+                        . '</tr>';
+                }
             }
         }
     }
@@ -757,31 +857,49 @@ if ($action === 'inscripciones_export_xls' && ($_SERVER['REQUEST_METHOD'] ?? '')
 if ($action === 'inscripciones_export_pdf' && ($_SERVER['REQUEST_METHOD'] ?? '') === 'GET' && $torneo_id) {
     verificarPermisosTorneo($torneo_id, $user_id, $is_admin_general);
     $pdo = DB::pdo();
-    $stmtT = $pdo->prepare('SELECT id, nombre FROM tournaments WHERE id = ? LIMIT 1');
+    $stmtT = $pdo->prepare('SELECT id, nombre, modalidad FROM tournaments WHERE id = ? LIMIT 1');
     $stmtT->execute([$torneo_id]);
     $torneo = $stmtT->fetch(PDO::FETCH_ASSOC);
     if (!$torneo) {
         http_response_code(404);
         exit('Torneo no encontrado');
     }
-    $agrupado = torneoGestionInscripcionesEquiposAgrupadas($pdo, $torneo_id);
+    $esIndividual = (int)($torneo['modalidad'] ?? 0) === 1;
+    $agrupado = $esIndividual
+        ? torneoGestionInscripcionesSoloAsociacion($pdo, $torneo_id)
+        : torneoGestionInscripcionesEquiposAgrupadas($pdo, $torneo_id);
     $esc = static fn ($v): string => htmlspecialchars((string)$v, ENT_QUOTES, 'UTF-8');
     $html = '<!DOCTYPE html><html><head><meta charset="UTF-8"><style>@page{size:letter landscape;margin:10mm}body{font-family:DejaVu Sans,sans-serif;font-size:8pt}table{width:100%;border-collapse:collapse;margin-bottom:10px}th,td{border:1px solid #666;padding:2px 4px}th{background:#eee}.titulo{font-size:14pt;font-weight:bold;text-align:center;margin:0 0 8px 0}.asoc{background:#dbeafe;font-weight:bold}.equipo{background:#f3f4f6;font-weight:bold}</style></head><body>';
     $html .= '<p class="titulo">' . $esc($torneo['nombre'] ?? '') . '</p>';
-    foreach ($agrupado as $asoc => $equiposAsoc) {
-        $html .= '<table><tr class="asoc"><td colspan="7">ASOCIACIÓN: ' . $esc($asoc) . '</td></tr>';
-        foreach ($equiposAsoc as $equipo => $integrantes) {
-            $html .= '<tr class="equipo"><td colspan="7">EQUIPO: ' . $esc($equipo) . '</td></tr>';
-            $html .= '<tr><th>cedula</th><th>nombre</th><th>id_usuario</th><th>numfvd</th><th>codigo_equipo</th><th>sexo</th><th>telefono</th></tr>';
-            foreach ($integrantes as $r) {
+    if ($esIndividual) {
+        foreach ($agrupado as $asoc => $filas) {
+            $html .= '<table><tr class="asoc"><td colspan="6">ASOCIACIÓN: ' . $esc($asoc) . '</td></tr>';
+            $html .= '<tr><th>cedula</th><th>nombre</th><th>id_usuario</th><th>numfvd</th><th>sexo</th><th>telefono</th></tr>';
+            foreach ($filas as $r) {
                 $numfvd = (int)($r['usuario_numfvd'] ?? 0);
                 if ($numfvd <= 0) {
                     $numfvd = (int)($r['inscrito_numfvd'] ?? 0);
                 }
-                $html .= '<tr><td>' . $esc($r['usuario_cedula'] ?? $r['cedula_inscrita'] ?? '') . '</td><td>' . $esc($r['usuario_nombre'] ?? '') . '</td><td>' . (int)($r['id_usuario'] ?? 0) . '</td><td>' . $numfvd . '</td><td>' . $esc($r['codigo_equipo'] ?? '') . '</td><td>' . $esc($r['usuario_sexo'] ?? '') . '</td><td>' . $esc($r['usuario_telefono'] ?? '') . '</td></tr>';
+                $html .= '<tr><td>' . $esc($r['usuario_cedula'] ?? $r['cedula_inscrita'] ?? '') . '</td><td>' . $esc($r['usuario_nombre'] ?? '') . '</td><td>' . (int)($r['id_usuario'] ?? 0) . '</td><td>' . $numfvd . '</td><td>' . $esc($r['usuario_sexo'] ?? '') . '</td><td>' . $esc($r['usuario_telefono'] ?? '') . '</td></tr>';
             }
+            $html .= '</table>';
         }
-        $html .= '</table>';
+    } else {
+        foreach ($agrupado as $asoc => $equiposAsoc) {
+            $html .= '<table><tr class="asoc"><td colspan="7">ASOCIACIÓN: ' . $esc($asoc) . '</td></tr>';
+            foreach ($equiposAsoc as $equipo => $integrantes) {
+                $html .= '<tr class="equipo"><td colspan="7">EQUIPO: ' . $esc($equipo) . '</td></tr>';
+                $html .= '<tr><th>cedula</th><th>nombre</th><th>id_usuario</th><th>numfvd</th><th>codigo_equipo</th><th>sexo</th><th>telefono</th></tr>';
+                foreach ($integrantes as $r) {
+                    $numfvd = (int)($r['usuario_numfvd'] ?? 0);
+                    if ($numfvd <= 0) {
+                        $numfvd = (int)($r['inscrito_numfvd'] ?? 0);
+                    }
+                    $html .= '<tr><td>' . $esc($r['usuario_cedula'] ?? $r['cedula_inscrita'] ?? '') . '</td><td>' . $esc($r['usuario_nombre'] ?? '') . '</td><td>' . (int)($r['id_usuario'] ?? 0) . '</td><td>' . $numfvd . '</td><td>' . $esc($r['codigo_equipo'] ?? '') . '</td><td>' . $esc($r['usuario_sexo'] ?? '') . '</td><td>' . $esc($r['usuario_telefono'] ?? '') . '</td></tr>';
+                }
+            }
+            $html .= '</table>';
+        }
     }
     $html .= '</body></html>';
     $autoload = __DIR__ . '/../vendor/autoload.php';
@@ -818,7 +936,10 @@ if ($action === 'inscripciones_reporte_detallado_pdf' && ($_SERVER['REQUEST_METH
         http_response_code(404);
         exit('Torneo no encontrado');
     }
-    $agrupado = torneoGestionInscripcionesEquiposAgrupadas($pdo, $torneo_id);
+    $esIndividualRep = (int)($enc['modalidad'] ?? 0) === 1;
+    $agrupado = $esIndividualRep
+        ? torneoGestionInscripcionesSoloAsociacion($pdo, $torneo_id)
+        : torneoGestionInscripcionesEquiposAgrupadas($pdo, $torneo_id);
     $esc = static fn ($v): string => htmlspecialchars((string)$v, ENT_QUOTES, 'UTF-8');
     $logoHtml = ($enc['org_logo_data_uri'] ?? '') !== ''
         ? '<img src="' . $esc($enc['org_logo_data_uri']) . '" style="max-height:56px;max-width:140px;object-fit:contain;" alt="" />'
@@ -840,8 +961,10 @@ if ($action === 'inscripciones_reporte_detallado_pdf' && ($_SERVER['REQUEST_METH
         . '<td style="border:none;vertical-align:middle"><div class="org-name">' . $esc($enc['org_nombre']) . '</div></td>'
         . '</tr></table></div>';
     $html .= '<p class="titulo-torneo">' . $esc($enc['torneo_nombre']) . '</p>';
-    $html .= '<p class="meta-gen">Reporte de inscritos por asociación y equipo · Generado: ' . $esc(date('d/m/Y H:i')) . '</p>';
-    $html .= torneoGestionHtmlCuerpoInscritosDetalladoEquipos($agrupado, $esc);
+    $html .= '<p class="meta-gen">' . $esc($esIndividualRep
+        ? 'Reporte de inscritos por asociación · Generado: ' . date('d/m/Y H:i')
+        : 'Reporte de inscritos por asociación y equipo · Generado: ' . date('d/m/Y H:i')) . '</p>';
+    $html .= torneoGestionHtmlCuerpoInscritosDetalladoEquipos($agrupado, $esc, !$esIndividualRep);
     $html .= '</body></html>';
     $autoload = __DIR__ . '/../vendor/autoload.php';
     if (is_file($autoload) && is_readable($autoload)) {
@@ -881,7 +1004,10 @@ if ($action === 'inscripciones_reporte_detallado_xls' && ($_SERVER['REQUEST_METH
         http_response_code(404);
         exit('Torneo no encontrado');
     }
-    $agrupado = torneoGestionInscripcionesEquiposAgrupadas($pdo, $torneo_id);
+    $esIndividualRep = (int)($enc['modalidad'] ?? 0) === 1;
+    $agrupado = $esIndividualRep
+        ? torneoGestionInscripcionesSoloAsociacion($pdo, $torneo_id)
+        : torneoGestionInscripcionesEquiposAgrupadas($pdo, $torneo_id);
     $esc = static fn ($v): string => htmlspecialchars((string)$v, ENT_QUOTES, 'UTF-8');
     $filename = 'inscritos_detallado_torneo_' . $torneo_id . '_' . date('Y-m-d_His') . '.xls';
     header('Content-Type: application/vnd.ms-excel; charset=utf-8');
@@ -892,9 +1018,11 @@ if ($action === 'inscripciones_reporte_detallado_xls' && ($_SERVER['REQUEST_METH
     echo '<table border="1" cellpadding="5" cellspacing="0" style="margin-bottom:12px;">';
     echo '<tr><td colspan="6" style="font-weight:bold;text-align:center;background:#e2e8f0;font-size:16px;">' . $esc($enc['org_nombre']) . '</td></tr>';
     echo '<tr><td colspan="6" style="font-weight:bold;text-align:center;background:#eff6ff;font-size:15px;">' . $esc($enc['torneo_nombre']) . '</td></tr>';
-    echo '<tr><td colspan="6" style="text-align:center;font-size:10px;color:#555;">Reporte detallado · Generado: ' . $esc(date('d/m/Y H:i')) . '</td></tr>';
+    echo '<tr><td colspan="6" style="text-align:center;font-size:10px;color:#555;">' . $esc(
+        ($esIndividualRep ? 'Reporte detallado por asociación · ' : 'Reporte detallado · ') . 'Generado: ' . date('d/m/Y H:i')
+    ) . '</td></tr>';
     echo '</table>';
-    echo torneoGestionHtmlCuerpoInscritosDetalladoEquipos($agrupado, $esc);
+    echo torneoGestionHtmlCuerpoInscritosDetalladoEquipos($agrupado, $esc, !$esIndividualRep);
     echo '</body></html>';
     exit;
 }
@@ -1180,6 +1308,46 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $torneo_id = (int)($_POST['torneo_id'] ?? 0);
             generarRonda($torneo_id, $user_id, $is_admin_general);
             break;
+
+        case 'set_inscripciones_finalizadas':
+            $tid = (int) ($_POST['torneo_id'] ?? 0);
+            $valor = isset($_POST['inscripciones_finalizadas']) ? (int) $_POST['inscripciones_finalizadas'] : 0;
+            if ($tid <= 0) {
+                $_SESSION['error'] = 'Torneo no especificado.';
+                header('Location: ' . buildRedirectUrl('index'));
+                exit;
+            }
+            verificarPermisosTorneo($tid, $user_id, $is_admin_general);
+            if (isTorneoLocked($tid)) {
+                $_SESSION['error'] = 'El torneo está cerrado.';
+                header('Location: ' . buildRedirectUrl('panel', ['torneo_id' => $tid]));
+                exit;
+            }
+            ensureTournamentsInscripcionesFinalizadasColumn();
+            $pdoSf = DB::pdo();
+            $stMax = $pdoSf->prepare('SELECT MAX(partida) FROM partiresul WHERE id_torneo = ?');
+            $stMax->execute([$tid]);
+            $maxR = (int) $stMax->fetchColumn();
+            if ($maxR > 0 && $valor === 0) {
+                $_SESSION['error'] = 'No puede reabrir la fase de inscripción: el torneo ya tiene rondas generadas.';
+                $redirSf = trim((string) ($_POST['redirect_action'] ?? 'inscripciones'));
+                if (!in_array($redirSf, ['inscripciones', 'gestionar_inscripciones_equipos'], true)) {
+                    $redirSf = 'inscripciones';
+                }
+                header('Location: ' . buildRedirectUrl($redirSf, ['torneo_id' => $tid]));
+                exit;
+            }
+            $stUp = $pdoSf->prepare('UPDATE tournaments SET inscripciones_finalizadas = ? WHERE id = ?');
+            $stUp->execute([$valor ? 1 : 0, $tid]);
+            $_SESSION['success'] = $valor
+                ? 'Fase de inscripción cerrada. Ya puede generar la primera ronda desde el panel del torneo.'
+                : 'Fase de inscripción reabierta. El botón «Generar ronda» permanecerá deshabilitado hasta que cierre de nuevo.';
+            $redirSf = trim((string) ($_POST['redirect_action'] ?? 'inscripciones'));
+            if (!in_array($redirSf, ['inscripciones', 'gestionar_inscripciones_equipos'], true)) {
+                $redirSf = 'inscripciones';
+            }
+            header('Location: ' . buildRedirectUrl($redirSf, ['torneo_id' => $tid]));
+            exit;
         
         case 'vincular_torneos_evento':
             $parent_torneo_id = (int)($_POST['parent_torneo_id'] ?? 0);
@@ -2446,6 +2614,7 @@ function obtenerDatosPosiciones($torneo_id) {
  * Obtiene datos de inscripciones de un torneo
  */
 function obtenerDatosInscripciones($torneo_id) {
+    ensureTournamentsInscripcionesFinalizadasColumn();
     $pdo = DB::pdo();
     
     $stmt = $pdo->prepare("SELECT t.*, COALESCE(o.nombre, c.nombre) AS club_nombre
@@ -2528,6 +2697,11 @@ function obtenerDatosInscripciones($torneo_id) {
         (int) ($torneo['modalidad'] ?? 0)
     );
 
+    $inscripciones_finalizadas = true;
+    if (tournamentsColumnExists('inscripciones_finalizadas')) {
+        $inscripciones_finalizadas = (int) ($torneo['inscripciones_finalizadas'] ?? 0) === 1;
+    }
+
     return [
         'torneo' => $torneo,
         'inscritos' => $inscritos,
@@ -2539,6 +2713,7 @@ function obtenerDatosInscripciones($torneo_id) {
         'torneo_iniciado' => $torneo_iniciado,
         'puede_confirmar_retirar' => $puede_confirmar_retirar,
         'contadores_inscripcion' => $contadores_inscripcion,
+        'inscripciones_finalizadas' => $inscripciones_finalizadas,
     ];
 }
 
@@ -3202,6 +3377,10 @@ function obtenerDatosPanelEquipos($torneo_id) {
         $stmt->execute([$torneo_id, $ultima_ronda]);
         $total_mesas_ronda = (int)$stmt->fetchColumn();
     }
+    ensureTournamentsInscripcionesFinalizadasColumn();
+    if ($ultima_ronda === 0 && \function_exists('torneoInscripcionesFinalizadasParaPrimeraRonda') && !torneoInscripcionesFinalizadasParaPrimeraRonda((int) $torneo_id)) {
+        $puede_generar = false;
+    }
     
     // Estadísticas adicionales
     $stmt = $pdo->prepare("SELECT COUNT(*) FROM partiresul WHERE id_torneo = ? AND registrado = 1");
@@ -3245,6 +3424,7 @@ function obtenerDatosPanelEquipos($torneo_id) {
  */
 function obtenerDatosGestionarInscripcionesEquipos($torneo_id) {
     require_once __DIR__ . '/../lib/EquiposHelper.php';
+    ensureTournamentsInscripcionesFinalizadasColumn();
     
     $pdo = DB::pdo();
     
@@ -3352,12 +3532,21 @@ function obtenerDatosGestionarInscripcionesEquipos($torneo_id) {
         (int) ($torneo['modalidad'] ?? 0)
     );
 
+    $rondas_gen_eq = obtenerRondasGeneradas($torneo_id);
+    $torneo_iniciado_eq = !empty($rondas_gen_eq);
+    $inscripciones_finalizadas_eq = true;
+    if (tournamentsColumnExists('inscripciones_finalizadas')) {
+        $inscripciones_finalizadas_eq = (int) ($torneo['inscripciones_finalizadas'] ?? 0) === 1;
+    }
+
     return [
         'torneo' => $torneo,
         'equipos' => $equipos,
         'equipos_por_club' => $equipos_por_club,
         'jugadores_por_equipo' => max(2, (int)($torneo['pareclub'] ?? 4)),
         'contadores_inscripcion' => $contadores_inscripcion,
+        'torneo_iniciado' => $torneo_iniciado_eq,
+        'inscripciones_finalizadas' => $inscripciones_finalizadas_eq,
     ];
 }
 

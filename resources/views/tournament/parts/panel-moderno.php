@@ -61,6 +61,7 @@ $ultima_ronda_tiene_resultados = isset($ultima_ronda_tiene_resultados) ? (bool)$
 $totalRondas = isset($torneo['rondas']) ? (int)$torneo['rondas'] : 0;
 $puede_generar_ronda = isset($puede_generar_ronda) ? (bool)$puede_generar_ronda : (isset($puedeGenerarRonda) ? (bool)$puedeGenerarRonda : true);
 $puedeGenerar = $puede_generar_ronda;
+$bloqueo_generar_por_inscripcion = isset($bloqueo_generar_por_inscripcion) ? (bool)$bloqueo_generar_por_inscripcion : false;
 $mesas_incompletas = isset($mesas_incompletas) && $mesas_incompletas !== null ? (int)$mesas_incompletas : (isset($mesasIncompletas) && $mesasIncompletas !== null ? (int)$mesasIncompletas : 0);
 $mesasInc = $mesas_incompletas;
 $isLocked = isset($torneo['locked']) ? ((int)$torneo['locked'] === 1) : false;
@@ -475,11 +476,18 @@ tailwind.config = {
                         
                         <!-- Generar Ronda -->
                         <?php if ($proximaRonda <= $totalRondas): ?>
+                            <?php if ($bloqueo_generar_por_inscripcion): ?>
+                                <p class="text-xs text-amber-800 bg-amber-50 border border-amber-200 rounded-lg p-2 mb-2">
+                                    <i class="fas fa-info-circle mr-1"></i>
+                                    Cierre la fase de inscripción en <strong>Inscripciones</strong> (o <strong>Gestionar inscripciones</strong> en modalidad equipos/parejas) antes de generar la primera ronda.
+                                </p>
+                            <?php endif; ?>
                             <form method="POST" action="<?php echo $use_standalone ? ($base_url . '?torneo_id=' . (int)($torneo['id'] ?? 0)) : 'index.php?page=torneo_gestion'; ?>" id="form-generar-ronda">
                                 <input type="hidden" name="action" value="generar_ronda">
                                 <input type="hidden" name="csrf_token" value="<?php echo CSRF::token(); ?>">
                                 <input type="hidden" name="torneo_id" value="<?php echo (int)($torneo['id'] ?? 0); ?>">
                                 <button type="submit" id="btn-generar-ronda"
+                                        title="<?php echo $bloqueo_generar_por_inscripcion ? 'Cierre la fase de inscripción desde el administrador de inscripciones.' : ''; ?>"
                                         data-btn-reset-html="<?php echo htmlspecialchars(
                                             '<i class="fas fa-' . (($puedeGenerar && !$isLocked) ? 'play' : 'lock') . '"></i> Generar Ronda ' . (int)$proximaRonda,
                                             ENT_QUOTES, 'UTF-8'

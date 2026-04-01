@@ -15,6 +15,7 @@ $base_url = $use_standalone ? $script_actual : 'index.php?page=torneo_gestion';
 $url_panel = $base_url . ($use_standalone ? '?' : '&') . 'action=panel&torneo_id=' . $torneo_id;
 
 $tid = $torneo_id;
+$reporte_sin_equipo = ((int)($torneo['modalidad'] ?? 0) === 1);
 if ($tid > 0 && class_exists('AppHelpers')) {
     $url_xls_simple = AppHelpers::torneoGestionUrl('inscripciones_export_xls', $tid);
     $url_xls_estruct = AppHelpers::torneoGestionUrl('inscripciones_reporte_detallado_xls', $tid);
@@ -64,7 +65,7 @@ if ($tid > 0 && class_exists('AppHelpers')) {
                     <a href="<?php echo htmlspecialchars($url_xls_simple, ENT_QUOTES, 'UTF-8'); ?>"
                        class="btn btn-success w-100 text-start d-flex align-items-center justify-content-between">
                         <span><i class="fas fa-table me-2"></i>Simple</span>
-                        <small class="opacity-75">Por asociación y equipo</small>
+                        <small class="opacity-75"><?php echo $reporte_sin_equipo ? 'Por asociación' : 'Por asociación y equipo'; ?></small>
                     </a>
                     <a href="<?php echo htmlspecialchars($url_xls_estruct, ENT_QUOTES, 'UTF-8'); ?>"
                        class="btn btn-outline-success w-100 text-start d-flex align-items-center justify-content-between">
@@ -85,7 +86,7 @@ if ($tid > 0 && class_exists('AppHelpers')) {
                        class="btn btn-danger w-100 text-start d-flex align-items-center justify-content-between"
                        target="_blank" rel="noopener">
                         <span><i class="fas fa-file-pdf me-2"></i>Simple</span>
-                        <small class="opacity-75">Por asociación y equipo</small>
+                        <small class="opacity-75"><?php echo $reporte_sin_equipo ? 'Por asociación' : 'Por asociación y equipo'; ?></small>
                     </a>
                     <a href="<?php echo htmlspecialchars($url_pdf_estruct, ENT_QUOTES, 'UTF-8'); ?>"
                        class="btn btn-outline-danger w-100 text-start d-flex align-items-center justify-content-between"

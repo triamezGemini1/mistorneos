@@ -13,6 +13,8 @@ $hombres = isset($hombres) ? (int)$hombres : 0;
 $mujeres = isset($mujeres) ? (int)$mujeres : 0;
 $resumen_clubes = $resumen_clubes ?? [];
 $puede_confirmar_retirar = isset($puede_confirmar_retirar) ? $puede_confirmar_retirar : true;
+$inscripciones_finalizadas = !empty($inscripciones_finalizadas);
+$redirect_action = 'inscripciones';
 ?>
 
 <!-- Breadcrumb -->
@@ -45,6 +47,8 @@ $puede_confirmar_retirar = isset($puede_confirmar_retirar) ? $puede_confirmar_re
         </div>
     </div>
 </div>
+
+<?php require __DIR__ . '/../../resources/views/partials/inscripcion_fase_competencia_banner.php'; ?>
 
 <!-- Botón retorno al panel (visible debajo del header) -->
 <div class="mb-3">

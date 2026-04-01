@@ -58,6 +58,9 @@ final class TournamentStatusHandler
         if (function_exists('ensureTournamentsCorreccionesCierreColumn')) {
             ensureTournamentsCorreccionesCierreColumn();
         }
+        if (function_exists('ensureTournamentsInscripcionesFinalizadasColumn')) {
+            ensureTournamentsInscripcionesFinalizadasColumn();
+        }
 
         $pdo = \DB::pdo();
 
@@ -72,6 +75,15 @@ final class TournamentStatusHandler
         $proxima_ronda = $ultima_ronda + 1;
         $mesas_incompletas = (int) $vm['mesas_incompletas'];
         $puede_generar = (bool) $vm['puede_generar_ronda'];
+
+        $inscripciones_finalizadas = true;
+        if (\function_exists('tournamentsColumnExists') && \tournamentsColumnExists('inscripciones_finalizadas')) {
+            $inscripciones_finalizadas = (int) ($torneo['inscripciones_finalizadas'] ?? 0) === 1;
+        }
+        $bloqueo_generar_por_inscripcion = ($ultima_ronda === 0 && !$inscripciones_finalizadas);
+        if ($bloqueo_generar_por_inscripcion) {
+            $puede_generar = false;
+        }
 
         $stmt = $pdo->prepare('SELECT COUNT(*) FROM inscritos WHERE torneo_id = ?');
         $stmt->execute([$torneoId]);
@@ -179,6 +191,8 @@ final class TournamentStatusHandler
             'total_jugadores_inscritos' => $total_jugadores_inscritos,
             'puedeGenerarRonda' => $puede_generar,
             'puede_generar_ronda' => $puede_generar,
+            'inscripciones_finalizadas' => $inscripciones_finalizadas,
+            'bloqueo_generar_por_inscripcion' => $bloqueo_generar_por_inscripcion,
             'mesasIncompletas' => $mesas_incompletas,
             'mesas_incompletas' => $mesas_incompletas,
             'mesas_cerradas_ronda' => $mesas_cerradas_ronda,
