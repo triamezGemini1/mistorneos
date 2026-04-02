@@ -14,13 +14,14 @@ $script = $_SERVER['SCRIPT_NAME'] ?? 'index.php';
 $base_url = ((!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http') . '://' . ($_SERVER['HTTP_HOST'] ?? '') . dirname($script);
 $url_panel = rtrim($base_url, '/') . '/' . basename($script) . '?page=torneo_gestion&action=panel&torneo_id=' . (int)$torneo_id;
 
-// URL principal para jugadores: acceso por cédula (recomendado para QR del torneo)
-$perfil_jugador_url = $base_url . '/public/perfil_jugador.php?torneo_id=' . $torneo_id;
+// URL pública: consulta de mesa por ronda (QR del torneo + ID de jugador; no expone el perfil completo)
+$public_base = rtrim(AppHelpers::getPublicUrl(), '/');
+$info_torneo_mesas_url = $public_base . '/info_torneo_mesas.php?torneo_id=' . (int) $torneo_id;
 $torneo_info_url = $base_url . '/public/torneo_info.php?torneo_id=' . $torneo_id;
 
 // URLs específicas para cada sección
 $urls = [
-    'perfil_jugador' => $perfil_jugador_url,
+    'info_torneo_mesas' => $info_torneo_mesas_url,
     'general' => $torneo_info_url . '&seccion=general',
     'incidencias' => $torneo_info_url . '&seccion=incidencias',
     'listado' => $torneo_info_url . '&seccion=listado'
@@ -62,34 +63,34 @@ function generarQRUrl($data, $size = 300) {
         </div>
         
         <div class="row g-4">
-            <!-- QR Acceso jugador por cédula (recomendado para imprimir en el evento) -->
+            <!-- QR: consulta de mesa (ID de jugador; sin perfil completo) -->
             <div class="col-md-6 col-lg-4">
                 <div class="card h-100 border-success">
                     <div class="card-header bg-success text-white text-center">
                         <h6 class="mb-0">
-                            <i class="fas fa-user-check me-2"></i>Acceso jugador (cédula)
+                            <i class="fas fa-chess-board me-2"></i>Consulta de mesa (jugadores)
                         </h6>
                     </div>
                     <div class="card-body text-center">
-                        <img src="<?= htmlspecialchars(generarQRUrl($urls['perfil_jugador'], 200)) ?>" 
-                             alt="QR Acceso jugador por cédula" 
+                        <img src="<?= htmlspecialchars(generarQRUrl($urls['info_torneo_mesas'], 200)) ?>" 
+                             alt="QR consulta de mesa por ID de jugador" 
                              class="img-fluid mb-3 border rounded p-2 bg-white">
                         <p class="small text-muted mb-2">
-                            <strong>Recomendado.</strong> Jugadores escanean, ingresan cédula y ven su información, mesas, resumen y resultados.
+                            <strong>Recomendado.</strong> Tras escanear, el jugador ingresa su <strong>ID de jugador</strong> y la <strong>ronda</strong>. Se abre un <strong>portal</strong> con mesa (resaltada), resumen de participación, listado general, posiciones por equipos (si aplica) y enlace a clasificación. Puede <strong>actualizar</strong> sin volver a escribir el ID mientras el torneo esté en curso.
                         </p>
                         <div class="d-grid gap-2">
-                            <a href="<?= htmlspecialchars($urls['perfil_jugador']) ?>" 
+                            <a href="<?= htmlspecialchars($urls['info_torneo_mesas']) ?>" 
                                class="btn btn-sm btn-success">
                                 <i class="fas fa-external-link-alt me-1"></i>Ver Página
                             </a>
                             <button type="button" 
                                     class="btn btn-sm btn-outline-success"
-                                    onclick="descargarQR('<?= htmlspecialchars(generarQRUrl($urls['perfil_jugador'], 500)) ?>', 'qr_acceso_jugador_torneo_<?= $torneo_id ?>.png')">
+                                    onclick="descargarQR('<?= htmlspecialchars(generarQRUrl($urls['info_torneo_mesas'], 500)) ?>', 'qr_consulta_mesa_torneo_<?= $torneo_id ?>.png')">
                                 <i class="fas fa-download me-1"></i>Descargar QR
                             </button>
                             <button type="button" 
                                     class="btn btn-sm btn-outline-secondary"
-                                    onclick="copiarEnlace('<?= htmlspecialchars($urls['perfil_jugador']) ?>')">
+                                    onclick="copiarEnlace('<?= htmlspecialchars($urls['info_torneo_mesas']) ?>')">
                                 <i class="fas fa-copy me-1"></i>Copiar Enlace
                             </button>
                         </div>
