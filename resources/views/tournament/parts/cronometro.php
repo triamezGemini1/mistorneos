@@ -1,28 +1,13 @@
 <?php
 /**
  * Vista standalone: Cronómetro de Ronda
- * Página aparte - pantalla dedicada al cronómetro
+ * Pantalla dedicada sin layout de la app: sin menús ni cabeceras del sitio.
  */
 $torneo = $torneo ?? ['id' => 0, 'nombre' => 'Torneo'];
 $torneo_id = $torneo_id ?? (int)($_GET['torneo_id'] ?? 0);
-$script_actual = basename($_SERVER['PHP_SELF'] ?? '');
-$return_to_raw = trim((string)($_GET['return_to'] ?? ''));
-$return_to_safe = '';
-if ($return_to_raw !== '' && !preg_match('#^(https?|javascript|data):#i', $return_to_raw)) {
-    $return_to_safe = $return_to_raw;
-}
-
-if ($return_to_safe !== '') {
-    $url_panel = $return_to_safe;
-} elseif (in_array($script_actual, ['admin_torneo.php', 'panel_torneo.php'], true)) {
-    $url_panel = $script_actual . '?action=panel&torneo_id=' . (int)$torneo_id;
-} else {
-    $url_panel = 'index.php?page=torneo_gestion&action=panel&torneo_id=' . (int)$torneo_id;
-}
 
 // Banner configurable e interactivo:
 // rota entre todos los banners publicados con selector=0 según nivel de acceso.
-// Niveles permitidos para este reloj: [0 (maestro), nivel_organizador].
 $banners_cronometro = [];
 try {
     $nivel_organizador = (int)($torneo['owner_user_id'] ?? 0);
@@ -59,10 +44,9 @@ try {
         }
     }
 } catch (Exception $e) {
-    // Fallback silencioso para no romper el cronómetro si falta tabla o datos.
+    // Fallback silencioso
 }
 
-// Fallback legado por si aún no hay registros en bannerclock.
 if (empty($banners_cronometro)) {
     $fallback_banner = trim((string)($torneo['banner_cronometro'] ?? $torneo['mensaje_cronometro'] ?? ''));
     if ($fallback_banner !== '') {
@@ -73,53 +57,61 @@ if (empty($banners_cronometro)) {
     $banners_cronometro[] = 'Mesa tecnica activa - Mantenga el orden de juego';
 }
 
-$logo_url = class_exists('AppHelpers') ? AppHelpers::getAppLogo() : '';
+$titulo_pagina = htmlspecialchars($torneo['nombre'] ?? 'Ronda', ENT_QUOTES, 'UTF-8');
 ?>
 <!DOCTYPE html>
 <html lang="es">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Cronómetro - <?= htmlspecialchars($torneo['nombre'] ?? 'Ronda') ?></title>
+    <title><?= $titulo_pagina ?></title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; }
+        html, body {
+            height: 100%;
+            overflow: hidden;
+        }
         body {
             font-family: 'Segoe UI', system-ui, sans-serif;
-            min-height: 100vh;
             background: linear-gradient(135deg, #1e1b4b 0%, #4c1d95 50%, #831843 100%);
             color: white;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
+            margin: 0;
         }
-        .cron-logo-corner {
+        /* Bloque flotante arrastrable (banner + reloj) */
+        #cronFloatingRoot {
             position: fixed;
-            top: 14px;
-            left: 14px;
-            z-index: 1000;
-            background: rgba(255, 255, 255, 0.12);
-            border: 1px solid rgba(255, 255, 255, 0.25);
-            border-radius: 12px;
-            padding: 0.45rem 0.6rem;
-            backdrop-filter: blur(5px);
+            z-index: 100;
+            left: 50%;
+            top: 50%;
+            transform: translate(-50%, -50%);
+            width: min(92vw, 820px);
+            max-height: calc(100vh - 100px);
+            overflow: visible;
         }
-        .cron-logo-corner img {
-            height: 34px;
-            width: auto;
-            display: block;
+        .cron-drag-handle {
+            cursor: move;
+            user-select: none;
+            padding: 0.35rem 0.5rem 0.85rem;
+            margin: 0 0 1rem;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.18);
+            -webkit-user-select: none;
+        }
+        .cron-drag-handle h1 {
+            font-size: clamp(1.1rem, 3.5vw, 1.5rem);
+            font-weight: 800;
+            text-align: center;
+            line-height: 1.25;
         }
         .cron-banner {
-            width: 90%;
-            max-width: 805px;
+            width: 100%;
             margin-bottom: 1rem;
             background: rgba(251, 191, 36, 0.18);
             border: 1px solid rgba(251, 191, 36, 0.65);
             border-radius: 12px;
             padding: 0.5rem 0.7rem;
             font-weight: 700;
-            font-size: 2rem;
+            font-size: clamp(1rem, 3.2vw, 2rem);
             line-height: 1.2;
             letter-spacing: 0.02em;
             box-shadow: 0 8px 22px rgba(0, 0, 0, 0.28);
@@ -178,99 +170,40 @@ $logo_url = class_exists('AppHelpers') ? AppHelpers::getAppLogo() : '';
             100% { transform: translateX(-50%); }
         }
         .cronometro-box {
-            width: 90%;
-            max-width: 805px;
+            width: 100%;
             background: rgba(0,0,0,0.3);
             border-radius: 1.5rem;
-            padding: 2rem;
+            padding: 1.25rem 1.5rem 1.75rem;
             box-shadow: 0 25px 50px rgba(0,0,0,0.4);
         }
-        .cronometro-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 2rem;
-        }
-        .cronometro-header h1 { font-size: 1.5rem; font-weight: 700; }
-        .btn-retornar {
-            background: #3b82f6;
-            color: white;
-            padding: 0.6rem 1.2rem;
-            border-radius: 0.5rem;
-            text-decoration: none;
-            font-weight: 600;
-            display: inline-flex;
-            align-items: center;
-            gap: 0.5rem;
-            transition: all 0.2s;
-        }
-        .btn-retornar:hover { background: #2563eb; color: white; }
-        #configPanel {
-            background: rgba(255,255,255,0.1);
-            border-radius: 1rem;
-            padding: 1.5rem;
-            margin-bottom: 1.5rem;
-            display: none;
-        }
-        .config-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 1rem;
-            margin-bottom: 1rem;
-        }
-        .config-grid label { display: block; font-weight: 700; margin-bottom: 0.5rem; font-size: 1.25rem; }
-        .config-grid input {
-            width: 100%;
-            padding: 0.75rem;
-            border-radius: 0.5rem;
-            font-size: 1.5rem;
-            font-weight: 700;
-            text-align: center;
-            background: rgba(255,255,255,0.2);
-            color: white;
-            border: 2px solid rgba(255,255,255,0.3);
-        }
-        .config-grid input:focus { outline: none; border-color: white; }
-        #configPanel .btn-aplicar {
-            width: 100%;
-            background: #22c55e;
-            color: white;
-            border: none;
-            padding: 0.75rem;
-            border-radius: 0.5rem;
-            font-size: 1.25rem;
-            font-weight: 700;
-            cursor: pointer;
-            margin-top: 0.5rem;
-        }
-        #configPanel .btn-aplicar:hover { background: #16a34a; }
-        .btn-config { background: rgba(255,255,255,0.2); color: white; border: none; padding: 0.5rem 1rem; border-radius: 0.5rem; cursor: pointer; font-weight: 600; }
-        .btn-config:hover { background: rgba(255,255,255,0.3); }
         .display-area {
             text-align: center;
-            padding: 2rem 0;
+            padding: 1rem 0 0.5rem;
         }
         #tiempoDisplay {
             font-family: 'Arial Black', sans-serif;
-            font-size: clamp(4.6rem, 17.25vw, 11.5rem);
+            font-size: clamp(3.2rem, 14vw, 10rem);
             font-weight: 900;
             line-height: 1.1;
             text-shadow: 0 4px 20px rgba(0,0,0,0.5);
         }
-        #estadoDisplay { font-size: 1.725rem; opacity: 0.9; margin-top: 0.5rem; }
+        #estadoDisplay { font-size: clamp(1rem, 2.8vw, 1.5rem); opacity: 0.95; margin-top: 0.5rem; font-weight: 700; }
         .controles {
             display: flex;
             gap: 1rem;
             justify-content: center;
-            margin-top: 2rem;
+            margin-top: 1.5rem;
+            flex-wrap: wrap;
         }
         .controles button {
-            padding: 1.15rem 1.725rem;
+            padding: 0.85rem 1.35rem;
             border-radius: 0.75rem;
             border: none;
-            font-size: 1.725rem;
+            font-size: clamp(1rem, 2.5vw, 1.5rem);
+            font-weight: 800;
             cursor: pointer;
             transition: all 0.2s;
+            min-width: 7rem;
         }
         .controles #btnIniciar { background: #22c55e; color: white; }
         .controles #btnIniciar:hover:not(:disabled) { background: #16a34a; transform: scale(1.05); }
@@ -278,64 +211,125 @@ $logo_url = class_exists('AppHelpers') ? AppHelpers::getAppLogo() : '';
         .controles #btnDetener:hover:not(:disabled) { background: #dc2626; transform: scale(1.05); }
         .controles button:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
         @keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:0.7;transform:scale(1.05)} }
+
+        /* Configuración: fija esquina inferior izquierda de la ventana */
+        .config-dock {
+            position: fixed;
+            left: 0;
+            bottom: 0;
+            z-index: 3000;
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 0;
+            padding: 10px 12px 12px;
+            max-width: min(100vw, 400px);
+            pointer-events: none;
+        }
+        .config-dock > * { pointer-events: auto; }
+        #configPanel {
+            background: rgba(15, 23, 42, 0.92);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 0.75rem;
+            padding: 1rem;
+            margin-bottom: 8px;
+            display: none;
+            width: 100%;
+            box-shadow: 0 -4px 24px rgba(0,0,0,0.35);
+        }
+        .config-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 0.75rem;
+            margin-bottom: 0.75rem;
+        }
+        .config-grid label { display: block; font-weight: 700; margin-bottom: 0.35rem; font-size: 0.95rem; }
+        .config-grid input {
+            width: 100%;
+            padding: 0.5rem;
+            border-radius: 0.4rem;
+            font-size: 1.25rem;
+            font-weight: 700;
+            text-align: center;
+            background: rgba(255,255,255,0.12);
+            color: white;
+            border: 2px solid rgba(255,255,255,0.25);
+        }
+        .config-grid input:focus { outline: none; border-color: #94a3b8; }
+        #configPanel .btn-aplicar {
+            width: 100%;
+            background: #22c55e;
+            color: white;
+            border: none;
+            padding: 0.6rem;
+            border-radius: 0.45rem;
+            font-size: 1.05rem;
+            font-weight: 800;
+            cursor: pointer;
+        }
+        #configPanel .btn-aplicar:hover { background: #16a34a; }
+        .btn-config {
+            background: rgba(15, 23, 42, 0.88);
+            color: white;
+            border: 1px solid rgba(255, 255, 255, 0.28);
+            padding: 0.55rem 1rem;
+            border-radius: 0.45rem;
+            cursor: pointer;
+            font-weight: 700;
+            font-size: 0.95rem;
+        }
+        .btn-config:hover { background: rgba(30, 41, 59, 0.95); }
     </style>
 </head>
 <body>
-    <?php if ($logo_url !== ''): ?>
-    <div class="cron-logo-corner" title="La Estacion del Domino">
-        <img src="<?= htmlspecialchars($logo_url) ?>" alt="La Estacion del Domino">
-    </div>
-    <?php endif; ?>
 
-    <div class="cron-banner" id="cronBanner">
-        <div class="cron-banner-wrap">
-            <button type="button" class="cron-banner-btn" id="btnBannerPrev" title="Banner anterior">
-                <i class="fas fa-chevron-left"></i>
-            </button>
-            <div class="cron-banner-text" id="cronBannerTexto"></div>
-            <button type="button" class="cron-banner-btn" id="btnBannerNext" title="Banner siguiente">
-                <i class="fas fa-chevron-right"></i>
-            </button>
+    <div id="cronFloatingRoot">
+        <div class="cron-banner" id="cronBanner">
+            <div class="cron-banner-wrap">
+                <button type="button" class="cron-banner-btn" id="btnBannerPrev" title="Banner anterior" aria-label="Anterior">
+                    <i class="fas fa-chevron-left"></i>
+                </button>
+                <div class="cron-banner-text" id="cronBannerTexto"></div>
+                <button type="button" class="cron-banner-btn" id="btnBannerNext" title="Banner siguiente" aria-label="Siguiente">
+                    <i class="fas fa-chevron-right"></i>
+                </button>
+            </div>
+            <div class="cron-banner-dots" id="cronBannerDots"></div>
         </div>
-        <div class="cron-banner-dots" id="cronBannerDots"></div>
-    </div>
 
-    <div class="cronometro-box">
-        <div class="cronometro-header">
-            <h1><i class="fas fa-clock me-2"></i>Cronómetro - <?= htmlspecialchars($torneo['nombre'] ?? 'Ronda') ?></h1>
-            <div style="display:flex;gap:0.5rem;align-items:center;">
-                <a href="<?= htmlspecialchars($url_panel) ?>" class="btn-retornar" title="Vuelve al panel - el cronómetro sigue corriendo"
-                   onclick="window.location.href=this.href;return false;">
-                    <i class="fas fa-arrow-left"></i> Retornar al Panel
-                </a>
-                <button type="button" onclick="toggleConfig()" class="btn-config"><i class="fas fa-cog me-1"></i>Configurar</button>
+        <div class="cronometro-box">
+            <div class="cron-drag-handle" id="cronDragHandle" title="Arrastrar">
+                <h1><?= $titulo_pagina ?></h1>
+            </div>
+
+            <div class="display-area">
+                <div id="tiempoDisplay">35:00</div>
+                <div id="estadoDisplay">DETENIDO</div>
+                <div class="controles">
+                    <button type="button" id="btnIniciar" onclick="iniciarCronometro()" title="Iniciar">Iniciar</button>
+                    <button type="button" id="btnDetener" onclick="detenerCronometro()" title="Detener" disabled>Detener</button>
+                </div>
             </div>
         </div>
-        
-        <div id="configPanel" style="display:none">
+    </div>
+
+    <div class="config-dock" id="configDock" aria-label="Configuración del tiempo">
+        <div id="configPanel">
             <div class="config-grid">
                 <div>
-                    <label>Minutos</label>
+                    <label for="configMinutos">Minutos</label>
                     <input type="number" id="configMinutos" min="1" max="99" value="35">
                 </div>
                 <div>
-                    <label>Segundos</label>
+                    <label for="configSegundos">Segundos</label>
                     <input type="number" id="configSegundos" min="0" max="59" value="0">
                 </div>
             </div>
-            <button type="button" onclick="aplicarConfiguracion()" class="btn-aplicar"><i class="fas fa-check me-1"></i>APLICAR</button>
+            <button type="button" onclick="aplicarConfiguracion()" class="btn-aplicar">Aplicar</button>
         </div>
-        
-        <div class="display-area">
-            <div id="tiempoDisplay">35:00</div>
-            <div id="estadoDisplay"><i class="fas fa-pause-circle me-1"></i>DETENIDO</div>
-            <div class="controles">
-                <button id="btnIniciar" onclick="iniciarCronometro()" title="Iniciar"><i class="fas fa-play"></i></button>
-                <button id="btnDetener" onclick="detenerCronometro()" title="Detener" disabled><i class="fas fa-stop"></i></button>
-            </div>
-        </div>
+        <button type="button" onclick="toggleConfig()" class="btn-config">Configurar</button>
     </div>
-    
+
     <script>
     const TORNEO_ID = <?= (int)$torneo_id ?>;
     const BANNERS = <?= json_encode(array_values($banners_cronometro), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?>;
@@ -348,22 +342,70 @@ $logo_url = class_exists('AppHelpers') ? AppHelpers::getAppLogo() : '';
     let estaCorriendo = false;
     let alarmaReproducida = false;
     let alarmaRepetida = false;
-    
+
+    function initCronDrag() {
+        const root = document.getElementById('cronFloatingRoot');
+        const handle = document.getElementById('cronDragHandle');
+        if (!root || !handle) return;
+
+        let dragging = false;
+        let startX = 0, startY = 0, origLeft = 0, origTop = 0;
+
+        function snapToPixels() {
+            const rect = root.getBoundingClientRect();
+            root.style.transform = 'none';
+            root.style.left = rect.left + 'px';
+            root.style.top = rect.top + 'px';
+            root.style.right = 'auto';
+            root.style.margin = '0';
+        }
+
+        handle.addEventListener('mousedown', function(e) {
+            if (e.button !== 0) return;
+            e.preventDefault();
+            snapToPixels();
+            const rect = root.getBoundingClientRect();
+            origLeft = rect.left;
+            origTop = rect.top;
+            startX = e.clientX;
+            startY = e.clientY;
+            dragging = true;
+        });
+
+        document.addEventListener('mousemove', function(e) {
+            if (!dragging) return;
+            const dx = e.clientX - startX;
+            const dy = e.clientY - startY;
+            const w = root.offsetWidth;
+            const h = root.offsetHeight;
+            let nl = origLeft + dx;
+            let nt = origTop + dy;
+            nl = Math.max(0, Math.min(nl, window.innerWidth - Math.min(w, window.innerWidth)));
+            nt = Math.max(0, Math.min(nt, window.innerHeight - Math.min(h, window.innerHeight)));
+            root.style.left = nl + 'px';
+            root.style.top = nt + 'px';
+        });
+
+        document.addEventListener('mouseup', function() {
+            dragging = false;
+        });
+    }
+
     function formatearTiempo(s) {
         const m = Math.floor(s / 60), segs = s % 60;
         return String(m).padStart(2,'0') + ':' + String(segs).padStart(2,'0');
     }
-    
+
     function actualizarDisplay() {
         const d = document.getElementById('tiempoDisplay');
         const e = document.getElementById('estadoDisplay');
         d.textContent = formatearTiempo(tiempoRestante);
         d.style.color = tiempoRestante <= 30 ? '#ef4444' : tiempoRestante <= 60 ? '#fbbf24' : 'white';
         d.style.animation = tiempoRestante <= 30 ? 'pulse 1s infinite' : 'none';
-        e.innerHTML = estaCorriendo ? '<i class="fas fa-play-circle me-1"></i>EN EJECUCIÓN' : '<i class="fas fa-pause-circle me-1"></i>DETENIDO';
-        e.style.color = estaCorriendo ? '#86efac' : 'rgba(255,255,255,0.9)';
+        e.textContent = estaCorriendo ? 'EN EJECUCIÓN' : 'DETENIDO';
+        e.style.color = estaCorriendo ? '#86efac' : 'rgba(255,255,255,0.95)';
     }
-    
+
     function reproducirAlarmaTsunami() {
         try {
             const ctx = new (window.AudioContext || window.webkitAudioContext)();
@@ -382,7 +424,7 @@ $logo_url = class_exists('AppHelpers') ? AppHelpers::getAppLogo() : '';
             }
         } catch (err) { if (navigator.vibrate) navigator.vibrate([300,100,300,100,300]); }
     }
-    
+
     function reproducirAlarmaTerremoto() {
         try {
             const ctx = new (window.AudioContext || window.webkitAudioContext)();
@@ -401,7 +443,7 @@ $logo_url = class_exists('AppHelpers') ? AppHelpers::getAppLogo() : '';
             }
         } catch (err) { if (navigator.vibrate) navigator.vibrate([500,200,500]); }
     }
-    
+
     function iniciarCronometro() {
         if (tiempoRestante <= 0) tiempoRestante = tiempoOriginal;
         estaCorriendo = true;
@@ -425,7 +467,7 @@ $logo_url = class_exists('AppHelpers') ? AppHelpers::getAppLogo() : '';
         }, 1000);
         actualizarDisplay();
     }
-    
+
     function detenerCronometro() {
         estaCorriendo = false;
         clearInterval(cronometroInterval);
@@ -435,15 +477,15 @@ $logo_url = class_exists('AppHelpers') ? AppHelpers::getAppLogo() : '';
         document.getElementById('btnDetener').disabled = true;
         actualizarDisplay();
     }
-    
+
     function toggleConfig() {
         const p = document.getElementById('configPanel');
-        p.style.display = p.style.display === 'none' ? 'block' : 'none';
+        p.style.display = p.style.display === 'none' || p.style.display === '' ? 'block' : 'none';
     }
-    
+
     function aplicarConfiguracion() {
-        const m = parseInt(document.getElementById('configMinutos').value) || 35;
-        const s = parseInt(document.getElementById('configSegundos').value) || 0;
+        const m = parseInt(document.getElementById('configMinutos').value, 10) || 35;
+        const s = parseInt(document.getElementById('configSegundos').value, 10) || 0;
         tiempoRestante = m * 60 + s;
         tiempoOriginal = tiempoRestante;
         if (!estaCorriendo) actualizarDisplay();
@@ -466,8 +508,7 @@ $logo_url = class_exists('AppHelpers') ? AppHelpers::getAppLogo() : '';
             track.style.animationDuration = animSeconds + 's';
         }
         if (dotsWrap) {
-            const dots = dotsWrap.querySelectorAll('.cron-banner-dot');
-            dots.forEach((dot, idx) => {
+            dotsWrap.querySelectorAll('.cron-banner-dot').forEach((dot, idx) => {
                 dot.classList.toggle('is-active', idx === bannerIndex);
             });
         }
@@ -512,7 +553,8 @@ $logo_url = class_exists('AppHelpers') ? AppHelpers::getAppLogo() : '';
             bannerBox.addEventListener('mouseleave', () => startBannerRotation());
         }
     }
-    
+
+    initCronDrag();
     initBanner();
     actualizarDisplay();
     window.addEventListener('beforeunload', function() { localStorage.removeItem(LS_KEY); });

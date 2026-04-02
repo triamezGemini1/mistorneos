@@ -305,13 +305,10 @@ tailwind.config = {
     <?php endif; ?>
 
     <?php
-    $return_to_panel = $use_standalone
-        ? ($base_url . '?action=panel&torneo_id=' . (int)$torneo['id'])
-        : ('index.php?page=torneo_gestion&action=panel&torneo_id=' . (int)$torneo['id']);
-    $url_cronometro = $base_url
-        . ($use_standalone ? '?' : '&')
-        . 'action=cronometro&torneo_id=' . (int)$torneo['id']
-        . '&return_to=' . urlencode($return_to_panel);
+    require_once __DIR__ . '/../../../../lib/CronometroPublicoToken.php';
+    $url_cronometro = class_exists('AppHelpers')
+        ? AppHelpers::url('cronometro_publico.php', CronometroPublicoToken::queryParams((int)($torneo['id'] ?? 0)))
+        : ('cronometro_publico.php?' . http_build_query(CronometroPublicoToken::queryParams((int)($torneo['id'] ?? 0))));
     ?>
     <!-- Cronómetro en ventana independiente (no bloquea ni interfiere con el panel) -->
     <div class="mb-2 text-center">
@@ -339,10 +336,17 @@ tailwind.config = {
         if (!btnCron) return;
         var urlCronometro = <?php echo json_encode($url_cronometro, JSON_UNESCAPED_SLASHES); ?>;
         btnCron.addEventListener('click', function () {
+            var w = 1100, h = 820;
             var features = [
                 'popup=yes',
-                'width=1100',
-                'height=820',
+                'width=' + w,
+                'height=' + h,
+                'left=' + Math.max(0, Math.floor((screen.availWidth - w) / 2)),
+                'top=' + Math.max(0, Math.floor((screen.availHeight - h) / 2)),
+                'menubar=no',
+                'toolbar=no',
+                'location=no',
+                'status=no',
                 'resizable=yes',
                 'scrollbars=yes'
             ].join(',');
