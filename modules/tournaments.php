@@ -1178,7 +1178,7 @@ function getModalidadLabel($modalidad) {
     <?php else: ?>
     <!-- Formulario -->
     <div class="d-flex justify-content-center align-items-center min-vh-100 py-5" style="background: linear-gradient(135deg, #1a365d 0%, #2d3748 100%);">
-        <div class="card shadow-lg" style="max-width: 60%; width: 60%;">
+        <div class="card shadow-lg tournament-form-card" style="max-width: 60%; width: 60%;">
             <div class="card-header bg-<?= $action === 'edit' ? 'warning' : 'success' ?> text-white">
                 <h5 class="card-title mb-0">
                     <i class="fas fa-<?= $action === 'edit' ? 'edit' : 'plus-circle' ?> me-2"></i>

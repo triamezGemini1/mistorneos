@@ -67,6 +67,12 @@
   .btn-group-sm > .btn {
     min-height: 2.25rem;
   }
+
+  /* Formulario nuevo/editar torneo: ~85 % del ancho útil en panel 13" */
+  .tournament-form-card {
+    width: 85% !important;
+    max-width: 85% !important;
+  }
 }
 
 /* Colores originales (resources/views/tournament/parts/cuadricula.php) */
