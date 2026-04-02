@@ -383,6 +383,9 @@ tailwind.config = {
                         <a href="index.php?page=invitacion_clubes&torneo_id=<?= (int)($torneo['id'] ?? 0) ?>" class="tw-btn bg-cyan-500 hover:bg-cyan-600 text-white w-full text-center">
                             <i class="fas fa-paper-plane mr-2"></i> Invitar Clubes
                         </a>
+                        <a href="index.php?page=invitations&filter_torneo=<?= (int)($torneo['id'] ?? 0) ?>" class="tw-btn bg-slate-600 hover:bg-slate-700 text-white w-full text-center">
+                            <i class="fas fa-envelope mr-2"></i> Invitaciones por club
+                        </a>
                         <!-- Inscripciones: un solo bloque (Gestionar + Inscribir en sitio) -->
                         <?php if ($isLocked): ?>
                             <!-- Torneo finalizado: inscripciones totalmente cerradas -->

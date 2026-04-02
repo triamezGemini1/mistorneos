@@ -149,8 +149,22 @@ if ($from_url !== '') {
         $nav_origin = htmlspecialchars($decoded, ENT_QUOTES, 'UTF-8');
     }
 }
+$body_page_extra = '';
+if ($current_page === 'torneo_gestion') {
+    $body_page_extra .= ' page-torneo-gestion';
+    $tg_action_layout = trim((string)($_GET['action'] ?? 'index'));
+    if ($tg_action_layout === '') {
+        $tg_action_layout = 'index';
+    }
+    if ($tg_action_layout === 'index') {
+        $body_page_extra .= ' page-torneo-gestion-index';
+    }
+}
+if ($current_page === 'estadisticas_torneos') {
+    $body_page_extra .= ' page-estadisticas-torneos';
+}
 ?>
-<body class="bg-light<?= $is_panel_control_torneos ? ' page-panel-control-torneos' : '' ?>"<?= $nav_origin !== '' ? ' data-nav-origin="' . $nav_origin . '"' : '' ?>>
+<body class="bg-light<?= $is_panel_control_torneos ? ' page-panel-control-torneos' : '' ?><?= htmlspecialchars($body_page_extra, ENT_QUOTES, 'UTF-8') ?>"<?= $nav_origin !== '' ? ' data-nav-origin="' . $nav_origin . '"' : '' ?>>
   <!-- Contenedor para notificaciones toast (Push + tarjeta visual) -->
   <div id="notification-container" aria-live="polite"></div>
 

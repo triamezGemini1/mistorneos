@@ -10,7 +10,7 @@ $base_url_panel = $use_standalone_list ? $script_actual : 'index.php?page=torneo
 $panel_sep = $use_standalone_list ? '?' : '&';
 ?>
 
-<div class="container-fluid">
+<div class="container-fluid ds-torneo-gestion-13">
     <div class="row mb-2">
         <div class="col-12">
             <div class="btn-group btn-group-sm mb-2">
@@ -42,9 +42,6 @@ $panel_sep = $use_standalone_list ? '?' : '&';
                     </a>
                     <a href="index.php?page=estadisticas_torneos" class="btn btn-outline-info">
                         <i class="fas fa-chart-line me-1"></i>Estadísticas Torneos
-                    </a>
-                    <a href="index.php?page=invitations" class="btn btn-outline-secondary">
-                        <i class="fas fa-envelope me-1"></i>Invitaciones
                     </a>
                     <?php if (!empty($is_admin_general)): ?>
                     <a href="index.php?page=notificaciones_masivas" class="btn btn-outline-warning">
@@ -112,6 +109,7 @@ $panel_sep = $use_standalone_list ? '?' : '&';
                                 <th>Club</th>
                                 <th class="text-center">Inscritos</th>
                                 <th class="text-center">Rondas</th>
+                                <th class="text-center">Invitaciones</th>
                                 <th></th>
                             </tr>
                         </thead>
@@ -132,6 +130,11 @@ $panel_sep = $use_standalone_list ? '?' : '&';
                                 <td><?= htmlspecialchars($t['club_nombre'] ?? '—') ?></td>
                                 <td class="text-center"><?= (int)($t['total_inscritos'] ?? 0) ?></td>
                                 <td class="text-center"><?= (int)($t['ultima_ronda'] ?? 0) ?> / <?= (int)($t['rondas'] ?? 0) ?></td>
+                                <td class="text-center">
+                                    <a href="index.php?page=invitations&amp;filter_torneo=<?= (int)$t['id'] ?>" class="btn btn-sm btn-outline-secondary" title="Invitaciones de clubes para este torneo">
+                                        <i class="fas fa-envelope"></i>
+                                    </a>
+                                </td>
                                 <td>
                                     <div class="btn-group btn-group-sm">
                                         <a href="index.php?page=torneo_gestion&action=view&id=<?= (int)$t['id'] ?>" class="btn btn-outline-info" title="Ver">Ver</a>

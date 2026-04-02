@@ -13,8 +13,10 @@ $titulos = [
     'realizados'   => ['titulo' => 'Realizados', 'icono' => 'fa-check-circle', 'texto' => 'Torneos finalizados'],
 ];
 $actual = $filtro_torneos ? ($titulos[$filtro_torneos] ?? null) : ['titulo' => 'Todos los torneos', 'icono' => 'fa-trophy', 'texto' => 'Gestiona tus torneos y administra rondas, mesas y resultados'];
+$is_admin_general = $is_admin_general ?? false;
 ?>
 
+<div class="ds-torneo-gestion-13">
 <!-- Filtros rápidos (pestañas) -->
 <div class="mb-3">
     <div class="btn-group btn-group-sm flex-wrap" role="group">
@@ -41,13 +43,21 @@ $actual = $filtro_torneos ? ($titulos[$filtro_torneos] ?? null) : ['titulo' => '
         </h2>
         <p class="text-muted mb-0"><?php echo htmlspecialchars($actual['texto']); ?></p>
     </div>
-    <div class="d-flex gap-2">
+    <div class="d-flex flex-wrap gap-2">
         <a href="index.php?page=torneo_gestion&action=index" class="btn btn-outline-primary btn-lg shadow-sm">
             <i class="fas fa-list me-2"></i>Ver y Editar Torneos
         </a>
         <a href="index.php?page=tournaments&action=new" class="btn btn-success btn-lg shadow-sm">
             <i class="fas fa-plus-circle me-2"></i>Crear Nuevo Torneo
         </a>
+        <a href="index.php?page=estadisticas_torneos" class="btn btn-outline-info btn-lg shadow-sm">
+            <i class="fas fa-chart-line me-2"></i>Estadísticas Torneos
+        </a>
+        <?php if ($is_admin_general): ?>
+        <a href="index.php?page=notificaciones_masivas" class="btn btn-outline-warning btn-lg shadow-sm">
+            <i class="fas fa-bell me-2"></i>Notificaciones
+        </a>
+        <?php endif; ?>
     </div>
 </div>
 
@@ -77,7 +87,6 @@ $actual = $filtro_torneos ? ($titulos[$filtro_torneos] ?? null) : ['titulo' => '
         </a>
     </div>
 <?php else: ?>
-    <?php $is_admin_general = $is_admin_general ?? false; ?>
     <div class="card">
         <div class="card-body p-0">
             <div class="table-responsive">
@@ -91,6 +100,7 @@ $actual = $filtro_torneos ? ($titulos[$filtro_torneos] ?? null) : ['titulo' => '
                             <th>Club</th>
                             <th class="text-center">Inscritos</th>
                             <th class="text-center">Rondas</th>
+                            <th class="text-center">Invitaciones</th>
                             <th></th>
                         </tr>
                     </thead>
@@ -111,6 +121,11 @@ $actual = $filtro_torneos ? ($titulos[$filtro_torneos] ?? null) : ['titulo' => '
                             <td><?= htmlspecialchars($t['organizacion_nombre'] ?? '—') ?></td>
                             <td class="text-center"><?= (int)($t['total_inscritos'] ?? 0) ?></td>
                             <td class="text-center"><?= (int)($t['ultima_ronda'] ?? 0) ?> / <?= (int)($t['rondas'] ?? 0) ?></td>
+                            <td class="text-center">
+                                <a href="index.php?page=invitations&amp;filter_torneo=<?= (int)$t['id'] ?>" class="btn btn-sm btn-outline-secondary" title="Invitaciones de clubes para este torneo">
+                                    <i class="fas fa-envelope"></i>
+                                </a>
+                            </td>
                             <td>
                                 <div class="btn-group btn-group-sm">
                                     <a href="index.php?page=torneo_gestion&action=view&id=<?= (int)$t['id'] ?>" class="btn btn-outline-info" title="Ver">Ver</a>
@@ -135,3 +150,4 @@ $actual = $filtro_torneos ? ($titulos[$filtro_torneos] ?? null) : ['titulo' => '
     </div>
 <?php endif; ?>
 
+</div>

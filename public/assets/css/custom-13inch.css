@@ -73,6 +73,44 @@
     width: 85% !important;
     max-width: 85% !important;
   }
+
+  /* Gestión de torneos (lista) y estadísticas: aprovechar ancho en ~13" */
+  body.page-torneo-gestion-index main.container-fluid.py-4,
+  body.page-estadisticas-torneos main.container-fluid.py-4 {
+    padding-top: 0.85rem !important;
+    padding-bottom: 0.85rem !important;
+    padding-left: 0.65rem !important;
+    padding-right: 0.65rem !important;
+  }
+
+  body.page-torneo-gestion .ds-torneo-gestion-13,
+  body.page-estadisticas-torneos .ds-estadisticas-torneos-13 {
+    max-width: 100%;
+  }
+
+  body.page-torneo-gestion-index .ds-torneo-gestion-13 .d-flex.justify-content-between,
+  body.page-torneo-gestion-index .ds-torneo-gestion-13 .d-flex.flex-wrap.gap-2 {
+    gap: 0.4rem !important;
+  }
+
+  body.page-torneo-gestion-index .ds-torneo-gestion-13 h1.h3,
+  body.page-torneo-gestion-index .ds-torneo-gestion-13 h2.h4 {
+    font-size: 1.2rem;
+  }
+
+  body.page-estadisticas-torneos .ds-estadisticas-torneos-13 h1.h3 {
+    font-size: 1.2rem;
+  }
+
+  body.page-estadisticas-torneos .ds-estadisticas-torneos-13 .row.g-3 {
+    --bs-gutter-y: 0.65rem;
+    --bs-gutter-x: 0.65rem;
+  }
+
+  body.page-torneo-gestion:not(.page-torneo-gestion-index) main.container-fluid.py-4 {
+    padding-left: 0.65rem !important;
+    padding-right: 0.65rem !important;
+  }
 }
 
 /* Colores originales (resources/views/tournament/parts/cuadricula.php) */

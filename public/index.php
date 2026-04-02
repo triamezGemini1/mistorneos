@@ -223,15 +223,15 @@ if ($page === 'invitations' && ($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'GET') 
     $inv_filter = $_GET['filter_torneo'] ?? $_GET['torneo_id'] ?? '';
     $base = (defined('URL_BASE') && URL_BASE !== '') ? rtrim(URL_BASE, '/') : '';
     $prefix = ($base !== '' ? $base . '/' : '');
-    $home_url = $prefix . 'index.php?page=home';
+    $torneo_gestion_url = $prefix . 'index.php?page=torneo_gestion&action=index';
     if ($inv_action === 'list' && $inv_filter === '') {
-        header('Location: ' . $home_url . '&error=' . urlencode('Acceda a Invitaciones desde el Panel de Control de un torneo.'));
+        header('Location: ' . $torneo_gestion_url . '&error=' . urlencode('Abra Invitaciones desde la fila de un torneo o desde el panel del torneo seleccionado.'));
         exit;
     }
     if ($inv_action === 'new') {
         $torneo_id_new = (int)($_GET['torneo_id'] ?? $_GET['filter_torneo'] ?? 0);
         if ($torneo_id_new <= 0 || !Auth::canAccessTournament($torneo_id_new)) {
-            header('Location: ' . $home_url . '&error=' . urlencode('Indique el torneo desde el Panel de Control.'));
+            header('Location: ' . $torneo_gestion_url . '&error=' . urlencode('Seleccione un torneo en Gestión de Torneos e indique el torneo al crear la invitación.'));
             exit;
         }
     }
