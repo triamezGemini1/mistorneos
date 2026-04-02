@@ -3360,6 +3360,7 @@ function obtenerDatosGestionarInscripcionesEquipos($torneo_id) {
         'equipos_por_club' => $equipos_por_club,
         'jugadores_por_equipo' => max(2, (int)($torneo['pareclub'] ?? 4)),
         'contadores_inscripcion' => $contadores_inscripcion,
+        'es_parejas' => ((int)($torneo['modalidad'] ?? 0) === 2),
     ];
 }
 

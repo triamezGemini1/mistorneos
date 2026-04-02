@@ -1,7 +1,7 @@
 <?php
 /**
- * Vista: Inscribir Equipos en Sitio
- * Formulario simplificado que muestra solo jugadores NO inscritos
+ * Vista: Inscribir en sitio (modalidad parejas = 2 o equipos = 3)
+ * Misma UI de tres columnas; el torneo define integrantes vía pareclub y reglas de parejas vía modalidad.
  */
 // Buffer amplio: evita flush por trozos (p. ej. 4KB) que hace ver primero Disponibles y luego el resto.
 if (ob_get_level() < 5) {
@@ -16,8 +16,9 @@ if ($contadores_inscripcion === [] && !empty($torneo['id'])) {
 $jugadores_disponibles = $view_data['jugadores_disponibles'] ?? [];
 $clubes_disponibles = $view_data['clubes_disponibles'] ?? [];
 $equipos_registrados = $view_data['equipos_registrados'] ?? [];
-$jugadores_por_equipo = $view_data['jugadores_por_equipo'] ?? 4;
-$es_parejas = !empty($view_data['es_parejas']);
+$jugadores_por_equipo = max(2, (int)($view_data['jugadores_por_equipo'] ?? ($torneo['pareclub'] ?? 4)));
+$modalidad_torneo = (int)($torneo['modalidad'] ?? 0);
+$es_parejas = ($modalidad_torneo === 2);
 $jugadores_lista_lazy = !empty($view_data['jugadores_lista_lazy']);
 $etiqueta_equipo = $es_parejas ? 'Pareja' : 'Equipo';
 $etiqueta_equipos = $es_parejas ? 'Parejas' : 'Equipos';
@@ -54,37 +55,31 @@ $api_guardar_equipo = $base_url . ($use_standalone ? '?' : '&') . 'action=guarda
     body {
         background-color: #f8f9fa;
     }
-    /* Una sola pantalla: sin scroll en la página (solo columnas internas si hiciera falta) */
+    /* Scroll en el contenedor padre (p. ej. panel_torneo); el formulario va en flujo debajo de las columnas */
     .page-inscripcion-sitio {
-        height: 100vh;
-        max-height: 100vh;
-        overflow: hidden;
         box-sizing: border-box;
         padding: 0.35rem 0.5rem !important;
-        display: flex;
-        flex-direction: column;
     }
     .page-inscripcion-sitio .breadcrumb { margin-bottom: 0.25rem !important; padding: 0.25rem 0; font-size: 0.8rem; }
     .page-inscripcion-sitio .card.mb-4:first-of-type { margin-bottom: 0.35rem !important; }
     .page-inscripcion-sitio .card.mb-4:first-of-type .card-body { padding: 0.5rem 0.75rem !important; }
     .page-inscripcion-sitio .card.mb-4:first-of-type h2 { font-size: 1rem !important; margin-bottom: 0 !important; }
-    .page-inscripcion-sitio .row.g-2.g-lg-3 {
-        flex: 1 1 0;
-        min-height: 0;
+    .page-inscripcion-sitio .row.row-inscripcion-dos-columnas {
         margin-left: 0;
         margin-right: 0;
         align-items: stretch;
+        min-height: 280px;
     }
-    .page-inscripcion-sitio .row.g-2.g-lg-3 > [class^="col-"] {
+    .page-inscripcion-sitio .row.row-inscripcion-dos-columnas > [class^="col-"] {
         display: flex;
         flex-direction: column;
         min-height: 0;
-        max-height: 100%;
     }
     .page-inscripcion-sitio .col-disponibles > .card,
     .page-inscripcion-sitio .col-insc-equipos > .card {
-        flex: 1 1 0;
-        min-height: 0;
+        flex: 1 1 auto;
+        min-height: 260px;
+        max-height: min(50vh, 560px);
         display: flex;
         flex-direction: column;
         overflow: hidden;
@@ -118,7 +113,8 @@ $api_guardar_equipo = $base_url . ($use_standalone ? '?' : '&') . 'action=guarda
         z-index: 10;
         flex-shrink: 0;
     }
-    .page-inscripcion-sitio .separador-jugador {
+    .page-inscripcion-sitio .separador-jugador,
+    .card-formulario-inscripcion .separador-jugador {
         border-top: 1px dashed #0d6efd;
         margin: 2px 0 !important;
         opacity: 0.45;
@@ -142,86 +138,79 @@ $api_guardar_equipo = $base_url . ($use_standalone ? '?' : '&') . 'action=guarda
     .equipo-registrado-item > div:first-child:hover {
         color: #0d6efd;
     }
-    /* Layout: un poco más ancho formulario para fila ID|cédula|nombre en una línea */
-    .col-disponibles {
-        flex: 0 0 28%;
-        max-width: 28%;
+    /* Disponibles 43% | Inscritos 55% (formulario debajo, ancho completo) */
+    .page-inscripcion-sitio .row-inscripcion-dos-columnas {
+        display: flex;
+        flex-direction: row;
+        flex-wrap: nowrap;
+        gap: 0.75rem;
+        align-items: stretch;
+    }
+    @media (max-width: 991px) {
+        .page-inscripcion-sitio .row-inscripcion-dos-columnas {
+            flex-wrap: wrap;
+        }
+        .page-inscripcion-sitio .row-inscripcion-dos-columnas .col-disponibles,
+        .page-inscripcion-sitio .row-inscripcion-dos-columnas .col-insc-equipos {
+            flex: 0 0 100% !important;
+            max-width: 100% !important;
+        }
+    }
+    @media (min-width: 992px) {
+        .page-inscripcion-sitio .row-inscripcion-dos-columnas .col-disponibles {
+            flex: 0 0 calc(43% - 0.375rem) !important;
+            max-width: calc(43% - 0.375rem) !important;
+        }
+        .page-inscripcion-sitio .row-inscripcion-dos-columnas .col-insc-equipos {
+            flex: 0 0 calc(55% - 0.375rem) !important;
+            max-width: calc(55% - 0.375rem) !important;
+        }
+    }
+    .page-inscripcion-sitio .row-inscripcion-dos-columnas .col-disponibles {
         background: linear-gradient(180deg, #e8f4fc 0%, #f0f7ff 100%);
         border-radius: 0.5rem;
         padding: 0.5rem;
+        min-width: 0;
     }
-    .col-insc-form {
-        flex: 0 0 41%;
-        max-width: 41%;
-        background: linear-gradient(180deg, #fff9e6 0%, #fffdf5 100%);
-        border-radius: 0.5rem;
-        padding: 0.5rem;
-    }
-    .page-inscripcion-sitio .col-insc-form {
-        min-height: 0;
-    }
-    .page-inscripcion-sitio .col-insc-form > .card {
-        flex: 1 1 0;
-        min-height: 0;
-        max-height: 100%;
-        display: flex;
-        flex-direction: column;
-        overflow: hidden;
-    }
-    .page-inscripcion-sitio .col-insc-form > .card > .card-header {
-        flex-shrink: 0;
-        padding: 0.35rem 0.5rem !important;
-    }
-    .page-inscripcion-sitio .col-insc-form > .card > .card-header h6 { font-size: 0.8rem; margin: 0; }
-    .page-inscripcion-sitio .col-insc-form > .card > .card-body {
-        flex: 1 1 0;
-        min-height: 0;
-        overflow: hidden;
-        padding: 0.4rem 0.5rem !important;
-        display: flex;
-        flex-direction: column;
-    }
-    .page-inscripcion-sitio #formEquipo {
-        display: flex;
-        flex-direction: column;
-        min-height: 0;
-        flex: 1 1 0;
-        overflow: hidden;
-    }
-    .page-inscripcion-sitio .fila-club-nombre-equipo {
-        flex-shrink: 0;
-        margin-bottom: 0.35rem !important;
-    }
-    .page-inscripcion-sitio .col-insc-form #club_id.form-select,
-    .page-inscripcion-sitio .col-insc-form #nombre_equipo.form-control {
-        min-height: 1.65rem !important;
-        height: 1.65rem !important;
-        padding: 0.15rem 0.35rem !important;
-        font-size: 0.72rem !important;
-    }
-    .page-inscripcion-sitio #jugadores-container {
-        flex: 1 1 0;
-        min-height: 0;
-        overflow-y: auto;
-        overflow-x: hidden;
-    }
-    .col-insc-equipos {
-        flex: 0 0 31%;
-        max-width: 31%;
+    .page-inscripcion-sitio .row-inscripcion-dos-columnas .col-insc-equipos {
         background: linear-gradient(180deg, #e8f5e9 0%, #f1faf1 100%);
         border-radius: 0.5rem;
         padding: 0.5rem;
+        min-width: 0;
+    }
+    .card-formulario-inscripcion {
+        background: linear-gradient(180deg, #fff9e6 0%, #fffdf5 100%);
+        border-width: 2px !important;
+    }
+    .card-formulario-inscripcion .card-formulario-inscripcion-body {
+        max-height: min(56vh, 620px);
+        overflow-y: auto;
+        overflow-x: hidden;
+        padding: 0.45rem 0.55rem !important;
+        display: flex;
+        flex-direction: column;
+    }
+    .card-formulario-inscripcion #formEquipo {
+        display: flex;
+        flex-direction: column;
+        min-height: 0;
+        flex: 1 1 auto;
+        overflow: hidden;
+    }
+    .card-formulario-inscripcion .fila-club-nombre-equipo {
+        flex-shrink: 0;
+        margin-bottom: 0.35rem !important;
+    }
+    .card-formulario-inscripcion #jugadores-container {
+        flex: 1 1 auto;
+        min-height: 0;
+        overflow-y: auto;
+        overflow-x: hidden;
     }
     .col-disponibles .jugador-item,
     .col-disponibles .jugador-item .small,
     .col-disponibles .jugador-item span { font-weight: 700 !important; }
     .col-disponibles .search-box small { font-weight: 600; }
-    @media (max-width: 991px) {
-        .col-disponibles, .col-insc-form, .col-insc-equipos {
-            flex: 0 0 100%;
-            max-width: 100%;
-        }
-    }
     /* Club + nombre equipo: misma línea, mismo alto */
     .fila-club-nombre-equipo {
         display: flex;
@@ -237,13 +226,36 @@ $api_guardar_equipo = $base_url . ($use_standalone ? '?' : '&') . 'action=guarda
         min-width: 0;
     }
     .fila-club-nombre-equipo .form-label { margin-bottom: 0.15rem; }
+    /* Parejas: Guardar + Nueva a la derecha de club/nombre, siempre en línea */
+    .fila-club-nombre-equipo--parejas .campo-club,
+    .fila-club-nombre-equipo--parejas .campo-nombre-equipo {
+        flex: 1 1 0;
+        min-width: 0;
+    }
+    .fila-club-nombre-equipo--parejas .campo-acciones-inscripcion {
+        display: flex;
+        flex-wrap: nowrap;
+        align-items: flex-end;
+        gap: 0.35rem;
+        flex: 0 0 auto;
+    }
+    .fila-club-nombre-equipo--parejas .campo-acciones-inscripcion .btn {
+        white-space: nowrap;
+    }
+    .fila-club-nombre-equipo--parejas .campo-acciones-inscripcion #wrap_codigo_equipo_barra {
+        margin-bottom: 0.15rem;
+    }
     @media (max-width: 576px) {
         .fila-club-nombre-equipo { flex-wrap: wrap; }
         .fila-club-nombre-equipo .campo-club,
         .fila-club-nombre-equipo .campo-nombre-equipo { flex: 1 1 100%; }
+        .fila-club-nombre-equipo--parejas .campo-acciones-inscripcion {
+            flex: 1 1 100%;
+            justify-content: flex-end;
+        }
     }
-    .col-insc-form #club_id.form-select,
-    .col-insc-form #nombre_equipo.form-control {
+    .card-formulario-inscripcion #club_id.form-select,
+    .card-formulario-inscripcion #nombre_equipo.form-control {
         min-height: 2.35rem !important;
         height: 2.35rem !important;
         padding: 0.4rem 0.5rem !important;
@@ -258,20 +270,20 @@ $api_guardar_equipo = $base_url . ($use_standalone ? '?' : '&') . 'action=guarda
         min-height: 0;
     }
     /* Controles compactos (no club/nombre ni filas jugador: tienen reglas propias) */
-    .col-insc-form .form-control-sm:not(.jugador-id-usuario):not(.jugador-cedula):not(.jugador-nombre),
-    .col-insc-form .form-select-sm:not(#club_id) {
+    .card-formulario-inscripcion .form-control-sm:not(.jugador-id-usuario):not(.jugador-cedula):not(.jugador-nombre),
+    .card-formulario-inscripcion .form-select-sm:not(#club_id) {
         padding: 0.08rem 0.28rem !important;
         font-size: 0.7rem !important;
         line-height: 1.05 !important;
         min-height: calc(0.72em + 0.16rem) !important;
     }
     /* Filas jugador compactas para caber en viewport sin scroll global */
-    .page-inscripcion-sitio .fila-jugador-compacta {
+    .card-formulario-inscripcion .fila-jugador-compacta {
         margin-bottom: 0.15rem !important;
     }
-    .page-inscripcion-sitio .fila-jugador-compacta .jugador-id-usuario,
-    .page-inscripcion-sitio .fila-jugador-compacta .jugador-cedula,
-    .page-inscripcion-sitio .fila-jugador-compacta .jugador-nombre {
+    .card-formulario-inscripcion .fila-jugador-compacta .jugador-id-usuario,
+    .card-formulario-inscripcion .fila-jugador-compacta .jugador-cedula,
+    .card-formulario-inscripcion .fila-jugador-compacta .jugador-nombre {
         padding: 0.1rem 0.25rem !important;
         font-size: 0.72rem !important;
         line-height: 1.15 !important;
@@ -336,233 +348,9 @@ $api_guardar_equipo = $base_url . ($use_standalone ? '?' : '&') . 'action=guarda
     .equipo-sidebar-integrantes li { padding: 0.15rem 0; font-weight: 700; }
     #wrap_codigo_equipo_barra { min-height: 1.5rem; }
     .btn-editar-equipo-form { font-size: 0.7rem; padding: 0.1rem 0.35rem; }
-    /* Parejas: sin scroll vertical, margen vertical, Volver siempre visible */
-    <?php if ($es_parejas): ?>
-    .page-inscripcion-sitio.form-parejas-amigable {
-        max-height: 90vh;
-        height: 90vh;
-        margin: 1rem 0;
-        overflow: hidden;
-        padding-top: 0.5rem !important;
-        padding-bottom: 0.5rem !important;
-        display: flex;
-        flex-direction: column;
-        min-height: 0;
-    }
-    .page-inscripcion-sitio.form-parejas-amigable .breadcrumb {
-        margin-bottom: 0.2rem !important;
-        padding: 0.15rem 0 !important;
-        flex-shrink: 0;
-    }
-    .page-inscripcion-sitio.form-parejas-amigable .card.mb-4:first-of-type {
-        margin-bottom: 0.35rem !important;
-        flex-shrink: 0;
-    }
-    .page-inscripcion-sitio.form-parejas-amigable .card.mb-4:first-of-type .card-body {
-        padding: 0.35rem 0.5rem !important;
-    }
-    .page-inscripcion-sitio.form-parejas-amigable .form-parejas-top {
-        flex-shrink: 0;
-    }
-    .page-inscripcion-sitio.form-parejas-amigable .row-columnas-parejas {
-        flex: 1 1 0;
-        min-height: 0;
-        overflow: hidden;
-        margin-bottom: 0 !important;
-    }
-    .page-inscripcion-sitio.form-parejas-amigable .row-columnas-parejas .col-disponibles-parejas,
-    .page-inscripcion-sitio.form-parejas-amigable .row-columnas-parejas .col-insc-equipos-parejas {
-        display: flex;
-        flex-direction: column;
-        min-height: 0;
-        overflow: hidden;
-    }
-    .page-inscripcion-sitio.form-parejas-amigable .col-disponibles-parejas .card,
-    .page-inscripcion-sitio.form-parejas-amigable .col-insc-equipos-parejas .card {
-        min-height: 0;
-        display: flex;
-        flex-direction: column;
-        overflow: hidden;
-        flex: 1 1 0;
-    }
-    .page-inscripcion-sitio.form-parejas-amigable .col-disponibles-parejas .card-body,
-    .page-inscripcion-sitio.form-parejas-amigable .col-insc-equipos-parejas .card-body {
-        flex: 1 1 0;
-        min-height: 0;
-        overflow-y: auto;
-        overflow-x: hidden;
-        -webkit-overflow-scrolling: touch;
-    }
-    .page-inscripcion-sitio.form-parejas-amigable .form-parejas-top {
-        border: 2px solid #0d6efd;
-        border-radius: 10px;
-        box-shadow: 0 2px 10px rgba(0,0,0,0.08);
-        background: #f4f8ff;
-        color: #000;
-    }
-    .page-inscripcion-sitio.form-parejas-amigable .form-parejas-top .badge-parejas-inscritas {
-        background-color: #b6d4fe;
-        color: #0d6efd;
-        border: 1px dashed #0d6efd;
-        font-size: 0.85rem;
-        padding: 0.35rem 0.6rem;
-    }
-    .page-inscripcion-sitio.form-parejas-amigable #formEquipo {
-        border: 2px dashed #9ec5fe;
-        border-radius: 8px;
-        padding: 0.4rem 0.5rem;
-        background: #f9fcff;
-    }
-    /* Formulario: letras ampliadas 40% */
-    .page-inscripcion-sitio.form-parejas-amigable .form-parejas-top input.form-control,
-    .page-inscripcion-sitio.form-parejas-amigable .form-parejas-top select.form-select {
-        font-size: 0.91rem !important;
-        line-height: 1.25 !important;
-        height: 1.75rem !important;
-        min-height: 1.75rem !important;
-        padding: 0.15rem 0.35rem !important;
-        color: #000 !important;
-    }
-    .page-inscripcion-sitio.form-parejas-amigable .form-parejas-top .form-label {
-        font-size: 0.84rem !important;
-        color: #000 !important;
-        margin-bottom: 0.08rem !important;
-    }
-    .page-inscripcion-sitio.form-parejas-amigable .form-parejas-top .btn {
-        font-size: 0.84rem !important;
-        padding: 0.25rem 0.5rem !important;
-    }
-    /* Fila superior: Club, Nombre pareja y Cédula a buscar reducidos 35% (65% total); botón Limpiar al final */
-    .page-inscripcion-sitio.form-parejas-amigable .form-parejas-top .fila-parejas-compacta .campo-club-parejas {
-        flex: 0 1 22%;
-        min-width: 0;
-        max-width: 22%;
-    }
-    .page-inscripcion-sitio.form-parejas-amigable .form-parejas-top .fila-parejas-compacta .campo-nombre-parejas {
-        flex: 0 1 22%;
-        min-width: 0;
-        max-width: 22%;
-    }
-    .page-inscripcion-sitio.form-parejas-amigable .form-parejas-top .fila-parejas-compacta .campo-cedula-buscar-parejas {
-        flex: 0 1 21%;
-        min-width: 0;
-        max-width: 21%;
-    }
-    .page-inscripcion-sitio.form-parejas-amigable .form-parejas-top .fila-parejas-compacta .campo-btn-limpiar-parejas {
-        flex: 0 0 auto;
-        margin-left: auto;
-        align-self: flex-end;
-    }
-    .page-inscripcion-sitio.form-parejas-amigable .form-parejas-top .fila-parejas-compacta .campo-club-parejas input,
-    .page-inscripcion-sitio.form-parejas-amigable .form-parejas-top .fila-parejas-compacta .campo-club-parejas select,
-    .page-inscripcion-sitio.form-parejas-amigable .form-parejas-top .fila-parejas-compacta .campo-nombre-parejas input,
-    .page-inscripcion-sitio.form-parejas-amigable .form-parejas-top .fila-parejas-compacta .campo-cedula-buscar-parejas input {
-        width: 100%;
-        max-width: 100%;
-    }
-    .page-inscripcion-sitio.form-parejas-amigable .form-parejas-top .fila-parejas-compacta {
-        display: flex;
-        align-items: center;
-        gap: 0.35rem;
-        margin-bottom: 0.2rem;
-    }
-    .page-inscripcion-sitio.form-parejas-amigable .form-parejas-top .jugadores-y-botones {
-        display: flex;
-        align-items: flex-start;
-        gap: 0.5rem;
-    }
-    .page-inscripcion-sitio.form-parejas-amigable .form-parejas-top .jugadores-y-botones .botones-parejas {
-        display: flex;
-        flex-direction: column;
-        gap: 0.2rem;
-        flex-shrink: 0;
-    }
-    /* Modelo: 2 filas iguales — codigo (2 filas) | id | cedula | nombre | quitar | botones apilados (2 filas) */
-    .page-inscripcion-sitio.form-parejas-amigable .grid-parejas-filas {
-        display: grid;
-        grid-template-columns: 6.75rem 3.3rem 5.4rem minmax(2rem, 0.5fr) auto auto;
-        grid-template-rows: auto auto;
-        gap: 0.35rem 0.35rem;
-        align-items: end;
-    }
-    .page-inscripcion-sitio.form-parejas-amigable .celda-codigo-span {
-        grid-row: 1 / -1;
-        align-self: stretch;
-        display: flex;
-        flex-direction: column;
-        justify-content: center;
-    }
-    .page-inscripcion-sitio.form-parejas-amigable .celda-botones-parejas-apilados {
-        grid-row: 1 / -1;
-        grid-column: 6;
-        display: flex;
-        flex-direction: column;
-        justify-content: flex-end;
-        gap: 0.25rem;
-    }
-    .page-inscripcion-sitio.form-parejas-amigable .celda-quitar-parejas {
-        display: flex;
-        align-items: flex-end;
-    }
-    .page-inscripcion-sitio.form-parejas-amigable .fila-parejas-modelo {
-        display: flex;
-        align-items: flex-end;
-        gap: 0.35rem;
-        margin-bottom: 0.25rem;
-    }
-    .page-inscripcion-sitio.form-parejas-amigable .celda-codigo-parejas {
-        width: 6.75rem;
-        min-width: 6.75rem;
-        flex-shrink: 0;
-    }
-    .page-inscripcion-sitio.form-parejas-amigable .celda-id-parejas { width: 3.3rem; min-width: 3.3rem; flex-shrink: 0; }
-    .page-inscripcion-sitio.form-parejas-amigable .celda-cedula-parejas { width: 5.4rem; min-width: 5.4rem; flex-shrink: 0; }
-    .page-inscripcion-sitio.form-parejas-amigable .celda-nombre-parejas { flex: 0.5 1 0; min-width: 2rem; }
-    .page-inscripcion-sitio.form-parejas-amigable .celda-codigo-parejas input,
-    .page-inscripcion-sitio.form-parejas-amigable .celda-id-parejas input,
-    .page-inscripcion-sitio.form-parejas-amigable .celda-cedula-parejas input,
-    .page-inscripcion-sitio.form-parejas-amigable .celda-nombre-parejas input {
-        width: 100%;
-        max-width: 100%;
-    }
-    .page-inscripcion-sitio.form-parejas-amigable .celda-codigo-span .badge {
-        font-size: 0.95em;
-    }
-    .page-inscripcion-sitio.form-parejas-amigable .btn-parejas-fila {
-        flex-shrink: 0;
-    }
-    .page-inscripcion-sitio.form-parejas-amigable .col-disponibles-parejas,
-    .page-inscripcion-sitio.form-parejas-amigable .col-insc-equipos-parejas {
-        flex: 0 0 50%;
-        max-width: 50%;
-        border: 2px solid #0d6efd;
-        border-radius: 8px;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.06);
-        background: #f4f8ff;
-        color: #000;
-    }
-    .page-inscripcion-sitio.form-parejas-amigable .col-disponibles-parejas .jugador-item .small,
-    .page-inscripcion-sitio.form-parejas-amigable .col-disponibles-parejas .jugador-item span,
-    .page-inscripcion-sitio.form-parejas-amigable .col-insc-equipos-parejas .equipo-sidebar-header .badge,
-    .page-inscripcion-sitio.form-parejas-amigable .col-insc-equipos-parejas .equipo-sidebar-header .text-primary,
-    .page-inscripcion-sitio.form-parejas-amigable .col-insc-equipos-parejas .equipo-sidebar-header .text-muted {
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        font-size: 0.875rem;
-        color: #000;
-    }
-    @media (max-width: 767px) {
-        .page-inscripcion-sitio.form-parejas-amigable .col-disponibles-parejas,
-        .page-inscripcion-sitio.form-parejas-amigable .col-insc-equipos-parejas {
-            flex: 0 0 100%;
-            max-width: 100%;
-        }
-    }
-    <?php endif; ?>
 </style>
 
-<div class="container-fluid py-4 page-inscripcion-sitio<?php echo $es_parejas ? ' form-parejas-amigable' : ''; ?>">
+<div class="container-fluid py-4 page-inscripcion-sitio">
     <!-- Breadcrumb -->
     <nav aria-label="breadcrumb" class="mb-4">
         <ol class="breadcrumb">
@@ -586,7 +374,12 @@ $api_guardar_equipo = $base_url . ($use_standalone ? '?' : '&') . 'action=guarda
                     </p>
                     <?php require __DIR__ . '/../../resources/views/partials/torneo_inscripcion_badges_bs5.php'; ?>
                 </div>
-                <div class="mt-2 mt-md-0">
+                <div class="mt-2 mt-md-0 d-flex flex-wrap gap-2 align-items-center justify-content-end">
+                    <button type="button" class="btn btn-warning text-dark" id="btnAbrirFormularioInscripcion"
+                            aria-controls="collapseFormInscripcion"
+                            title="Abrir el formulario de inscripción">
+                        <i class="fas fa-edit me-1"></i>Inscribir <?php echo htmlspecialchars($etiqueta_equipo); ?>
+                    </button>
                     <a href="<?php echo $base_url . ($use_standalone ? '?' : '&'); ?>action=panel&torneo_id=<?php echo $torneo['id']; ?>" 
                        class="btn btn-secondary">
                         <i class="fas fa-arrow-left me-2"></i>Retornar al Panel
@@ -596,177 +389,8 @@ $api_guardar_equipo = $base_url . ($use_standalone ? '?' : '&') . 'action=guarda
         </div>
     </div>
 
-    <?php if ($es_parejas): ?>
-    <!-- Parejas: formulario arriba ancho completo (compacto para evitar scroll) -->
-    <div class="row mb-2 form-parejas-row">
-        <div class="col-12">
-            <div class="card border-0 shadow-sm form-parejas-top">
-                <div class="card-header bg-warning text-dark py-1 px-2 d-flex justify-content-between align-items-center flex-wrap">
-                    <h6 class="mb-0 small">
-                        <i class="fas fa-edit me-1"></i>Inscripción por parejas
-                        <span class="d-block mt-0 fw-normal small text-muted">Club, nombre (opcional) y cédula; al salir del campo se busca automáticamente.</span>
-                    </h6>
-                    <span class="badge badge-parejas-inscritas fw-bold ms-2" id="badge-parejas-inscritas-titulo"><?php echo count($equipos_registrados); ?> inscritas</span>
-                </div>
-                <div class="card-body py-1 px-2">
-                    <?php if ($torneo_iniciado): ?>
-                        <div class="alert alert-warning mb-1 py-1"><i class="fas fa-exclamation-triangle me-1"></i>El torneo ya inició. No se permiten nuevas inscripciones.</div>
-                    <?php endif; ?>
-                    <form id="formEquipo">
-                        <?php require_once __DIR__ . '/../../config/csrf.php'; ?>
-                        <input type="hidden" name="csrf_token" value="<?php echo CSRF::token(); ?>">
-                        <input type="hidden" id="equipo_id" name="equipo_id" value="">
-                        <input type="hidden" id="torneo_id" name="torneo_id" value="<?php echo $torneo['id']; ?>">
-                        <input type="hidden" id="codigo_club_prefijo" name="codigo_club_prefijo" value="">
-                        <input type="hidden" id="codigo_equipo" name="codigo_equipo" value="">
-                        <!-- Fila 1: Club | Nombre pareja | Cédula a buscar (blur = búsqueda automática) -->
-                        <div class="fila-parejas-compacta">
-                            <div class="campo-club-parejas">
-                                <label class="form-label small mb-0" for="club_id">Club *</label>
-                                <select id="club_id" name="club_id" class="form-select form-select-sm w-100" required>
-                                    <option value="">Club *</option>
-                                    <?php if (!empty($clubes_disponibles)): foreach ($clubes_disponibles as $club): ?>
-                                        <option value="<?php echo $club['id']; ?>" data-codigo-prefijo="<?php echo htmlspecialchars((string)($club['codigo_prefijo'] ?? $club['id']), ENT_QUOTES, 'UTF-8'); ?>"><?php echo htmlspecialchars($club['nombre']); ?></option>
-                                    <?php endforeach; else: ?>
-                                        <option value="" disabled>No hay clubes</option>
-                                    <?php endif; ?>
-                                </select>
-                            </div>
-                            <div class="campo-nombre-parejas">
-                                <label class="form-label small mb-0" for="nombre_equipo">Nombre pareja (opc.)</label>
-                                <input type="text" id="nombre_equipo" name="nombre_equipo" class="form-control form-control-sm w-100" placeholder="Opcional">
-                            </div>
-                            <div class="campo-cedula-buscar-parejas">
-                                <label class="form-label small mb-0" for="cedula_buscar_parejas">Cédula a buscar</label>
-                                <input type="text" id="cedula_buscar_parejas" class="form-control form-control-sm w-100" placeholder="Salir del campo para buscar" inputmode="numeric" autocomplete="off">
-                            </div>
-                            <div class="campo-btn-limpiar-parejas">
-                                <label class="form-label small mb-0 d-block">&nbsp;</label>
-                                <button type="button" class="btn btn-outline-secondary btn-sm" onclick="limpiarFormulario()" title="Limpiar formulario" <?= $torneo_iniciado ? 'disabled' : '' ?>><i class="fas fa-eraser me-1"></i>Limpiar formulario</button>
-                            </div>
-                        </div>
-                        <!-- Grid 2 filas iguales: Código (2 filas) | id | cedula | nombre | quitar | botones (Nueva sobre Guardar) -->
-                        <div class="grid-parejas-filas">
-                            <div id="wrap_codigo_equipo_barra" class="celda-codigo-parejas celda-codigo-span" style="visibility:hidden;" aria-hidden="true">
-                                <span class="small text-muted fw-bold">Código</span>
-                                <span id="codigo_equipo_visible" class="badge bg-secondary px-2 py-0"></span>
-                            </div>
-                            <!-- Fila 1: id, cedula, nombre, quitar -->
-                            <div class="celda-id-parejas fila-jugador-compacta" data-posicion="1" data-jugador-asignado="">
-                                <label class="form-label small mb-0 d-block">id</label>
-                                <input type="text" class="form-control form-control-sm jugador-id-usuario input-id-usuario" id="jugador_id_usuario_1" placeholder="ID" readonly style="background:#e9ecef;">
-                                <input type="hidden" id="jugador_id_usuario_h_1" name="jugadores[1][id_usuario]">
-                            </div>
-                            <div class="celda-cedula-parejas">
-                                <label class="form-label small mb-0 d-block">cedula</label>
-                                <input type="text" class="form-control form-control-sm jugador-cedula input-cedula" id="jugador_cedula_1" name="jugadores[1][cedula]" placeholder="Céd." data-posicion="1" onblur="buscarJugadorPorCedula(this)" oninput="validarFormulario()">
-                                <input type="hidden" class="jugador-id-inscrito" id="jugador_id_inscrito_1" name="jugadores[1][id_inscrito]">
-                            </div>
-                            <div class="celda-nombre-parejas">
-                                <label class="form-label small mb-0 d-block">nombre</label>
-                                <input type="text" class="form-control form-control-sm jugador-nombre input-nombre-jug" id="jugador_nombre_1" name="jugadores[1][nombre]" placeholder="Nombre" readonly style="background:#e9ecef;" oninput="validarFormulario()">
-                            </div>
-                            <div class="celda-quitar-parejas">
-                                <input type="hidden" id="es_capitan_1" name="jugadores[1][es_capitan]" value="1">
-                                <button type="button" class="btn btn-sm btn-outline-danger py-0 px-1" onclick="limpiarJugadorYDevolver(1)" title="Volver disponible" id="btn_limpiar_1" style="display:none;"><i class="fas fa-undo me-0" aria-hidden="true"></i></button>
-                            </div>
-                            <!-- Fila 2: id, cedula, nombre, quitar (misma estructura) -->
-                            <div class="celda-id-parejas fila-jugador-compacta" data-posicion="2" data-jugador-asignado="">
-                                <label class="form-label small mb-0 d-block">id</label>
-                                <input type="text" class="form-control form-control-sm jugador-id-usuario input-id-usuario" id="jugador_id_usuario_2" placeholder="ID" readonly style="background:#e9ecef;">
-                                <input type="hidden" id="jugador_id_usuario_h_2" name="jugadores[2][id_usuario]">
-                            </div>
-                            <div class="celda-cedula-parejas">
-                                <label class="form-label small mb-0 d-block">cedula</label>
-                                <input type="text" class="form-control form-control-sm jugador-cedula input-cedula" id="jugador_cedula_2" name="jugadores[2][cedula]" placeholder="Céd." data-posicion="2" onblur="buscarJugadorPorCedula(this)" oninput="validarFormulario()">
-                                <input type="hidden" class="jugador-id-inscrito" id="jugador_id_inscrito_2" name="jugadores[2][id_inscrito]">
-                            </div>
-                            <div class="celda-nombre-parejas">
-                                <label class="form-label small mb-0 d-block">nombre</label>
-                                <input type="text" class="form-control form-control-sm jugador-nombre input-nombre-jug" id="jugador_nombre_2" name="jugadores[2][nombre]" placeholder="Nombre" readonly style="background:#e9ecef;" oninput="validarFormulario()">
-                            </div>
-                            <div class="celda-quitar-parejas">
-                                <input type="hidden" id="es_capitan_2" name="jugadores[2][es_capitan]" value="0">
-                                <button type="button" class="btn btn-sm btn-outline-danger py-0 px-1" onclick="limpiarJugadorYDevolver(2)" title="Volver disponible" id="btn_limpiar_2" style="display:none;"><i class="fas fa-undo me-0" aria-hidden="true"></i></button>
-                            </div>
-                            <!-- Botones uno sobre el otro al final -->
-                            <div class="celda-botones-parejas-apilados">
-                                <button type="button" class="btn btn-secondary btn-sm btn-parejas-fila w-100 mb-1" onclick="limpiarFormulario()" <?= $torneo_iniciado ? 'disabled' : '' ?>><i class="fas fa-redo me-1"></i>Nueva</button>
-                                <button type="submit" class="btn btn-success btn-sm btn-parejas-fila w-100" id="btnGuardarEquipo" <?= $torneo_iniciado ? 'disabled' : '' ?>><i class="fas fa-save me-1"></i>Guardar</button>
-                            </div>
-                        </div>
-                    </form>
-                </div>
-            </div>
-        </div>
-    </div>
-    <!-- Dos columnas 50%: Disponibles | Inscritos -->
-    <div class="row g-2 row-columnas-parejas">
-        <div class="col-12 col-md-6 col-disponibles-parejas">
-            <div class="card border-0 shadow-sm h-100 d-flex flex-column overflow-hidden">
-                <div class="card-header bg-primary text-white py-1 px-2">
-                    <h6 class="mb-0 small"><i class="fas fa-user-friends me-1"></i>Atletas de su entidad</h6>
-                </div>
-                <div class="search-box">
-                    <small class="text-muted d-block">Clic en un atleta para asignarlo a una posición.</small>
-                    <input type="text" id="searchJugadores" class="d-none" disabled aria-hidden="true">
-                    <input type="hidden" id="buscarCedulaLazy" aria-hidden="true">
-                </div>
-                <div class="card-body p-0" style="flex:1;min-height:0;overflow-y:auto;">
-                    <?php if (empty($jugadores_disponibles)): ?>
-                        <div class="text-center py-3 text-muted small">Sin disponibles</div>
-                    <?php else: ?>
-                        <div class="small text-muted px-2 py-1 border-bottom bg-light fw-bold">ID | Céd. | Nombre</div>
-                        <div id="listaJugadores">
-                            <?php foreach ($jugadores_disponibles as $jugador): ?>
-                                <div class="jugador-item <?= $torneo_iniciado ? 'disabled' : '' ?>" data-nombre="<?php echo strtolower(htmlspecialchars($jugador['nombre'] ?? '')); ?>" data-cedula="<?php echo htmlspecialchars($jugador['cedula'] ?? ''); ?>" data-id-usuario="<?php echo $jugador['id_usuario'] ?? ''; ?>" data-id="<?php echo $jugador['id'] ?? ''; ?>" data-jugador='<?php echo htmlspecialchars(json_encode($jugador, JSON_UNESCAPED_UNICODE), ENT_QUOTES, 'UTF-8'); ?>' <?php if (!$torneo_iniciado): ?>onclick="seleccionarJugador(this)"<?php endif; ?> style="cursor:<?= $torneo_iniciado ? 'not-allowed' : 'pointer' ?>;">
-                                    <div class="small"><span class="text-muted fw-bold"><?php echo htmlspecialchars($jugador['id_usuario'] ?? '-'); ?></span> | <span class="text-muted"><?php echo htmlspecialchars($jugador['cedula'] ?? ''); ?></span> | <span class="text-dark"><?php echo htmlspecialchars($jugador['nombre'] ?? ''); ?></span></div>
-                                </div>
-                            <?php endforeach; ?>
-                        </div>
-                    <?php endif; ?>
-                </div>
-            </div>
-        </div>
-        <div class="col-12 col-md-6 col-insc-equipos-parejas">
-            <div class="card border-0 shadow-sm equipo-sidebar-card h-100 d-flex flex-column overflow-hidden">
-                <div class="card-header bg-success text-white py-1 px-2">
-                    <h6 class="mb-0 small"><i class="fas fa-users me-1"></i>Parejas inscritas (<?php echo count($equipos_registrados); ?>)</h6>
-                    <small class="opacity-75 d-block small">Clic para ver · Editar para cargar en el formulario</small>
-                </div>
-                <div class="card-body p-2 flex-grow-1 overflow-auto">
-                    <?php if (empty($equipos_registrados)): ?>
-                        <div class="text-center py-3 text-muted small">Aún no hay parejas</div>
-                    <?php else: ?>
-                        <div id="listaEquiposRegistrados">
-                            <?php foreach ($equipos_registrados as $equipo): $eid = (int)$equipo['id']; $collapseId = 'int-equipo-' . $eid; ?>
-                            <div class="equipo-sidebar-item equipo-registrado-item" data-equipo-id="<?php echo $eid; ?>">
-                                <div class="equipo-sidebar-header d-flex align-items-center justify-content-between gap-1 flex-wrap" role="button" tabindex="0" data-collapse-target="<?php echo htmlspecialchars($collapseId, ENT_QUOTES, 'UTF-8'); ?>">
-                                    <div class="flex-grow-1 min-w-0">
-                                        <span class="badge bg-secondary"><?php echo htmlspecialchars($equipo['codigo_equipo']); ?></span>
-                                        <span class="fw-semibold text-primary"><?php echo htmlspecialchars($equipo['nombre_equipo']); ?></span>
-                                        <div class="text-muted small"><?php echo htmlspecialchars($equipo['nombre_club'] ?? ''); ?></div>
-                                    </div>
-                                    <button type="button" class="btn btn-sm btn-outline-primary btn-editar-equipo-form" onclick="event.stopPropagation(); cargarEquipo(<?php echo $eid; ?>); document.getElementById('formEquipo').scrollIntoView({behavior:'smooth'});" title="Editar">Editar</button>
-                                    <span class="btn btn-sm btn-outline-secondary py-0 px-1 integrantes-chevron"><i class="fas fa-chevron-down small"></i></span>
-                                    <button type="button" class="btn btn-sm btn-outline-danger py-0 px-1" onclick="event.stopPropagation(); eliminarEquipo(<?php echo $eid; ?>, '<?php echo htmlspecialchars($equipo['nombre_equipo'], ENT_QUOTES); ?>')" title="Eliminar"><i class="fas fa-trash-alt"></i></button>
-                                </div>
-                                <ul class="list-unstyled mb-0 equipo-sidebar-integrantes collapse integrantes-collapse" id="<?php echo $collapseId; ?>">
-                                    <?php foreach ($equipo['jugadores'] ?? [] as $j): ?>
-                                        <li><?php echo htmlspecialchars($j['cedula'] ?? ''); ?> — <?php echo htmlspecialchars($j['nombre'] ?? ''); ?></li>
-                                    <?php endforeach; ?>
-                                </ul>
-                            </div>
-                            <?php endforeach; ?>
-                        </div>
-                    <?php endif; ?>
-                </div>
-            </div>
-        </div>
-    </div>
-    <?php else: ?>
-    <!-- Tres columnas: disponibles | formulario | equipos inscritos -->
-    <div class="row g-2 g-lg-3">
+    <!-- Dos columnas: disponibles | inscritos -->
+    <div class="row g-2 g-lg-3 row-inscripcion-dos-columnas">
         <div class="col-12 col-disponibles">
             <div class="card border-0 shadow-sm h-100 d-flex flex-column overflow-hidden">
                 <div class="card-header bg-primary text-white py-2">
@@ -846,17 +470,85 @@ $api_guardar_equipo = $base_url . ($use_standalone ? '?' : '&') . 'action=guarda
             </div>
         </div>
 
-        <!-- COLUMNA 2: Formulario (~20% menos ancho que col-lg-5) -->
-        <div class="col-12 col-lg-4 col-insc-form">
-            <div class="card border-0 shadow-sm">
-                        <div class="card-header bg-warning text-dark py-2">
-                    <h6 class="mb-0 small">
-                        <i class="fas fa-edit me-1"></i>Formulario de <?php echo strtolower($etiqueta_equipo); ?>
-                        <span class="d-block mt-1 fw-semibold">Inscripción <?php echo strtolower($etiqueta_equipos); ?> de <?php echo (int)$jugadores_por_equipo; ?> jugadores</span>
-                        <span class="text-muted fw-normal" style="font-size:0.75rem;">Clic en «Editar» en <?php echo strtolower($etiqueta_equipos); ?> inscritos para cargar y editar</span>
+        <!-- Inscritos -->
+        <div class="col-12 col-insc-equipos">
+            <div class="card border-0 shadow-sm equipo-sidebar-card h-100">
+                <div class="card-header bg-success text-white py-2">
+                    <h6 class="mb-0">
+                        <i class="fas fa-users me-1"></i><?php echo $etiqueta_equipos; ?> inscritos (<?php echo count($equipos_registrados); ?>)
                     </h6>
+                    <small class="opacity-75 fw-bold">Clic en la fila: mostrar / ocultar integrantes · «Editar» carga el formulario</small>
                 </div>
-                <div class="card-body">
+                <div class="card-body p-2">
+                    <?php if (empty($equipos_registrados)): ?>
+                        <div class="text-center py-3 text-muted small">
+                            <i class="fas fa-users-slash fa-2x mb-2 opacity-50"></i>
+                            <p class="mb-0">Aún no hay <?php echo strtolower($etiqueta_equipos); ?></p>
+                        </div>
+                    <?php else: ?>
+                        <div id="listaEquiposRegistrados">
+                            <?php foreach ($equipos_registrados as $equipo):
+                                $eid = (int)$equipo['id'];
+                                $jugEq = $equipo['jugadores'] ?? [];
+                                $collapseId = 'int-equipo-' . $eid;
+                            ?>
+                            <div class="equipo-sidebar-item equipo-registrado-item" data-equipo-id="<?php echo $eid; ?>">
+                                <div class="equipo-sidebar-header d-flex align-items-center justify-content-between gap-1 flex-wrap"
+                                     role="button" tabindex="0"
+                                     data-collapse-target="<?php echo htmlspecialchars($collapseId, ENT_QUOTES, 'UTF-8'); ?>"
+                                     aria-expanded="false" aria-controls="<?php echo $collapseId; ?>">
+                                    <div class="flex-grow-1 min-w-0">
+                                        <span class="badge bg-secondary"><?php echo htmlspecialchars($equipo['codigo_equipo']); ?></span>
+                                        <span class="fw-semibold text-primary"><?php echo htmlspecialchars($equipo['nombre_equipo']); ?></span>
+                                        <div class="text-muted" style="font-size:0.72rem;"><?php echo htmlspecialchars($equipo['nombre_club'] ?? ''); ?></div>
+                                    </div>
+                                    <div class="d-flex align-items-center gap-1 flex-shrink-0">
+                                        <button type="button" class="btn btn-sm btn-outline-primary btn-editar-equipo-form"
+                                                onclick="event.stopPropagation(); cargarEquipo(<?php echo $eid; ?>); window.enfocarPanelFormularioFlotante();"
+                                                title="Cargar en formulario para editar">Editar</button>
+                                        <span class="btn btn-sm btn-outline-secondary py-0 px-1 mb-0 integrantes-chevron" title="Mostrar/ocultar integrantes">
+                                            <i class="fas fa-chevron-down small"></i>
+                                        </span>
+                                        <button type="button" class="btn btn-sm btn-outline-danger py-0 px-1"
+                                                onclick="event.stopPropagation(); eliminarEquipo(<?php echo $eid; ?>, '<?php echo htmlspecialchars($equipo['nombre_equipo'], ENT_QUOTES); ?>')">
+                                            <i class="fas fa-trash-alt"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                                <div class="collapse integrantes-collapse" id="<?php echo $collapseId; ?>">
+                                    <ul class="list-unstyled mb-0 equipo-sidebar-integrantes">
+                                        <?php if (empty($jugEq)): ?>
+                                            <li class="text-muted">Sin jugadores en lista</li>
+                                        <?php else: ?>
+                                            <?php foreach ($jugEq as $j): ?>
+                                                <li>
+                                                    <span class="text-muted"><?php echo htmlspecialchars($j['cedula'] ?? ''); ?></span>
+                                                    — <?php echo htmlspecialchars($j['nombre'] ?? ''); ?>
+                                                    <span class="badge bg-light text-dark" style="font-size:0.65rem;">#<?php echo (int)($j['id_usuario'] ?? 0); ?></span>
+                                                </li>
+                                            <?php endforeach; ?>
+                                        <?php endif; ?>
+                                    </ul>
+                                </div>
+                            </div>
+                            <?php endforeach; ?>
+                        </div>
+                    <?php endif; ?>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Formulario de inscripción (siempre visible al bajar; se puede plegar) -->
+    <div class="row g-2 mt-2" id="bloqueFormularioInscripcion">
+        <div class="col-12">
+            <div class="card border-warning shadow-sm card-formulario-inscripcion" role="region" aria-labelledby="tituloFormFlotanteInscripcion">
+                <div class="card-header bg-warning text-dark py-2 px-2 d-flex align-items-center justify-content-between flex-wrap gap-1 border-bottom border-secondary border-opacity-25">
+                    <span id="tituloFormFlotanteInscripcion" class="small fw-semibold mb-0"><i class="fas fa-edit me-1"></i>Formulario de inscripción</span>
+                    <button type="button" class="btn btn-sm btn-outline-dark py-0 px-2" id="btnToggleFormFlotante" data-bs-toggle="collapse" data-bs-target="#collapseFormInscripcion" aria-expanded="true" aria-controls="collapseFormInscripcion" title="Mostrar u ocultar formulario"><i class="fas fa-chevron-up" aria-hidden="true"></i></button>
+                </div>
+                <div id="collapseFormInscripcion" class="collapse show">
+                    <div class="card-body card-formulario-inscripcion-body">
                     <?php if ($torneo_iniciado): ?>
                         <div class="alert alert-warning">
                             <i class="fas fa-exclamation-triangle me-2"></i>
@@ -871,8 +563,8 @@ $api_guardar_equipo = $base_url . ($use_standalone ? '?' : '&') . 'action=guarda
                         <input type="hidden" id="codigo_club_prefijo" name="codigo_club_prefijo" value="">
                         <input type="hidden" id="codigo_equipo" name="codigo_equipo" value="">
                         
-                        <!-- Club y nombre equipo: misma línea, mismo alto -->
-                        <div class="fila-club-nombre-equipo">
+                        <!-- Club y nombre equipo: misma línea; parejas: Guardar y Nueva a la derecha -->
+                        <div class="fila-club-nombre-equipo<?php echo $es_parejas ? ' fila-club-nombre-equipo--parejas' : ''; ?>">
                             <div class="campo-club">
                                 <label class="form-label small mb-0" for="club_id">Club *</label>
                                 <select id="club_id" name="club_id" class="form-select form-select-sm w-100" required>
@@ -895,6 +587,20 @@ $api_guardar_equipo = $base_url . ($use_standalone ? '?' : '&') . 'action=guarda
                                        <?php echo $es_parejas ? '' : 'required '; ?>
                                        placeholder="<?php echo $es_parejas ? 'Opcional (sin nombre)' : 'Nombre del ' . $etiqueta_equipo . ' *'; ?>">
                             </div>
+                            <?php if ($es_parejas): ?>
+                            <div class="campo-acciones-inscripcion">
+                                <div id="wrap_codigo_equipo_barra" class="d-flex align-items-center gap-2" style="visibility:hidden;" aria-hidden="true">
+                                    <span class="small text-muted fw-bold mb-0">Código</span>
+                                    <span id="codigo_equipo_visible" class="badge bg-secondary fs-6 px-2 py-1"></span>
+                                </div>
+                                <button type="submit" class="btn btn-success btn-sm py-1" id="btnGuardarEquipo" <?= $torneo_iniciado ? 'disabled' : '' ?>>
+                                    <i class="fas fa-save me-1"></i>Guardar <?php echo $etiqueta_equipo; ?>
+                                </button>
+                                <button type="button" class="btn btn-secondary btn-sm py-1" onclick="limpiarFormulario()" <?= $torneo_iniciado ? 'disabled' : '' ?>>
+                                    <i class="fas fa-redo me-1"></i>Nueva <?php echo $etiqueta_equipo; ?>
+                                </button>
+                            </div>
+                            <?php endif; ?>
                         </div>
                         <?php if (empty($clubes_disponibles) && !empty($is_admin_club ?? false)): ?>
                             <small class="text-muted d-block mb-2">
@@ -904,14 +610,15 @@ $api_guardar_equipo = $base_url . ($use_standalone ? '?' : '&') . 'action=guarda
                         
                         <hr class="my-1">
                         
-                        <!-- Jugadores + barra: código (solo edición) | guardar -->
+                        <!-- Equipos: barra código + botones encima de jugadores; parejas: botones van en fila club/nombre -->
+                        <?php if (!$es_parejas): ?>
                         <div class="mb-1 flex-shrink-0">
-                            <div class="d-flex justify-content-between align-items-center flex-wrap gap-1 mb-1">
-                                <div id="wrap_codigo_equipo_barra" class="d-flex align-items-center gap-2" style="visibility:hidden;" aria-hidden="true">
+                            <div class="d-flex justify-content-between align-items-center flex-nowrap gap-2 mb-1">
+                                <div id="wrap_codigo_equipo_barra" class="d-flex align-items-center gap-2 flex-shrink-0 min-w-0" style="visibility:hidden;" aria-hidden="true">
                                     <span class="small text-muted fw-bold mb-0">Código</span>
                                     <span id="codigo_equipo_visible" class="badge bg-secondary fs-6 px-2 py-1"></span>
                                 </div>
-                                <div class="d-flex gap-2 ms-auto">
+                                <div class="d-flex flex-nowrap gap-2 ms-auto flex-shrink-0">
                                     <button type="submit" class="btn btn-success btn-sm py-1" id="btnGuardarEquipo" <?= $torneo_iniciado ? 'disabled' : '' ?>>
                                         <i class="fas fa-save me-1"></i>Guardar <?php echo $etiqueta_equipo; ?>
                                     </button>
@@ -920,6 +627,7 @@ $api_guardar_equipo = $base_url . ($use_standalone ? '?' : '&') . 'action=guarda
                                     </button>
                                 </div>
                             </div>
+                        <?php endif; ?>
                             <div id="jugadores-container">
                                 <?php for ($i = 1; $i <= $jugadores_por_equipo; $i++): ?>
                                     <div class="row g-1 align-items-center fila-jugador-compacta" data-posicion="<?php echo $i; ?>" data-jugador-asignado="">
@@ -984,87 +692,44 @@ $api_guardar_equipo = $base_url . ($use_standalone ? '?' : '&') . 'action=guarda
                                     <?php endif; ?>
                                 <?php endfor; ?>
                             </div>
+                        <?php if (!$es_parejas): ?>
                         </div>
+                        <?php endif; ?>
                     </form>
-                </div>
-            </div>
-        </div>
-
-        <!-- COLUMNA 3: Equipos inscritos -->
-        <div class="col-12 col-lg-4 col-insc-equipos">
-            <div class="card border-0 shadow-sm equipo-sidebar-card h-100">
-                <div class="card-header bg-success text-white py-2">
-                    <h6 class="mb-0">
-                        <i class="fas fa-users me-1"></i><?php echo $etiqueta_equipos; ?> inscritos (<?php echo count($equipos_registrados); ?>)
-                    </h6>
-                    <small class="opacity-75 fw-bold">Clic en la fila: mostrar / ocultar integrantes · «Editar» carga el formulario</small>
-                </div>
-                <div class="card-body p-2">
-                    <?php if (empty($equipos_registrados)): ?>
-                        <div class="text-center py-3 text-muted small">
-                            <i class="fas fa-users-slash fa-2x mb-2 opacity-50"></i>
-                            <p class="mb-0">Aún no hay <?php echo strtolower($etiqueta_equipos); ?></p>
-                        </div>
-                    <?php else: ?>
-                        <div id="listaEquiposRegistrados">
-                            <?php foreach ($equipos_registrados as $equipo):
-                                $eid = (int)$equipo['id'];
-                                $jugEq = $equipo['jugadores'] ?? [];
-                                $collapseId = 'int-equipo-' . $eid;
-                            ?>
-                            <div class="equipo-sidebar-item equipo-registrado-item" data-equipo-id="<?php echo $eid; ?>">
-                                <div class="equipo-sidebar-header d-flex align-items-center justify-content-between gap-1 flex-wrap"
-                                     role="button" tabindex="0"
-                                     data-collapse-target="<?php echo htmlspecialchars($collapseId, ENT_QUOTES, 'UTF-8'); ?>"
-                                     aria-expanded="false" aria-controls="<?php echo $collapseId; ?>">
-                                    <div class="flex-grow-1 min-w-0">
-                                        <span class="badge bg-secondary"><?php echo htmlspecialchars($equipo['codigo_equipo']); ?></span>
-                                        <span class="fw-semibold text-primary"><?php echo htmlspecialchars($equipo['nombre_equipo']); ?></span>
-                                        <div class="text-muted" style="font-size:0.72rem;"><?php echo htmlspecialchars($equipo['nombre_club'] ?? ''); ?></div>
-                                    </div>
-                                    <div class="d-flex align-items-center gap-1 flex-shrink-0">
-                                        <button type="button" class="btn btn-sm btn-outline-primary btn-editar-equipo-form"
-                                                onclick="event.stopPropagation(); cargarEquipo(<?php echo $eid; ?>); document.getElementById('formEquipo').scrollIntoView({behavior:'smooth'});"
-                                                title="Cargar en formulario para editar">Editar</button>
-                                        <span class="btn btn-sm btn-outline-secondary py-0 px-1 mb-0 integrantes-chevron" title="Mostrar/ocultar integrantes">
-                                            <i class="fas fa-chevron-down small"></i>
-                                        </span>
-                                        <button type="button" class="btn btn-sm btn-outline-danger py-0 px-1"
-                                                onclick="event.stopPropagation(); eliminarEquipo(<?php echo $eid; ?>, '<?php echo htmlspecialchars($equipo['nombre_equipo'], ENT_QUOTES); ?>')">
-                                            <i class="fas fa-trash-alt"></i>
-                                        </button>
-                                    </div>
-                                </div>
-                                <div class="collapse integrantes-collapse" id="<?php echo $collapseId; ?>">
-                                    <ul class="list-unstyled mb-0 equipo-sidebar-integrantes">
-                                        <?php if (empty($jugEq)): ?>
-                                            <li class="text-muted">Sin jugadores en lista</li>
-                                        <?php else: ?>
-                                            <?php foreach ($jugEq as $j): ?>
-                                                <li>
-                                                    <span class="text-muted"><?php echo htmlspecialchars($j['cedula'] ?? ''); ?></span>
-                                                    — <?php echo htmlspecialchars($j['nombre'] ?? ''); ?>
-                                                    <span class="badge bg-light text-dark" style="font-size:0.65rem;">#<?php echo (int)($j['id_usuario'] ?? 0); ?></span>
-                                                </li>
-                                            <?php endforeach; ?>
-                                        <?php endif; ?>
-                                    </ul>
-                                </div>
-                            </div>
-                            <?php endforeach; ?>
-                        </div>
-                    <?php endif; ?>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
-    <?php endif; ?>
+
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js" defer></script>
 <!-- SweetAlert2 -->
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11" defer></script>
 <script>
+window.enfocarPanelFormularioFlotante = function () {
+    var col = document.getElementById('collapseFormInscripcion');
+    var bloque = document.getElementById('bloqueFormularioInscripcion');
+    if (col && typeof bootstrap !== 'undefined') {
+        try {
+            bootstrap.Collapse.getOrCreateInstance(col, { toggle: false }).show();
+        } catch (e0) {}
+    }
+    if (bloque) {
+        try {
+            bloque.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        } catch (e) {}
+    }
+    requestAnimationFrame(function () {
+        try {
+            var club = document.getElementById('club_id');
+            if (club && !club.disabled) {
+                club.focus({ preventScroll: true });
+            }
+        } catch (e2) {}
+    });
+};
 const JUGADORES_POR_EQUIPO = <?php echo $jugadores_por_equipo; ?>;
 const ES_PAREJAS = <?php echo $es_parejas ? 'true' : 'false'; ?>;
 const TORNEO_ID = <?php echo $torneo['id']; ?>;
@@ -1164,6 +829,33 @@ document.addEventListener('DOMContentLoaded', function() {
         validarFormulario();
         actualizarBloqueoSeleccionJugadores();
     });
+    var collapseForm = document.getElementById('collapseFormInscripcion');
+    var btnToggleForm = document.getElementById('btnToggleFormFlotante');
+    if (collapseForm && btnToggleForm) {
+        collapseForm.addEventListener('shown.bs.collapse', function () {
+            btnToggleForm.setAttribute('aria-expanded', 'true');
+            var ic = btnToggleForm.querySelector('i');
+            if (ic) ic.className = 'fas fa-chevron-up';
+        });
+        collapseForm.addEventListener('hidden.bs.collapse', function () {
+            btnToggleForm.setAttribute('aria-expanded', 'false');
+            var ic = btnToggleForm.querySelector('i');
+            if (ic) ic.className = 'fas fa-chevron-down';
+        });
+    }
+    var btnAbrirForm = document.getElementById('btnAbrirFormularioInscripcion');
+    if (btnAbrirForm) {
+        btnAbrirForm.addEventListener('click', function (ev) {
+            ev.preventDefault();
+            window.enfocarPanelFormularioFlotante();
+        });
+    }
+    try {
+        var params = new URLSearchParams(window.location.search);
+        if (params.get('abrir_form') === '1' || params.get('abrir_form') === 'true') {
+            window.enfocarPanelFormularioFlotante();
+        }
+    } catch (e3) {}
 });
 
 // Búsqueda en tiempo real
@@ -1495,7 +1187,7 @@ async function buscarCedulaParejasGlobal() {
                     return;
                 }
             }
-            Swal.fire({ icon: 'info', title: 'Completo', text: 'Las dos posiciones ya tienen jugador.', confirmButtonColor: '#3b82f6' });
+            Swal.fire({ icon: 'info', title: 'Completo', text: 'Todas las posiciones ya tienen jugador.', confirmButtonColor: '#3b82f6' });
         } else {
             Swal.fire({ icon: 'error', title: 'No encontrado', text: data.message || 'Verifique la cédula.', confirmButtonColor: '#3b82f6' });
         }
@@ -1873,7 +1565,7 @@ function cargarEquipo(equipoId) {
     });
 
     actualizarBloqueoSeleccionJugadores();
-    document.getElementById('formEquipo').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    window.enfocarPanelFormularioFlotante();
     validarFormulario();
 }
 
