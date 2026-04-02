@@ -113,9 +113,52 @@ $pageTitle = isset($titulo) ? (string) $titulo : ('Cuadrícula - Ronda ' . (int)
         @media (max-width: 1366px) and (max-height: 800px) {
             body.cuadricula-equipos-v3 .cuadricula-header .btn-sm { font-size: 0.7rem; padding: 0.2rem 0.45rem; }
         }
+        /* Torneos asociados (cuadrícula): activo verde, inactivo rosa */
+        .page-cuadricula-10 .tcs--on-dark .tcs__pill:not(.is-active) {
+            background: #f9a8d4 !important;
+            color: #831843 !important;
+            border: 1px solid #db2777 !important;
+        }
+        .page-cuadricula-10 .tcs--on-dark .tcs__pill:not(.is-active):hover {
+            background: #fbcfe8 !important;
+            color: #701a35 !important;
+        }
+        .page-cuadricula-10 .tcs--on-dark .tcs__pill:not(.is-active) .tcs__pill-meta {
+            border-top-color: rgba(131, 24, 67, 0.28) !important;
+            color: #9d174d !important;
+        }
+        .page-cuadricula-10 .tcs--on-dark .tcs__pill:not(.is-active) .tcs__meta-k {
+            color: #a21caf !important;
+        }
+        .page-cuadricula-10 .tcs--on-dark .tcs__pill:not(.is-active) .tcs__meta-v {
+            color: #831843 !important;
+        }
+        .page-cuadricula-10 .tcs--on-dark .tcs__pill:not(.is-active) .tcs__meta-sep {
+            background: rgba(190, 24, 93, 0.45) !important;
+        }
+        .page-cuadricula-10 .tcs--on-dark .tcs__pill.is-active {
+            background: #16a34a !important;
+            border: 1px solid #15803d !important;
+            color: #fff !important;
+        }
+        .page-cuadricula-10 .tcs--on-dark .tcs__pill.is-active .tcs__pill-name,
+        .page-cuadricula-10 .tcs--on-dark .tcs__pill.is-active .tcs__pill-meta,
+        .page-cuadricula-10 .tcs--on-dark .tcs__pill.is-active .tcs__meta-k,
+        .page-cuadricula-10 .tcs--on-dark .tcs__pill.is-active .tcs__meta-v {
+            color: #fff !important;
+        }
+        .page-cuadricula-10 .tcs--on-dark .tcs__pill.is-active .tcs__pill-meta {
+            border-top-color: rgba(255, 255, 255, 0.35) !important;
+        }
+        .page-cuadricula-10 .tcs--on-dark .tcs__pill.is-active .tcs__meta-sep {
+            background: rgba(255, 255, 255, 0.45) !important;
+        }
     </style>
 </head>
-<body class="page-cuadricula-10<?php echo $es_modalidad_equipos_v3 ? ' cuadricula-equipos-v3' : ''; ?>">
+<?php
+$cuad_url_panel = $base_url . ($use_standalone ? '?' : '&') . 'action=panel&torneo_id=' . (int) ($torneo['id'] ?? 0);
+?>
+<body class="page-cuadricula-10<?php echo $es_modalidad_equipos_v3 ? ' cuadricula-equipos-v3' : ''; ?>" data-nav-origin="<?php echo htmlspecialchars($cuad_url_panel, ENT_QUOTES, 'UTF-8'); ?>">
     <div class="cuadricula-shell">
         <div class="cuadricula-header no-print d-flex align-items-center justify-content-between flex-wrap w-100">
             <span class="cuadricula-header-torneo mr-2" style="min-width:0;">
@@ -141,19 +184,17 @@ $pageTitle = isset($titulo) ? (string) $titulo : ('Cuadrícula - Ronda ' . (int)
                         'map_max' => $map_max_partida_switch,
                         'mode' => 'cuadricula',
                         'theme' => 'on_dark',
-                        'select_id' => 'torneo-asociado-select-cuad',
+                        'show_select' => false,
                         'show_info' => false,
                         'pill_row_class' => 'mr-2',
                     ];
                     require __DIR__ . '/../../resources/views/partials/torneo_context_switch.php';
                     ?>
                 <?php endif; ?>
-                <button type="button" onclick="window.print()" class="btn btn-primary btn-sm">
+                <button type="button" onclick="window.print()" class="btn btn-primary btn-sm ml-1">
                     <i class="fas fa-print mr-2"></i> Imprimir
                 </button>
-                <a href="<?php echo htmlspecialchars($base_url . ($use_standalone ? '?' : '&') . 'action=panel&torneo_id=' . (int) ($torneo['id'] ?? 0), ENT_QUOTES, 'UTF-8'); ?>" class="btn btn-secondary btn-sm ml-1">
-                    <i class="fas fa-arrow-left mr-2"></i> Volver al panel
-                </a>
+                <span id="breadcrumb-back-beside-print" class="d-inline-flex align-items-center ml-1"></span>
             </div>
         </div>
         <div class="cuadricula-meta no-print" id="cuadriculaMeta" aria-live="polite"></div>
@@ -224,5 +265,6 @@ $pageTitle = isset($titulo) ? (string) $titulo : ('Cuadrícula - Ronda ' . (int)
 
 })();
     </script>
+    <script src="<?php echo htmlspecialchars(AppHelpers::url('assets/breadcrumb-back.js'), ENT_QUOTES, 'UTF-8'); ?>" defer></script>
 </body>
 </html>

@@ -753,45 +753,21 @@ $contextLabel = $contextGenero === 'F' ? 'Femenino' : 'Masculino';
 
         <!-- Área Principal - Formulario (ampliada 20%) -->
         <div class="col-md-10 col-lg-11 col-form-registro">
+            <?php
+            $url_volver_panel = $base_url . $action_param . 'action=panel&torneo_id=' . (int)($torneo['id'] ?? 0);
+            $rr_card_header_visible = (!empty($mostrar_countdown_correcciones) && !empty($countdown_fin_timestamp))
+                || !empty($puede_cerrar_torneo)
+                || (!empty($torneo['locked']) && (int)$torneo['locked'] === 1);
+            ?>
             <div class="card formulario-resultados-sticky">
-                <div class="card-header d-flex flex-row justify-content-between align-items-center flex-wrap gap-2" style="background-color: #e3f2fd; color: #1565c0;">
-                    <div class="d-flex flex-column align-items-start">
-                        <h4 class="mb-0 d-flex align-items-center gap-2 flex-wrap">
-                            <i class="fas fa-keyboard mr-2"></i>Carga de Resultados
-                            <span class="badge contexto-genero-badge theme-<?php echo (int)$contextBadgeIndex; ?>" title="Contexto: <?php echo htmlspecialchars($contextLabel, ENT_QUOTES, 'UTF-8'); ?>">
-                                <?php echo htmlspecialchars($contextBadgeName, ENT_QUOTES, 'UTF-8'); ?>
-                            </span>
-                        </h4>
-                        <?php if (!empty($mostrar_countdown_correcciones) && !empty($countdown_fin_timestamp)): ?>
-                        <p class="mb-0 mt-1 font-weight-bold" style="font-size: 1.1rem;">
-                            Correcciones se cierran en: <span id="countdown-correcciones" class="tabular-nums" data-fin="<?php echo (int)$countdown_fin_timestamp; ?>">--:--</span>
-                        </p>
-                        <?php endif; ?>
-                    </div>
-                    <div class="d-flex align-items-center flex-wrap justify-content-end" style="gap:.5rem;">
-                        <span class="tcs-info tcs-info--on-light">
-                            <span class="tcs-info__dot" aria-hidden="true"></span>
-                            Visualizando: Torneo <?php echo htmlspecialchars($contextBadgeName, ENT_QUOTES, 'UTF-8'); ?> [#<?php echo (int)($context_switcher['active_tournament_id'] ?? ($torneo['id'] ?? 0)); ?>]
-                        </span>
-                        <?php if (!empty($context_switcher['items'])): ?>
-                            <?php
-                            $tcs = [
-                                'items' => $context_switcher['items'],
-                                'active_id' => (int) ($context_switcher['active_tournament_id'] ?? 0),
-                                'base_url' => $base_url,
-                                'sep' => $use_standalone ? '?' : '&',
-                                'ronda_base' => (int) $ronda,
-                                'map_max' => $map_max_partida_switch,
-                                'mode' => 'registrar_resultados',
-                                'theme' => 'on_light',
-                                'select_id' => 'torneo-asociado-select-registrar',
-                                'show_info' => false,
-                                'aria_label' => 'Selector de contexto del torneo',
-                                'extra' => ['mesa' => 0],
-                            ];
-                            require __DIR__ . '/../../resources/views/partials/torneo_context_switch.php';
-                            ?>
-                        <?php endif; ?>
+                <?php if ($rr_card_header_visible): ?>
+                <div class="card-header d-flex flex-row align-items-center justify-content-between flex-wrap gap-2 py-2" style="background-color: #e3f2fd; color: #1565c0;">
+                    <?php if (!empty($mostrar_countdown_correcciones) && !empty($countdown_fin_timestamp)): ?>
+                    <p class="mb-0 font-weight-bold" style="font-size: 1.1rem;">
+                        Correcciones se cierran en: <span id="countdown-correcciones" class="tabular-nums" data-fin="<?php echo (int)$countdown_fin_timestamp; ?>">--:--</span>
+                    </p>
+                    <?php endif; ?>
+                    <div class="d-flex align-items-center flex-wrap justify-content-end ms-auto" style="gap:.5rem;">
                         <?php if (!empty($puede_cerrar_torneo)): ?>
                         <form method="POST" action="<?php echo $use_standalone ? $base_url : 'index.php?page=torneo_gestion'; ?>" class="mb-0" onsubmit="return confirm('¿Finalizar el torneo? A partir de ese momento no se podrán modificar datos.');">
                             <input type="hidden" name="action" value="cerrar_torneo">
@@ -806,6 +782,7 @@ $contextLabel = $contextGenero === 'F' ? 'Femenino' : 'Masculino';
                         <?php endif; ?>
                     </div>
                 </div>
+                <?php endif; ?>
                 
                 <div class="card-body">
                     <!-- Mensajes -->
@@ -838,7 +815,29 @@ $contextLabel = $contextGenero === 'F' ? 'Femenino' : 'Masculino';
                         </div>
                     <?php endif; ?>
 
-                    <!-- Una fila: ronda+mesa (izq.) | nº mesa (centro) | volver (der.; breadcrumb-back.js) -->
+                    <?php if (!empty($context_switcher['items'])): ?>
+                    <div class="mb-2 d-flex align-items-center flex-wrap gap-2 rr-torneos-asociados-pills">
+                        <?php
+                        $tcs = [
+                            'items' => $context_switcher['items'],
+                            'active_id' => (int) ($context_switcher['active_tournament_id'] ?? 0),
+                            'base_url' => $base_url,
+                            'sep' => $use_standalone ? '?' : '&',
+                            'ronda_base' => (int) $ronda,
+                            'map_max' => $map_max_partida_switch,
+                            'mode' => 'registrar_resultados',
+                            'theme' => 'on_light',
+                            'show_select' => false,
+                            'show_info' => false,
+                            'aria_label' => 'Torneos asociados (mismo evento)',
+                            'extra' => ['mesa' => 0],
+                        ];
+                        require __DIR__ . '/../../resources/views/partials/torneo_context_switch.php';
+                        ?>
+                    </div>
+                    <?php endif; ?>
+
+                    <!-- Una fila: ronda+mesa (izq.) | nº mesa (centro) | Volver → panel -->
                     <?php
                     $rr_label_ronda_mesa = 'Ronda ' . (int)($ronda ?? 0) . ' — Mesa ' . (int)($mesaActual ?? 0);
                     ?>
@@ -875,13 +874,15 @@ $contextLabel = $contextGenero === 'F' ? 'Femenino' : 'Masculino';
                                     <i class="fas fa-exchange-alt"></i> Reasignar
                                 </a>
                                 <?php endif; ?>
-                                <span id="breadcrumb-back-slot" class="d-inline-flex align-items-center flex-shrink-0"></span>
+                                <a href="<?php echo htmlspecialchars($url_volver_panel, ENT_QUOTES, 'UTF-8'); ?>"
+                                   class="btn btn-outline-secondary btn-sm flex-shrink-0"
+                                   title="Volver al panel"
+                                   aria-label="Volver">
+                                    <i class="fas fa-arrow-left me-1"></i> Volver
+                                </a>
                             </div>
                         </div>
                     </div>
-                    <?php
-                    $url_volver_panel = $base_url . $action_param . 'action=panel&torneo_id=' . (int)($torneo['id'] ?? 0);
-                    ?>
 
                     <!-- Mensaje de Validación -->
                     <div id="mensaje-validacion" class="mb-2"></div>

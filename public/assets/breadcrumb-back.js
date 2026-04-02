@@ -80,6 +80,12 @@
             slot.appendChild(createVolverBtn());
             return;
         }
+        var besidePrint = document.getElementById('breadcrumb-back-beside-print');
+        if (besidePrint && !besidePrint.querySelector('.btn-breadcrumb-back')) {
+            besidePrint.className = (besidePrint.className ? besidePrint.className + ' ' : '') + 'nav-origin-global';
+            besidePrint.appendChild(createVolverBtn());
+            return;
+        }
         var selectors = [
             'nav[aria-label="breadcrumb"]',
             '.breadcrumb-modern'
