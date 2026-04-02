@@ -680,9 +680,14 @@ if ($current_page === 'estadisticas_torneos') {
       <!-- Contenido dinámico (CSS/head ya cargados arriba; el módulo se incluye dentro del body con formato) -->
       <main class="container-fluid py-4">
         <?php
-        $layout_registrar_rr = ($current_page === 'torneo_gestion' && in_array(($_GET['action'] ?? ''), ['registrar_resultados', 'registrar_resultados_v2'], true));
+        $layout_skip_global_volver = ($current_page === 'torneo_gestion' && in_array(($_GET['action'] ?? ''), [
+            'registrar_resultados',
+            'registrar_resultados_v2',
+            'cuadricula',
+            'hojas_anotacion',
+        ], true));
         ?>
-        <?php if ($current_page !== 'home' && !$layout_registrar_rr): ?>
+        <?php if ($current_page !== 'home' && !$layout_skip_global_volver): ?>
         <div id="global-volver-container"></div>
         <?php endif; ?>
         <?php

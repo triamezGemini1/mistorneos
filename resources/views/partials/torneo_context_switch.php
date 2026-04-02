@@ -6,7 +6,7 @@
  * $tcs: items[], active_id, base_url, sep, ronda_base (solo compat.; el enlace usa última ronda en destino), map_max[], mode, theme (on_dark|on_light),
  *       select_id, show_select (bool), show_info (bool), context_name, context_id,
  *       extra[] (p.ej. mesa para registrar_resultados), select_label_class, select_class,
- *       pill_row_class, aria_label (opcionales)
+ *       pill_row_class, aria_label, show_pill_meta (bool, default true: bloque ID/Padre bajo el nombre) (opcionales)
  */
 if (empty($tcs) || !is_array($tcs)) {
     return;
@@ -37,6 +37,7 @@ $selectClass = array_key_exists('select_class', $tcs)
     ? (string) $tcs['select_class']
     : 'form-control form-control-sm';
 $pillRowClass = trim((string) ($tcs['pill_row_class'] ?? ''));
+$showPillMeta = array_key_exists('show_pill_meta', $tcs) ? (bool) $tcs['show_pill_meta'] : true;
 
 $switchCount = count($items);
 $compact = $switchCount >= 3;
@@ -80,10 +81,11 @@ $ariaLabel = (string) ($tcs['aria_label'] ?? 'Torneos asociados (mismo evento)')
         $href = torneoContextSwitchHref($baseUrl, $sep, $mode, $switchId, $rondaBase, $mapMax, $extra);
         ?>
         <a href="<?php echo htmlspecialchars($href, ENT_QUOTES, 'UTF-8'); ?>"
-           class="tcs__pill js-context-switch<?php echo $isActive ? ' is-active' : ''; ?>"
+           class="tcs__pill js-context-switch<?php echo $isActive ? ' is-active' : ''; ?><?php echo !$showPillMeta ? ' tcs__pill--name-only' : ''; ?>"
            aria-pressed="<?php echo $isActive ? 'true' : 'false'; ?>"
            title="<?php echo htmlspecialchars('ID Sistema: ' . $switchId . ($switchParentEventId ? ' | Evento Padre: ' . $switchParentEventId : ''), ENT_QUOTES, 'UTF-8'); ?>">
             <span class="tcs__pill-name"><?php echo htmlspecialchars($switchLabel, ENT_QUOTES, 'UTF-8'); ?></span>
+            <?php if ($showPillMeta): ?>
             <span class="tcs__pill-meta" aria-hidden="true">
                 <span class="tcs__meta-item"><span class="tcs__meta-k">ID</span><span class="tcs__meta-v"><?php echo $switchId; ?></span></span>
                 <?php if ($switchParentEventId > 0): ?>
@@ -91,6 +93,7 @@ $ariaLabel = (string) ($tcs['aria_label'] ?? 'Torneos asociados (mismo evento)')
                 <span class="tcs__meta-item"><span class="tcs__meta-k">Padre</span><span class="tcs__meta-v"><?php echo $switchParentEventId; ?></span></span>
                 <?php endif; ?>
             </span>
+            <?php endif; ?>
         </a>
     <?php endforeach; ?>
 </div>

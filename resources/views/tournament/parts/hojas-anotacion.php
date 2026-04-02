@@ -424,7 +424,7 @@ if (!isset($base_url) || !isset($use_standalone)) {
         <button onclick="window.print()" class="btn-imprimir">
             <i class="fas fa-print"></i> Imprimir
         </button>
-        <a href="<?php echo $base_url . ($use_standalone ? '?' : '&'); ?>action=panel&torneo_id=<?php echo $torneo['id']; ?>" class="btn-volver" id="btn-volver">
+        <a href="<?php echo $base_url . ($use_standalone ? '?' : '&'); ?>action=panel&torneo_id=<?php echo (int)($torneo['id'] ?? 0); ?>" class="btn-volver" id="btn-volver" title="Ir al panel de control del torneo">
             <i class="fas fa-arrow-left"></i> Volver
         </a>
     </div>
@@ -773,13 +773,6 @@ if (!isset($base_url) || !isset($use_standalone)) {
             el.scrollIntoView({ behavior: 'smooth', block: 'start' });
         }
     }
-    // Volver: usar history.back() para respuesta instantánea (bfcache) en lugar de recargar el panel
-    document.getElementById('btn-volver').addEventListener('click', function(e) {
-        if (window.history.length > 1) {
-            e.preventDefault();
-            window.history.back();
-        }
-    });
     </script>
 </body>
 </html>

@@ -65,12 +65,20 @@ if (!empty($context_switcher['items']) && is_array($context_switcher['items'])) 
             margin: 0.5in;
         }
         
+        :root {
+            --hojas-header-h: 48px;
+            /* Margen para barra con píldoras en 1–2 líneas (nombres largos) */
+            --hojas-toolbar-h: 68px;
+            --hojas-fixed-stack: calc(var(--hojas-header-h) + var(--hojas-toolbar-h));
+        }
+
         body {
             font-family: Arial, sans-serif;
             background: #f5f5f5;
             overflow-y: auto;
             height: auto;
             padding: 20px;
+            padding-top: calc(var(--hojas-fixed-stack) + 16px);
         }
         
         .contenedor-hojas {
@@ -134,48 +142,161 @@ if (!empty($context_switcher['items']) && is_array($context_switcher['items'])) 
             background: #4b5563;
         }
         
-        .selector-mesas {
+        .hojas-fixed-header {
             position: fixed;
-            top: 20px;
-            left: 50%;
-            transform: translateX(-50%);
-            z-index: 1000;
-            background: white;
-            padding: 12px 20px;
-            border-radius: 12px;
-            box-shadow: 0 4px 16px rgba(0,0,0,0.15);
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 1002;
+            min-height: var(--hojas-header-h);
+            padding: 0 16px;
             display: flex;
-            flex-wrap: wrap;
+            flex-wrap: nowrap;
             align-items: center;
-            justify-content: center;
-            gap: 12px;
-            max-width: calc(100vw - 32px);
+            justify-content: flex-start;
+            gap: 10px;
+            background: #ffffff;
+            border-bottom: 1px solid #e5e7eb;
+            box-shadow: 0 1px 4px rgba(15, 23, 42, 0.06);
+            font-size: 15px;
+            font-weight: 700;
+            color: #111827;
             overflow: hidden;
         }
-        
+        .hojas-fixed-header__title {
+            flex-shrink: 0;
+            color: #374151;
+            font-weight: 800;
+            letter-spacing: 0.02em;
+            text-transform: uppercase;
+            font-size: 12px;
+        }
+        .hojas-fixed-header__torneo {
+            flex: 1 1 auto;
+            min-width: 0;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        .hojas-fixed-header__meta {
+            flex-shrink: 0;
+            font-variant-numeric: tabular-nums;
+            color: #4b5563;
+            font-weight: 700;
+            font-size: 14px;
+        }
+
+        .selector-mesas {
+            position: fixed;
+            top: var(--hojas-header-h);
+            left: 0;
+            right: 0;
+            z-index: 1001;
+            min-height: var(--hojas-toolbar-h);
+            padding: 10px 16px;
+            background: #fafafa;
+            border-bottom: 1px solid #e5e7eb;
+            box-shadow: 0 2px 8px rgba(15, 23, 42, 0.06);
+            display: flex;
+            flex-direction: row;
+            flex-wrap: nowrap;
+            align-items: center;
+            justify-content: flex-start;
+            gap: 14px;
+            width: 100%;
+            max-width: none;
+            border-radius: 0;
+            box-sizing: border-box;
+        }
+
+        /* Píldoras visibles (como cuadrícula / registrar) + selector de hoja */
+        .selector-mesas__group {
+            display: flex;
+            flex-direction: row;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 14px 16px;
+            width: 100%;
+            max-width: 100%;
+            min-width: 0;
+        }
+
+        .selector-mesas__ir {
+            display: inline-flex;
+            flex-direction: row;
+            flex-wrap: nowrap;
+            align-items: center;
+            gap: 10px;
+            flex-shrink: 0;
+        }
+
         .selector-mesas label {
             font-weight: 600;
             color: #374151;
             white-space: nowrap;
+            margin: 0;
         }
-        
+
         .selector-mesas select {
             padding: 8px 14px;
             border: 2px solid #e5e7eb;
             border-radius: 8px;
             font-size: 15px;
-            min-width: 140px;
+            min-width: 160px;
+            max-width: min(42vw, 280px);
             cursor: pointer;
+            background: #fff;
         }
-        
+
         .selector-mesas select:focus {
             outline: none;
             border-color: #3b82f6;
         }
+
+        /* Ocupa el espacio libre: ambas píldoras legibles, sin recorte horizontal */
+        .selector-mesas__group > .tcs {
+            flex: 1 1 280px;
+            min-width: min(100%, 240px);
+            max-width: none;
+            width: auto;
+            margin-left: 0;
+            display: flex !important;
+            flex-wrap: wrap;
+            align-items: stretch;
+            justify-content: flex-start;
+            align-content: center;
+            gap: 8px;
+            overflow: visible;
+        }
+        .selector-mesas__group > .tcs .tcs__pill {
+            flex: 1 1 200px;
+            min-width: min(100%, 11rem);
+            max-width: none !important;
+            box-sizing: border-box;
+        }
+        .selector-mesas__group .tcs.tcs--hojas-inline .tcs__pill-name {
+            font-size: 12px;
+            line-height: 1.35;
+            word-break: break-word;
+            hyphens: auto;
+        }
+
+        .selector-mesas__group .tcs.tcs--hojas-inline {
+            padding: 4px 6px;
+            gap: 8px;
+            border-radius: 12px;
+        }
+
         @media (max-width: 1366px) {
-            .selector-mesas { gap: 8px; padding: 10px 12px; }
+            :root {
+                --hojas-header-h: 44px;
+                --hojas-toolbar-h: 80px;
+            }
+            .hojas-fixed-header { font-size: 14px; padding: 0 12px; }
+            .hojas-fixed-header__title { font-size: 11px; }
+            .selector-mesas { gap: 10px; padding: 6px 12px; }
             .selector-mesas label { font-size: 13px; }
-            .selector-mesas select { min-width: 120px; font-size: 13px; padding: 6px 10px; }
+            .selector-mesas select { min-width: 130px; max-width: min(50vw, 240px); font-size: 13px; padding: 6px 10px; }
             .tcs-info { font-size: 11px; }
         }
         
@@ -440,11 +561,13 @@ if (!empty($context_switcher['items']) && is_array($context_switcher['items'])) 
         @media print {
             .no-print,
             .btn-flotante,
-            .selector-mesas {
+            .selector-mesas,
+            .hojas-fixed-header {
                 display: none !important;
             }
             body {
                 background: white;
+                padding-top: 20px;
             }
             .hoja-mesa {
                 margin-bottom: 0;
@@ -458,45 +581,55 @@ if (!empty($context_switcher['items']) && is_array($context_switcher['items'])) 
         <button onclick="window.print()" class="btn-imprimir">
             <i class="fas fa-print"></i> Imprimir
         </button>
-        <a href="<?php echo $base_url . ($use_standalone ? '?' : '&'); ?>action=panel&torneo_id=<?php echo $torneo['id']; ?>" class="btn-volver" id="btn-volver">
+        <a href="<?php echo $base_url . ($use_standalone ? '?' : '&'); ?>action=panel&torneo_id=<?php echo (int)($torneo['id'] ?? 0); ?>" class="btn-volver" id="btn-volver" title="Ir al panel de control del torneo">
             <i class="fas fa-arrow-left"></i> Volver
         </a>
     </div>
 
-    <!-- Selector: ver mesas asignadas e ir a una hoja en particular -->
-    <div class="selector-mesas no-print">
-        <label for="ir-a-mesa">Ir a hoja:</label>
-        <select id="ir-a-mesa" onchange="irAMesa(this.value)">
-            <option value="">— Mesas asignadas —</option>
-            <?php foreach ($mesas as $idx => $m): 
-                $num_mesa = (int)($m['numero'] ?? $idx + 1);
-            ?>
-                <option value="hoja-mesa-<?php echo $num_mesa; ?>">Mesa <?php echo $num_mesa; ?> (hoja <?php echo $idx + 1; ?>)</option>
-            <?php endforeach; ?>
-        </select>
-        <span class="tcs-info tcs-info--on-light">
-            <span class="tcs-info__dot" aria-hidden="true"></span>
-            Visualizando: Torneo <?php echo htmlspecialchars($activeContextName, ENT_QUOTES, 'UTF-8'); ?> [#<?php echo $activeContextViewId; ?>]
-        </span>
-        <?php if (!empty($context_switcher['items'])): ?>
-            <?php
-            $tcs = [
-                'items' => $context_switcher['items'],
-                'active_id' => (int) ($context_switcher['active_tournament_id'] ?? 0),
-                'base_url' => $base_url,
-                'sep' => $use_standalone ? '?' : '&',
-                'ronda_base' => (int) $ronda,
-                'map_max' => $map_max_partida_switch,
-                'mode' => 'hojas_anotacion',
-                'theme' => 'on_light',
-                'select_id' => 'torneo-asociado-select-hojas',
-                'show_info' => false,
-                'select_class' => 'tcs-select-control',
-                'select_label_class' => 'mb-0 mr-1',
-            ];
-            require __DIR__ . '/../../resources/views/partials/torneo_context_switch.php';
-            ?>
-        <?php endif; ?>
+    <header class="hojas-fixed-header no-print" role="banner">
+        <span class="hojas-fixed-header__title">Hojas de anotación</span>
+        <span class="hojas-fixed-header__torneo"><?php echo htmlspecialchars($torneo['nombre'] ?? 'Torneo', ENT_QUOTES, 'UTF-8'); ?></span>
+        <span class="hojas-fixed-header__meta">Ronda <?php echo (int) $ronda; ?></span>
+    </header>
+
+    <!-- Selector: ir a hoja + torneos asociados (una sola fila, panel fijo bajo el encabezado) -->
+    <div class="selector-mesas no-print" role="navigation" aria-label="Ir a hoja y torneos asociados">
+        <div class="selector-mesas__group">
+            <?php if (!empty($context_switcher['items'])): ?>
+                <?php
+                $tcs = [
+                    'items' => $context_switcher['items'],
+                    'active_id' => (int) ($context_switcher['active_tournament_id'] ?? 0),
+                    'base_url' => $base_url,
+                    'sep' => $use_standalone ? '?' : '&',
+                    'ronda_base' => (int) $ronda,
+                    'map_max' => $map_max_partida_switch,
+                    'mode' => 'hojas_anotacion',
+                    'theme' => 'on_light',
+                    'select_id' => 'torneo-asociado-select-hojas',
+                    'show_info' => false,
+                    'show_select' => false,
+                    'show_pill_meta' => false,
+                    'select_class' => 'tcs-select-control',
+                    'select_label_class' => 'mb-0 mr-1',
+                    'pill_row_class' => 'tcs--hojas-inline',
+                    'aria_label' => 'Torneos asociados (mismo evento)',
+                ];
+                require __DIR__ . '/../../resources/views/partials/torneo_context_switch.php';
+                ?>
+            <?php endif; ?>
+            <div class="selector-mesas__ir">
+                <label for="ir-a-mesa">Ir a hoja:</label>
+                <select id="ir-a-mesa" onchange="irAMesa(this.value)">
+                    <option value="">— Mesas asignadas —</option>
+                    <?php foreach ($mesas as $idx => $m):
+                        $num_mesa = (int)($m['numero'] ?? $idx + 1);
+                    ?>
+                        <option value="hoja-mesa-<?php echo $num_mesa; ?>">Mesa <?php echo $num_mesa; ?> (hoja <?php echo $idx + 1; ?>)</option>
+                    <?php endforeach; ?>
+                </select>
+            </div>
+        </div>
     </div>
 
     <?php 
@@ -830,14 +963,6 @@ if (!empty($context_switcher['items']) && is_array($context_switcher['items'])) 
             el.scrollIntoView({ behavior: 'smooth', block: 'start' });
         }
     }
-    // Volver: usar history.back() para respuesta instantánea (bfcache) en lugar de recargar el panel
-    document.getElementById('btn-volver').addEventListener('click', function(e) {
-        if (window.history.length > 1) {
-            e.preventDefault();
-            window.history.back();
-        }
-    });
-
     </script>
 </body>
 </html>

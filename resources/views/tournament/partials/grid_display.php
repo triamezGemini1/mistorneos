@@ -49,7 +49,21 @@ $claseGrilla = isset($claseGrilla) ? (string) $claseGrilla : 'grilla-pantalla';
                                     $cuad_bye = $jug && !empty($jug['bye']);
                                     ?>
                                     <div class="matrix-cell matrix-iden<?php echo $cuad_bye ? ' matrix-bye' : ''; ?>" data-row="<?php echo (int) $r; ?>"><?php echo $jug ? htmlspecialchars((string) $jug['id'], ENT_QUOTES, 'UTF-8') : ''; ?></div>
-                                    <div class="matrix-cell matrix-mesa<?php echo $cuad_bye ? ' matrix-bye' : ''; ?>" data-row="<?php echo (int) $r; ?>"><?php echo $jug ? htmlspecialchars((string) $jug['mesa'], ENT_QUOTES, 'UTF-8') : ''; ?></div>
+                                    <div class="matrix-cell matrix-mesa<?php echo $cuad_bye ? ' matrix-bye' : ''; ?>" data-row="<?php echo (int) $r; ?>"><?php
+                                    if (!$jug) {
+                                        echo '';
+                                    } elseif ($cuad_bye) {
+                                        echo 'BYE';
+                                    } else {
+                                        $mn = isset($jug['mesa_num']) ? (int) $jug['mesa_num'] : 0;
+                                        $ml = isset($jug['mesa_letra']) ? (string) $jug['mesa_letra'] : '';
+                                        if ($mn > 0 && $ml !== '') {
+                                            echo '<span class="matrix-mesa-label"><span class="matrix-mesa-num">' . (int) $mn . '</span><span class="matrix-mesa-letra">' . htmlspecialchars($ml, ENT_QUOTES, 'UTF-8') . '</span></span>';
+                                        } elseif (isset($jug['mesa'])) {
+                                            echo htmlspecialchars((string) $jug['mesa'], ENT_QUOTES, 'UTF-8');
+                                        }
+                                    }
+                                    ?></div>
                                 <?php endfor; ?>
                             <?php endfor; ?>
                         </div>

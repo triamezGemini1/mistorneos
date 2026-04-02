@@ -829,6 +829,7 @@ $contextLabel = $contextGenero === 'F' ? 'Femenino' : 'Masculino';
                             'theme' => 'on_light',
                             'show_select' => false,
                             'show_info' => false,
+                            'show_pill_meta' => false,
                             'aria_label' => 'Torneos asociados (mismo evento)',
                             'extra' => ['mesa' => 0],
                         ];

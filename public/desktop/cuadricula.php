@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 /**
  * Paso 4: Cuadrícula de asignaciones por ID (Desktop).
  * Tabla ordenada por id_usuario ASC para localizar jugadores rápido. 22 filas x 9 segmentos (ID + MESA+letra).
@@ -135,7 +135,7 @@ require_once __DIR__ . '/desktop_layout.php';
                             $esBye = ($mesa === 0 || $mesaRaw === '0');
                     ?>
                             <td class="col-id-usuario<?= $esBye ? ' celda-bye' : '' ?>"><?= htmlspecialchars((string)$idUsuario) ?></td>
-                            <td class="col-mesa-letra<?= $esBye ? ' celda-bye' : '' ?>"><?= $esBye ? 'BYE' : $mesa . $letra ?></td>
+                            <td class="col-mesa-letra<?= $esBye ? ' celda-bye' : '' ?>"><?php if ($esBye): ?>BYE<?php else: ?><span class="matrix-mesa-label"><span class="matrix-mesa-num"><?= (int) $mesa ?></span><span class="matrix-mesa-letra"><?= htmlspecialchars($letra, ENT_QUOTES, 'UTF-8') ?></span></span><?php endif; ?></td>
                         <?php else: ?>
                             <td class="celda-vacia col-id-usuario"></td>
                             <td class="celda-vacia col-mesa-letra"></td>
@@ -151,6 +151,16 @@ require_once __DIR__ . '/desktop_layout.php';
 <style>
 .col-id-usuario { background-color: #4ade80 !important; font-weight: bold; color: #000; }
 .col-mesa-letra { background-color: #60a5fa !important; font-weight: bold; color: #000; }
+.col-mesa-letra .matrix-mesa-label {
+  display: inline-flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: 0.45em;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+}
+.col-mesa-letra .matrix-mesa-num { font-variant-numeric: tabular-nums; font-weight: 800; }
+.col-mesa-letra .matrix-mesa-letra { font-weight: 800; font-size: 1.08em; letter-spacing: 0.08em; }
 .col-separador { background-color: #fb923c !important; width: 1%; padding: 0; border: none; }
 .celda-vacia { background-color: #f0f0f0; color: #999; }
 .celda-bye { background-color: #fef08a !important; font-style: italic; }

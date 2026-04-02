@@ -59,7 +59,6 @@ if (!empty($asignaciones) && is_array($asignaciones)) {
         $secuencia = (int) ($asignacion['secuencia'] ?? 0);
         $letra = $letras[$secuencia] ?? '';
         $esBye = ($mesa === 0 || $mesaRaw === '0' || $mesaRaw === 0);
-        $mesaDisplay = $esBye ? 'BYE' : ($mesa . $letra);
         $idMostrar = $usarNumfvd
             ? (int)($asignacion['numfvd'] ?? 0)
             : (int)($asignacion['id_usuario'] ?? 0);
@@ -68,8 +67,9 @@ if (!empty($asignaciones) && is_array($asignaciones)) {
         }
         $listaPlana[] = [
             'id' => (string) $idMostrar,
-            'mesa' => $mesaDisplay,
             'bye' => $esBye,
+            'mesa_num' => $esBye ? null : $mesa,
+            'mesa_letra' => $esBye ? '' : $letra,
         ];
     }
 }
@@ -82,6 +82,7 @@ if (empty($listaPlana)) {
 }
 
 require_once __DIR__ . '/../../lib/app_helpers.php';
+$cuad_url_panel = $base_url . ($use_standalone ? '?' : '&') . 'action=panel&torneo_id=' . (int) ($torneo['id'] ?? 0);
 $href_custom_13 = AppHelpers::url('assets/css/custom-13inch.css');
 $href_torneo_context_switch = AppHelpers::url('assets/css/torneo-context-switch.css');
 $pageTitle = isset($titulo) ? (string) $titulo : ('Cuadrícula - Ronda ' . (int) ($numRonda ?? 0));
@@ -109,92 +110,59 @@ $pageTitle = isset($titulo) ? (string) $titulo : ('Cuadrícula - Ronda ' . (int)
         /* Equipos V3: cabecera compacta, sin desbordar 1366×768 */
         body.cuadricula-equipos-v3 .cuadricula-header-torneo { font-size: 0.8rem; line-height: 1.2; max-width: min(52vw, 520px); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
         body.cuadricula-equipos-v3 .cuadricula-header { flex-wrap: nowrap; gap: 4px; }
-        body.cuadricula-equipos-v3 .cuadricula-header-right { flex-wrap: nowrap; min-width: 0; }
+        body.cuadricula-equipos-v3 .cuadricula-header-toolbar .tcs { flex-shrink: 0; min-width: 0; }
         @media (max-width: 1366px) and (max-height: 800px) {
             body.cuadricula-equipos-v3 .cuadricula-header .btn-sm { font-size: 0.7rem; padding: 0.2rem 0.45rem; }
         }
-        /* Torneos asociados (cuadrícula): activo verde, inactivo rosa */
-        .page-cuadricula-10 .tcs--on-dark .tcs__pill:not(.is-active) {
-            background: #f9a8d4 !important;
-            color: #831843 !important;
-            border: 1px solid #db2777 !important;
+        /* Una sola fila: título torneo+ronda | píldoras | Imprimir, alineados al centro vertical */
+        .cuadricula-header-toolbar {
+            gap: 0.5rem 0.75rem;
         }
-        .page-cuadricula-10 .tcs--on-dark .tcs__pill:not(.is-active):hover {
-            background: #fbcfe8 !important;
-            color: #701a35 !important;
+        .cuadricula-header-toolbar .cuadricula-tcs-pills {
+            margin-right: 0 !important;
         }
-        .page-cuadricula-10 .tcs--on-dark .tcs__pill:not(.is-active) .tcs__pill-meta {
-            border-top-color: rgba(131, 24, 67, 0.28) !important;
-            color: #9d174d !important;
-        }
-        .page-cuadricula-10 .tcs--on-dark .tcs__pill:not(.is-active) .tcs__meta-k {
-            color: #a21caf !important;
-        }
-        .page-cuadricula-10 .tcs--on-dark .tcs__pill:not(.is-active) .tcs__meta-v {
-            color: #831843 !important;
-        }
-        .page-cuadricula-10 .tcs--on-dark .tcs__pill:not(.is-active) .tcs__meta-sep {
-            background: rgba(190, 24, 93, 0.45) !important;
-        }
-        .page-cuadricula-10 .tcs--on-dark .tcs__pill.is-active {
-            background: #16a34a !important;
-            border: 1px solid #15803d !important;
-            color: #fff !important;
-        }
-        .page-cuadricula-10 .tcs--on-dark .tcs__pill.is-active .tcs__pill-name,
-        .page-cuadricula-10 .tcs--on-dark .tcs__pill.is-active .tcs__pill-meta,
-        .page-cuadricula-10 .tcs--on-dark .tcs__pill.is-active .tcs__meta-k,
-        .page-cuadricula-10 .tcs--on-dark .tcs__pill.is-active .tcs__meta-v {
-            color: #fff !important;
-        }
-        .page-cuadricula-10 .tcs--on-dark .tcs__pill.is-active .tcs__pill-meta {
-            border-top-color: rgba(255, 255, 255, 0.35) !important;
-        }
-        .page-cuadricula-10 .tcs--on-dark .tcs__pill.is-active .tcs__meta-sep {
-            background: rgba(255, 255, 255, 0.45) !important;
+        .cuadricula-header-toolbar .cuadricula-header-actions {
+            margin-left: auto;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.35rem;
+            flex-shrink: 0;
         }
     </style>
 </head>
-<?php
-$cuad_url_panel = $base_url . ($use_standalone ? '?' : '&') . 'action=panel&torneo_id=' . (int) ($torneo['id'] ?? 0);
-?>
-<body class="page-cuadricula-10<?php echo $es_modalidad_equipos_v3 ? ' cuadricula-equipos-v3' : ''; ?>" data-nav-origin="<?php echo htmlspecialchars($cuad_url_panel, ENT_QUOTES, 'UTF-8'); ?>">
+<body class="page-cuadricula-10<?php echo $es_modalidad_equipos_v3 ? ' cuadricula-equipos-v3' : ''; ?>">
     <div class="cuadricula-shell">
-        <div class="cuadricula-header no-print d-flex align-items-center justify-content-between flex-wrap w-100">
-            <span class="cuadricula-header-torneo mr-2" style="min-width:0;">
+        <div class="cuadricula-header no-print d-flex align-items-center flex-wrap w-100 cuadricula-header-toolbar">
+            <span class="cuadricula-header-torneo align-middle" style="min-width:0;">
                 <?php echo htmlspecialchars(strtoupper($torneo['nombre'] ?? 'Torneo'), ENT_QUOTES, 'UTF-8'); ?>
                 — RONDA <?php echo (int) ($numRonda ?? 0); ?>
-                <?php if ($totalInscritos > 0): ?>
-                    <span class="text-muted font-weight-normal"> · <?php echo (int) $totalInscritos; ?> inscritos</span>
-                <?php endif; ?>
             </span>
-            <div class="cuadricula-header-right d-flex align-items-center ml-auto" style="flex-shrink:0;">
-                <span class="tcs-info tcs-info--on-dark mr-2">
-                    <span class="tcs-info__dot" aria-hidden="true"></span>
-                    Visualizando: Torneo <?php echo htmlspecialchars($activeContextName, ENT_QUOTES, 'UTF-8'); ?> [#<?php echo $activeContextViewId; ?>]
-                </span>
-                <?php if (!empty($context_switcher['items'])): ?>
-                    <?php
-                    $tcs = [
-                        'items' => $context_switcher['items'],
-                        'active_id' => (int) ($context_switcher['active_tournament_id'] ?? 0),
-                        'base_url' => $base_url,
-                        'sep' => $use_standalone ? '?' : '&',
-                        'ronda_base' => (int) ($numRonda ?? 0),
-                        'map_max' => $map_max_partida_switch,
-                        'mode' => 'cuadricula',
-                        'theme' => 'on_dark',
-                        'show_select' => false,
-                        'show_info' => false,
-                        'pill_row_class' => 'mr-2',
-                    ];
-                    require __DIR__ . '/../../resources/views/partials/torneo_context_switch.php';
-                    ?>
-                <?php endif; ?>
-                <button type="button" onclick="window.print()" class="btn btn-primary btn-sm ml-1">
+            <?php if (!empty($context_switcher['items'])): ?>
+                <?php
+                $tcs = [
+                    'items' => $context_switcher['items'],
+                    'active_id' => (int) ($context_switcher['active_tournament_id'] ?? 0),
+                    'base_url' => $base_url,
+                    'sep' => $use_standalone ? '?' : '&',
+                    'ronda_base' => (int) ($numRonda ?? 0),
+                    'map_max' => $map_max_partida_switch,
+                    'mode' => 'cuadricula',
+                    'theme' => 'on_dark',
+                    'show_select' => false,
+                    'show_info' => false,
+                    'show_pill_meta' => false,
+                    'pill_row_class' => 'cuadricula-tcs-pills',
+                ];
+                require __DIR__ . '/../../resources/views/partials/torneo_context_switch.php';
+                ?>
+            <?php endif; ?>
+            <div class="cuadricula-header-actions no-print">
+                <button type="button" onclick="window.print()" class="btn btn-primary btn-sm">
                     <i class="fas fa-print mr-2"></i> Imprimir
                 </button>
-                <span id="breadcrumb-back-beside-print" class="d-inline-flex align-items-center ml-1"></span>
+                <a href="<?php echo htmlspecialchars($cuad_url_panel, ENT_QUOTES, 'UTF-8'); ?>" class="btn btn-secondary btn-sm" title="Ir al panel de control">
+                    <i class="fas fa-arrow-left mr-1"></i> Volver
+                </a>
             </div>
         </div>
         <div class="cuadricula-meta no-print" id="cuadriculaMeta" aria-live="polite"></div>
@@ -265,6 +233,5 @@ $cuad_url_panel = $base_url . ($use_standalone ? '?' : '&') . 'action=panel&torn
 
 })();
     </script>
-    <script src="<?php echo htmlspecialchars(AppHelpers::url('assets/breadcrumb-back.js'), ENT_QUOTES, 'UTF-8'); ?>" defer></script>
 </body>
 </html>

@@ -114,6 +114,23 @@ $letras = [1 => 'A', 2 => 'C', 3 => 'B', 4 => 'D'];
 
         .matrix-iden { background: var(--color-iden-bg); color: var(--color-iden-text); }
         .matrix-mesa { background: var(--color-mesa-bg); color: var(--color-mesa-text); }
+        .matrix-mesa .matrix-mesa-label {
+            display: inline-flex;
+            align-items: baseline;
+            justify-content: center;
+            gap: 0.45em;
+            font-weight: 800;
+            letter-spacing: 0.02em;
+        }
+        .matrix-mesa .matrix-mesa-num {
+            font-variant-numeric: tabular-nums;
+            font-weight: 800;
+        }
+        .matrix-mesa .matrix-mesa-letra {
+            font-weight: 800;
+            font-size: 1.08em;
+            letter-spacing: 0.08em;
+        }
         .matrix-head { text-transform: uppercase; letter-spacing: 0.02em; }
         .matrix-bye { font-style: italic; background: var(--color-bye-bg) !important; color: #000000; }
         .matrix-cell:nth-child(2n) { border-right: 2px solid var(--color-separator); }
@@ -187,7 +204,8 @@ $letras = [1 => 'A', 2 => 'C', 3 => 'B', 4 => 'D'];
                         <?php
                         $asignacion = isset($segmentos[$segmento][$fila]) ? $segmentos[$segmento][$fila] : null;
                         $idUsuario = '';
-                        $mesaDisplay = '';
+                        $mesaNum = null;
+                        $mesaLetra = '';
                         $esBye = false;
                         if ($asignacion) {
                             $idUsuario = (string)($asignacion['id_usuario'] ?? '');
@@ -196,11 +214,20 @@ $letras = [1 => 'A', 2 => 'C', 3 => 'B', 4 => 'D'];
                             $secuencia = (int)($asignacion['secuencia'] ?? 0);
                             $letra = $letras[$secuencia] ?? '';
                             $esBye = ($mesa === 0 || $mesaRaw === '0' || $mesaRaw === 0);
-                            $mesaDisplay = $esBye ? 'BYE' : ($mesa . $letra);
+                            if (!$esBye) {
+                                $mesaNum = $mesa;
+                                $mesaLetra = $letra;
+                            }
                         }
                         ?>
                         <div class="matrix-cell matrix-iden<?php echo $esBye ? ' matrix-bye' : ''; ?>" data-row="<?php echo $fila; ?>"><?php echo htmlspecialchars($idUsuario); ?></div>
-                        <div class="matrix-cell matrix-mesa<?php echo $esBye ? ' matrix-bye' : ''; ?>" data-row="<?php echo $fila; ?>"><?php echo htmlspecialchars($mesaDisplay); ?></div>
+                        <div class="matrix-cell matrix-mesa<?php echo $esBye ? ' matrix-bye' : ''; ?>" data-row="<?php echo $fila; ?>"><?php
+                        if ($esBye) {
+                            echo 'BYE';
+                        } elseif ($mesaNum !== null && $mesaLetra !== '') {
+                            echo '<span class="matrix-mesa-label"><span class="matrix-mesa-num">' . (int) $mesaNum . '</span><span class="matrix-mesa-letra">' . htmlspecialchars($mesaLetra, ENT_QUOTES, 'UTF-8') . '</span></span>';
+                        }
+                        ?></div>
                     <?php endfor; ?>
                 <?php endfor; ?>
             </div>

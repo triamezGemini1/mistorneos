@@ -76,13 +76,56 @@
     background: rgba(255, 255, 255, 0.35);
     flex-shrink: 0;
 }
-.tcs--on-dark .tcs__pill:hover {
+
+/* Inactivo: rosa con buen contraste (se distingue del activo y se ve clicable) */
+.tcs--on-dark .tcs__pill:not(.is-active) {
+    background: #fbcfe8;
+    color: #831843;
+    border: 1px solid #db2777;
+    box-shadow: 0 1px 3px rgba(131, 24, 67, 0.18);
+}
+.tcs--on-dark .tcs__pill:not(.is-active) .tcs__pill-name {
+    color: #701a35;
+}
+.tcs--on-dark .tcs__pill:not(.is-active) .tcs__pill-meta {
+    border-top-color: rgba(190, 24, 93, 0.38);
+    color: #9d174d;
+}
+.tcs--on-dark .tcs__pill:not(.is-active) .tcs__meta-k {
+    color: #a21caf;
+    opacity: 1;
+}
+.tcs--on-dark .tcs__pill:not(.is-active) .tcs__meta-v {
+    color: #831843;
+}
+.tcs--on-dark .tcs__pill:not(.is-active) .tcs__meta-sep {
+    background: rgba(190, 24, 93, 0.5);
+}
+.tcs--on-dark .tcs__pill:not(.is-active):hover {
+    background: #fce7f3;
+    color: #701a35;
+    border-color: #be185d;
+    box-shadow: 0 2px 6px rgba(131, 24, 67, 0.22);
+}
+.tcs--on-dark .tcs__pill:not(.is-active):hover .tcs__pill-name {
+    color: #701a35;
+}
+.tcs--on-dark .tcs__pill:not(.is-active):hover .tcs__pill-meta {
+    color: #9d174d;
+}
+.tcs--on-dark .tcs__pill:not(.is-active):hover .tcs__meta-v {
+    color: #831843;
+}
+
+.tcs--on-dark .tcs__pill.is-active:hover {
     color: #fff;
-    background: rgba(255, 255, 255, 0.16);
+    background: #004a36;
+    filter: brightness(1.05);
 }
 .tcs--on-dark .tcs__pill.is-active {
     background: #005c44;
     color: #fff;
+    border: 1px solid rgba(255, 255, 255, 0.25);
 }
 .tcs--on-dark .tcs__pill.is-active .tcs__pill-name,
 .tcs--on-dark .tcs__pill.is-active .tcs__pill-meta,
@@ -164,13 +207,42 @@
     background: #d1d5db;
     flex-shrink: 0;
 }
-.tcs--on-light .tcs__pill:hover {
-    background: #e5e7eb;
-    color: #111827;
+
+/* Inactivo (fondo claro): rosa visible frente al gris del contenedor */
+.tcs--on-light .tcs__pill:not(.is-active) {
+    background: #fce7f3;
+    color: #831843;
+    border: 1px solid #f472b6;
+    box-shadow: 0 1px 3px rgba(157, 23, 77, 0.12);
+}
+.tcs--on-light .tcs__pill:not(.is-active) .tcs__pill-name {
+    color: #701a35;
+}
+.tcs--on-light .tcs__pill:not(.is-active) .tcs__pill-meta {
+    border-top-color: rgba(219, 39, 119, 0.38);
+    color: #9d174d;
+}
+.tcs--on-light .tcs__pill:not(.is-active) .tcs__meta-k {
+    color: #a21caf;
+}
+.tcs--on-light .tcs__pill:not(.is-active) .tcs__meta-v {
+    color: #831843;
+}
+.tcs--on-light .tcs__pill:not(.is-active) .tcs__meta-sep {
+    background: rgba(219, 39, 119, 0.45);
+}
+.tcs--on-light .tcs__pill:not(.is-active):hover {
+    background: #fbcfe8;
+    border-color: #db2777;
+    box-shadow: 0 2px 6px rgba(157, 23, 77, 0.18);
+}
+.tcs--on-light .tcs__pill.is-active:hover {
+    filter: brightness(1.06);
 }
 .tcs--on-light .tcs__pill.is-active {
     background: #005c44;
     color: #fff;
+    border: 1px solid #004a36;
 }
 .tcs--on-light .tcs__pill.is-active .tcs__pill-name,
 .tcs--on-light .tcs__pill.is-active .tcs__meta-v {
@@ -282,4 +354,29 @@
     .tcs-info {
         font-size: 11px;
     }
+}
+
+/* Solo nombre (sin bloque ID/Padre): píldora más baja */
+.tcs__pill.tcs__pill--name-only {
+    flex-direction: row;
+    align-items: center;
+    gap: 0;
+    min-height: 0;
+}
+.tcs__pill.tcs__pill--name-only .tcs__pill-name {
+    margin: 0;
+}
+
+/* Teclado: anillo visible al enfocar la píldora */
+.tcs a.tcs__pill:focus-visible {
+    outline: 2px solid #db2777;
+    outline-offset: 2px;
+}
+.tcs.tcs--on-dark a.tcs__pill.is-active:focus-visible {
+    outline-color: #fff;
+    outline-offset: 3px;
+}
+.tcs.tcs--on-light a.tcs__pill.is-active:focus-visible {
+    outline-color: #0f766e;
+    outline-offset: 2px;
 }
