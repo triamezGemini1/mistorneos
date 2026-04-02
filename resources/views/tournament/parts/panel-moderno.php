@@ -6,6 +6,9 @@
  * Diseño con Tailwind CSS - 3 columnas organizadas
  */
 require_once __DIR__ . '/../../config/db.php';
+if (!class_exists('AppHelpers', false)) {
+    require_once __DIR__ . '/../../lib/app_helpers.php';
+}
 
 $script_actual = basename($_SERVER['PHP_SELF'] ?? '');
 $use_standalone = in_array($script_actual, ['admin_torneo.php', 'panel_torneo.php']);
@@ -104,6 +107,12 @@ if ($ultima_ronda > 0 && isset($torneo['id'])) {
         error_log("Error obteniendo primera mesa en panel-moderno.php: " . $e->getMessage());
     }
 }
+
+$tid_panel = (int)($torneo['id'] ?? 0);
+$url_reportes_inscritos = ($tid_panel > 0 && class_exists('AppHelpers', false))
+    ? AppHelpers::torneoGestionUrl('reportes_inscritos', $tid_panel)
+    : ($tid_panel > 0 ? 'index.php?page=torneo_gestion&action=reportes_inscritos&torneo_id=' . $tid_panel : '#');
+$invitar_clubes_inhabil = ($ultima_ronda > 0);
 ?>
 
 <link rel="stylesheet" href="assets/css/design-system.css">
@@ -306,9 +315,8 @@ tailwind.config = {
     ?>
     <!-- Cronómetro en ventana independiente (no bloquea ni interfiere con el panel) -->
     <div class="mb-2 text-center">
-        <button type="button" id="btnCronometroVentana"
-           class="d-inline-block font-bold py-2 px-5 rounded-lg text-lg transition-all transform shadow border-0" style="cursor: pointer;">
-            <i class="fas fa-external-link-alt mr-2"></i><span>ABRIR CRONÓMETRO DE RONDA</span>
+        <button type="button" id="btnCronometroVentana" class="transition-all">
+            Activar cronómetro
         </button>
         <?php
         $u_banner = class_exists('Auth') ? Auth::user() : null;
@@ -380,9 +388,15 @@ tailwind.config = {
                             <span class="inline-flex items-center rounded-full bg-slate-100 text-slate-800 px-2 py-1 font-semibold border border-slate-200" title="Equipos activos (modalidad equipos/parejas)">Equipos <span class="ml-1 tabular-nums"><?php echo $be; ?></span></span>
                         </div>
                         <!-- Invitar Clubes (listado directorio + envío por WhatsApp/Telegram) -->
+                        <?php if ($invitar_clubes_inhabil): ?>
+                        <span class="tw-btn bg-gray-300 text-gray-700 w-full text-center cursor-not-allowed opacity-90" role="text" title="No disponible: el torneo ya inició (hay rondas generadas).">
+                            Invitar Clubes
+                        </span>
+                        <?php else: ?>
                         <a href="index.php?page=invitacion_clubes&torneo_id=<?= (int)($torneo['id'] ?? 0) ?>" class="tw-btn bg-cyan-500 hover:bg-cyan-600 text-white w-full text-center">
                             <i class="fas fa-paper-plane mr-2"></i> Invitar Clubes
                         </a>
+                        <?php endif; ?>
                         <a href="index.php?page=invitations&filter_torneo=<?= (int)($torneo['id'] ?? 0) ?>" class="tw-btn bg-slate-600 hover:bg-slate-700 text-white w-full text-center">
                             <i class="fas fa-envelope mr-2"></i> Invitaciones por club
                         </a>
@@ -397,7 +411,6 @@ tailwind.config = {
                             <a href="index.php?page=registrants&torneo_id=<?php echo $torneo['id']; ?><?php echo $use_standalone ? '&return_to=panel_torneo' : ''; ?>" class="tw-btn bg-blue-500 hover:bg-blue-600 text-white">
                                 <i class="fas fa-clipboard-list"></i> Gestionar Inscripciones (retirar)
                             </a>
-                            <a href="<?php echo $base_url . ($use_standalone ? '?' : '&'); ?>action=activar_participantes&torneo_id=<?php echo (int)$torneo['id']; ?>" class="tw-btn bg-green-500 hover:bg-green-600 text-white"><i class="fas fa-user-check"></i> Activar participantes</a>
                             <?php if (!$es_modalidad_equipos && $ultima_ronda >= 1): ?>
                             <a href="index.php?page=torneo_gestion&action=sustituir_jugador&torneo_id=<?php echo (int)$torneo['id']; ?>" class="tw-btn bg-amber-500 hover:bg-amber-600 text-white"><i class="fas fa-user-exchange"></i> Sustituir jugador retirado</a>
                             <?php endif; ?>
@@ -417,7 +430,6 @@ tailwind.config = {
                                     <a href="<?php echo $base_url . ($use_standalone ? '?' : '&'); ?>action=inscribir_sitio&torneo_id=<?php echo $torneo['id']; ?>" class="tw-btn bg-amber-500 hover:bg-amber-600 text-white"><i class="fas fa-user-check"></i> Inscripción en Sitio</a>
                                     <button type="button" class="tw-btn bg-indigo-500 hover:bg-indigo-600 text-white" data-bs-toggle="modal" data-bs-target="#modalImportacionMasiva" id="btnAbrirImportacionMasiva"><i class="fas fa-file-csv"></i> Importación masiva</button>
                                 <?php endif; ?>
-                                <a href="<?php echo $base_url . ($use_standalone ? '?' : '&'); ?>action=activar_participantes&torneo_id=<?php echo (int)$torneo['id']; ?>" class="tw-btn bg-green-500 hover:bg-green-600 text-white"><i class="fas fa-user-check"></i> Activar participantes</a>
                             </div>
                         <?php endif; ?>
                         
@@ -449,20 +461,11 @@ tailwind.config = {
                                     <i class="fas fa-plus-circle"></i> Agregar Mesa
                                 </a>
                             <?php endif; ?>
-                            
-                            <!-- Eliminar Ronda: siempre habilitado si el torneo no está cerrado. Con resultados en mesas exige confirmación estricta. -->
-                            <form method="POST" action="<?php echo $use_standalone ? $base_url : 'index.php?page=torneo_gestion'; ?>" 
-                                  onsubmit="event.preventDefault(); eliminarRondaConfirmar(event, <?php echo $ultima_ronda; ?>, <?php echo $ultima_ronda_tiene_resultados ? 'true' : 'false'; ?>);">
-                                <input type="hidden" name="action" value="eliminar_ultima_ronda">
-                                <input type="hidden" name="csrf_token" value="<?php echo CSRF::token(); ?>">
-                                <input type="hidden" name="torneo_id" value="<?php echo $torneo['id']; ?>">
-                                <input type="hidden" name="confirmar_eliminar_con_resultados" value="">
-                                <button type="submit" <?php echo $isLocked ? 'disabled' : ''; ?>
-                                        class="tw-btn <?php echo $isLocked ? 'bg-gray-400' : 'bg-red-500 hover:bg-red-600'; ?> text-white"
-                                        title="<?php echo $isLocked ? 'Torneo cerrado.' : ($ultima_ronda_tiene_resultados ? 'Eliminar ronda (la ronda tiene resultados en mesas; se pedirá confirmación estricta).' : 'Eliminar la última ronda.'); ?>">
-                                    <i class="fas fa-trash-alt"></i> Eliminar Ronda
-                                </button>
-                            </form>
+
+                            <a href="index.php?page=tournament_admin&torneo_id=<?php echo (int)($torneo['id'] ?? 0); ?>&action=generar_qr" 
+                               class="tw-btn bg-violet-600 hover:bg-violet-700 text-white w-full text-center" target="_blank" rel="noopener">
+                                <i class="fas fa-qrcode"></i> Generar e imprimir QR del torneo
+                            </a>
                         <?php else: ?>
                             <!-- Sin rondas generadas -->
                             <div class="bg-gray-50 rounded-lg p-3 text-center text-gray-500 text-sm">
@@ -498,9 +501,9 @@ tailwind.config = {
                         <!-- Verificar Mesas (QR): activo cuando hay actas pendientes -->
                         <?php if ($actas_pendientes_count > 0): ?>
                             <a href="<?php echo $base_url . ($use_standalone ? '?' : '&'); ?>action=verificar_resultados&torneo_id=<?php echo (int)$torneo['id']; ?>" 
-                               class="tw-btn text-white" style="background-color: #ef4444;">
+                               class="tw-btn tw-panel-btn--alert">
                                 <i class="fas fa-check-double"></i> Verificar Mesas
-                                <span class="ml-2 px-2 py-0.5 rounded-full text-sm" style="background-color: rgba(255,255,255,0.3);"><?php echo $actas_pendientes_count; ?></span>
+                                <span class="tw-panel-btn__badge"><?php echo $actas_pendientes_count; ?></span>
                             </a>
                         <?php else: ?>
                             <button type="button" disabled class="tw-btn bg-gray-400 text-white">
@@ -517,7 +520,7 @@ tailwind.config = {
                                 <input type="hidden" name="torneo_id" value="<?php echo (int)($torneo['id'] ?? 0); ?>">
                                 <button type="submit" id="btn-generar-ronda"
                                         data-btn-reset-html="<?php echo htmlspecialchars(
-                                            '<i class="fas fa-' . (($puedeGenerar && !$isLocked) ? 'play' : 'lock') . '"></i> Generar Ronda ' . (int)$proximaRonda,
+                                            'Generar Ronda ' . (int)$proximaRonda,
                                             ENT_QUOTES, 'UTF-8'
                                         ); ?>"
                                         <?php echo (!$puedeGenerar || $isLocked) ? 'disabled' : ''; ?>
@@ -563,12 +566,21 @@ tailwind.config = {
                                 <i class="fas fa-print"></i> Imprimir Hojas
                             </a>
                         <?php endif; ?>
-                        
-                        <!-- Generar e imprimir QR del torneo (acceso desde panel) -->
-                        <a href="index.php?page=tournament_admin&torneo_id=<?php echo (int)($torneo['id'] ?? 0); ?>&action=generar_qr" 
-                           class="tw-btn bg-emerald-600 hover:bg-emerald-700 text-white" target="_blank" rel="noopener">
-                            <i class="fas fa-qrcode"></i> Generar e imprimir QR del torneo
-                        </a>
+
+                        <?php if ($ultima_ronda > 0): ?>
+                            <form method="POST" action="<?php echo $use_standalone ? $base_url : 'index.php?page=torneo_gestion'; ?>"
+                                  onsubmit="event.preventDefault(); eliminarRondaConfirmar(event, <?php echo $ultima_ronda; ?>, <?php echo $ultima_ronda_tiene_resultados ? 'true' : 'false'; ?>);">
+                                <input type="hidden" name="action" value="eliminar_ultima_ronda">
+                                <input type="hidden" name="csrf_token" value="<?php echo CSRF::token(); ?>">
+                                <input type="hidden" name="torneo_id" value="<?php echo $torneo['id']; ?>">
+                                <input type="hidden" name="confirmar_eliminar_con_resultados" value="">
+                                <button type="submit" <?php echo $isLocked ? 'disabled' : ''; ?>
+                                        class="tw-btn <?php echo $isLocked ? 'bg-gray-400' : 'bg-red-600 hover:bg-red-700'; ?> text-white"
+                                        title="<?php echo $isLocked ? 'Torneo cerrado.' : ($ultima_ronda_tiene_resultados ? 'Eliminar ronda (la ronda tiene resultados en mesas; se pedirá confirmación estricta).' : 'Eliminar la última ronda.'); ?>">
+                                    <i class="fas fa-trash-alt"></i> Eliminar Ronda
+                                </button>
+                            </form>
+                        <?php endif; ?>
 
                     </div>
                 </div>
@@ -660,6 +672,13 @@ tailwind.config = {
                                 <?php echo $isLocked ? 'Torneo Finalizado' : 'Finalizar torneo'; ?>
                             </button>
                         </form>
+
+                        <?php if ($tid_panel > 0): ?>
+                        <a href="<?= htmlspecialchars($url_reportes_inscritos, ENT_QUOTES, 'UTF-8'); ?>"
+                           class="tw-btn bg-sky-600 hover:bg-sky-700 text-white w-full text-center">
+                            <i class="fas fa-file-invoice"></i> Reportes de inscritos
+                        </a>
+                        <?php endif; ?>
                     </div>
                 </div>
             </div>

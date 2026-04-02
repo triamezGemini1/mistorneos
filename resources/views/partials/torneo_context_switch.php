@@ -82,9 +82,15 @@ $ariaLabel = (string) ($tcs['aria_label'] ?? 'Torneos asociados (mismo evento)')
         <a href="<?php echo htmlspecialchars($href, ENT_QUOTES, 'UTF-8'); ?>"
            class="tcs__pill js-context-switch<?php echo $isActive ? ' is-active' : ''; ?>"
            aria-pressed="<?php echo $isActive ? 'true' : 'false'; ?>"
-           title="<?php echo htmlspecialchars('ID Sistema: ' . $switchId . ' | Evento Padre: ' . $switchParentEventId, ENT_QUOTES, 'UTF-8'); ?>">
-            <?php echo htmlspecialchars($switchLabel, ENT_QUOTES, 'UTF-8'); ?>
-            <span class="tcs__id-ghost">#<?php echo $switchId; ?></span>
+           title="<?php echo htmlspecialchars('ID Sistema: ' . $switchId . ($switchParentEventId ? ' | Evento Padre: ' . $switchParentEventId : ''), ENT_QUOTES, 'UTF-8'); ?>">
+            <span class="tcs__pill-name"><?php echo htmlspecialchars($switchLabel, ENT_QUOTES, 'UTF-8'); ?></span>
+            <span class="tcs__pill-meta" aria-hidden="true">
+                <span class="tcs__meta-item"><span class="tcs__meta-k">ID</span><span class="tcs__meta-v"><?php echo $switchId; ?></span></span>
+                <?php if ($switchParentEventId > 0): ?>
+                <span class="tcs__meta-sep" aria-hidden="true"></span>
+                <span class="tcs__meta-item"><span class="tcs__meta-k">Padre</span><span class="tcs__meta-v"><?php echo $switchParentEventId; ?></span></span>
+                <?php endif; ?>
+            </span>
         </a>
     <?php endforeach; ?>
 </div>

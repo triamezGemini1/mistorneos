@@ -911,9 +911,30 @@ html {
 .tw-panel .alert-error { background: #fee2e2; border: 1px solid #ef4444; color: #991b1b; padding: 0.64rem 0.85rem; border-radius: 0.43rem; margin-bottom: 0.85rem; display: flex; align-items: center; justify-content: space-between; font-size: 0.9rem; }
 .tw-panel .ronda-info { background: #eff6ff; border-left: 4px solid #3b82f6; border-radius: 0.43rem; padding: 0.43rem 0.64rem; margin-bottom: 0.64rem; }
 
-.tw-panel .tw-columns { display: flex; gap: 0.85rem; flex-wrap: wrap; }
-.tw-panel .tw-column { flex: 1; min-width: 238px; }
-.tw-panel .w-1\/3 { width: 33.333%; min-width: 238px; }
+.tw-panel .tw-columns { display: flex; gap: 1rem; flex-wrap: wrap; align-items: stretch; }
+.tw-panel .tw-column { flex: 1 1 0; min-width: min(100%, 220px); }
+.tw-panel .w-1\/3 { width: 33.333%; min-width: min(100%, 220px); }
+.tw-panel .tw-column h3 { font-size: 1.0625rem !important; line-height: 1.35 !important; font-weight: 800 !important; letter-spacing: 0.015em; }
+.tw-panel .tw-column > .bg-white > .p-5 { padding: 0.85rem 1rem !important; }
+.tw-panel .tw-column .space-y-4 { gap: 0.52rem !important; }
+/* Títulos de columnas del panel: centrados, negro, negrita (anulan gradiente de cabecera) */
+.tw-panel .tw-column > .bg-white > div[class*="bg-gradient-to-r"] {
+  background: #f1f5f9 !important;
+  background-image: none !important;
+  border-bottom: 1px solid #e2e8f0;
+  color: #000 !important;
+  display: flex !important;
+  justify-content: center !important;
+  align-items: center !important;
+  text-align: center !important;
+}
+.tw-panel .tw-column > .bg-white > div[class*="bg-gradient-to-r"] h3,
+.tw-panel .tw-column > .bg-white > div[class*="bg-gradient-to-r"] h3.text-white {
+  color: #000 !important;
+  justify-content: center !important;
+  width: 100%;
+  text-align: center !important;
+}
 
 .tw-panel .bg-white { background-color: #fff; }
 .tw-panel .rounded-xl { border-radius: 0.64rem; }
@@ -939,43 +960,82 @@ html {
 .tw-panel .items-center { align-items: center; }
 .tw-panel .mr-3 { margin-right: 0.75rem; }
 
+/* Panel: botones fondo pastel (no blanco puro), texto negro negrita; hovers ligeramente más intensos */
 .tw-panel .tw-btn.bg-blue-500,
-.tw-panel a.tw-btn[class*="bg-blue"] { background-color: #3b82f6 !important; color: white !important; }
+.tw-panel a.tw-btn[class*="bg-blue"] { background-color: #bfdbfe !important; color: #000 !important; border: 1px solid #60a5fa !important; }
 .tw-panel .tw-btn.bg-blue-500:hover,
-.tw-panel a.tw-btn[class*="bg-blue"]:hover { background-color: #2563eb !important; }
+.tw-panel a.tw-btn[class*="bg-blue"]:hover { background-color: #93c5fd !important; }
 .tw-panel .tw-btn.bg-amber-500,
-.tw-panel a.tw-btn[class*="bg-amber"] { background-color: #f59e0b !important; color: white !important; }
+.tw-panel a.tw-btn[class*="bg-amber"]:not([class*="amber-7"]) { background-color: #fde68a !important; color: #000 !important; border: 1px solid #fbbf24 !important; }
 .tw-panel .tw-btn.bg-amber-500:hover,
-.tw-panel a.tw-btn[class*="bg-amber"]:hover { background-color: #d97706 !important; }
+.tw-panel a.tw-btn[class*="bg-amber"]:not([class*="amber-7"]):hover { background-color: #fcd34d !important; }
+.tw-panel .tw-btn.bg-amber-700,
+.tw-panel a.tw-btn.bg-amber-700 { background-color: #fcd34d !important; color: #000 !important; border: 1px solid #d97706 !important; }
+.tw-panel .tw-btn.bg-amber-700:hover { background-color: #fbbf24 !important; }
 .tw-panel .tw-btn.bg-emerald-500,
-.tw-panel a.tw-btn[class*="bg-emerald"] { background-color: #10b981 !important; color: white !important; }
+.tw-panel a.tw-btn[class*="bg-emerald"] { background-color: #a7f3d0 !important; color: #000 !important; border: 1px solid #34d399 !important; }
 .tw-panel .tw-btn.bg-emerald-500:hover,
-.tw-panel a.tw-btn[class*="bg-emerald"]:hover { background-color: #059669 !important; }
+.tw-panel a.tw-btn[class*="bg-emerald"]:hover { background-color: #6ee7b7 !important; }
 .tw-panel .tw-btn.bg-cyan-500,
-.tw-panel a.tw-btn[class*="bg-cyan"] { background-color: #06b6d4 !important; color: white !important; }
+.tw-panel a.tw-btn[class*="bg-cyan"] { background-color: #a5f3fc !important; color: #000 !important; border: 1px solid #22d3ee !important; }
 .tw-panel .tw-btn.bg-cyan-500:hover,
-.tw-panel a.tw-btn[class*="bg-cyan"]:hover { background-color: #0891b2 !important; }
+.tw-panel a.tw-btn[class*="bg-cyan"]:hover { background-color: #67e8f9 !important; }
 .tw-panel .tw-btn.bg-red-500,
-.tw-panel a.tw-btn[class*="bg-red"] { background-color: #ef4444 !important; color: white !important; }
-.tw-panel .tw-btn.bg-red-500:hover,
-.tw-panel a.tw-btn[class*="bg-red"]:hover { background-color: #dc2626 !important; }
-.tw-panel .tw-btn.bg-gray-400 { background-color: #9ca3af !important; color: white !important; }
+.tw-panel a.tw-btn[class*="bg-red"]:not([class*="red-600"]) { background-color: #fecaca !important; color: #000 !important; border: 1px solid #f87171 !important; }
+.tw-panel .tw-btn.bg-gray-400 { background-color: #d1d5db !important; color: #374151 !important; border: 1px solid #9ca3af !important; }
 .tw-panel .tw-btn.bg-purple-500,
-.tw-panel a.tw-btn[class*="bg-purple"] { background-color: #a855f7 !important; color: white !important; }
+.tw-panel a.tw-btn[class*="bg-purple"] { background-color: #e9d5ff !important; color: #000 !important; border: 1px solid #c084fc !important; }
 .tw-panel .tw-btn.bg-purple-500:hover,
-.tw-panel a.tw-btn[class*="bg-purple"]:hover { background-color: #9333ea !important; }
+.tw-panel a.tw-btn[class*="bg-purple"]:hover { background-color: #ddd6fe !important; }
 .tw-panel .tw-btn.bg-indigo-500,
-.tw-panel a.tw-btn[class*="bg-indigo"] { background-color: #6366f1 !important; color: white !important; }
+.tw-panel a.tw-btn[class*="bg-indigo"] { background-color: #c7d2fe !important; color: #000 !important; border: 1px solid #818cf8 !important; }
 .tw-panel .tw-btn.bg-indigo-500:hover,
-.tw-panel a.tw-btn[class*="bg-indigo"]:hover { background-color: #4f46e5 !important; }
+.tw-panel a.tw-btn[class*="bg-indigo"]:hover { background-color: #a5b4fc !important; }
 .tw-panel .tw-btn.bg-teal-500,
-.tw-panel a.tw-btn[class*="bg-teal"] { background-color: #14b8a6 !important; color: white !important; }
+.tw-panel a.tw-btn[class*="bg-teal"] { background-color: #99f6e4 !important; color: #000 !important; border: 1px solid #2dd4bf !important; }
 .tw-panel .tw-btn.bg-teal-500:hover,
-.tw-panel a.tw-btn[class*="bg-teal"]:hover { background-color: #0d9488 !important; }
+.tw-panel a.tw-btn[class*="bg-teal"]:hover { background-color: #5eead4 !important; }
 .tw-panel .tw-btn.bg-rose-500,
-.tw-panel a.tw-btn[class*="bg-rose"] { background-color: #f43f5e !important; color: white !important; }
+.tw-panel a.tw-btn[class*="bg-rose"] { background-color: #fecdd3 !important; color: #000 !important; border: 1px solid #fb7185 !important; }
 .tw-panel .tw-btn.bg-rose-500:hover,
-.tw-panel a.tw-btn[class*="bg-rose"]:hover { background-color: #e11d48 !important; }
+.tw-panel a.tw-btn[class*="bg-rose"]:hover { background-color: #fda4af !important; }
+.tw-panel .tw-btn.bg-sky-600,
+.tw-panel a.tw-btn[class*="bg-sky"] { background-color: #bae6fd !important; color: #000 !important; border: 1px solid #38bdf8 !important; }
+.tw-panel .tw-btn.bg-sky-600:hover,
+.tw-panel a.tw-btn[class*="bg-sky"]:hover { background-color: #7dd3fc !important; }
+.tw-panel .tw-btn.bg-violet-600,
+.tw-panel a.tw-btn[class*="bg-violet"] { background-color: #ddd6fe !important; color: #000 !important; border: 1px solid #a78bfa !important; }
+.tw-panel .tw-btn.bg-violet-600:hover,
+.tw-panel a.tw-btn[class*="bg-violet"]:hover { background-color: #c4b5fd !important; }
+.tw-panel .tw-btn.bg-red-600,
+.tw-panel a.tw-btn[class*="bg-red-600"] { background-color: #fecaca !important; color: #000 !important; border: 1px solid #ef4444 !important; }
+.tw-panel .tw-btn.bg-red-600:hover,
+.tw-panel a.tw-btn[class*="bg-red-600"]:hover { background-color: #fca5a5 !important; }
+.tw-panel .tw-btn.bg-slate-600,
+.tw-panel a.tw-btn[class*="bg-slate-600"] { background-color: #cbd5e1 !important; color: #000 !important; border: 1px solid #64748b !important; }
+.tw-panel .tw-btn.bg-slate-600:hover,
+.tw-panel a.tw-btn[class*="bg-slate-600"]:hover { background-color: #94a3b8 !important; color: #000 !important; }
+.tw-panel .tw-btn.bg-gray-500 { background-color: #d1d5db !important; color: #1f2937 !important; border: 1px solid #9ca3af !important; }
+.tw-panel .tw-btn.bg-gray-800 { background-color: #e5e7eb !important; color: #000 !important; border: 1px solid #4b5563 !important; }
+.tw-panel .tw-btn.bg-gray-800:hover { background-color: #d1d5db !important; }
+.tw-panel .tw-panel-btn--alert {
+  background-color: #fecaca !important;
+  color: #000 !important;
+  border: 1px solid #f87171 !important;
+  font-weight: 700 !important;
+}
+.tw-panel .tw-panel-btn--alert:hover {
+  background-color: #fca5a5 !important;
+}
+.tw-panel .tw-panel-btn__badge {
+  margin-left: 0.45rem;
+  padding: 0.12rem 0.5rem;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  background: #f87171;
+  color: #000;
+  font-weight: 800;
+}
 
 .tw-panel .bg-gray-100 { background-color: #f3f4f6; }
 .tw-panel .border-l-4 { border-left-width: 4px; }
@@ -999,13 +1059,17 @@ html {
   font-weight: 700;
 }
 .tw-panel .tw-btn,
-.tw-panel a.tw-btn {
+.tw-panel a.tw-btn,
+.tw-panel span.tw-btn {
   font-size: 0.91rem !important;
   padding: 0.5rem 0.7rem;
   font-weight: 700 !important;
-  color: #000 !important;
+  letter-spacing: 0.02em;
+  font-feature-settings: "kern" 1;
+  color: #0a0a0a !important;
 }
-.tw-panel .tw-btn i {
+.tw-panel .tw-btn i,
+.tw-panel a.tw-btn i {
   display: none !important;
 }
 .tw-panel nav ol {
@@ -1052,7 +1116,9 @@ html {
 }
 .tw-panel div[class*="bg-gradient-to-r"] h3 {
   font-size: 0.862rem !important;
-  color: #000 !important;
+  color: #fff !important;
+  font-weight: 600 !important;
+  letter-spacing: 0.04em;
 }
 .tw-panel .text-xs {
   font-size: 0.63rem !important;
@@ -1077,16 +1143,11 @@ html {
 }
 .tw-panel .mb-4 { margin-bottom: 0.55rem; }
 .tw-panel .mb-6 { margin-bottom: 0.85rem; }
-/* Ocultar todos los iconos en el panel de control (solo esta página) */
-.tw-panel i.fas,
-.tw-panel i.far,
-.tw-panel i.fab {
-  display: none !important;
-}
-/* Texto de botones en negro (los fondos conservan su color) */
-.tw-panel .tw-btn[class*="bg-"],
-.tw-panel a.tw-btn[class*="bg-"] {
-  color: #000 !important;
+.tw-panel span.tw-btn.bg-gray-300 {
+  background-color: #d1d5db !important;
+  color: #374151 !important;
+  border: 1px solid #9ca3af !important;
+  font-weight: 700 !important;
 }
 
 /* ========== Panel: incrementos de fuente (nombre/logo +100%, breadcrumb +150%, meta +100%, ronda +150%, tarjetas +100%, cronómetro +100%) ========== */
@@ -1136,16 +1197,17 @@ html {
   font-size: 1.23rem !important;
 }
 
-/* ========== Franja superior: 5 columnas (auditoría | torneo 1 | cronómetro | torneo 2 | estadísticas) ========== */
+/* ========== Franja superior: 3 columnas (auditoría | cronómetro | estadísticas) ========== */
 .tw-panel .panel-top-strip {
   display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
-  gap: 0.3rem 0.35rem;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.45rem 0.55rem;
   align-items: start;
-  margin-bottom: 0.3rem;
+  margin-bottom: 0.4rem;
   width: 100%;
   max-width: 100%;
-  font-size: 0.82rem;
+  font-size: 0.9rem;
+  line-height: 1.35;
   font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
@@ -1155,7 +1217,7 @@ html {
   display: flex;
   flex-direction: column;
   align-items: stretch;
-  gap: 0.18rem;
+  gap: 0.22rem;
 }
 .tw-panel .panel-top-strip__audit-row {
   display: flex;
@@ -1182,12 +1244,15 @@ html {
   min-width: 0;
 }
 .tw-panel .panel-top-strip__label {
-  font-size: 1em !important;
-  font-weight: 700 !important;
+  display: block;
+  width: 100%;
+  text-align: center;
+  font-size: 0.78rem !important;
+  font-weight: 800 !important;
   text-transform: uppercase;
-  letter-spacing: 0.05em;
-  color: #64748b;
-  line-height: 1.1;
+  letter-spacing: 0.06em;
+  color: #000 !important;
+  line-height: 1.2;
   flex-shrink: 0;
 }
 .tw-panel .panel-top-strip .panel-badge-med {
@@ -1195,14 +1260,14 @@ html {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 0.22rem 0.28rem;
-  border-radius: 0.3rem;
+  padding: 0.28rem 0.35rem;
+  border-radius: 0.35rem;
   border: 1px solid rgba(15, 23, 42, 0.1);
   background: #f8fafc;
-  line-height: 1.2;
+  line-height: 1.25;
   text-align: center;
-  min-height: 2.35rem;
-  font-size: 1em;
+  min-height: 2.5rem;
+  font-size: 0.95em;
   box-sizing: border-box;
 }
 .tw-panel .panel-badge-med__k {
@@ -1290,7 +1355,7 @@ html {
   padding: 0.1rem 0;
 }
 .tw-panel .panel-top-strip__bloqueo-full {
-  font-size: 0.72rem !important;
+  font-size: 0.8rem !important;
   font-weight: 700 !important;
   color: #b45309;
   background: #fffbeb;
@@ -1363,31 +1428,56 @@ html {
   display: block;
   text-align: center;
 }
-.tw-panel #btnCronometroVentana.panel-top-strip__cron-btn {
-  font-size: 1em !important;
-  padding: 0.32rem 0.35rem !important;
+/* Activar cronómetro: +80% sobre ~0.9rem ≈ 1.62rem; relieve, borde y hover/active */
+.tw-panel #btnCronometroVentana {
+  font-size: 1.62rem !important;
+  line-height: 1.25 !important;
+  padding: 0.58rem 0.95rem !important;
+  border-radius: 0.45rem;
+  border: 2px solid #0d9488;
+  background: linear-gradient(135deg, #0f766e 0%, #0d9488 100%);
+  color: #fff !important;
+  font-weight: 800 !important;
+  cursor: pointer;
+  box-shadow: 0 2px 0 #0f766e, 0 4px 12px rgba(15, 118, 110, 0.35);
+  min-height: 2.75rem;
+  transition: background 0.15s ease, box-shadow 0.15s ease, transform 0.08s ease;
+}
+.tw-panel #btnCronometroVentana:hover {
+  box-shadow: 0 3px 0 #0f766e, 0 6px 16px rgba(15, 118, 110, 0.45);
+  filter: brightness(1.05);
+}
+.tw-panel #btnCronometroVentana:active {
+  transform: translateY(2px);
+  box-shadow: 0 1px 0 #0f766e, 0 2px 8px rgba(15, 118, 110, 0.3);
+}
+.tw-panel .panel-top-strip__cron #btnCronometroVentana {
+  width: 100%;
+  max-width: 100%;
+  display: block;
 }
 
 @media (max-width: 1024px) {
   .tw-panel .panel-top-strip {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.5rem 0.55rem;
   }
-  .tw-panel .panel-top-strip__col:nth-child(5) {
+  .tw-panel .panel-top-strip__col:nth-child(3) {
     grid-column: 1 / -1;
     flex-direction: column;
     flex-wrap: nowrap;
     align-items: stretch;
-    gap: 0.25rem;
+    gap: 0.28rem;
   }
-  .tw-panel .panel-top-strip__col:nth-child(5) .panel-top-strip__stats-row {
+  .tw-panel .panel-top-strip__col:nth-child(3) .panel-top-strip__stats-row {
     width: 100%;
   }
-  .tw-panel .panel-top-strip__col:nth-child(5) .panel-top-strip__stats-row .panel-badge-med {
+  .tw-panel .panel-top-strip__col:nth-child(3) .panel-top-strip__stats-row .panel-badge-med {
     flex: 1 1 0;
     min-width: 0;
     max-width: none;
   }
-  .tw-panel .panel-top-strip__col:nth-child(5) .panel-top-strip__label {
+  .tw-panel .panel-top-strip__col:nth-child(3) .panel-top-strip__label {
     width: 100%;
   }
 }

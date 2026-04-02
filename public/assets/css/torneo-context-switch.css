@@ -19,17 +19,62 @@
 }
 .tcs--on-dark .tcs__pill {
     min-width: 86px;
-    padding: 4px 9.5px;
-    border-radius: 999px;
-    color: rgba(255, 255, 255, 0.92);
+    padding: 6px 10px;
+    border-radius: 12px;
+    color: rgba(255, 255, 255, 0.95);
     font-size: 12px;
     font-weight: 600;
     text-decoration: none;
     display: inline-flex;
+    flex-direction: column;
+    align-items: stretch;
+    justify-content: center;
+    gap: 5px;
+    line-height: 1.2;
+    text-align: center;
+    white-space: normal;
+    max-width: 16rem;
+}
+.tcs--on-dark .tcs__pill-name {
+    display: block;
+    font-weight: 700;
+    font-size: 12px;
+    line-height: 1.25;
+    word-break: break-word;
+}
+.tcs--on-dark .tcs__pill-meta {
+    display: flex;
+    flex-wrap: wrap;
     align-items: center;
     justify-content: center;
-    line-height: 1;
-    white-space: nowrap;
+    gap: 6px 10px;
+    font-size: 10px;
+    font-weight: 600;
+    color: rgba(255, 255, 255, 0.88);
+    border-top: 1px solid rgba(255, 255, 255, 0.28);
+    padding-top: 5px;
+    margin-top: 1px;
+}
+.tcs--on-dark .tcs__meta-item {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 4px;
+}
+.tcs--on-dark .tcs__meta-k {
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    font-size: 9px;
+    opacity: 0.85;
+}
+.tcs--on-dark .tcs__meta-v {
+    font-weight: 800;
+    font-variant-numeric: tabular-nums;
+}
+.tcs--on-dark .tcs__meta-sep {
+    width: 1px;
+    height: 12px;
+    background: rgba(255, 255, 255, 0.35);
+    flex-shrink: 0;
 }
 .tcs--on-dark .tcs__pill:hover {
     color: #fff;
@@ -39,11 +84,20 @@
     background: #005c44;
     color: #fff;
 }
+.tcs--on-dark .tcs__pill.is-active .tcs__pill-name,
+.tcs--on-dark .tcs__pill.is-active .tcs__pill-meta,
+.tcs--on-dark .tcs__pill.is-active .tcs__meta-k,
+.tcs--on-dark .tcs__pill.is-active .tcs__meta-v {
+    color: #fff;
+}
+.tcs--on-dark .tcs__pill.is-active .tcs__pill-meta {
+    border-top-color: rgba(255, 255, 255, 0.35);
+}
+.tcs--on-dark .tcs__pill.is-active .tcs__meta-sep {
+    background: rgba(255, 255, 255, 0.45);
+}
 .tcs--on-dark .tcs__id-ghost {
-    font-size: 10px;
-    color: rgba(255, 255, 255, 0.72);
-    margin-left: 4px;
-    font-weight: 500;
+    display: none;
 }
 .tcs--on-dark.tcs--compact .tcs__pill {
     font-size: 13px;
@@ -58,17 +112,57 @@
 }
 .tcs--on-light .tcs__pill {
     min-width: 78px;
-    padding: 5px 7.6px;
-    border-radius: 999px;
+    padding: 6px 8px;
+    border-radius: 12px;
     font-size: 11px;
     font-weight: 700;
-    color: #374151;
+    color: #111827;
     text-decoration: none;
     display: inline-flex;
+    flex-direction: column;
+    align-items: stretch;
+    justify-content: center;
+    gap: 4px;
+    line-height: 1.2;
+    text-align: center;
+    white-space: normal;
+    max-width: 16rem;
+}
+.tcs--on-light .tcs__pill-name {
+    display: block;
+    font-weight: 800;
+    font-size: 11px;
+    color: #111827;
+    word-break: break-word;
+}
+.tcs--on-light .tcs__pill-meta {
+    display: flex;
+    flex-wrap: wrap;
     align-items: center;
     justify-content: center;
-    line-height: 1;
-    white-space: nowrap;
+    gap: 6px 10px;
+    font-size: 10px;
+    font-weight: 700;
+    color: #4b5563;
+    border-top: 1px solid #e5e7eb;
+    padding-top: 4px;
+}
+.tcs--on-light .tcs__meta-k {
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    font-size: 9px;
+    color: #6b7280;
+}
+.tcs--on-light .tcs__meta-v {
+    font-weight: 800;
+    font-variant-numeric: tabular-nums;
+    color: #111827;
+}
+.tcs--on-light .tcs__meta-sep {
+    width: 1px;
+    height: 11px;
+    background: #d1d5db;
+    flex-shrink: 0;
 }
 .tcs--on-light .tcs__pill:hover {
     background: #e5e7eb;
@@ -78,11 +172,22 @@
     background: #005c44;
     color: #fff;
 }
+.tcs--on-light .tcs__pill.is-active .tcs__pill-name,
+.tcs--on-light .tcs__pill.is-active .tcs__meta-v {
+    color: #fff;
+}
+.tcs--on-light .tcs__pill.is-active .tcs__pill-meta {
+    border-top-color: rgba(255, 255, 255, 0.35);
+    color: rgba(255, 255, 255, 0.92);
+}
+.tcs--on-light .tcs__pill.is-active .tcs__meta-k {
+    color: rgba(255, 255, 255, 0.85);
+}
+.tcs--on-light .tcs__pill.is-active .tcs__meta-sep {
+    background: rgba(255, 255, 255, 0.4);
+}
 .tcs--on-light .tcs__id-ghost {
-    font-size: 10px;
-    color: rgba(75, 85, 99, 0.68);
-    margin-left: 4px;
-    font-weight: 500;
+    display: none;
 }
 .tcs--on-light.tcs--compact .tcs__pill {
     font-size: 10px;
@@ -98,16 +203,17 @@
     gap: 5px;
 }
 .tw-panel .tcs.tcs--on-dark .tcs__pill {
-    min-width: 5.9rem;
-    padding: 0.25rem 0.665rem;
-    font-size: 14px;
+    min-width: 6.5rem;
+    padding: 0.4rem 0.55rem;
+    font-size: 13px;
     letter-spacing: 0.01em;
-    max-width: 13.5rem;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    max-width: 15rem;
 }
-.tw-panel .tcs.tcs--on-dark .tcs__id-ghost {
-    color: rgba(255, 255, 255, 0.72);
+.tw-panel .tcs.tcs--on-dark .tcs__pill-name {
+    font-size: 13px;
+}
+.tw-panel .tcs.tcs--on-dark .tcs__pill-meta {
+    font-size: 10px;
 }
 .tw-panel .tcs.tcs--on-dark.tcs--compact .tcs__pill {
     font-size: 13px;
