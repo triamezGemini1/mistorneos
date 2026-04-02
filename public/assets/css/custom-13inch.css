@@ -111,6 +111,12 @@
     padding-left: 0.65rem !important;
     padding-right: 0.65rem !important;
   }
+
+  /* Ingreso de resultados (~13"): refuerzo en registrar-resultados-v2.php (estilos del módulo van después del head) */
+  body.page-registrar-resultados .registrar-resultados-wrap #sidebar-mesas .card-body {
+    padding-left: 0.45rem !important;
+    padding-right: 0.45rem !important;
+  }
 }
 
 /* Colores originales (resources/views/tournament/parts/cuadricula.php) */

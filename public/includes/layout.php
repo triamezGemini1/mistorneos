@@ -159,6 +159,9 @@ if ($current_page === 'torneo_gestion') {
     if ($tg_action_layout === 'index') {
         $body_page_extra .= ' page-torneo-gestion-index';
     }
+    if ($tg_action_layout === 'registrar_resultados' || $tg_action_layout === 'registrar_resultados_v2') {
+        $body_page_extra .= ' page-registrar-resultados';
+    }
 }
 if ($current_page === 'estadisticas_torneos') {
     $body_page_extra .= ' page-estadisticas-torneos';
@@ -676,7 +679,10 @@ if ($current_page === 'estadisticas_torneos') {
 
       <!-- Contenido dinámico (CSS/head ya cargados arriba; el módulo se incluye dentro del body con formato) -->
       <main class="container-fluid py-4">
-        <?php if ($current_page !== 'home'): ?>
+        <?php
+        $layout_registrar_rr = ($current_page === 'torneo_gestion' && in_array(($_GET['action'] ?? ''), ['registrar_resultados', 'registrar_resultados_v2'], true));
+        ?>
+        <?php if ($current_page !== 'home' && !$layout_registrar_rr): ?>
         <div id="global-volver-container"></div>
         <?php endif; ?>
         <?php

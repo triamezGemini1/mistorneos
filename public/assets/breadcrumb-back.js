@@ -74,6 +74,12 @@
 
     function initBreadcrumbBack() {
         injectStyles();
+        var slot = document.getElementById('breadcrumb-back-slot');
+        if (slot && !slot.querySelector('.btn-breadcrumb-back')) {
+            slot.className = (slot.className ? slot.className + ' ' : '') + 'nav-origin-global';
+            slot.appendChild(createVolverBtn());
+            return;
+        }
         var selectors = [
             'nav[aria-label="breadcrumb"]',
             '.breadcrumb-modern'
