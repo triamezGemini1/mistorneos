@@ -46,6 +46,7 @@ $es_modalidad_parejas = ($modalidad_num_panel === 2); // Parejas por equipos (mi
 $es_modalidad_parejas_fijas = ($modalidad_num_panel === 4);
 $es_modalidad_equipos_o_parejas = ($es_modalidad_equipos || $es_modalidad_parejas);
 $context_switcher = isset($context_switcher) && is_array($context_switcher) ? $context_switcher : ['active_tournament_id' => (int)($torneo['id'] ?? 0), 'items' => []];
+$has_panel_context_switch = !empty($context_switcher['items']);
 $paired_tournaments_status = isset($paired_tournaments_status) && is_array($paired_tournaments_status) ? $paired_tournaments_status : ['enabled' => false, 'items' => [], 'bloqueo' => null];
 $bloqueo_cierre_total = $paired_tournaments_status['bloqueo'] ?? null;
 
@@ -109,19 +110,10 @@ if ($ultima_ronda > 0 && isset($torneo['id'])) {
     }
 }
 
-$panel_torneo_id_reportes = (int)($torneo['id'] ?? 0);
-if ($panel_torneo_id_reportes > 0 && class_exists('AppHelpers')) {
-    $url_reporte_insc_pdf_det = AppHelpers::torneoGestionUrl('inscripciones_reporte_detallado_pdf', $panel_torneo_id_reportes);
-    $url_reporte_insc_xls_det = AppHelpers::torneoGestionUrl('inscripciones_reporte_detallado_xls', $panel_torneo_id_reportes);
-    $url_reporte_insc_pdf_simple = AppHelpers::torneoGestionUrl('inscripciones_export_pdf', $panel_torneo_id_reportes);
-    $url_reporte_insc_xls_simple = AppHelpers::torneoGestionUrl('inscripciones_export_xls', $panel_torneo_id_reportes);
-} else {
-    $baseQ = 'index.php?page=torneo_gestion&torneo_id=' . $panel_torneo_id_reportes;
-    $url_reporte_insc_pdf_det = $baseQ . '&action=inscripciones_reporte_detallado_pdf';
-    $url_reporte_insc_xls_det = $baseQ . '&action=inscripciones_reporte_detallado_xls';
-    $url_reporte_insc_pdf_simple = $baseQ . '&action=inscripciones_export_pdf';
-    $url_reporte_insc_xls_simple = $baseQ . '&action=inscripciones_export_xls';
-}
+$tid_panel = (int)($torneo['id'] ?? 0);
+$url_reportes_inscritos = ($tid_panel > 0 && class_exists('AppHelpers', false))
+    ? AppHelpers::torneoGestionUrl('reportes_inscritos', $tid_panel)
+    : ($tid_panel > 0 ? 'index.php?page=torneo_gestion&action=reportes_inscritos&torneo_id=' . $tid_panel : '#');
 ?>
 
 <link rel="stylesheet" href="assets/css/design-system.css">
@@ -152,19 +144,17 @@ tailwind.config = {
 <?php /* Estilos del panel movidos a assets/css/modern-panel.css (Design System + Panel) */ ?>
 
 <div class="tw-panel ds-root">
-    <!-- Breadcrumb (compacto) -->
+    <!-- Breadcrumb: sin repetir el nombre del torneo (el nombre va en el encabezado) -->
     <nav aria-label="breadcrumb" class="mb-2">
-        <ol class="flex items-center space-x-2 text-sm text-gray-500">
+        <ol class="flex items-center text-sm text-gray-500">
             <li><a href="<?php echo $base_url . ($use_standalone ? '?' : '&'); ?>action=index" class="hover:text-blue-600">Gestión de Torneos</a></li>
-            <li><i class="fas fa-chevron-right text-xs mx-2"></i></li>
-            <li class="text-gray-700 font-medium"><?php echo htmlspecialchars($torneo['nombre'] ?? 'Panel'); ?></li>
         </ol>
     </nav>
 
-    <!-- Header del Torneo (compacto) -->
-    <div class="panel-header bg-gradient-to-r from-indigo-600 to-purple-600 rounded-xl shadow-lg p-4 mb-3 text-white">
-        <div class="panel-header-inner flex justify-between items-center flex-wrap gap-4">
-            <div class="flex-grow-1 panel-header-grow">
+    <!-- Header del Torneo (compacto): nombre a la izquierda, selector de torneos asociados a la derecha -->
+    <div class="panel-header panel-header--compact bg-gradient-to-r from-indigo-600 to-purple-600 rounded-xl shadow-lg p-4 mb-3 text-white">
+        <div class="panel-header-inner flex items-center flex-wrap gap-4 <?php echo $has_panel_context_switch ? 'panel-header-inner--spread' : 'justify-center'; ?>">
+            <div class="panel-header-grow">
                 <h2 class="titulo-torneo">
                     <?php echo htmlspecialchars($torneo['nombre'] ?? 'Torneo'); ?>
                 </h2>
@@ -187,29 +177,28 @@ tailwind.config = {
                     <span><i class="fas fa-layer-group mr-1"></i> <?php echo ($torneo['rondas'] ?? 0); ?> rondas</span>
                 </div>
             </div>
-            <div class="text-right flex-shrink-0 panel-header-actions">
-                <?php if (!empty($context_switcher['items'])): ?>
-                    <?php
-                    $tcs = [
-                        'items' => $context_switcher['items'],
-                        'active_id' => (int) ($context_switcher['active_tournament_id'] ?? 0),
-                        'base_url' => $base_url,
-                        'sep' => $use_standalone ? '?' : '&',
-                        'ronda_base' => 0,
-                        'map_max' => [],
-                        'mode' => 'panel',
-                        'theme' => 'on_dark',
-                        'select_id' => 'torneo-asociado-select-panel',
-                        'show_info' => false,
-                        'aria_label' => 'Selector de contexto del torneo',
-                        'pill_row_class' => 'mb-2',
-                    ];
-                    require __DIR__ . '/../../resources/views/partials/torneo_context_switch.php';
-                    ?>
-                <?php endif; ?>
-                <div class="torneo-id text-4xl font-extrabold opacity-80">#<?php echo $torneo['id']; ?></div>
-                <div class="text-sm opacity-70">ID del Torneo</div>
+            <?php if ($has_panel_context_switch): ?>
+            <div class="panel-header-context">
+                <?php
+                $tcs = [
+                    'items' => $context_switcher['items'],
+                    'active_id' => (int)($context_switcher['active_tournament_id'] ?? 0),
+                    'base_url' => $base_url,
+                    'sep' => $use_standalone ? '?' : '&',
+                    'ronda_base' => 0,
+                    'map_max' => [],
+                    'mode' => 'panel',
+                    'theme' => 'on_dark',
+                    'select_id' => 'torneo-asociado-select-panel',
+                    'show_info' => false,
+                    'show_select' => false,
+                    'aria_label' => 'Selector de torneos asociados',
+                    'pill_row_class' => 'panel-header-context__pills',
+                ];
+                require __DIR__ . '/../../resources/views/partials/torneo_context_switch.php';
+                ?>
             </div>
+            <?php endif; ?>
         </div>
     </div>
 
@@ -228,122 +217,6 @@ tailwind.config = {
         </div>
     <?php endif; ?>
 
-    <?php if ($actas_pendientes_count > 0): ?>
-        <div class="bg-amber-50 border-l-4 border-amber-500 px-4 py-3 rounded-lg mb-4 flex items-center justify-between">
-            <span>
-                <i class="fas fa-clipboard-check text-amber-600 mr-2"></i>
-                <strong>Tienes <?= $actas_pendientes_count ?> acta(s) pendientes de verificación</strong>
-                <span class="text-amber-700 ml-1">(enviadas por QR)</span>
-            </span>
-            <a href="<?= $base_url . ($use_standalone ? '?' : '&') ?>action=verificar_resultados&torneo_id=<?= (int)($torneo['id'] ?? 0) ?>" class="bg-amber-500 hover:bg-amber-600 text-white font-semibold px-4 py-2 rounded-lg transition-colors">
-                <i class="fas fa-eye me-1"></i>Verificar
-            </a>
-        </div>
-    <?php endif; ?>
-
-    <?php if (($mesas_verificadas_count + $mesas_digitadas_count) > 0): ?>
-        <div class="bg-slate-50 border border-slate-200 rounded-lg px-4 py-3 mb-4">
-            <h5 class="text-slate-700 font-semibold mb-2"><i class="fas fa-chart-bar mr-2"></i>Auditoría de Resultados</h5>
-            <div class="flex flex-wrap gap-4">
-                <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-emerald-100 text-emerald-800">
-                    <i class="fas fa-camera mr-1"></i>Verificadas (QR): <?= $mesas_verificadas_count ?>
-                </span>
-                <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800">
-                    <i class="fas fa-keyboard mr-1"></i>Digitadas (admin): <?= $mesas_digitadas_count ?>
-                </span>
-            </div>
-        </div>
-    <?php endif; ?>
-
-    <?php if (!empty($paired_tournaments_status['enabled']) && !empty($paired_tournaments_status['items'])): ?>
-        <div class="bg-white border border-slate-200 rounded-lg px-4 py-3 mb-4">
-            <h5 class="text-slate-700 font-semibold mb-2"><i class="fas fa-link mr-2"></i>Cierre total del grupo</h5>
-            <div class="flex flex-wrap gap-3">
-                <?php foreach ($paired_tournaments_status['items'] as $stItem): ?>
-                    <?php
-                    $g = strtoupper((string)($stItem['genero'] ?? 'M'));
-                    $gLabel = $g === 'F' ? 'Femenino' : 'Masculino';
-                    $p = (int)($stItem['mesas_pendientes'] ?? 0);
-                    ?>
-                    <div class="px-3 py-2 rounded-lg border <?php echo !empty($stItem['activo']) ? 'border-indigo-300 bg-indigo-50' : 'border-slate-200 bg-slate-50'; ?>">
-                        <div class="text-sm font-semibold text-slate-700">
-                            <?php echo htmlspecialchars((string)($stItem['nombre'] ?? $gLabel), ENT_QUOTES, 'UTF-8'); ?> [#<?php echo (int)($stItem['id'] ?? 0); ?>]<?php echo !empty($stItem['activo']) ? ' (Activo)' : ''; ?>
-                        </div>
-                        <div class="text-xs text-slate-600">
-                            Ronda <?php echo (int)($stItem['ronda_actual'] ?? 0); ?> · Mesas pendientes: <strong><?php echo $p; ?></strong>
-                        </div>
-                    </div>
-                <?php endforeach; ?>
-            </div>
-            <?php if (!empty($bloqueo_cierre_total['mensaje'])): ?>
-                <div class="mt-2 text-sm text-amber-700 font-semibold">
-                    <i class="fas fa-exclamation-triangle mr-1"></i><?php echo htmlspecialchars((string)$bloqueo_cierre_total['mensaje'], ENT_QUOTES, 'UTF-8'); ?>
-                </div>
-            <?php endif; ?>
-        </div>
-    <?php endif; ?>
-
-    <!-- Estado de Ronda Actual -->
-    <?php if ($ultima_ronda > 0): ?>
-        <div class="ronda-info bg-blue-50 border-l-4 border-blue-500 rounded-lg p-4 mb-6">
-            <div class="flex items-center justify-between flex-wrap gap-2">
-                <div class="flex items-center gap-4">
-                    <span class="text-gray-600 font-semibold">
-                        Ronda Actual: <span class="text-blue-600 text-xl font-bold"><?php echo $ultima_ronda; ?></span>
-                    </span>
-                    <?php if (isset($estadisticas['mesas_ronda'])): ?>
-                        <span class="text-blue-600 font-semibold"><?php echo $estadisticas['mesas_ronda']; ?> mesas</span>
-                    <?php endif; ?>
-                    <?php if ($es_modalidad_equipos): ?>
-                        <?php if (isset($total_equipos) && $total_equipos > 0): ?>
-                            <span class="text-indigo-600 font-semibold ml-4">
-                                <i class="fas fa-users mr-1"></i> <?php echo $total_equipos; ?> equipos inscritos
-                            </span>
-                        <?php endif; ?>
-                        <?php if (isset($estadisticas['total_jugadores_inscritos']) && $estadisticas['total_jugadores_inscritos'] > 0): ?>
-                            <span class="text-green-600 font-semibold ml-4">
-                                <i class="fas fa-user-friends mr-1"></i> <?php echo $estadisticas['total_jugadores_inscritos']; ?> jugadores
-                            </span>
-                        <?php endif; ?>
-                    <?php else: ?>
-                        <?php if (isset($inscritos_para_rondas) && $inscritos_para_rondas > 0): ?>
-                            <span class="text-green-600 font-semibold ml-4">
-                                <i class="fas fa-user-friends mr-1"></i> <?php echo $inscritos_para_rondas; ?> inscritos<?php if ($total_inscritos !== $inscritos_para_rondas): ?> (<?php echo $total_inscritos; ?> en lista)<?php endif; ?>
-                            </span>
-                        <?php endif; ?>
-                    <?php endif; ?>
-                </div>
-                <?php if (!$puedeGenerar && $ultima_ronda > 0 && $mesasInc > 0): ?>
-                    <div class="flex items-center gap-2 text-amber-600">
-                        <i class="fas fa-exclamation-triangle"></i>
-                        <span class="font-semibold"><?php echo $mesasInc; ?> mesa(s) pendiente(s)</span>
-                    </div>
-                <?php endif; ?>
-            </div>
-        </div>
-    <?php endif; ?>
-
-    <!-- Cronómetro Finalizar Torneo (mismo diseño que cronómetro de ronda, encima de él) -->
-    <?php if ($mostrar_aviso_20min && $countdown_fin_timestamp): ?>
-    <div class="mb-4 text-center cronometro-finalizar-torneo" id="countdown-cierre-torneo-top">
-        <p class="cron-finalizar-label"><i class="fas fa-lock mr-2"></i>El torneo se cerrará oficialmente en</p>
-        <p class="countdown-tiempo-restante tabular-nums" data-fin="<?php echo (int)$countdown_fin_timestamp; ?>">--:--</p>
-        <p class="cron-finalizar-hint">Tras este tiempo se habilitará el botón Finalizar torneo</p>
-    </div>
-    <?php elseif ($puedeCerrar): ?>
-    <div class="mb-4 text-center cronometro-finalizar-torneo">
-        <p class="cron-finalizar-label"><i class="fas fa-check-circle mr-2"></i>Puede finalizar el torneo</p>
-        <form method="POST" action="<?php echo $use_standalone ? $base_url : 'index.php?page=torneo_gestion'; ?>" class="inline mt-2" onsubmit="event.preventDefault(); confirmarCierreTorneo(event);">
-            <input type="hidden" name="action" value="cerrar_torneo">
-            <input type="hidden" name="csrf_token" value="<?php echo CSRF::token(); ?>">
-            <input type="hidden" name="torneo_id" value="<?php echo $torneo['id']; ?>">
-            <button type="submit" class="d-inline-block font-bold py-2 px-5 rounded-lg text-lg border-0 shadow" style="background: rgba(255,255,255,0.25); color: #fff; cursor: pointer;">
-                <i class="fas fa-lock mr-2"></i>Finalizar torneo
-            </button>
-        </form>
-    </div>
-    <?php endif; ?>
-
     <?php
     $return_to_panel = $use_standalone
         ? ($base_url . '?action=panel&torneo_id=' . (int)$torneo['id'])
@@ -352,28 +225,131 @@ tailwind.config = {
         . ($use_standalone ? '?' : '&')
         . 'action=cronometro&torneo_id=' . (int)$torneo['id']
         . '&return_to=' . urlencode($return_to_panel);
+    $url_verificar_actas_strip = $base_url . ($use_standalone ? '?' : '&') . 'action=verificar_resultados&torneo_id=' . (int)($torneo['id'] ?? 0);
+    $paired_items_strip = (!empty($paired_tournaments_status['enabled']) && !empty($paired_tournaments_status['items']))
+        ? array_values($paired_tournaments_status['items'])
+        : [];
+    $paired_strip_0 = $paired_items_strip[0] ?? null;
+    $paired_strip_1 = $paired_items_strip[1] ?? null;
+    $jugadores_strip = $es_modalidad_equipos
+        ? (int)($estadisticas['total_jugadores_inscritos'] ?? 0)
+        : (int)($inscritos_para_rondas ?? 0);
+    $equipos_strip = (int)($total_equipos ?? 0);
+    $u_banner_strip = class_exists('Auth') ? Auth::user() : null;
+    $puede_admin_banner_strip = is_array($u_banner_strip) && in_array(($u_banner_strip['role'] ?? ''), ['admin_general', 'admin_club'], true);
     ?>
-    <!-- Cronómetro en ventana independiente (no bloquea ni interfiere con el panel) -->
-    <div class="mb-2 text-center">
-        <button type="button" id="btnCronometroVentana"
-           class="d-inline-block font-bold py-2 px-5 rounded-lg text-lg transition-all transform shadow border-0" style="cursor: pointer;">
-            <i class="fas fa-external-link-alt mr-2"></i><span>ABRIR CRONÓMETRO DE RONDA</span>
-        </button>
-        <?php
-        $u_banner = class_exists('Auth') ? Auth::user() : null;
-        $puede_admin_banner = is_array($u_banner) && in_array(($u_banner['role'] ?? ''), ['admin_general', 'admin_club'], true);
-        ?>
-        <?php if ($puede_admin_banner): ?>
-        <div class="mt-2">
-            <a href="index.php?page=bannerclock&torneo_id=<?php echo (int)$torneo['id']; ?>" class="inline-block text-sm text-indigo-200 hover:text-white underline">
-                <i class="fas fa-bullhorn mr-1"></i>Administrar banner del reloj
-            </a>
+
+    <div class="panel-top-strip" role="region" aria-label="Resumen de ronda, auditoría y cronómetro">
+        <!-- Col 1: Auditoría + actas pendientes -->
+        <div class="panel-top-strip__col">
+            <span class="panel-top-strip__label">Auditoría</span>
+            <div class="panel-top-strip__audit-row">
+                <div class="panel-badge-med panel-badge-med--emerald" title="Verificadas (QR)">
+                    <span class="panel-badge-med__k">QR</span>
+                    <span class="panel-badge-med__v"><?php echo (int)$mesas_verificadas_count; ?></span>
+                </div>
+                <div class="panel-badge-med panel-badge-med--blue" title="Digitadas (admin)">
+                    <span class="panel-badge-med__k">Adm.</span>
+                    <span class="panel-badge-med__v"><?php echo (int)$mesas_digitadas_count; ?></span>
+                </div>
+            </div>
+            <?php if ($actas_pendientes_count > 0): ?>
+            <div class="panel-badge-med panel-badge-med--amber" title="Actas pendientes de verificación (QR)">
+                <span class="panel-badge-med__k">Actas</span>
+                <span class="panel-badge-med__v"><?php echo (int)$actas_pendientes_count; ?></span>
+            </div>
+            <a href="<?= htmlspecialchars($url_verificar_actas_strip, ENT_QUOTES, 'UTF-8') ?>" class="panel-top-strip__link-verify">Verificar actas</a>
+            <?php endif; ?>
         </div>
-        <?php endif; ?>
-        <div class="text-xs text-gray-300 mt-2">
-            Se abre en ventana nueva, redimensionable e independiente del panel.
+
+        <!-- Col 2: Primer torneo asociado (cierre total grupo) -->
+        <div class="panel-top-strip__col">
+            <span class="panel-top-strip__label">Torneo asociado 1</span>
+            <?php if ($paired_strip_0): ?>
+                <?php
+                $g0 = strtoupper((string)($paired_strip_0['genero'] ?? 'M'));
+                $gLabel0 = $g0 === 'F' ? 'Femenino' : 'Masculino';
+                $p0 = (int)($paired_strip_0['mesas_pendientes'] ?? 0);
+                ?>
+                <div class="panel-top-strip__paired<?php echo !empty($paired_strip_0['activo']) ? ' panel-top-strip__paired--active' : ''; ?>">
+                    <div class="panel-top-strip__paired-name"><?php echo htmlspecialchars((string)($paired_strip_0['nombre'] ?? $gLabel0), ENT_QUOTES, 'UTF-8'); ?> [#<?php echo (int)($paired_strip_0['id'] ?? 0); ?>]<?php echo !empty($paired_strip_0['activo']) ? ' · Activo' : ''; ?></div>
+                    <div class="panel-top-strip__paired-meta">Rda. <?php echo (int)($paired_strip_0['ronda_actual'] ?? 0); ?> · Pend. <?php echo $p0; ?></div>
+                </div>
+            <?php else: ?>
+                <div class="panel-badge-med panel-badge-med--slate">
+                    <span class="panel-badge-med__k">Sin vínculo</span>
+                    <span class="panel-badge-med__v">—</span>
+                </div>
+            <?php endif; ?>
+        </div>
+
+        <!-- Col 3: Cronómetro + cierre oficial -->
+        <div class="panel-top-strip__col panel-top-strip__cron">
+            <span class="panel-top-strip__label">Cronómetro</span>
+            <?php if ($mostrar_aviso_20min && $countdown_fin_timestamp): ?>
+            <div class="cronometro-finalizar-torneo" id="countdown-cierre-torneo-top">
+                <p class="cron-finalizar-label">Cierre oficial en</p>
+                <p class="countdown-tiempo-restante tabular-nums" data-fin="<?php echo (int)$countdown_fin_timestamp; ?>">--:--</p>
+                <p class="cron-finalizar-hint">Luego: Finalizar torneo</p>
+            </div>
+            <?php elseif ($puedeCerrar): ?>
+            <div class="cronometro-finalizar-torneo">
+                <p class="cron-finalizar-label">Listo para cerrar</p>
+                <form method="POST" action="<?php echo $use_standalone ? $base_url : 'index.php?page=torneo_gestion'; ?>" class="panel-top-strip__cerrar-form" onsubmit="event.preventDefault(); confirmarCierreTorneo(event);">
+                    <input type="hidden" name="action" value="cerrar_torneo">
+                    <input type="hidden" name="csrf_token" value="<?php echo CSRF::token(); ?>">
+                    <input type="hidden" name="torneo_id" value="<?php echo $torneo['id']; ?>">
+                    <button type="submit" class="panel-top-strip__cerrar-btn">Finalizar torneo</button>
+                </form>
+            </div>
+            <?php endif; ?>
+            <button type="button" id="btnCronometroVentana" class="panel-top-strip__cron-btn">Abrir cronómetro de ronda</button>
+            <?php if ($puede_admin_banner_strip): ?>
+            <a href="index.php?page=bannerclock&torneo_id=<?php echo (int)$torneo['id']; ?>" class="panel-top-strip__banner-link">Banner del reloj</a>
+            <?php endif; ?>
+        </div>
+
+        <!-- Col 4: Segundo torneo asociado -->
+        <div class="panel-top-strip__col">
+            <span class="panel-top-strip__label">Torneo asociado 2</span>
+            <?php if ($paired_strip_1): ?>
+                <?php
+                $g1 = strtoupper((string)($paired_strip_1['genero'] ?? 'M'));
+                $gLabel1 = $g1 === 'F' ? 'Femenino' : 'Masculino';
+                $p1 = (int)($paired_strip_1['mesas_pendientes'] ?? 0);
+                ?>
+                <div class="panel-top-strip__paired<?php echo !empty($paired_strip_1['activo']) ? ' panel-top-strip__paired--active' : ''; ?>">
+                    <div class="panel-top-strip__paired-name"><?php echo htmlspecialchars((string)($paired_strip_1['nombre'] ?? $gLabel1), ENT_QUOTES, 'UTF-8'); ?> [#<?php echo (int)($paired_strip_1['id'] ?? 0); ?>]<?php echo !empty($paired_strip_1['activo']) ? ' · Activo' : ''; ?></div>
+                    <div class="panel-top-strip__paired-meta">Rda. <?php echo (int)($paired_strip_1['ronda_actual'] ?? 0); ?> · Pend. <?php echo $p1; ?></div>
+                </div>
+            <?php else: ?>
+                <div class="panel-badge-med panel-badge-med--slate">
+                    <span class="panel-badge-med__k">Sin vínculo</span>
+                    <span class="panel-badge-med__v">—</span>
+                </div>
+            <?php endif; ?>
+        </div>
+
+        <!-- Col 5: equipos y jugadores en la misma línea -->
+        <div class="panel-top-strip__col">
+            <span class="panel-top-strip__label">Estadísticas</span>
+            <div class="panel-top-strip__stats-row">
+                <?php if ($es_modalidad_equipos): ?>
+                <div class="panel-badge-med panel-badge-med--indigo">
+                    <span class="panel-badge-med__k">Equipos</span>
+                    <span class="panel-badge-med__v"><?php echo $equipos_strip; ?></span>
+                </div>
+                <?php endif; ?>
+                <div class="panel-badge-med panel-badge-med--rose">
+                    <span class="panel-badge-med__k"><?php echo $es_modalidad_equipos ? 'Jugadores' : 'Inscritos'; ?></span>
+                    <span class="panel-badge-med__v"><?php echo $jugadores_strip; ?><?php if (!$es_modalidad_equipos && isset($total_inscritos) && (int)$total_inscritos !== $jugadores_strip): ?> <span class="panel-badge-med__sub">/<?php echo (int)$total_inscritos; ?></span><?php endif; ?></span>
+                </div>
+            </div>
         </div>
     </div>
+    <?php if (!empty($bloqueo_cierre_total['mensaje']) && !empty($paired_items_strip)): ?>
+    <div class="panel-top-strip__bloqueo-full"><?php echo htmlspecialchars((string)$bloqueo_cierre_total['mensaje'], ENT_QUOTES, 'UTF-8'); ?></div>
+    <?php endif; ?>
     <script>
     (function() {
         var btnCron = document.getElementById('btnCronometroVentana');
@@ -417,47 +393,13 @@ tailwind.config = {
                             <i class="fas fa-table mr-2"></i> Gestión de Mesas
                         </h3>
                     </div>
-                    <?php if ($panel_torneo_id_reportes > 0): ?>
-                    <div class="px-4 py-3 bg-slate-50 border-b border-slate-200">
-                        <div class="text-xs font-bold text-slate-600 uppercase tracking-wide mb-1">
-                            <i class="fas fa-file-invoice mr-1"></i> Reportes inscripciones
-                        </div>
-                        <p class="text-sm text-slate-800 font-semibold leading-tight mb-0.5 truncate" title="<?= htmlspecialchars((string)($torneo['nombre'] ?? ''), ENT_QUOTES, 'UTF-8'); ?>">
-                            Torneo activo: <?= htmlspecialchars((string)($torneo['nombre'] ?? ''), ENT_QUOTES, 'UTF-8'); ?>
-                        </p>
-                        <p class="text-xs text-slate-500 mb-3">Sin elegir torneo otra vez: se usa este (#<?= $panel_torneo_id_reportes ?>).</p>
-                        <div class="flex flex-col gap-2">
-                            <a href="<?= htmlspecialchars($url_reporte_insc_pdf_det, ENT_QUOTES, 'UTF-8'); ?>"
-                               target="_blank" rel="noopener"
-                               class="tw-btn bg-rose-600 hover:bg-rose-700 text-white text-center w-full">
-                                <i class="fas fa-file-pdf mr-2"></i> Imprimir PDF detallado
-                            </a>
-                            <a href="<?= htmlspecialchars($url_reporte_insc_xls_det, ENT_QUOTES, 'UTF-8'); ?>"
-                               target="_blank" rel="noopener"
-                               class="tw-btn bg-emerald-700 hover:bg-emerald-800 text-white text-center w-full">
-                                <i class="fas fa-file-excel mr-2"></i> Descargar Excel detallado
-                            </a>
-                        </div>
-                        <div class="mt-2 pt-2 border-t border-slate-200 flex flex-wrap gap-2 justify-center">
-                            <a href="<?= htmlspecialchars($url_reporte_insc_pdf_simple, ENT_QUOTES, 'UTF-8'); ?>"
-                               target="_blank" rel="noopener" class="text-xs text-slate-600 hover:text-rose-700 underline">PDF simple</a>
-                            <span class="text-slate-300">|</span>
-                            <a href="<?= htmlspecialchars($url_reporte_insc_xls_simple, ENT_QUOTES, 'UTF-8'); ?>"
-                               target="_blank" rel="noopener" class="text-xs text-slate-600 hover:text-emerald-700 underline">Excel simple</a>
-                        </div>
-                    </div>
-                    <?php endif; ?>
                     <div class="p-5 space-y-4">
-                        <?php
-                        $bi = (int) $total_inscritos;
-                        $bj = (int) $inscritos_para_rondas;
-                        $be = (int) $total_equipos;
-                        ?>
-                        <div class="flex flex-wrap gap-2 mb-1 text-xs" role="group" aria-label="Resumen de inscripciones">
-                            <span class="inline-flex items-center rounded-full bg-blue-100 text-blue-900 px-2 py-1 font-semibold border border-blue-200" title="Registros en inscritos">Inscritos <span class="ml-1 tabular-nums"><?php echo $bi; ?></span></span>
-                            <span class="inline-flex items-center rounded-full bg-emerald-100 text-emerald-900 px-2 py-1 font-semibold border border-emerald-200" title="Inscritos confirmados">Jugadores <span class="ml-1 tabular-nums"><?php echo $bj; ?></span></span>
-                            <span class="inline-flex items-center rounded-full bg-slate-100 text-slate-800 px-2 py-1 font-semibold border border-slate-200" title="Equipos activos (modalidad equipos/parejas)">Equipos <span class="ml-1 tabular-nums"><?php echo $be; ?></span></span>
-                        </div>
+                        <?php if ($tid_panel > 0): ?>
+                        <a href="<?= htmlspecialchars($url_reportes_inscritos, ENT_QUOTES, 'UTF-8'); ?>"
+                           class="tw-btn bg-slate-700 hover:bg-slate-800 text-white w-full text-center">
+                            <i class="fas fa-file-invoice mr-2"></i> Reportes de inscritos
+                        </a>
+                        <?php endif; ?>
                         <!-- Invitar Clubes (listado directorio + envío por WhatsApp/Telegram) -->
                         <a href="index.php?page=invitacion_clubes&torneo_id=<?= (int)($torneo['id'] ?? 0) ?>" class="tw-btn bg-cyan-500 hover:bg-cyan-600 text-white w-full text-center">
                             <i class="fas fa-paper-plane mr-2"></i> Invitar Clubes

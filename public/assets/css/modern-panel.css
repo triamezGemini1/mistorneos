@@ -257,6 +257,52 @@ html {
   min-width: 0;
 }
 
+/* Encabezado del torneo: ancho completo del área del panel (sin columna de ID) */
+.tw-panel .panel-header--compact {
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+  margin-left: 0;
+  margin-right: 0;
+  padding: 0.45rem 0.65rem !important;
+}
+.tw-panel .panel-header--compact .panel-header-inner {
+  justify-content: center;
+  width: 100%;
+}
+.tw-panel .panel-header--compact .panel-header-grow {
+  flex: 1 1 auto;
+  min-width: 0;
+  max-width: 100%;
+}
+
+/* Encabezado: nombre/meta a la izquierda, píldoras de torneos asociados a la derecha */
+.tw-panel .panel-header--compact .panel-header-inner.panel-header-inner--spread {
+  justify-content: space-between !important;
+  align-items: flex-start;
+  width: 100%;
+}
+.tw-panel .panel-header--compact .panel-header-inner--spread .panel-header-grow {
+  text-align: left;
+}
+.tw-panel .panel-header--compact .panel-header-inner--spread .titulo-torneo {
+  text-align: left !important;
+}
+.tw-panel .panel-header--compact .panel-header-inner--spread .meta {
+  justify-content: flex-start !important;
+}
+.tw-panel .panel-header-context {
+  flex: 0 1 auto;
+  max-width: min(100%, 50%);
+  min-width: 0;
+}
+.tw-panel .panel-header-context .tcs {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 0.25rem;
+}
+
 .tw-panel .panel-header-actions {
   display: flex;
   flex-direction: column;
@@ -974,10 +1020,6 @@ html {
   font-size: 0.616rem !important;
   font-weight: 700 !important;
 }
-.tw-panel .panel-header .torneo-id {
-  font-size: 1.61rem !important;
-  font-weight: 700 !important;
-}
 .tw-panel .text-xl {
   font-size: 0.9rem !important;
   font-weight: 700 !important;
@@ -1048,15 +1090,9 @@ html {
 }
 
 /* ========== Panel: incrementos de fuente (nombre/logo +100%, breadcrumb +150%, meta +100%, ronda +150%, tarjetas +100%, cronómetro +100%) ========== */
-/* Nombre del torneo y logo / ID: +100% */
+/* Nombre del torneo: 50% respecto al tamaño incrementado del panel (antes 2.52rem) */
 .tw-panel .panel-header .titulo-torneo {
-  font-size: 2.52rem !important;
-}
-.tw-panel .panel-header .torneo-id {
-  font-size: 3.22rem !important;
-}
-.tw-panel .panel-header .text-sm.opacity-70 {
-  font-size: 1.23rem !important;
+  font-size: 1.26rem !important;
 }
 /* Breadcrumb: +150% */
 .tw-panel nav[aria-label="breadcrumb"] ol,
@@ -1098,4 +1134,260 @@ html {
 }
 .tw-panel #btnCronometro #lblCronometro {
   font-size: 1.23rem !important;
+}
+
+/* ========== Franja superior: 5 columnas (auditoría | torneo 1 | cronómetro | torneo 2 | estadísticas) ========== */
+.tw-panel .panel-top-strip {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 0.3rem 0.35rem;
+  align-items: start;
+  margin-bottom: 0.3rem;
+  width: 100%;
+  max-width: 100%;
+  font-size: 0.82rem;
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+.tw-panel .panel-top-strip__col {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0.18rem;
+}
+.tw-panel .panel-top-strip__audit-row {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: nowrap;
+  align-items: stretch;
+  gap: 0.2rem;
+  width: 100%;
+}
+.tw-panel .panel-top-strip__audit-row .panel-badge-med {
+  flex: 1 1 0;
+  min-width: 0;
+}
+.tw-panel .panel-top-strip__stats-row {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: nowrap;
+  align-items: stretch;
+  gap: 0.2rem;
+  width: 100%;
+}
+.tw-panel .panel-top-strip__stats-row .panel-badge-med {
+  flex: 1 1 0;
+  min-width: 0;
+}
+.tw-panel .panel-top-strip__label {
+  font-size: 1em !important;
+  font-weight: 700 !important;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #64748b;
+  line-height: 1.1;
+  flex-shrink: 0;
+}
+.tw-panel .panel-top-strip .panel-badge-med {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 0.22rem 0.28rem;
+  border-radius: 0.3rem;
+  border: 1px solid rgba(15, 23, 42, 0.1);
+  background: #f8fafc;
+  line-height: 1.2;
+  text-align: center;
+  min-height: 2.35rem;
+  font-size: 1em;
+  box-sizing: border-box;
+}
+.tw-panel .panel-badge-med__k {
+  font-size: 1em !important;
+  font-weight: 700 !important;
+  color: #334155;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  line-height: 1.2;
+}
+.tw-panel .panel-badge-med__v {
+  font-size: 1em !important;
+  font-weight: 800 !important;
+  font-variant-numeric: tabular-nums;
+  color: #0f172a;
+  line-height: 1.25;
+  margin-top: 0.06rem;
+}
+.tw-panel .panel-badge-med__sub {
+  font-size: 1em !important;
+  font-weight: 700 !important;
+  opacity: 0.85;
+}
+.tw-panel .panel-badge-med--emerald {
+  background: #ecfdf5;
+  border-color: #a7f3d0;
+}
+.tw-panel .panel-badge-med--blue {
+  background: #eff6ff;
+  border-color: #bfdbfe;
+}
+.tw-panel .panel-badge-med--amber {
+  background: #fffbeb;
+  border-color: #fde68a;
+}
+.tw-panel .panel-badge-med--indigo {
+  background: #eef2ff;
+  border-color: #c7d2fe;
+}
+.tw-panel .panel-badge-med--rose {
+  background: #fff1f2;
+  border-color: #fecdd3;
+}
+.tw-panel .panel-badge-med--slate {
+  background: #f1f5f9;
+  border-color: #e2e8f0;
+}
+.tw-panel .panel-top-strip__paired {
+  font-size: 1em !important;
+  font-weight: 700 !important;
+  padding: 0.22rem 0.28rem;
+  border-radius: 0.28rem;
+  border: 1px solid #e2e8f0;
+  background: #fff;
+  line-height: 1.2;
+  min-height: 2.4rem;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 0.08rem;
+}
+.tw-panel .panel-top-strip__paired--active {
+  border-color: #a5b4fc;
+  background: #eef2ff;
+}
+.tw-panel .panel-top-strip__paired-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  word-break: break-word;
+}
+.tw-panel .panel-top-strip__paired-meta {
+  font-size: 1em !important;
+  color: #475569;
+  font-weight: 700 !important;
+}
+.tw-panel .panel-top-strip__link-verify {
+  font-size: 1em !important;
+  font-weight: 800 !important;
+  text-align: center;
+  color: #b45309 !important;
+  text-decoration: underline;
+  padding: 0.1rem 0;
+}
+.tw-panel .panel-top-strip__bloqueo-full {
+  font-size: 0.72rem !important;
+  font-weight: 700 !important;
+  color: #b45309;
+  background: #fffbeb;
+  border: 1px solid #fde68a;
+  border-radius: 0.28rem;
+  padding: 0.2rem 0.35rem;
+  margin-bottom: 0.25rem;
+  line-height: 1.25;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+.tw-panel .panel-top-strip__cron {
+  align-items: stretch;
+  text-align: center;
+}
+.tw-panel .panel-top-strip__cron .cronometro-finalizar-torneo {
+  margin-bottom: 0.2rem !important;
+  padding: 0.15rem 0.2rem !important;
+  background: rgba(255, 255, 255, 0.12);
+  border-radius: 0.28rem;
+}
+.tw-panel .panel-top-strip__cron .cronometro-finalizar-torneo .cron-finalizar-label,
+.tw-panel .panel-top-strip__cron .cronometro-finalizar-torneo .cron-finalizar-hint {
+  font-size: 1em !important;
+  margin: 0 !important;
+  line-height: 1.15 !important;
+}
+.tw-panel .panel-top-strip__cron .cronometro-finalizar-torneo .countdown-tiempo-restante {
+  font-size: 1em !important;
+  line-height: 1.1 !important;
+  margin: 0.08rem 0 !important;
+}
+.tw-panel .panel-top-strip__cerrar-form {
+  margin: 0.15rem 0 0;
+}
+.tw-panel .panel-top-strip__cerrar-btn {
+  width: 100%;
+  padding: 0.25rem 0.35rem !important;
+  font-size: 1em !important;
+  font-weight: 800 !important;
+  border: none;
+  border-radius: 0.28rem;
+  background: #1e293b;
+  color: #fff !important;
+  cursor: pointer;
+}
+.tw-panel .panel-top-strip__cron-btn {
+  width: 100%;
+  max-width: 100%;
+  padding: 0.32rem 0.35rem !important;
+  font-size: 1em !important;
+  line-height: 1.2 !important;
+  border-radius: 0.3rem;
+  border: 1px solid #0f766e;
+  background: linear-gradient(135deg, #0f766e 0%, #0d9488 100%);
+  color: #fff !important;
+  font-weight: 800 !important;
+  cursor: pointer;
+  margin-top: 0.12rem;
+}
+.tw-panel .panel-top-strip__banner-link {
+  font-size: 1em !important;
+  font-weight: 700 !important;
+  color: #4f46e5 !important;
+  text-decoration: underline;
+  margin-top: 0.12rem;
+  display: block;
+  text-align: center;
+}
+.tw-panel #btnCronometroVentana.panel-top-strip__cron-btn {
+  font-size: 1em !important;
+  padding: 0.32rem 0.35rem !important;
+}
+
+@media (max-width: 1024px) {
+  .tw-panel .panel-top-strip {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+  .tw-panel .panel-top-strip__col:nth-child(5) {
+    grid-column: 1 / -1;
+    flex-direction: column;
+    flex-wrap: nowrap;
+    align-items: stretch;
+    gap: 0.25rem;
+  }
+  .tw-panel .panel-top-strip__col:nth-child(5) .panel-top-strip__stats-row {
+    width: 100%;
+  }
+  .tw-panel .panel-top-strip__col:nth-child(5) .panel-top-strip__stats-row .panel-badge-med {
+    flex: 1 1 0;
+    min-width: 0;
+    max-width: none;
+  }
+  .tw-panel .panel-top-strip__col:nth-child(5) .panel-top-strip__label {
+    width: 100%;
+  }
 }

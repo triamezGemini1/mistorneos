@@ -437,6 +437,8 @@ if ($page === 'torneo_gestion' && ($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'GET
         || ($tg_get === 'inscripciones_export_pdf' && $tg_tid > 0)
         || ($tg_get === 'inscripciones_reporte_detallado_pdf' && $tg_tid > 0)
         || ($tg_get === 'inscripciones_reporte_detallado_xls' && $tg_tid > 0)
+        || ($tg_get === 'retirados_export_pdf' && $tg_tid > 0)
+        || ($tg_get === 'retirados_export_xls' && $tg_tid > 0)
         || in_array($tg_get, ['panel_equipos', 'dashboard'], true);
     if ($tg_early) {
         require_once __DIR__ . '/../modules/torneo_gestion.php';

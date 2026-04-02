@@ -42,6 +42,8 @@ $es_modalidad_equipos = ($modalidad_num_panel === 3);
 $es_modalidad_parejas = ($modalidad_num_panel === 2); // Parejas por equipos (mismo flujo que equipos de 4)
 $es_modalidad_parejas_fijas = ($modalidad_num_panel === 4);
 $es_modalidad_equipos_o_parejas = ($es_modalidad_equipos || $es_modalidad_parejas);
+$context_switcher = isset($context_switcher) && is_array($context_switcher) ? $context_switcher : ['active_tournament_id' => (int)($torneo['id'] ?? 0), 'items' => []];
+$has_panel_context_switch = !empty($context_switcher['items']);
 
 // Lógica de bloqueo de inscripciones: equipos, parejas y parejas fijas bloquean desde ronda >=1; otros desde ronda >=2
 $torneo_bloqueado_inscripciones = false;
@@ -106,6 +108,7 @@ if ($ultima_ronda > 0 && isset($torneo['id'])) {
 
 <link rel="stylesheet" href="assets/css/design-system.css">
 <link rel="stylesheet" href="assets/css/modern-panel.css">
+<link rel="stylesheet" href="assets/css/torneo-context-switch.css">
 <?php if ($use_standalone): ?>
 <!-- Tailwind CSS solo en modo standalone para no romper el layout del dashboard -->
 <link rel="stylesheet" href="assets/dist/output.css">
@@ -131,19 +134,17 @@ tailwind.config = {
 <?php /* Estilos del panel movidos a assets/css/modern-panel.css (Design System + Panel) */ ?>
 
 <div class="tw-panel ds-root">
-    <!-- Breadcrumb (compacto) -->
+    <!-- Breadcrumb: sin repetir el nombre del torneo -->
     <nav aria-label="breadcrumb" class="mb-2">
-        <ol class="flex items-center space-x-2 text-sm text-gray-500">
+        <ol class="flex items-center text-sm text-gray-500">
             <li><a href="<?php echo $base_url . ($use_standalone ? '?' : '&'); ?>action=index" class="hover:text-blue-600">Gestión de Torneos</a></li>
-            <li><i class="fas fa-chevron-right text-xs mx-2"></i></li>
-            <li class="text-gray-700 font-medium"><?php echo htmlspecialchars($torneo['nombre'] ?? 'Panel'); ?></li>
         </ol>
     </nav>
 
-    <!-- Header del Torneo (compacto) -->
-    <div class="panel-header bg-gradient-to-r from-indigo-600 to-purple-600 rounded-xl shadow-lg p-4 mb-3 text-white">
-        <div class="panel-header-inner flex justify-between items-center flex-wrap gap-4">
-            <div class="flex-grow-1 panel-header-grow">
+    <!-- Header: nombre + selector de torneos asociados -->
+    <div class="panel-header panel-header--compact bg-gradient-to-r from-indigo-600 to-purple-600 rounded-xl shadow-lg p-4 mb-3 text-white">
+        <div class="panel-header-inner flex items-center flex-wrap gap-4 <?php echo $has_panel_context_switch ? 'panel-header-inner--spread' : 'justify-center'; ?>">
+            <div class="panel-header-grow">
                 <h2 class="titulo-torneo">
                     <?php echo htmlspecialchars($torneo['nombre'] ?? 'Torneo'); ?>
                 </h2>
@@ -166,10 +167,28 @@ tailwind.config = {
                     <span><i class="fas fa-layer-group mr-1"></i> <?php echo ($torneo['rondas'] ?? 0); ?> rondas</span>
                 </div>
             </div>
-            <div class="text-right flex-shrink-0">
-                <div class="torneo-id text-4xl font-extrabold opacity-80">#<?php echo $torneo['id']; ?></div>
-                <div class="text-sm opacity-70">ID del Torneo</div>
+            <?php if ($has_panel_context_switch): ?>
+            <div class="panel-header-context">
+                <?php
+                $tcs = [
+                    'items' => $context_switcher['items'],
+                    'active_id' => (int)($context_switcher['active_tournament_id'] ?? 0),
+                    'base_url' => $base_url,
+                    'sep' => $use_standalone ? '?' : '&',
+                    'ronda_base' => 0,
+                    'map_max' => [],
+                    'mode' => 'panel',
+                    'theme' => 'on_dark',
+                    'select_id' => 'torneo-asociado-select-panel',
+                    'show_info' => false,
+                    'show_select' => false,
+                    'aria_label' => 'Selector de torneos asociados',
+                    'pill_row_class' => 'panel-header-context__pills',
+                ];
+                require __DIR__ . '/../../partials/torneo_context_switch.php';
+                ?>
             </div>
+            <?php endif; ?>
         </div>
     </div>
 

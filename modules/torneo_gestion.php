@@ -810,6 +810,18 @@ if ($action === 'inscripciones_export_pdf' && ($_SERVER['REQUEST_METHOD'] ?? '')
     echo $html;
     exit;
 }
+if ($action === 'retirados_export_pdf' && ($_SERVER['REQUEST_METHOD'] ?? '') === 'GET' && $torneo_id) {
+    verificarPermisosTorneo($torneo_id, $user_id, $is_admin_general);
+    $_GET['torneo_id'] = (string) $torneo_id;
+    require __DIR__ . '/registrants/report_pdf_retirados.php';
+    exit;
+}
+if ($action === 'retirados_export_xls' && ($_SERVER['REQUEST_METHOD'] ?? '') === 'GET' && $torneo_id) {
+    verificarPermisosTorneo($torneo_id, $user_id, $is_admin_general);
+    $_GET['torneo_id'] = (string) $torneo_id;
+    require __DIR__ . '/registrants/export_excel_retirados.php';
+    exit;
+}
 if ($action === 'inscripciones_reporte_detallado_pdf' && ($_SERVER['REQUEST_METHOD'] ?? '') === 'GET' && $torneo_id) {
     verificarPermisosTorneo($torneo_id, $user_id, $is_admin_general);
     $pdo = DB::pdo();
@@ -1424,6 +1436,22 @@ try {
             $view_data['torneo_id'] = $torneo_id;
             $view_data['context_switcher'] = obtenerContextoTorneoUnificado((int)$torneo_id);
             $view_data['paired_tournaments_status'] = obtenerEstadoParTorneosUnificado((int)$torneo_id);
+            break;
+
+        case 'reportes_inscritos':
+            if (!$torneo_id) {
+                throw new Exception('Debe especificar un torneo');
+            }
+            $torneo = obtenerTorneo($torneo_id, $user_id, $is_admin_general);
+            if (!$torneo) {
+                throw new Exception('Torneo no encontrado o sin permisos');
+            }
+            $view_file = __DIR__ . '/gestion_torneos/reportes_inscritos.php';
+            $view_data = obtenerDatosPanel($torneo_id);
+            if (!isset($view_data['torneo']) || !$view_data['torneo']) {
+                $view_data['torneo'] = $torneo;
+            }
+            $view_data['torneo_id'] = $torneo_id;
             break;
         
         case 'vincular_torneos':

@@ -490,48 +490,32 @@ if (isset($_GET['ajax']) && $_GET['ajax'] === 'deuda') {
 <div class="container-fluid">
     <div class="row">
         <div class="col-12">
-            <div class="d-flex justify-content-between align-items-center mb-4">
-                <div>
-                    <h1 class="h3 mb-0">
-                        <i class="fas fa-users me-2"></i>Inscritos
-                    </h1>
-                    <p class="text-muted mb-0">Gesti�n de jugadores inscritos en torneos</p>
-                </div>
-                <div>
-                    <?php if ($action === 'list'): ?>
-                        <?php if (!empty($filter_torneo)): ?>
-                        <?php
-                        $url_panel = ($return_to === 'panel_torneo')
-                            ? ('panel_torneo.php?action=panel&torneo_id=' . (int)$filter_torneo)
-                            : ('index.php?page=torneo_gestion&action=panel&torneo_id=' . (int)$filter_torneo);
-                        ?>
-                        <a href="<?= htmlspecialchars($url_panel) ?>" class="btn btn-outline-secondary me-2">
-                            <i class="fas fa-arrow-left me-2"></i>Retornar al panel del torneo
-                        </a>
-                        <?php endif; ?>
-                        <?php if (!empty($filter_torneo) && class_exists('AppHelpers')): ?>
-                        <a href="<?= htmlspecialchars(AppHelpers::torneoGestionUrl('inscripciones_reporte_detallado_pdf', (int)$filter_torneo)) ?>"
-                               class="btn btn-primary me-2" target="_blank" rel="noopener"
-                               title="PDF con logo del organizador, por asociación y equipo">
-                            <i class="fas fa-file-pdf me-2"></i>Inscritos detallado (PDF)
-                        </a>
-                        <a href="<?= htmlspecialchars(AppHelpers::torneoGestionUrl('inscripciones_reporte_detallado_xls', (int)$filter_torneo)) ?>"
-                               class="btn btn-outline-primary me-2" target="_blank" rel="noopener">
-                            <i class="fas fa-file-excel me-2"></i>Inscritos detallado (Excel)
-                        </a>
-                        <?php endif; ?>
-                        <a href="index.php?page=registrants_report<?= !empty($filter_torneo) ? '&filter_torneo=' . (int)$filter_torneo : '' ?><?= !empty($filter_clubs) ? '&' . http_build_query(['filter_clubs' => $filter_clubs]) : '' ?>" 
-                               class="btn btn-info me-2">
-                            <i class="fas fa-file-alt me-2"></i>Reportes
-                        </a>
-                        <a href="index.php?page=registrants_report_retirados<?= !empty($filter_torneo) ? '&filter_torneo=' . (int)$filter_torneo : '' ?><?= !empty($filter_clubs) ? '&' . http_build_query(['filter_clubs' => $filter_clubs]) : '' ?>" 
-                               class="btn btn-warning text-dark me-2">
-                            <i class="fas fa-user-minus me-2"></i>Reporte Retirados
-                        </a>
+            <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+                <h1 class="h3 mb-0">
+                    <i class="fas fa-users me-2"></i>Inscritos
+                </h1>
+                <?php if ($action === 'list'): ?>
+                <div class="d-flex align-items-center flex-wrap gap-2 ms-auto">
+                    <?php if (!empty($filter_torneo)): ?>
+                    <?php
+                    $url_panel = ($return_to === 'panel_torneo')
+                        ? ('panel_torneo.php?action=panel&torneo_id=' . (int)$filter_torneo)
+                        : ('index.php?page=torneo_gestion&action=panel&torneo_id=' . (int)$filter_torneo);
+                    ?>
+                    <a href="<?= htmlspecialchars($url_panel) ?>" class="btn btn-outline-secondary">
+                        <i class="fas fa-arrow-left me-2"></i>Retornar al panel del torneo
+                    </a>
+                    <?php endif; ?>
+                    <?php if (!empty($filter_torneo) && class_exists('AppHelpers')): ?>
+                    <a href="<?= htmlspecialchars(AppHelpers::torneoGestionUrl('reportes_inscritos', (int)$filter_torneo)) ?>"
+                       class="btn btn-info">
+                        <i class="fas fa-file-alt me-2"></i>Reportes
+                    </a>
                     <?php endif; ?>
                 </div>
+                <?php endif; ?>
             </div>
-            
+
             <!-- Alertas -->
             <?php if (isset($success_message)): ?>
                 <div class="alert alert-success alert-dismissible fade show" role="alert">
