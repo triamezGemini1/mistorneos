@@ -172,6 +172,11 @@ $api_guardar_equipo = $base_url . ($use_standalone ? '?' : '&') . 'action=guarda
         padding: 0.5rem;
         min-width: 0;
     }
+    .page-inscripcion-sitio .inscripcion-stats-sobre-inscritos {
+        padding-bottom: 0.4rem;
+        margin-bottom: 0.35rem;
+        border-bottom: 1px solid rgba(25, 135, 84, 0.22);
+    }
     .card-formulario-inscripcion {
         background: linear-gradient(180deg, #fff9e6 0%, #fffdf5 100%);
         border-width: 2px !important;
@@ -358,14 +363,9 @@ $api_guardar_equipo = $base_url . ($use_standalone ? '?' : '&') . 'action=guarda
         <div class="card-body">
             <div class="d-flex justify-content-between align-items-center flex-wrap">
                 <div>
-                    <h2 class="h4 mb-1">
+                    <h2 class="h4 mb-0">
                         <i class="fas fa-user-plus text-warning me-2"></i>Inscribir <?php echo $etiqueta_equipo; ?> en Sitio
                     </h2>
-                    <p class="text-muted mb-0">
-                        <i class="fas fa-trophy me-1"></i><?php echo htmlspecialchars($torneo['nombre']); ?>
-                        <span class="badge bg-info ms-2"><?php echo $jugadores_por_equipo; ?> jugadores por <?php echo strtolower($etiqueta_equipo); ?></span>
-                    </p>
-                    <?php require __DIR__ . '/../../partials/torneo_inscripcion_badges_bs5.php'; ?>
                 </div>
                 <div class="mt-2 mt-md-0 d-flex flex-wrap gap-2 align-items-center justify-content-end">
                     <button type="button" class="btn btn-warning text-dark" id="btnAbrirFormularioInscripcion"
@@ -465,6 +465,13 @@ $api_guardar_equipo = $base_url . ($use_standalone ? '?' : '&') . 'action=guarda
 
         <!-- Inscritos -->
         <div class="col-12 col-insc-equipos">
+            <div class="inscripcion-stats-sobre-inscritos">
+                <?php
+                $torneo_inscripcion_badges_group_class = 'mb-0';
+                require __DIR__ . '/../../partials/torneo_inscripcion_badges_bs5.php';
+                unset($torneo_inscripcion_badges_group_class);
+                ?>
+            </div>
             <div class="card border-0 shadow-sm equipo-sidebar-card h-100">
                 <div class="card-header bg-success text-white py-2">
                     <h6 class="mb-0">

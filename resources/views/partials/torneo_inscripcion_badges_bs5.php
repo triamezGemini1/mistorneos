@@ -9,8 +9,12 @@ if (!isset($contadores_inscripcion) || !is_array($contadores_inscripcion)) {
 $bi = (int) ($contadores_inscripcion['inscritos_total'] ?? 0);
 $bj = (int) ($contadores_inscripcion['jugadores_confirmados'] ?? 0);
 $be = (int) ($contadores_inscripcion['equipos_activos'] ?? 0);
+/** Clases extra del contenedor (p. ej. mb-0). Por defecto mb-2. */
+$tib_group_class = isset($torneo_inscripcion_badges_group_class) && is_string($torneo_inscripcion_badges_group_class)
+    ? $torneo_inscripcion_badges_group_class
+    : 'mb-2';
 ?>
-<div class="d-flex flex-wrap gap-2 align-items-center mb-2" role="group" aria-label="Resumen de inscripciones del torneo">
+<div class="d-flex flex-wrap gap-2 align-items-center <?php echo htmlspecialchars($tib_group_class, ENT_QUOTES, 'UTF-8'); ?>" role="group" aria-label="Resumen de inscripciones del torneo">
     <span class="badge rounded-pill bg-primary" title="Registros en inscritos (todos los estatus)">Inscritos <?php echo $bi; ?></span>
     <span class="badge rounded-pill bg-success" title="Inscritos confirmados (pueden jugar)">Jugadores <?php echo $bj; ?></span>
     <span class="badge rounded-pill bg-secondary" title="Equipos activos en el torneo (modalidad equipos/parejas)">Equipos <?php echo $be; ?></span>
