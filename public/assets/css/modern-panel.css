@@ -1391,3 +1391,92 @@ html {
     width: 100%;
   }
 }
+
+/* ========== Página «Reportes de inscritos»: tipografía a mitad (breadcrumb + título + cuerpo); botones compactos ========== */
+.tw-panel.reportes-inscritos-page nav[aria-label="breadcrumb"] ol,
+.tw-panel.reportes-inscritos-page nav[aria-label="breadcrumb"] a,
+.tw-panel.reportes-inscritos-page nav[aria-label="breadcrumb"] .text-gray-700 {
+  font-size: 1.54rem !important;
+}
+.tw-panel.reportes-inscritos-page nav[aria-label="breadcrumb"] .text-xs {
+  font-size: 0.7rem !important;
+}
+.tw-panel.reportes-inscritos-page .reportes-inscritos-card-head {
+  padding: 0.5rem 0.85rem !important;
+}
+.tw-panel.reportes-inscritos-page .reportes-inscritos-card-head h1 {
+  font-size: 1.125rem !important;
+  line-height: 1.25 !important;
+}
+/* Resumen (+150% sobre el tamaño previo ≈ ×2,5) */
+.tw-panel.reportes-inscritos-page .bg-slate-50 .text-xs.font-bold {
+  font-size: 1.575rem !important;
+}
+.tw-panel.reportes-inscritos-page .bg-slate-50 .flex.flex-wrap.gap-2 {
+  font-size: 1.575rem !important;
+}
+.tw-panel.reportes-inscritos-page .bg-slate-50 .inline-flex.items-center.rounded-full {
+  font-size: 1.5rem !important;
+  padding: 0.5rem 1.1rem !important;
+}
+.tw-panel.reportes-inscritos-page .p-5.space-y-6,
+.tw-panel.reportes-inscritos-page .p-5 {
+  font-size: 0.616rem !important;
+  padding: 0.85rem 0.95rem !important;
+  font-weight: 600 !important;
+}
+.tw-panel.reportes-inscritos-page .p-5 h2.text-sm {
+  font-size: 1.35rem !important;
+  font-weight: 800 !important;
+  letter-spacing: 0.04em !important;
+}
+/* Textos bajo cada título de reporte (+100% = ×2) */
+.tw-panel.reportes-inscritos-page .p-5 p.text-sm,
+.tw-panel.reportes-inscritos-page .p-5 .text-sm.text-slate-600 {
+  font-size: 1.232rem !important;
+}
+/* Volver al panel (+100% = ×2) */
+.tw-panel.reportes-inscritos-page .p-5 a.text-sm.text-indigo-600,
+.tw-panel.reportes-inscritos-page .p-5 a.inline-flex.text-sm {
+  font-size: 1.232rem !important;
+  font-weight: 700 !important;
+}
+.tw-panel.reportes-inscritos-page .tw-btn,
+.tw-panel.reportes-inscritos-page a.tw-btn {
+  font-size: 1.36rem !important;
+  padding: 0.52rem 0.65rem !important;
+  min-height: 2.6rem !important;
+  font-weight: 800 !important;
+  border-radius: 0.4rem !important;
+  transform: none !important;
+  box-shadow: none !important;
+}
+.tw-panel.reportes-inscritos-page .tw-btn:hover,
+.tw-panel.reportes-inscritos-page a.tw-btn:hover {
+  transform: none !important;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.12) !important;
+}
+.tw-panel.reportes-inscritos-page .tw-btn i,
+.tw-panel.reportes-inscritos-page a.tw-btn i {
+  display: inline-block !important;
+  font-size: 0.95em !important;
+  margin-right: 0.4rem !important;
+}
+.tw-panel.reportes-inscritos-page i.fas,
+.tw-panel.reportes-inscritos-page i.far,
+.tw-panel.reportes-inscritos-page i.fab {
+  display: inline-block !important;
+}
+.tw-panel.reportes-inscritos-page .flex.gap-3 {
+  gap: 0.5rem !important;
+}
+@media (max-width: 640px) {
+  .tw-panel.reportes-inscritos-page nav[aria-label="breadcrumb"] ol,
+  .tw-panel.reportes-inscritos-page nav[aria-label="breadcrumb"] a,
+  .tw-panel.reportes-inscritos-page nav[aria-label="breadcrumb"] .text-gray-700 {
+    font-size: 1rem !important;
+  }
+  .tw-panel.reportes-inscritos-page .reportes-inscritos-card-head h1 {
+    font-size: 0.95rem !important;
+  }
+}

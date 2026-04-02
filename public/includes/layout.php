@@ -662,45 +662,6 @@ if ($from_url !== '') {
 
       <!-- Contenido dinámico (CSS/head ya cargados arriba; el módulo se incluye dentro del body con formato) -->
       <main class="container-fluid py-4">
-        <?php
-        // Barra rápida: reportes de inscripciones del torneo activo (misma URL ?torneo_id=…, sin elegir torneo otra vez)
-        if ($current_page === 'torneo_gestion') {
-            $bar_tid = (int)($_GET['torneo_id'] ?? 0);
-            $bar_action = (string)($_GET['action'] ?? '');
-            // En el panel ya va el bloque "Reportes inscripciones" en Gestión de Mesas; aquí solo otras pantallas del torneo
-            if ($bar_action === 'panel') {
-                $bar_tid = 0;
-            }
-            $bar_role = (string)($user['role'] ?? '');
-            if ($bar_tid > 0 && in_array($bar_role, ['admin_general', 'admin_torneo', 'admin_club'], true) && class_exists('AppHelpers')) {
-                $bar_nombre = '';
-                try {
-                    require_once dirname(__DIR__, 2) . '/config/db.php';
-                    $stBar = DB::pdo()->prepare('SELECT nombre FROM tournaments WHERE id = ? LIMIT 1');
-                    $stBar->execute([$bar_tid]);
-                    $bar_nombre = trim((string)($stBar->fetchColumn() ?: ''));
-                } catch (Throwable $e) {
-                    $bar_nombre = '';
-                }
-                $bar_pdf = AppHelpers::torneoGestionUrl('inscripciones_reporte_detallado_pdf', $bar_tid);
-                $bar_xls = AppHelpers::torneoGestionUrl('inscripciones_reporte_detallado_xls', $bar_tid);
-                ?>
-        <div class="alert alert-light border border-primary shadow-sm mb-3 py-2 px-3 d-flex flex-wrap align-items-center justify-content-between gap-2" role="region" aria-label="Reportes de inscripciones">
-          <div class="small mb-0">
-            <strong class="text-primary"><i class="fas fa-file-invoice me-1"></i>Reportes inscripciones</strong>
-            <span class="text-muted mx-1">·</span>
-            <span class="text-dark"><?= htmlspecialchars($bar_nombre !== '' ? $bar_nombre : ('Torneo #' . $bar_tid), ENT_QUOTES, 'UTF-8'); ?></span>
-            <span class="text-muted d-none d-md-inline">(activo en esta pantalla)</span>
-          </div>
-          <div class="d-flex flex-wrap gap-1">
-            <a href="<?= htmlspecialchars($bar_pdf, ENT_QUOTES, 'UTF-8'); ?>" target="_blank" rel="noopener" class="btn btn-sm btn-danger"><i class="fas fa-file-pdf me-1"></i>PDF</a>
-            <a href="<?= htmlspecialchars($bar_xls, ENT_QUOTES, 'UTF-8'); ?>" target="_blank" rel="noopener" class="btn btn-sm btn-success"><i class="fas fa-file-excel me-1"></i>Excel</a>
-          </div>
-        </div>
-                <?php
-            }
-        }
-        ?>
         <?php if ($current_page !== 'home'): ?>
         <div id="global-volver-container"></div>
         <?php endif; ?>

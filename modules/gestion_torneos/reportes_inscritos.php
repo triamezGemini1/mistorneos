@@ -59,27 +59,20 @@ $page_title = 'Reportes de inscritos — ' . (string) ($torneo['nombre'] ?? 'Tor
 <link rel="stylesheet" href="assets/dist/output.css">
 <?php endif; ?>
 
-<div class="tw-panel ds-root">
+<div class="tw-panel ds-root reportes-inscritos-page">
     <nav aria-label="breadcrumb" class="mb-3">
         <ol class="flex items-center flex-wrap gap-2 text-sm text-gray-500">
             <li><a href="<?php echo $base_url . ($use_standalone ? '?' : '&'); ?>action=index" class="hover:text-blue-600">Gestión de Torneos</a></li>
-            <li><i class="fas fa-chevron-right text-xs"></i></li>
-            <li><a href="<?php echo htmlspecialchars($url_panel, ENT_QUOTES, 'UTF-8'); ?>" class="hover:text-blue-600"><?php echo htmlspecialchars((string)($torneo['nombre'] ?? 'Panel'), ENT_QUOTES, 'UTF-8'); ?></a></li>
             <li><i class="fas fa-chevron-right text-xs"></i></li>
             <li class="text-gray-700 font-medium">Reportes de inscritos</li>
         </ol>
     </nav>
 
     <div class="bg-white rounded-xl shadow-md border border-gray-200 overflow-hidden mb-6">
-        <div class="bg-gradient-to-r from-slate-600 to-slate-800 px-4 py-3 text-white">
-            <h1 class="text-lg font-bold mb-1 flex items-center">
+        <div class="bg-gradient-to-r from-slate-600 to-slate-800 px-4 py-3 text-white reportes-inscritos-card-head">
+            <h1 class="text-lg font-bold mb-0 flex items-center">
                 <i class="fas fa-file-invoice mr-2"></i> Reportes de inscritos
             </h1>
-            <p class="text-sm opacity-90 font-semibold truncate" title="<?php echo htmlspecialchars((string)($torneo['nombre'] ?? ''), ENT_QUOTES, 'UTF-8'); ?>">
-                Torneo: <?php echo htmlspecialchars((string)($torneo['nombre'] ?? ''), ENT_QUOTES, 'UTF-8'); ?>
-                <span class="opacity-80 font-mono">(#<?php echo $tid_report; ?>)</span>
-            </p>
-            <p class="text-xs opacity-75 mt-1">Todos los enlaces siguientes aplican a este torneo; no hace falta volver a elegirlo.</p>
         </div>
         <div class="px-4 py-4 bg-slate-50 border-b border-slate-200">
             <p class="text-xs font-bold text-slate-600 uppercase tracking-wide mb-2">Resumen</p>
