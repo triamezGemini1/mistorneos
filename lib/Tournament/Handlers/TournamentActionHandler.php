@@ -105,62 +105,10 @@ final class TournamentActionHandler
 
             $sessionInfo = null;
 
-            if (in_array($modalidadTorneo, [2, 4], true)) {
-                require_once dirname(__DIR__, 2) . '/ParejasResultadosService.php';
-                require_once dirname(__DIR__, 2) . '/InscritosHelper.php';
-
-                $resultadoParejas = \ParejasResultadosService::guardarResultadosMesa(
-                    $pdo,
-                    $torneo_id,
-                    $ronda,
-                    $mesa,
-                    $jugadores,
-                    $userId,
-                    $puntosTorneo
-                );
-
-                if ($observaciones !== '') {
-                    $stmtObs = $pdo->prepare('UPDATE partiresul SET observaciones = ? WHERE id_torneo = ? AND partida = ? AND mesa = ?');
-                    $stmtObs->execute([$observaciones, $torneo_id, $ronda, $mesa]);
-                }
-
-                $idsTarjetaNegra = array_values(array_unique(array_map('intval', (array) ($resultadoParejas['ids_tarjeta_negra'] ?? []))));
-                if (! empty($idsTarjetaNegra)) {
-                    $placeholders = implode(',', array_fill(0, count($idsTarjetaNegra), '?'));
-                    $stmtRetiro = $pdo->prepare("UPDATE inscritos SET estatus = ? WHERE torneo_id = ? AND id_usuario IN ($placeholders)");
-                    $stmtRetiro->execute(array_merge([\InscritosHelper::ESTATUS_RETIRADO_NUM, $torneo_id], $idsTarjetaNegra));
-                    $n = count($idsTarjetaNegra);
-                    $sessionInfo = $n === 1
-                        ? 'Jugador marcado como retirado del torneo por tarjeta negra. No participará en rondas futuras (asumido como BYE).'
-                        : "{$n} jugadores marcados como retirados del torneo por tarjeta negra. No participarán en rondas futuras (asumidos como BYE).";
-                } elseif (! empty($resultadoParejas['es_empate_mano_nula'])) {
-                    $sessionInfo = 'Empate en tranque registrado como Mano Nula: 0 puntos para ambas parejas.';
-                }
-
-                $pdo->commit();
-
-                try {
-                    \actualizarEstadisticasInscritos($torneo_id);
-                } catch (Exception $e) {
-                    error_log('Error al actualizar estadísticas después de guardar resultados (parejas): ' . $e->getMessage());
-                }
-
-                self::postCommitResultadosMesa($pdo, $torneo_id, $ronda, $mesa);
-
-                $out = [
-                    'success' => true,
-                    'redirect_url' => $urlRegistrar,
-                    'limpiar_formulario' => true,
-                    'resultados_guardados' => true,
-                ];
-                if ($sessionInfo !== null) {
-                    $out['session_info'] = $sessionInfo;
-                }
-
-                return $out;
-            }
-
             $jugadores = array_values($jugadores);
+            if (in_array($modalidadTorneo, [2, 4], true)) {
+                self::unificarSancionForfaitTarjetaPorPareja($jugadores);
+            }
 
             $codigoPorUsuario = [];
             if (in_array($modalidadTorneo, [2, 4], true)) {
@@ -478,6 +426,41 @@ final class TournamentActionHandler
                 'session_error' => 'Error al guardar resultados: ' . $e->getMessage(),
                 'redirect_url' => $urlRegistrar,
             ];
+        }
+    }
+
+    /**
+     * Modalidad parejas (2, 4): el formulario envía una sola línea de sanción / forfait / tarjeta por pareja.
+     * Copia los mismos valores a ambos integrantes (índices 0–1 y 2–3) antes de guardar en partiresul.
+     *
+     * @param array<int, array<string, mixed>> $jugadores
+     */
+    private static function unificarSancionForfaitTarjetaPorPareja(array &$jugadores): void
+    {
+        foreach ([[0, 1], [2, 3]] as [$a, $b]) {
+            if (! isset($jugadores[$a], $jugadores[$b]) || ! is_array($jugadores[$a]) || ! is_array($jugadores[$b])) {
+                continue;
+            }
+            $s = (int) ($jugadores[$a]['sancion'] ?? $jugadores[$b]['sancion'] ?? 0);
+            if ($s > 80) {
+                $s = 80;
+            }
+            if ($s < 0) {
+                $s = 0;
+            }
+            $jugadores[$a]['sancion'] = (string) $s;
+            $jugadores[$b]['sancion'] = (string) $s;
+            $t = (int) ($jugadores[$a]['tarjeta'] ?? $jugadores[$b]['tarjeta'] ?? 0);
+            $jugadores[$a]['tarjeta'] = (string) $t;
+            $jugadores[$b]['tarjeta'] = (string) $t;
+            $ffA = isset($jugadores[$a]['ff']) && ($jugadores[$a]['ff'] === '1' || $jugadores[$a]['ff'] === true || $jugadores[$a]['ff'] === 'on');
+            $ffB = isset($jugadores[$b]['ff']) && ($jugadores[$b]['ff'] === '1' || $jugadores[$b]['ff'] === true || $jugadores[$b]['ff'] === 'on');
+            if ($ffA || $ffB) {
+                $jugadores[$a]['ff'] = '1';
+                $jugadores[$b]['ff'] = '1';
+            } else {
+                unset($jugadores[$a]['ff'], $jugadores[$b]['ff']);
+            }
         }
     }
 

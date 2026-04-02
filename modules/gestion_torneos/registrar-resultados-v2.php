@@ -265,8 +265,18 @@ $contextLabel = $contextGenero === 'F' ? 'Femenino' : 'Masculino';
     .columna-sancion { width: 5%; }
     .columna-forfait { width: 3.2%; }
     .columna-tarjeta { width: 15%; overflow: hidden; }
-    /* Estadísticas: una columna, 9% del ancho */
-    .columna-estadisticas { width: 9%; max-width: 9%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    /* Una columna: título con iniciales POS · GAN · PER · EFE (sustituye "Estadísticas") */
+    .columna-estadisticas { width: 9%; max-width: 9%; }
+    .stats-th-iniciales {
+        display: flex;
+        flex-wrap: nowrap;
+        justify-content: space-between;
+        gap: 0.15em;
+        font-size: 0.72em;
+        letter-spacing: -0.02em;
+        line-height: 1.2;
+        padding: 0 0.05rem;
+    }
     .columna-estadisticas .estadisticas-valores { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .columna-tarjeta .tarjeta-btn { width: 33.33%; min-width: 1.5rem; max-width: 33.33%; box-sizing: border-box; flex-shrink: 0; }
     .estadisticas-valores { font-size: clamp(0.75rem, 1.5vw, 0.875rem); font-weight: 300; color: #111827; white-space: nowrap; line-height: 1.275; }
@@ -288,7 +298,7 @@ $contextLabel = $contextGenero === 'F' ? 'Femenino' : 'Masculino';
         border: 2px solid #333 !important;
     }
     #formResultados tbody tr td {
-        padding: 0.13rem 0.24rem !important;
+        padding: calc(0.13rem * 1.25) 0.24rem !important;
         vertical-align: middle;
         border: 1px solid #666;
     }
@@ -309,7 +319,7 @@ $contextLabel = $contextGenero === 'F' ? 'Femenino' : 'Masculino';
             line-height: 1.14 !important;
         }
         .registrar-resultados-wrap #formResultados tbody tr td {
-            padding: 0.11rem 0.2rem !important;
+            padding: calc(0.11rem * 1.25) 0.2rem !important;
             line-height: 1.14 !important;
         }
         .registrar-resultados-wrap #formResultados tbody td .form-control-sm {
@@ -546,6 +556,10 @@ $contextLabel = $contextGenero === 'F' ? 'Femenino' : 'Masculino';
             padding: 0.28rem 0.2rem;
             font-size: clamp(0.62rem, 1.7vw, 0.78rem);
         }
+        .registrar-resultados-wrap #formResultados .table tbody tr td {
+            padding-top: calc(0.28rem * 1.25) !important;
+            padding-bottom: calc(0.28rem * 1.25) !important;
+        }
         
         .columna-puntos {
             min-width: 5.4rem;
@@ -622,6 +636,10 @@ $contextLabel = $contextGenero === 'F' ? 'Femenino' : 'Masculino';
         .table th,
         .table td {
             padding: 0.25rem 0.15rem;
+        }
+        .registrar-resultados-wrap #formResultados .table tbody tr td {
+            padding-top: calc(0.25rem * 1.25) !important;
+            padding-bottom: calc(0.25rem * 1.25) !important;
         }
         
         .columna-puntos {
@@ -932,7 +950,9 @@ $contextLabel = $contextGenero === 'F' ? 'Femenino' : 'Masculino';
                                             <th rowspan="2" class="text-center align-middle columna-sancion">Sanción</th>
                                             <th rowspan="2" class="text-center align-middle columna-forfait">Forfait</th>
                                             <th rowspan="2" class="text-center align-middle columna-tarjeta">Tarjeta</th>
-                                            <th rowspan="2" class="text-center align-middle columna-estadisticas">Estadísticas</th>
+                                            <th rowspan="2" class="text-center align-middle columna-estadisticas" title="Posición, Ganados, Perdidos, Efectividad">
+                                                <span class="stats-th-iniciales"><span>POS</span><span>GAN</span><span>PER</span><span>EFE</span></span>
+                                            </th>
                                         </tr>
                                     </thead>
                                     <tbody>
@@ -951,7 +971,27 @@ $contextLabel = $contextGenero === 'F' ? 'Femenino' : 'Masculino';
                                             foreach ($parejaA as $index => $jugador): 
                                                 $indiceArray = $index;
                                                 $puntosParejaA = $jugador['resultado1'] ?? 0;
-                                        ?>
+                                                if ($esTorneoParejas && $index === 1):
+                                                    $tpP = (int)($jugador['inscrito']['tarjeta_previa'] ?? $jugador['inscrito']['tarjeta'] ?? 0);
+                                                    $tieneP = $tpP >= 1;
+                                                    $titP = $tieneP ? '⚠️ Tiene tarjeta previa. Sanción 80 pts = siguiente tarjeta (Roja/Negra).' : '';
+                                                ?>
+                                            <tr class="table-info">
+                                                <td class="text-center font-weight-bold bg-info columna-id"><?php echo (int)$jugador['id_usuario']; ?></td>
+                                                <td class="columna-nombre">
+                                                    <span class="nombre-jugador-linea <?php echo $tieneP ? 'jugador-tarjeta-previa' : ''; ?>"<?php echo $titP !== '' ? ' title="' . htmlspecialchars($titP, ENT_QUOTES, 'UTF-8') . '"' : ''; ?>><?php echo htmlspecialchars($jugador['nombre_completo'] ?? $jugador['nombre'] ?? 'N/A', ENT_QUOTES, 'UTF-8'); ?></span>
+                                                    <input type="hidden" name="jugadores[<?php echo $indiceArray; ?>][id]" value="<?php echo (int)$jugador['id']; ?>">
+                                                    <input type="hidden" name="jugadores[<?php echo $indiceArray; ?>][id_usuario]" value="<?php echo (int)$jugador['id_usuario']; ?>">
+                                                    <input type="hidden" name="jugadores[<?php echo $indiceArray; ?>][secuencia]" value="<?php echo (int)$jugador['secuencia']; ?>">
+                                                    <input type="hidden" name="jugadores[<?php echo $indiceArray; ?>][resultado1]" id="resultado1_<?php echo $indiceArray; ?>" value="<?php echo htmlspecialchars((string)($jugador['resultado1'] ?? 0), ENT_QUOTES, 'UTF-8'); ?>">
+                                                    <input type="hidden" name="jugadores[<?php echo $indiceArray; ?>][resultado2]" id="resultado2_<?php echo $indiceArray; ?>" value="<?php echo htmlspecialchars((string)($jugador['resultado2'] ?? 0), ENT_QUOTES, 'UTF-8'); ?>">
+                                                    <input type="hidden" name="jugadores[<?php echo $indiceArray; ?>][tarjeta]" id="tarjeta_<?php echo $indiceArray; ?>" value="<?php echo (int)($jugador['tarjeta'] ?? 0); ?>">
+                                                </td>
+                                            </tr>
+                                                <?php
+                                                continue;
+                                                endif;
+                                                ?>
                                             <tr class="table-info">
                                                 <!-- ID Usuario -->
                                                 <td class="text-center font-weight-bold bg-info columna-id">
@@ -988,6 +1028,7 @@ $contextLabel = $contextGenero === 'F' ? 'Femenino' : 'Masculino';
                                                 </td>
                                                 <?php endif; ?>
                                                 
+                                                <?php if (!$esTorneoParejas): ?>
                                                 <!-- Sanción: 40=resta pts sin tarjeta; 80=resta pts y tarjeta (amarilla o siguiente si ya tenía) -->
                                                 <td class="text-center columna-sancion" data-tarjeta-inscritos="<?php echo (int)($jugador['inscrito']['tarjeta_previa'] ?? $jugador['inscrito']['tarjeta'] ?? 0); ?>">
                                                     <input type="number" 
@@ -1037,7 +1078,6 @@ $contextLabel = $contextGenero === 'F' ? 'Femenino' : 'Masculino';
                                                     </div>
                                                 </td>
                                                 
-                                                <!-- Estadísticas: pos - gan - per - efect (≤10% ancho) -->
                                                 <?php 
                                                 $pos = (int)($jugador['inscrito']['posicion'] ?? 0);
                                                 $gan = (int)($jugador['inscrito']['ganados'] ?? 0);
@@ -1046,6 +1086,67 @@ $contextLabel = $contextGenero === 'F' ? 'Femenino' : 'Masculino';
                                                 $estadisticas_linea = $pos . ' - ' . $gan . ' - ' . $per . ' - ' . $efec;
                                                 ?>
                                                 <td class="text-center bg-light columna-estadisticas"><span class="estadisticas-valores"><?php echo htmlspecialchars($estadisticas_linea); ?></span></td>
+                                                <?php else:
+                                                    $jugP0 = $parejaA[0] ?? $jugador;
+                                                    $jugP1 = $parejaA[1] ?? $jugP0;
+                                                    $tpMaxA = max(
+                                                        (int)($jugP0['inscrito']['tarjeta_previa'] ?? $jugP0['inscrito']['tarjeta'] ?? 0),
+                                                        (int)($jugP1['inscrito']['tarjeta_previa'] ?? $jugP1['inscrito']['tarjeta'] ?? 0)
+                                                    );
+                                                    $sancUnifA = min(max((int)($jugP0['sancion'] ?? 0), (int)($jugP1['sancion'] ?? 0)), 80);
+                                                    $tarjUnifA = max((int)($jugP0['tarjeta'] ?? 0), (int)($jugP1['tarjeta'] ?? 0));
+                                                    $ffUnifA = (!empty($jugP0['ff']) || !empty($jugP1['ff']));
+                                                    $posP = (int)($jugP0['inscrito']['posicion'] ?? 0);
+                                                    $ganP = (int)($jugP0['inscrito']['ganados'] ?? 0);
+                                                    $perP = (int)($jugP0['inscrito']['perdidos'] ?? 0);
+                                                    $efecP = (int)($jugP0['inscrito']['efectividad'] ?? 0);
+                                                    $estadisticasParejaA = $posP . ' - ' . $ganP . ' - ' . $perP . ' - ' . $efecP;
+                                                ?>
+                                                <td rowspan="2" class="text-center align-middle columna-sancion" data-tarjeta-inscritos="<?php echo $tpMaxA; ?>">
+                                                    <input type="number"
+                                                           name="jugadores[0][sancion]"
+                                                           class="form-control form-control-sm text-center"
+                                                           value="<?php echo $sancUnifA; ?>"
+                                                           min="0"
+                                                           max="80"
+                                                           placeholder="0"
+                                                           oninput="validarSancionYTarjeta(0); sincronizarTarjetaOcultaPareja(0, 1);"
+                                                           onchange="validarSancionYTarjeta(0); sincronizarTarjetaOcultaPareja(0, 1); validarPuntosEnTiempoReal();">
+                                                    <small id="indicador_tarjeta_80_0" class="d-block text-muted mt-1" style="display:none !important;"></small>
+                                                </td>
+                                                <td rowspan="2" class="text-center align-middle columna-forfait">
+                                                    <input type="checkbox"
+                                                           name="jugadores[0][ff]"
+                                                           id="ff_0"
+                                                           class="form-check-input"
+                                                           value="1"
+                                                           <?php echo $ffUnifA ? 'checked' : ''; ?>
+                                                           onchange="validarPuntosEnTiempoReal();">
+                                                </td>
+                                                <td rowspan="2" class="text-center align-middle columna-tarjeta">
+                                                    <div class="d-flex justify-content-center gap-1">
+                                                        <button type="button" class="tarjeta-btn"
+                                                                data-tarjeta="1"
+                                                                data-index="0"
+                                                                onclick="seleccionarTarjeta(0, 1)"
+                                                                title="Tarjeta Amarilla">🟨</button>
+                                                        <button type="button" class="tarjeta-btn"
+                                                                data-tarjeta="3"
+                                                                data-index="0"
+                                                                onclick="seleccionarTarjeta(0, 3)"
+                                                                title="Tarjeta Roja">🟥</button>
+                                                        <button type="button" class="tarjeta-btn"
+                                                                data-tarjeta="4"
+                                                                data-index="0"
+                                                                onclick="seleccionarTarjeta(0, 4)"
+                                                                title="Tarjeta Negra">⬛</button>
+                                                        <input type="hidden" name="jugadores[0][tarjeta]"
+                                                               id="tarjeta_0"
+                                                               value="<?php echo $tarjUnifA; ?>">
+                                                    </div>
+                                                </td>
+                                                <td rowspan="2" class="text-center bg-light columna-estadisticas align-middle"><span class="estadisticas-valores"><?php echo htmlspecialchars($estadisticasParejaA); ?></span></td>
+                                                <?php endif; ?>
                                                 
                                                 <!-- Campos Hidden -->
                                                 <input type="hidden" name="jugadores[<?php echo $indiceArray; ?>][id]" 
@@ -1068,7 +1169,27 @@ $contextLabel = $contextGenero === 'F' ? 'Femenino' : 'Masculino';
                                             foreach ($parejaB as $index => $jugador): 
                                                 $indiceArray = 2 + $index;
                                                 $puntosParejaB = $jugador['resultado1'] ?? 0;
-                                        ?>
+                                                if ($esTorneoParejas && $index === 1):
+                                                    $tpP = (int)($jugador['inscrito']['tarjeta_previa'] ?? $jugador['inscrito']['tarjeta'] ?? 0);
+                                                    $tieneP = $tpP >= 1;
+                                                    $titP = $tieneP ? '⚠️ Tiene tarjeta previa. Sanción 80 pts = siguiente tarjeta (Roja/Negra).' : '';
+                                                ?>
+                                            <tr class="table-success">
+                                                <td class="text-center font-weight-bold bg-success columna-id"><?php echo (int)$jugador['id_usuario']; ?></td>
+                                                <td class="columna-nombre">
+                                                    <span class="nombre-jugador-linea <?php echo $tieneP ? 'jugador-tarjeta-previa' : ''; ?>"<?php echo $titP !== '' ? ' title="' . htmlspecialchars($titP, ENT_QUOTES, 'UTF-8') . '"' : ''; ?>><?php echo htmlspecialchars($jugador['nombre_completo'] ?? $jugador['nombre'] ?? 'N/A', ENT_QUOTES, 'UTF-8'); ?></span>
+                                                    <input type="hidden" name="jugadores[<?php echo $indiceArray; ?>][id]" value="<?php echo (int)$jugador['id']; ?>">
+                                                    <input type="hidden" name="jugadores[<?php echo $indiceArray; ?>][id_usuario]" value="<?php echo (int)$jugador['id_usuario']; ?>">
+                                                    <input type="hidden" name="jugadores[<?php echo $indiceArray; ?>][secuencia]" value="<?php echo (int)$jugador['secuencia']; ?>">
+                                                    <input type="hidden" name="jugadores[<?php echo $indiceArray; ?>][resultado1]" id="resultado1_<?php echo $indiceArray; ?>" value="<?php echo htmlspecialchars((string)($jugador['resultado1'] ?? 0), ENT_QUOTES, 'UTF-8'); ?>">
+                                                    <input type="hidden" name="jugadores[<?php echo $indiceArray; ?>][resultado2]" id="resultado2_<?php echo $indiceArray; ?>" value="<?php echo htmlspecialchars((string)($jugador['resultado2'] ?? 0), ENT_QUOTES, 'UTF-8'); ?>">
+                                                    <input type="hidden" name="jugadores[<?php echo $indiceArray; ?>][tarjeta]" id="tarjeta_<?php echo $indiceArray; ?>" value="<?php echo (int)($jugador['tarjeta'] ?? 0); ?>">
+                                                </td>
+                                            </tr>
+                                                <?php
+                                                continue;
+                                                endif;
+                                                ?>
                                             <tr class="table-success">
                                                 <!-- ID Usuario -->
                                                 <td class="text-center font-weight-bold bg-success columna-id">
@@ -1105,6 +1226,7 @@ $contextLabel = $contextGenero === 'F' ? 'Femenino' : 'Masculino';
                                                 </td>
                                                 <?php endif; ?>
                                                 
+                                                <?php if (!$esTorneoParejas): ?>
                                                 <!-- Sanción: 40=resta pts sin tarjeta; 80=resta pts y tarjeta (amarilla o siguiente si ya tenía) -->
                                                 <td class="text-center columna-sancion" data-tarjeta-inscritos="<?php echo (int)($jugador['inscrito']['tarjeta_previa'] ?? $jugador['inscrito']['tarjeta'] ?? 0); ?>">
                                                     <input type="number" 
@@ -1154,7 +1276,6 @@ $contextLabel = $contextGenero === 'F' ? 'Femenino' : 'Masculino';
                                                     </div>
                                                 </td>
                                                 
-                                                <!-- Estadísticas: pos - gan - per - efect (≤10% ancho) -->
                                                 <?php 
                                                 $pos = (int)($jugador['inscrito']['posicion'] ?? 0);
                                                 $gan = (int)($jugador['inscrito']['ganados'] ?? 0);
@@ -1163,6 +1284,67 @@ $contextLabel = $contextGenero === 'F' ? 'Femenino' : 'Masculino';
                                                 $estadisticas_linea = $pos . ' - ' . $gan . ' - ' . $per . ' - ' . $efec;
                                                 ?>
                                                 <td class="text-center bg-light columna-estadisticas"><span class="estadisticas-valores"><?php echo htmlspecialchars($estadisticas_linea); ?></span></td>
+                                                <?php else:
+                                                    $jugP0 = $parejaB[0] ?? $jugador;
+                                                    $jugP1 = $parejaB[1] ?? $jugP0;
+                                                    $tpMaxB = max(
+                                                        (int)($jugP0['inscrito']['tarjeta_previa'] ?? $jugP0['inscrito']['tarjeta'] ?? 0),
+                                                        (int)($jugP1['inscrito']['tarjeta_previa'] ?? $jugP1['inscrito']['tarjeta'] ?? 0)
+                                                    );
+                                                    $sancUnifB = min(max((int)($jugP0['sancion'] ?? 0), (int)($jugP1['sancion'] ?? 0)), 80);
+                                                    $tarjUnifB = max((int)($jugP0['tarjeta'] ?? 0), (int)($jugP1['tarjeta'] ?? 0));
+                                                    $ffUnifB = (!empty($jugP0['ff']) || !empty($jugP1['ff']));
+                                                    $posP = (int)($jugP0['inscrito']['posicion'] ?? 0);
+                                                    $ganP = (int)($jugP0['inscrito']['ganados'] ?? 0);
+                                                    $perP = (int)($jugP0['inscrito']['perdidos'] ?? 0);
+                                                    $efecP = (int)($jugP0['inscrito']['efectividad'] ?? 0);
+                                                    $estadisticasParejaB = $posP . ' - ' . $ganP . ' - ' . $perP . ' - ' . $efecP;
+                                                ?>
+                                                <td rowspan="2" class="text-center align-middle columna-sancion" data-tarjeta-inscritos="<?php echo $tpMaxB; ?>">
+                                                    <input type="number"
+                                                           name="jugadores[2][sancion]"
+                                                           class="form-control form-control-sm text-center"
+                                                           value="<?php echo $sancUnifB; ?>"
+                                                           min="0"
+                                                           max="80"
+                                                           placeholder="0"
+                                                           oninput="validarSancionYTarjeta(2); sincronizarTarjetaOcultaPareja(2, 3);"
+                                                           onchange="validarSancionYTarjeta(2); sincronizarTarjetaOcultaPareja(2, 3); validarPuntosEnTiempoReal();">
+                                                    <small id="indicador_tarjeta_80_2" class="d-block text-muted mt-1" style="display:none !important;"></small>
+                                                </td>
+                                                <td rowspan="2" class="text-center align-middle columna-forfait">
+                                                    <input type="checkbox"
+                                                           name="jugadores[2][ff]"
+                                                           id="ff_2"
+                                                           class="form-check-input"
+                                                           value="1"
+                                                           <?php echo $ffUnifB ? 'checked' : ''; ?>
+                                                           onchange="validarPuntosEnTiempoReal();">
+                                                </td>
+                                                <td rowspan="2" class="text-center align-middle columna-tarjeta">
+                                                    <div class="d-flex justify-content-center gap-1">
+                                                        <button type="button" class="tarjeta-btn"
+                                                                data-tarjeta="1"
+                                                                data-index="2"
+                                                                onclick="seleccionarTarjeta(2, 1)"
+                                                                title="Tarjeta Amarilla">🟨</button>
+                                                        <button type="button" class="tarjeta-btn"
+                                                                data-tarjeta="3"
+                                                                data-index="2"
+                                                                onclick="seleccionarTarjeta(2, 3)"
+                                                                title="Tarjeta Roja">🟥</button>
+                                                        <button type="button" class="tarjeta-btn"
+                                                                data-tarjeta="4"
+                                                                data-index="2"
+                                                                onclick="seleccionarTarjeta(2, 4)"
+                                                                title="Tarjeta Negra">⬛</button>
+                                                        <input type="hidden" name="jugadores[2][tarjeta]"
+                                                               id="tarjeta_2"
+                                                               value="<?php echo $tarjUnifB; ?>">
+                                                    </div>
+                                                </td>
+                                                <td rowspan="2" class="text-center bg-light columna-estadisticas align-middle"><span class="estadisticas-valores"><?php echo htmlspecialchars($estadisticasParejaB); ?></span></td>
+                                                <?php endif; ?>
                                                 
                                                 <!-- Campos Hidden -->
                                                 <input type="hidden" name="jugadores[<?php echo $indiceArray; ?>][id]" 
@@ -1277,6 +1459,15 @@ $contextLabel = $contextGenero === 'F' ? 'Femenino' : 'Masculino';
 </div>
 
 <script>
+const ES_TORNEO_PAREJAS = <?php echo $esTorneoParejas ? 'true' : 'false'; ?>;
+
+function sincronizarTarjetaOcultaPareja(leaderIdx, followerIdx) {
+    if (!ES_TORNEO_PAREJAS) return;
+    const lead = document.getElementById('tarjeta_' + leaderIdx);
+    const fol = document.getElementById('tarjeta_' + followerIdx);
+    if (lead && fol) fol.value = lead.value;
+}
+
 // Función para mostrar/ocultar sidebar en móvil
 function toggleSidebar() {
     const sidebar = document.getElementById('sidebar-mesas');
@@ -1719,6 +1910,9 @@ function seleccionarTarjeta(index, tarjeta) {
     
     // Actualizar indicador de amarilla/roja por acumulación (cuando se selecciona amarilla directa)
     validarSancionYTarjeta(index);
+    if (ES_TORNEO_PAREJAS && (index === 0 || index === 2)) {
+        sincronizarTarjetaOcultaPareja(index, index + 1);
+    }
     
     // Validar puntos
     validarPuntosEnTiempoReal();
@@ -2107,6 +2301,11 @@ document.addEventListener('DOMContentLoaded', function() {
             // Procesar radio buttons de pena
             procesarPena();
             
+            if (ES_TORNEO_PAREJAS) {
+                sincronizarTarjetaOcultaPareja(0, 1);
+                sincronizarTarjetaOcultaPareja(2, 3);
+            }
+            
             // Distribuir puntos antes de enviar - asegurar que ambas parejas estén sincronizadas
             distribuirPuntos('todas');
             
@@ -2126,6 +2325,10 @@ document.addEventListener('DOMContentLoaded', function() {
     // Mostrar indicador de tarjeta por acumulación (80 pts) si ya viene con 80 en el formulario
     for (let i = 0; i < 4; i++) {
         validarSancionYTarjeta(i);
+    }
+    if (ES_TORNEO_PAREJAS) {
+        sincronizarTarjetaOcultaPareja(0, 1);
+        sincronizarTarjetaOcultaPareja(2, 3);
     }
 
     // Inicializar tarjetas visualmente (mostrar el estado actual)
