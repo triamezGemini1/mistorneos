@@ -433,6 +433,8 @@ if ($page === 'torneo_gestion' && ($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'GET
     $tg_early = $tg_switch > 0
         || ($tg_get === 'carga_masiva_equipos_plantilla' && $tg_tid > 0)
         || ($tg_get === 'carga_masiva_equipos_reporte_pdf' && $tg_tid > 0)
+        || ($tg_get === 'carga_masiva_parejas_plantilla' && $tg_tid > 0)
+        || ($tg_get === 'carga_masiva_parejas_reporte_pdf' && $tg_tid > 0)
         || ($tg_get === 'inscripciones_export_xls' && $tg_tid > 0)
         || ($tg_get === 'inscripciones_export_pdf' && $tg_tid > 0)
         || ($tg_get === 'inscripciones_reporte_detallado_pdf' && $tg_tid > 0)

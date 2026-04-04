@@ -173,53 +173,20 @@ try {
     $participantes = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
     if ($es_parejas) {
-        $stmtParejas = $pdo->prepare("
-            SELECT i.codigo_equipo, u.nombre AS nombre_completo
-            FROM inscritos i
-            INNER JOIN usuarios u ON i.id_usuario = u.id
-            WHERE i.torneo_id = ?
-              AND i.codigo_equipo IS NOT NULL
-              AND i.codigo_equipo != ''
-              AND i.codigo_equipo != '000-000'
-              AND i.estatus != 'retirado'
-            ORDER BY i.codigo_equipo ASC, u.nombre ASC
-        ");
-        $stmtParejas->execute([$torneo_id]);
-        $nombresPorCodigo = [];
-        foreach ($stmtParejas->fetchAll(PDO::FETCH_ASSOC) as $filaPareja) {
-            $codigo = trim((string)($filaPareja['codigo_equipo'] ?? ''));
-            $nombre = trim((string)($filaPareja['nombre_completo'] ?? ''));
-            if ($codigo === '' || $nombre === '') {
-                continue;
-            }
-            if (!isset($nombresPorCodigo[$codigo])) {
-                $nombresPorCodigo[$codigo] = [];
-            }
-            $nombresPorCodigo[$codigo][] = $nombre;
-        }
+        $participantes = \ResultadosReporteData::colapsarFilasPorPareja($participantes, $pdo, $torneo_id);
         foreach ($participantes as &$participante) {
             $codigo = trim((string)($participante['codigo_equipo'] ?? ''));
-            if ($codigo === '' || !isset($nombresPorCodigo[$codigo])) {
-                continue;
+            $disp = trim((string)($participante['nombre_completo'] ?? ''));
+            if ($disp !== '') {
+                $participante['pareja_display'] = $disp;
+                $participante['nombre_equipo'] = $disp;
+            } elseif ($codigo !== '') {
+                $participante['nombre_completo'] = 'Pareja ' . $codigo;
+                $participante['pareja_display'] = $participante['nombre_completo'];
+                $participante['nombre_equipo'] = $participante['nombre_completo'];
             }
-            $nombres = array_values(array_unique($nombresPorCodigo[$codigo]));
-            $participante['pareja_display'] = implode(' / ', array_slice($nombres, 0, 2));
-            $participante['nombre_equipo'] = $participante['pareja_display'];
         }
         unset($participante);
-
-        // En parejas el reporte muestra una fila por pareja (codigo_equipo), no por jugador.
-        $parejasUnicas = [];
-        foreach ($participantes as $p) {
-            $codigo = trim((string)($p['codigo_equipo'] ?? ''));
-            if ($codigo === '' || isset($parejasUnicas[$codigo])) {
-                continue;
-            }
-            $p['id_usuario'] = $codigo;
-            $p['nombre_completo'] = $p['pareja_display'] ?? ($p['nombre_equipo'] ?? 'Pareja ' . $codigo);
-            $parejasUnicas[$codigo] = $p;
-        }
-        $participantes = array_values($parejasUnicas);
     }
     
     // Asegurar que todos los jugadores tengan el nombre del equipo si tienen codigo_equipo

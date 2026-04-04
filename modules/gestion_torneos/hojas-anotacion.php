@@ -12,6 +12,7 @@ if (!class_exists('AppHelpers', false)) {
     require_once __DIR__ . '/../../lib/app_helpers.php';
 }
 require_once __DIR__ . '/../../lib/QrMesaTokenHelper.php';
+require_once __DIR__ . '/../../lib/GestionTorneosViewsData.php';
 $href_torneo_context_switch = AppHelpers::url('assets/css/torneo-context-switch.css');
 $letras_secuencia = [1 => 'A', 2 => 'C', 3 => 'B', 4 => 'D'];
 // URL base: interfaz móvil para carga de actas (formato requerido: ?t=&m=&r=&token=)
@@ -392,6 +393,44 @@ if (!empty($context_switcher['items']) && is_array($context_switcher['items'])) 
             padding-top: 4px;
             border-top: 1px solid #ccc;
         }
+
+        /* Modalidad parejas: bloque unificado por lado (impresión) */
+        .linea-con-qr--parejas .col-izq--parejas,
+        .linea-con-qr--parejas .col-der--parejas {
+            align-self: flex-start;
+        }
+        .hojas-bloque-pareja {
+            font-size: 13px;
+            line-height: 1.4;
+            text-align: left;
+        }
+        .hojas-bloque-pareja--der {
+            text-align: right;
+        }
+        .hojas-pareja-titulo {
+            font-weight: 800;
+            font-size: 14px;
+            margin-bottom: 6px;
+            letter-spacing: 0.02em;
+        }
+        .hojas-pareja-nombre {
+            font-weight: 600;
+            margin-bottom: 3px;
+            word-break: break-word;
+        }
+        .hojas-pareja-stats {
+            font-size: 11px;
+            margin: 6px 0;
+            color: #1f2937;
+        }
+        .hojas-pareja-equipo {
+            font-size: 12px;
+            font-style: italic;
+            padding-top: 6px;
+            margin-top: 4px;
+            border-top: 1px solid #ccc;
+            word-break: break-word;
+        }
         
         /* Sección de jugadores */
         .seccion-jugadores {
@@ -638,6 +677,10 @@ if (!empty($context_switcher['items']) && is_array($context_switcher['items'])) 
     if (!$es_torneo_equipos && isset($torneo)) {
         $es_torneo_equipos = (int)($torneo['modalidad'] ?? 0) === 3;
     }
+    $es_torneo_parejas = isset($es_torneo_parejas) ? (bool)$es_torneo_parejas : false;
+    if (!$es_torneo_parejas && isset($torneo)) {
+        $es_torneo_parejas = (int)($torneo['modalidad'] ?? 0) === 2;
+    }
     ?>
 
     <div class="contenedor-hojas">
@@ -678,6 +721,35 @@ if (!empty($context_switcher['items']) && is_array($context_switcher['items'])) 
                     <div class="nombre-torneo"><?php echo htmlspecialchars($torneo['nombre'] ?? 'Torneo'); ?><?php if (!empty($torneo['fechator'])): ?> — <?php echo date('d/m/Y', strtotime($torneo['fechator'])); ?><?php endif; ?></div>
                     <div class="header-ronda-mesa">Ronda: <?php echo $ronda; ?> - Mesa: <?php echo $mesa['numero']; ?></div>
                 </div>
+                <?php if ($es_torneo_parejas): ?>
+                <div class="linea-con-qr linea-con-qr--parejas">
+                    <div class="col-izq col-izq--parejas">
+                        <div class="hojas-bloque-pareja">
+                            <div class="hojas-pareja-titulo">Pareja <?php echo htmlspecialchars(($letras_secuencia[1] ?? 'A') . '-' . ($letras_secuencia[2] ?? 'C'), ENT_QUOTES, 'UTF-8'); ?></div>
+                            <div class="hojas-pareja-nombre"><?php echo htmlspecialchars($jugador1['nombre_completo'] ?? $jugador1['nombre'] ?? '—', ENT_QUOTES, 'UTF-8'); ?></div>
+                            <div class="hojas-pareja-nombre"><?php echo htmlspecialchars($jugador2['nombre_completo'] ?? $jugador2['nombre'] ?? '—', ENT_QUOTES, 'UTF-8'); ?></div>
+                            <div class="hojas-pareja-stats"><?php echo htmlspecialchars(GestionTorneosViewsData::lineaEstadisticasParejaHoja($jugador1, $jugador2), ENT_QUOTES, 'UTF-8'); ?></div>
+                            <div class="hojas-pareja-equipo"><?php echo GestionTorneosViewsData::htmlLineaNombreEquipoPareja($jugador1); ?></div>
+                        </div>
+                    </div>
+                    <div class="col-qr">
+                        <div class="qr-mesa" title="Escanear para cargar acta">
+                            <a href="<?php echo htmlspecialchars($url_carga_mesa); ?>" target="_blank" rel="noopener">
+                                <img src="<?php echo htmlspecialchars($qr_url); ?>" alt="QR Cargar acta" width="100" height="100">
+                            </a>
+                        </div>
+                    </div>
+                    <div class="col-der col-der--parejas">
+                        <div class="hojas-bloque-pareja hojas-bloque-pareja--der">
+                            <div class="hojas-pareja-titulo">Pareja <?php echo htmlspecialchars(($letras_secuencia[3] ?? 'B') . '-' . ($letras_secuencia[4] ?? 'D'), ENT_QUOTES, 'UTF-8'); ?></div>
+                            <div class="hojas-pareja-nombre"><?php echo htmlspecialchars($jugador3['nombre_completo'] ?? $jugador3['nombre'] ?? '—', ENT_QUOTES, 'UTF-8'); ?></div>
+                            <div class="hojas-pareja-nombre"><?php echo htmlspecialchars($jugador4['nombre_completo'] ?? $jugador4['nombre'] ?? '—', ENT_QUOTES, 'UTF-8'); ?></div>
+                            <div class="hojas-pareja-stats"><?php echo htmlspecialchars(GestionTorneosViewsData::lineaEstadisticasParejaHoja($jugador3, $jugador4), ENT_QUOTES, 'UTF-8'); ?></div>
+                            <div class="hojas-pareja-equipo"><?php echo GestionTorneosViewsData::htmlLineaNombreEquipoPareja($jugador3); ?></div>
+                        </div>
+                    </div>
+                </div>
+                <?php else: ?>
                 <div class="linea-con-qr">
                     <div class="col-izq">
                         <div class="jugador-id-nombre">
@@ -779,8 +851,10 @@ if (!empty($context_switcher['items']) && is_array($context_switcher['items'])) 
                         </div>
                     </div>
                 </div>
+                <?php endif; ?>
             </div>
             
+            <?php if (!$es_torneo_parejas): ?>
             <!-- Línea 2: C y D (Pareja AC vs Pareja BD) -->
             <div class="seccion-jugadores">
                 <div class="linea-jugadores">
@@ -926,6 +1000,7 @@ if (!empty($context_switcher['items']) && is_array($context_switcher['items'])) 
                     </div>
                 </div>
             </div>
+            <?php endif; ?>
             
             <!-- Espacio para anotar -->
             <div class="espacio-anotacion">
@@ -937,12 +1012,12 @@ if (!empty($context_switcher['items']) && is_array($context_switcher['items'])) 
             <div class="firmas">
                 <div class="firma-item">
                     <div class="firma-linea">
-                        Pareja AC
+                        Pareja <?php echo $es_torneo_parejas ? htmlspecialchars(($letras_secuencia[1] ?? 'A') . '-' . ($letras_secuencia[2] ?? 'C'), ENT_QUOTES, 'UTF-8') : 'AC'; ?>
                     </div>
                 </div>
                 <div class="firma-item">
                     <div class="firma-linea">
-                        Pareja BD
+                        Pareja <?php echo $es_torneo_parejas ? htmlspecialchars(($letras_secuencia[3] ?? 'B') . '-' . ($letras_secuencia[4] ?? 'D'), ENT_QUOTES, 'UTF-8') : 'BD'; ?>
                     </div>
                 </div>
                 <div class="firma-item">

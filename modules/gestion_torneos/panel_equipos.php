@@ -44,6 +44,7 @@ $action_param = $use_standalone ? '?' : '&';
     $script_actual = basename($_SERVER['PHP_SELF'] ?? '');
     $use_standalone = in_array($script_actual, ['admin_torneo.php', 'panel_torneo.php']);
     $base_url = $use_standalone ? $script_actual : 'index.php?page=torneo_gestion';
+    $es_parejas_panel = (int)($torneo['modalidad'] ?? 0) === 2;
     ?>
     
     <?php if ($isLocked): ?>
@@ -117,9 +118,9 @@ $action_param = $use_standalone ? '?' : '&';
                            class="btn btn-sm btn-warning w-100 mb-1">
                             <i class="fas fa-user-plus mr-1"></i> Inscribir en Sitio
                         </a>
-                        <a href="<?php echo $base_url . ($use_standalone ? '?' : '&'); ?>action=carga_masiva_equipos_sitio&torneo_id=<?php echo $torneo['id']; ?>" 
+                        <a href="<?php echo $base_url . ($use_standalone ? '?' : '&'); ?>action=<?php echo $es_parejas_panel ? 'carga_masiva_parejas_sitio' : 'carga_masiva_equipos_sitio'; ?>&torneo_id=<?php echo $torneo['id']; ?>" 
                            class="btn btn-sm btn-outline-warning w-100">
-                            <i class="fas fa-file-upload mr-1"></i> Carga masiva CSV/Excel
+                            <i class="fas fa-file-upload mr-1"></i> <?php echo $es_parejas_panel ? 'Carga masiva parejas' : 'Carga masiva CSV/Excel'; ?>
                         </a>
                     <?php endif; ?>
                 </div>

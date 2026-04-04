@@ -36,6 +36,7 @@ class GestionTorneosViewsData
         $stmt->execute([$torneo_id]);
         $torneo = $stmt->fetch(PDO::FETCH_ASSOC);
         $es_torneo_equipos = (int)($torneo['modalidad'] ?? 0) === 3;
+        $es_torneo_parejas = (int)($torneo['modalidad'] ?? 0) === 2;
         $stmt = $pdo->prepare("SELECT id_usuario, codigo_equipo, posicion, ganados, perdidos, efectividad, puntos, sancion, tarjeta FROM inscritos WHERE torneo_id = ? ORDER BY posicion ASC");
         $stmt->execute([$torneo_id]);
         $inscritos = $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -45,7 +46,7 @@ class GestionTorneosViewsData
         }
         $equiposMap = [];
         $estadisticasEquipos = [];
-        if ($es_torneo_equipos) {
+        if ($es_torneo_equipos || $es_torneo_parejas) {
             $stmt = $pdo->prepare("SELECT codigo_equipo, nombre_equipo, id_club FROM equipos WHERE id_torneo = ? AND estatus = 0");
             $stmt->execute([$torneo_id]);
             foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $e) {
@@ -53,10 +54,11 @@ class GestionTorneosViewsData
             }
             $stmt = $pdo->prepare("SELECT codigo_equipo, posicion, puntos, ganados, perdidos, efectividad FROM equipos WHERE id_torneo = ? AND estatus = 0 AND codigo_equipo IS NOT NULL AND codigo_equipo != '' ORDER BY posicion ASC");
             $stmt->execute([$torneo_id]);
+            $nj = $es_torneo_equipos ? 4 : 2;
             foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $s) {
                 $estadisticasEquipos[$s['codigo_equipo']] = [
                     'posicion' => (int)$s['posicion'], 'clasiequi' => (int)$s['posicion'],
-                    'puntos' => (int)$s['puntos'], 'ganados' => (int)$s['ganados'], 'perdidos' => (int)$s['perdidos'], 'efectividad' => (int)$s['efectividad'], 'total_jugadores' => 4,
+                    'puntos' => (int)$s['puntos'], 'ganados' => (int)$s['ganados'], 'perdidos' => (int)$s['perdidos'], 'efectividad' => (int)$s['efectividad'], 'total_jugadores' => $nj,
                 ];
             }
         }
@@ -74,11 +76,11 @@ class GestionTorneosViewsData
             $row['tarjeta'] = (int)($inscritoData['tarjeta'] ?? 0);
             $row['inscrito'] = ['posicion' => (int)$inscritoData['posicion'], 'ganados' => (int)$inscritoData['ganados'], 'perdidos' => (int)$inscritoData['perdidos'], 'efectividad' => (int)$inscritoData['efectividad'], 'puntos' => (int)$inscritoData['puntos'], 'sancion' => (int)$inscritoData['sancion'], 'tarjeta' => (int)$inscritoData['tarjeta']];
             $codigoEquipo = $row['codigo_equipo'] ?? $inscritoData['codigo_equipo'] ?? null;
-            if ($es_torneo_equipos && $codigoEquipo && isset($equiposMap[$codigoEquipo])) {
+            if (($es_torneo_equipos || $es_torneo_parejas) && $codigoEquipo && isset($equiposMap[$codigoEquipo])) {
                 $row['nombre_equipo'] = $equiposMap[$codigoEquipo]['nombre_equipo'];
                 $row['codigo_equipo_display'] = $equiposMap[$codigoEquipo]['codigo_equipo'];
             }
-            if ($es_torneo_equipos && $codigoEquipo && isset($estadisticasEquipos[$codigoEquipo])) {
+            if (($es_torneo_equipos || $es_torneo_parejas) && $codigoEquipo && isset($estadisticasEquipos[$codigoEquipo])) {
                 $row['estadisticas_equipo'] = $estadisticasEquipos[$codigoEquipo];
             }
             $mesas[$numMesa]['jugadores'][] = $row;
@@ -88,6 +90,74 @@ class GestionTorneosViewsData
             'ronda' => $ronda,
             'mesas' => array_values($mesas),
             'es_torneo_equipos' => $es_torneo_equipos,
+            'es_torneo_parejas' => $es_torneo_parejas,
         ];
+    }
+
+    /**
+     * Una sola línea de estadísticas para la pareja en hoja de anotación (impresión).
+     */
+    public static function lineaEstadisticasParejaHoja(?array $j1, ?array $j2): string
+    {
+        $j2 = $j2 ?? [];
+        $j1 = $j1 ?? [];
+        $c1 = $j1['codigo_equipo'] ?? null;
+        $c2 = $j2['codigo_equipo'] ?? null;
+        $mismoCod = $c1 !== null && $c1 !== '' && (string)$c1 === (string)($c2 ?? '');
+        if ($j1 !== [] && $mismoCod && !empty($j1['estadisticas_equipo'])) {
+            $s = $j1['estadisticas_equipo'];
+            return sprintf(
+                'Pos: %s · G: %d · P: %d · Efect: %d · Pts: %d',
+                (string)($s['clasiequi'] ?? $s['posicion'] ?? 0),
+                (int)($s['ganados'] ?? 0),
+                (int)($s['perdidos'] ?? 0),
+                (int)($s['efectividad'] ?? 0),
+                (int)($s['puntos'] ?? 0)
+            );
+        }
+        $i1 = $j1['inscrito'] ?? [];
+        $i2 = $j2['inscrito'] ?? [];
+        $p1 = (int)($i1['posicion'] ?? 0);
+        $p2 = (int)($i2['posicion'] ?? 0);
+        $g = (int)($i1['ganados'] ?? 0) + (int)($i2['ganados'] ?? 0);
+        $p = (int)($i1['perdidos'] ?? 0) + (int)($i2['perdidos'] ?? 0);
+        $pts = (int)($i1['puntos'] ?? 0) + (int)($i2['puntos'] ?? 0);
+        $e1 = (int)($i1['efectividad'] ?? 0);
+        $e2 = (int)($i2['efectividad'] ?? 0);
+        return sprintf('Pos: %d / %d · G: %d · P: %d · Efect: %d / %d · Pts: %d', $p1, $p2, $g, $p, $e1, $e2, $pts);
+    }
+
+    /**
+     * HTML seguro (internamente escapado) para la línea «nombre del equipo» en parejas.
+     */
+    public static function htmlLineaNombreEquipoPareja(?array $jugador): string
+    {
+        if (!$jugador) {
+            return htmlspecialchars('Sin equipo', ENT_QUOTES, 'UTF-8');
+        }
+        if (!empty($jugador['nombre_equipo'])) {
+            $out = '';
+            if (!empty($jugador['codigo_equipo_display'])) {
+                $out .= '<span class="equipo-codigo-inline">' . htmlspecialchars((string)$jugador['codigo_equipo_display'], ENT_QUOTES, 'UTF-8') . '</span> — ';
+            }
+            $out .= htmlspecialchars((string)$jugador['nombre_equipo'], ENT_QUOTES, 'UTF-8');
+            $t = (int)($jugador['tarjeta'] ?? 0);
+            if ($t > 0) {
+                $c = $t === 1 ? 'Amarilla' : ($t === 3 ? 'Roja' : ($t === 4 ? 'Negra' : ''));
+                if ($c !== '') {
+                    $out .= ' <span class="tarjeta-club">* ' . htmlspecialchars($c, ENT_QUOTES, 'UTF-8') . ' *</span>';
+                }
+            }
+            return $out;
+        }
+        $club = htmlspecialchars((string)($jugador['nombre_club'] ?? $jugador['club_nombre'] ?? 'Sin Club'), ENT_QUOTES, 'UTF-8');
+        $t = (int)($jugador['tarjeta'] ?? 0);
+        if ($t > 0) {
+            $c = $t === 1 ? 'Amarilla' : ($t === 3 ? 'Roja' : ($t === 4 ? 'Negra' : ''));
+            if ($c !== '') {
+                $club .= ' <span class="tarjeta-club">* ' . htmlspecialchars($c, ENT_QUOTES, 'UTF-8') . ' *</span>';
+            }
+        }
+        return $club;
     }
 }

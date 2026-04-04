@@ -710,6 +710,14 @@ if ($action === 'carga_masiva_equipos_plantilla' && ($_SERVER['REQUEST_METHOD'] 
     echo CargaMasivaEquiposSitioService::contenidoPlantillaCsv();
     exit;
 }
+if ($action === 'carga_masiva_parejas_plantilla' && ($_SERVER['REQUEST_METHOD'] ?? '') === 'GET' && $torneo_id) {
+    verificarPermisosTorneo($torneo_id, $user_id, $is_admin_general);
+    require_once __DIR__ . '/../lib/CargaMasivaParejasSitioService.php';
+    header('Content-Type: text/csv; charset=UTF-8');
+    header('Content-Disposition: attachment; filename="plantilla_carga_parejas_torneo_' . $torneo_id . '.csv"');
+    echo CargaMasivaParejasSitioService::contenidoPlantillaCsv();
+    exit;
+}
 if ($action === 'inscripciones_export_xls' && ($_SERVER['REQUEST_METHOD'] ?? '') === 'GET' && $torneo_id) {
     verificarPermisosTorneo($torneo_id, $user_id, $is_admin_general);
     $pdo = DB::pdo();
@@ -989,6 +997,85 @@ if ($action === 'carga_masiva_equipos_reporte_pdf' && ($_SERVER['REQUEST_METHOD'
     echo $html;
     exit;
 }
+if ($action === 'carga_masiva_parejas_reporte_pdf' && ($_SERVER['REQUEST_METHOD'] ?? '') === 'GET' && $torneo_id) {
+    verificarPermisosTorneo($torneo_id, $user_id, $is_admin_general);
+    $repo = $_SESSION['carga_masiva_parejas_reportes'][$torneo_id] ?? null;
+    if (!is_array($repo) || empty($repo['reporte_proceso'])) {
+        http_response_code(404);
+        exit('No hay reporte disponible para este torneo.');
+    }
+    $torneoNombre = (string)($repo['torneo_nombre'] ?? ('Torneo ' . $torneo_id));
+    $fechaGen = (string)($repo['fecha'] ?? date('Y-m-d H:i:s'));
+    $proc = (array)$repo['reporte_proceso'];
+    $res = (array)($proc['resumen'] ?? []);
+    $equipos = (array)($proc['equipos'] ?? []);
+    $esc = static fn ($v): string => htmlspecialchars((string)$v, ENT_QUOTES, 'UTF-8');
+    $html = '<!DOCTYPE html><html><head><meta charset="UTF-8"><style>'
+        . '@page{size:letter portrait;margin:12mm}body{font-family:DejaVu Sans,sans-serif;font-size:9pt;color:#111}'
+        . 'h1{font-size:13pt;margin:0 0 4px} .meta{font-size:8pt;color:#444;margin-bottom:8px}'
+        . 'table{width:100%;border-collapse:collapse;margin-bottom:8px}th,td{border:1px solid #666;padding:4px;vertical-align:top}'
+        . 'th{background:#eee} .ok{color:#166534;font-weight:700}.err{color:#991b1b;font-weight:700}'
+        . '</style></head><body>';
+    $html .= '<h1>Reporte carga automática de parejas</h1>';
+    $html .= '<div class="meta">Torneo: <strong>' . $esc($torneoNombre) . '</strong> [#' . (int)$torneo_id . '] · Generado: ' . $esc($fechaGen) . '</div>';
+    $html .= '<table><tr><th>Total</th><th>OK</th><th>Error</th></tr><tr>'
+        . '<td>' . (int)($res['total'] ?? 0) . '</td>'
+        . '<td>' . (int)($res['ok'] ?? 0) . '</td>'
+        . '<td>' . (int)($res['error'] ?? 0) . '</td></tr></table>';
+    $html .= '<table><tr><th>Pareja</th><th>Integrantes</th><th>Resultado</th><th>Error / Cómo resolver</th></tr>';
+    foreach ($equipos as $eq) {
+        $ints = '';
+        foreach ((array)($eq['integrantes'] ?? []) as $j) {
+            $ced = trim((string)($j['cedula'] ?? ''));
+            $nom = trim((string)($j['nombre'] ?? ''));
+            $idu = (int)($j['id_usuario'] ?? 0);
+            $nf = (int)($j['numfvd'] ?? 0);
+            $ints .= $esc(($ced !== '' ? $ced : 'S/C') . ' - ' . ($nom !== '' ? $nom : 'SIN NOMBRE') . ' [id_usuario: ' . $idu . ' | numfvd: ' . $nf . ']');
+            if (empty($j['completo'])) {
+                $ints .= ' (incompleto)';
+            }
+            $ints .= '<br>';
+        }
+        $okEq = !empty($eq['ok']);
+        $html .= '<tr><td><strong>' . $esc($eq['equipo'] ?? '') . '</strong><br>Línea ' . (int)($eq['linea_inicio'] ?? 0) . '</td>'
+            . '<td>' . ($ints !== '' ? $ints : 'Sin integrantes') . '</td>'
+            . '<td class="' . ($okEq ? 'ok' : 'err') . '">' . ($okEq ? 'OK' : 'ERROR') . '</td>'
+            . '<td>' . ($okEq ? 'Sin acciones pendientes.' : ($esc($eq['error'] ?? '') . '<br><small>Cómo resolver: ' . $esc($eq['como_resolver'] ?? '') . '</small>')) . '</td></tr>';
+    }
+    $html .= '</table></body></html>';
+    $filename = 'reporte_carga_masiva_parejas_torneo_' . (int)$torneo_id . '_' . date('Ymd_His');
+    $autoload = __DIR__ . '/../vendor/autoload.php';
+    $dompdfOk = is_file($autoload) && is_readable($autoload);
+    if ($dompdfOk) {
+        try {
+            require_once $autoload;
+            if (class_exists(\Dompdf\Dompdf::class)) {
+                $opt = new \Dompdf\Options();
+                $opt->set('isRemoteEnabled', false);
+                $opt->set('isHtml5ParserEnabled', true);
+                $opt->set('defaultFont', 'DejaVu Sans');
+                $pdf = new \Dompdf\Dompdf($opt);
+                $pdf->loadHtml($html, 'UTF-8');
+                $pdf->setPaper('letter', 'portrait');
+                $pdf->render();
+                while (ob_get_level()) {
+                    ob_end_clean();
+                }
+                $pdf->stream($filename . '.pdf', ['Attachment' => true]);
+                exit;
+            }
+        } catch (Throwable $e) {
+            // fallback html
+        }
+    }
+    while (ob_get_level()) {
+        ob_end_clean();
+    }
+    header('Content-Type: text/html; charset=UTF-8');
+    header('Content-Disposition: attachment; filename="' . $filename . '_imprimir.html"');
+    echo $html;
+    exit;
+}
 
 // Mantener torneo activo en sesión para toda la vista de gestión.
 $active_session_torneo_id = (int)($_SESSION['active_tournament_id'] ?? 0);
@@ -1014,7 +1101,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $post_action = $_POST['action'] ?? $action;
     $post_torneo_id_ctx = (int)($_POST['torneo_id'] ?? 0);
     $get_torneo_id_ctx = (int)($_GET['torneo_id'] ?? 0);
-    $acciones_criticas_ctx = ['guardar_equipo_sitio', 'carga_masiva_equipos_validar', 'carga_masiva_equipos_sitio'];
+    $acciones_criticas_ctx = ['guardar_equipo_sitio', 'carga_masiva_equipos_validar', 'carga_masiva_equipos_sitio', 'carga_masiva_parejas_validar', 'carga_masiva_parejas_sitio'];
     if (in_array($post_action, $acciones_criticas_ctx, true) && $post_torneo_id_ctx > 0) {
         $ctx_ok = true;
         $ctx_msg = '';
@@ -1051,7 +1138,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     
     // Bloquear acciones de modificación si el torneo está cerrado (las de carga masiva responden JSON)
     $torneo_id_check = (int)($_POST['torneo_id'] ?? 0);
-    $post_json_carga_masiva = in_array($post_action, ['carga_masiva_equipos_validar', 'carga_masiva_equipos_sitio'], true);
+    $post_json_carga_masiva = in_array($post_action, ['carga_masiva_equipos_validar', 'carga_masiva_equipos_sitio', 'carga_masiva_parejas_validar', 'carga_masiva_parejas_sitio'], true);
     if ($torneo_id_check && isTorneoLocked($torneo_id_check) && ($post_action !== 'cerrar_torneo') && !$post_json_carga_masiva) {
         $_SESSION['error'] = 'Este torneo está cerrado y no admite modificaciones.';
         header('Location: ' . buildRedirectUrl('panel', ['torneo_id' => $torneo_id_check]));
@@ -1171,6 +1258,102 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             } catch (Throwable $e) {
                 http_response_code(500);
                 error_log('carga_masiva_equipos_sitio: ' . $e->getMessage());
+                echo json_encode(['success' => false, 'message' => $e->getMessage()], JSON_UNESCAPED_UNICODE);
+            }
+            exit;
+
+        case 'carga_masiva_parejas_validar':
+            $tid = (int)($_POST['torneo_id'] ?? 0);
+            $clubId = (int)($_POST['club_id'] ?? 0);
+            if ($tid <= 0) {
+                header('Content-Type: application/json; charset=utf-8');
+                echo json_encode(['success' => false, 'message' => 'Torneo no especificado'], JSON_UNESCAPED_UNICODE);
+                exit;
+            }
+            verificarPermisosTorneo($tid, $user_id, $is_admin_general);
+            if (!isset($_FILES['archivo']) || !is_uploaded_file($_FILES['archivo']['tmp_name'] ?? '')) {
+                header('Content-Type: application/json; charset=utf-8');
+                echo json_encode(['success' => false, 'message' => 'Adjunte el archivo.'], JSON_UNESCAPED_UNICODE);
+                exit;
+            }
+            require_once __DIR__ . '/../lib/CargaMasivaParejasSitioService.php';
+            header('Content-Type: application/json; charset=utf-8');
+            $pdo = DB::pdo();
+            $parsed = CargaMasivaParejasSitioService::parseArchivo(
+                (string)$_FILES['archivo']['tmp_name'],
+                (string)($_FILES['archivo']['name'] ?? 'upload.csv')
+            );
+            if (isset($parsed['error'])) {
+                echo json_encode(['success' => false, 'message' => $parsed['error']], JSON_UNESCAPED_UNICODE);
+                exit;
+            }
+            $val = CargaMasivaParejasSitioService::validarPrevio($pdo, $tid, $parsed['bloques'], $clubId);
+            $_SESSION['carga_masiva_parejas_reportes'][$tid] = [
+                'torneo_nombre' => (string)($_POST['torneo_nombre'] ?? ''),
+                'fecha' => date('Y-m-d H:i:s'),
+                'validacion' => $val,
+            ];
+            echo json_encode([
+                'success' => $val['puede_proceder'],
+                'message' => $val['puede_proceder']
+                    ? 'Archivo válido. Revise el aviso de borrado y confirme para ejecutar.'
+                    : 'Revise errores antes de continuar.',
+                'validacion' => $val,
+                'frase_confirmacion' => CargaMasivaParejasSitioService::CONFIRMACION_REEMPLAZO,
+            ], JSON_UNESCAPED_UNICODE);
+            exit;
+
+        case 'carga_masiva_parejas_sitio':
+            $tid = (int)($_GET['torneo_id'] ?? $_POST['torneo_id'] ?? 0);
+            $clubId = (int)($_POST['club_id'] ?? 0);
+            if ($tid <= 0 || ($_SERVER['REQUEST_METHOD'] ?? '') !== 'POST') {
+                header('Content-Type: application/json; charset=utf-8');
+                echo json_encode(['success' => false, 'message' => 'Torneo no especificado o método inválido'], JSON_UNESCAPED_UNICODE);
+                exit;
+            }
+            verificarPermisosTorneo($tid, $user_id, $is_admin_general);
+            if (isTorneoLocked($tid)) {
+                header('Content-Type: application/json; charset=utf-8');
+                echo json_encode(['success' => false, 'message' => 'Torneo cerrado.'], JSON_UNESCAPED_UNICODE);
+                exit;
+            }
+            if ($clubId <= 0) {
+                header('Content-Type: application/json; charset=utf-8');
+                echo json_encode(['success' => false, 'message' => 'Seleccione el club al que pertenecen las parejas.'], JSON_UNESCAPED_UNICODE);
+                exit;
+            }
+            if (!isset($_FILES['archivo']) || !is_uploaded_file($_FILES['archivo']['tmp_name'] ?? '')) {
+                header('Content-Type: application/json; charset=utf-8');
+                echo json_encode(['success' => false, 'message' => 'No se recibió archivo.'], JSON_UNESCAPED_UNICODE);
+                exit;
+            }
+            require_once __DIR__ . '/../lib/CargaMasivaParejasSitioService.php';
+            header('Content-Type: application/json; charset=utf-8');
+            try {
+                $pdo = DB::pdo();
+                $out = CargaMasivaParejasSitioService::ejecutarDesdeArchivo(
+                    $pdo,
+                    $tid,
+                    (string)$_FILES['archivo']['tmp_name'],
+                    (string)($_FILES['archivo']['name'] ?? 'upload.csv'),
+                    $clubId,
+                    Auth::id() ?: null,
+                    trim((string)($_POST['confirmar_reemplazo'] ?? ''))
+                );
+                $stmtT = $pdo->prepare('SELECT nombre FROM tournaments WHERE id = ? LIMIT 1');
+                $stmtT->execute([$tid]);
+                $tn = (string)($stmtT->fetchColumn() ?: ('Torneo ' . $tid));
+                $_SESSION['carga_masiva_parejas_reportes'][$tid] = [
+                    'torneo_nombre' => $tn,
+                    'fecha' => date('Y-m-d H:i:s'),
+                    'reporte_proceso' => $out['reporte_proceso'] ?? null,
+                    'detalles' => $out['detalles'] ?? [],
+                ];
+                $out['reporte_pdf_url'] = buildRedirectUrl('carga_masiva_parejas_reporte_pdf', ['torneo_id' => $tid, 't' => time()]);
+                echo json_encode($out, JSON_UNESCAPED_UNICODE);
+            } catch (Throwable $e) {
+                http_response_code(500);
+                error_log('carga_masiva_parejas_sitio: ' . $e->getMessage());
                 echo json_encode(['success' => false, 'message' => $e->getMessage()], JSON_UNESCAPED_UNICODE);
             }
             exit;
@@ -1521,6 +1704,30 @@ try {
             $view_file = __DIR__ . '/gestion_torneos/carga_masiva_equipos_sitio.php';
             $view_data = ['torneo' => $torneo_cm, 'torneo_id' => $torneo_id, 'cache_cleanup' => $cache_cleanup];
             break;
+
+        case 'carga_masiva_parejas_sitio':
+            if (!$torneo_id) {
+                throw new Exception('Debe especificar un torneo');
+            }
+            verificarPermisosTorneo($torneo_id, $user_id, $is_admin_general);
+            require_once __DIR__ . '/../lib/CargaMasivaEquiposSitioService.php';
+            require_once __DIR__ . '/../lib/CargaMasivaParejasSitioService.php';
+            $cache_cleanup = CargaMasivaEquiposSitioService::limpiarCacheCargaMasiva();
+            $stmt = DB::pdo()->prepare('SELECT id, nombre, modalidad, locked FROM tournaments WHERE id = ?');
+            $stmt->execute([$torneo_id]);
+            $torneo_cm = $stmt->fetch(PDO::FETCH_ASSOC);
+            if (!$torneo_cm || (int)($torneo_cm['modalidad'] ?? 0) !== 2) {
+                throw new Exception('Solo torneos modalidad parejas (2).');
+            }
+            $view_data_insc = obtenerDatosInscribirEquipoSitio($torneo_id);
+            $view_file = __DIR__ . '/gestion_torneos/carga_masiva_parejas_sitio.php';
+            $view_data = [
+                'torneo' => $view_data_insc['torneo'] ?? $torneo_cm,
+                'torneo_id' => $torneo_id,
+                'cache_cleanup' => $cache_cleanup,
+                'clubes_disponibles' => $view_data_insc['clubes_disponibles'] ?? [],
+            ];
+            break;
             
         case 'mesas':
             if (!$torneo_id || !$ronda) {
@@ -1848,6 +2055,32 @@ try {
                 throw new Exception('Este reporte solo está disponible para torneos por equipos');
             }
             $view_file = __DIR__ . '/tournament_admin/resultados_general.php';
+            $view_data = ['torneo' => $torneo, 'torneo_id' => $torneo_id, 'pdo' => DB::pdo()];
+            break;
+
+        case 'resultados_reportes':
+            if (!$torneo_id) {
+                throw new Exception('Debe especificar un torneo');
+            }
+            verificarPermisosTorneo($torneo_id, $user_id, $is_admin_general);
+            $torneo = obtenerTorneo($torneo_id, $user_id, $is_admin_general);
+            if (!$torneo) {
+                throw new Exception('Torneo no encontrado o sin permisos');
+            }
+            $view_file = __DIR__ . '/tournament_admin/resultados_reportes.php';
+            $view_data = ['torneo' => $torneo, 'torneo_id' => $torneo_id, 'pdo' => DB::pdo()];
+            break;
+
+        case 'resultados_reportes_print':
+            if (!$torneo_id) {
+                throw new Exception('Debe especificar un torneo');
+            }
+            verificarPermisosTorneo($torneo_id, $user_id, $is_admin_general);
+            $torneo = obtenerTorneo($torneo_id, $user_id, $is_admin_general);
+            if (!$torneo) {
+                throw new Exception('Torneo no encontrado o sin permisos');
+            }
+            $view_file = __DIR__ . '/tournament_admin/resultados_reportes_print.php';
             $view_data = ['torneo' => $torneo, 'torneo_id' => $torneo_id, 'pdo' => DB::pdo()];
             break;
 
@@ -2338,6 +2571,7 @@ function obtenerDatosRondas($torneo_id) {
  * fallback a inscritos.tarjeta; valores 0=ninguna, 1=amarilla, 3=roja, 4=negra.
  */
 function obtenerDatosPosiciones($torneo_id) {
+    require_once __DIR__ . '/../lib/ResultadosReporteData.php';
     $pdo = DB::pdo();
     
     $stmt = $pdo->prepare("SELECT * FROM tournaments WHERE id = ?");
@@ -2436,6 +2670,11 @@ function obtenerDatosPosiciones($torneo_id) {
         }
     }
     unset($pos);
+
+    $modalidadTorneo = (int)($torneo['modalidad'] ?? 0);
+    if (in_array($modalidadTorneo, [2, 4], true)) {
+        $posiciones = \ResultadosReporteData::colapsarFilasPorPareja($posiciones, $pdo, $torneo_id);
+    }
     
     return [
         'torneo' => $torneo,
@@ -4012,6 +4251,7 @@ function obtenerDatosHojasAnotacion($torneo_id, $ronda) {
     $torneo = $stmt->fetch(PDO::FETCH_ASSOC);
     
     $es_torneo_equipos = (int)($torneo['modalidad'] ?? 0) === 3;
+    $es_torneo_parejas = (int)($torneo['modalidad'] ?? 0) === 2;
     
     // Obtener inscritos con estadísticas (incluyendo tarjeta y codigo_equipo)
     $sql = "SELECT 
@@ -4036,10 +4276,10 @@ function obtenerDatosHojasAnotacion($torneo_id, $ronda) {
         $inscritosMap[$inscrito['id_usuario']] = $inscrito;
     }
     
-    // Obtener información de equipos si es torneo de equipos
+    // Equipos / parejas (nombre y stats de tabla equipos): modalidad equipos (3) o parejas (2)
     $equiposMap = [];
     $estadisticasEquipos = [];
-    if ($es_torneo_equipos) {
+    if ($es_torneo_equipos || $es_torneo_parejas) {
         $sql = "SELECT 
                     e.codigo_equipo,
                     e.nombre_equipo,
@@ -4064,7 +4304,7 @@ function obtenerDatosHojasAnotacion($torneo_id, $ronda) {
         $stmt = $pdo->prepare($sql);
         $stmt->execute([$torneo_id]);
         $statsEquipos = $stmt->fetchAll(PDO::FETCH_ASSOC);
-        
+        $njEq = $es_torneo_equipos ? 4 : 2;
         foreach ($statsEquipos as $stat) {
             $posicion = (int)($stat['posicion'] ?? 0);
             $estadisticasEquipos[$stat['codigo_equipo']] = [
@@ -4074,7 +4314,7 @@ function obtenerDatosHojasAnotacion($torneo_id, $ronda) {
                 'ganados' => (int)($stat['ganados'] ?? 0),
                 'perdidos' => (int)($stat['perdidos'] ?? 0),
                 'efectividad' => (int)($stat['efectividad'] ?? 0),
-                'total_jugadores' => 4
+                'total_jugadores' => $njEq
             ];
         }
     }
@@ -4125,9 +4365,9 @@ function obtenerDatosHojasAnotacion($torneo_id, $ronda) {
                 'codigo_equipo' => null
             ];
             
-            // Agregar información del equipo si es torneo de equipos
+            // Agregar información del equipo (modalidad equipos o parejas)
             $codigoEquipo = $resultado['codigo_equipo'] ?? $inscritoData['codigo_equipo'] ?? null;
-            if ($es_torneo_equipos && $codigoEquipo) {
+            if (($es_torneo_equipos || $es_torneo_parejas) && $codigoEquipo) {
                 $equipoData = $equiposMap[$codigoEquipo] ?? null;
                 if ($equipoData) {
                     $resultado['nombre_equipo'] = $equipoData['nombre_equipo'];
@@ -4160,7 +4400,8 @@ function obtenerDatosHojasAnotacion($torneo_id, $ronda) {
         'torneo' => $torneo,
         'ronda' => $ronda,
         'mesas' => array_values($mesas),
-        'es_torneo_equipos' => $es_torneo_equipos
+        'es_torneo_equipos' => $es_torneo_equipos,
+        'es_torneo_parejas' => $es_torneo_parejas,
     ];
 }
 

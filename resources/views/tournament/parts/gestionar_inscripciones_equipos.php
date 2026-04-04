@@ -199,6 +199,11 @@ $csrf_token = class_exists('CSRF') ? CSRF::token() : '';
                        class="btn btn-outline-primary btn-sm">
                         <i class="fas fa-file-upload me-1"></i>Carga masiva
                     </a>
+                    <?php else: ?>
+                    <a href="<?php echo $base_url . ($use_standalone ? '?' : '&'); ?>action=carga_masiva_parejas_sitio&torneo_id=<?php echo $torneo['id']; ?>" 
+                       class="btn btn-outline-primary btn-sm">
+                        <i class="fas fa-file-upload me-1"></i>Carga masiva parejas
+                    </a>
                     <?php endif; ?>
                     <a href="<?php echo $base_url . ($use_standalone ? '?' : '&'); ?>action=panel&torneo_id=<?php echo $torneo['id']; ?>" 
                        class="btn btn-secondary btn-sm">

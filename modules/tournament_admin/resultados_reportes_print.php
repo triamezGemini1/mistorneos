@@ -112,9 +112,11 @@ if ($tipo === 'clubes_resumido') {
     }
 } elseif ($tipo === 'general' || $tipo === 'posiciones') {
     $data = ResultadosReporteData::cargar($pdo, $torneo_id, $torneo);
+    $esParejasRep = in_array((int)($torneo['modalidad'] ?? 0), [2, 4], true);
+    $colJugadorRep = $esParejasRep ? 'Pareja' : 'Jugador';
     $h1p = $tipo === 'posiciones' ? 'Tabla de posiciones — ' : 'Resultados general — ';
     echo '<h1>' . $h1p . $nombreTorneo . '</h1><div class="meta">' . $fechaTor . ' · ' . $fechaGen . '</div>';
-    echo '<table><tr><th>Pos</th><th>Jugador</th><th>Club</th><th>Equipo</th><th>G</th><th>P</th><th>Ef.</th><th>Pts</th><th>Rnk</th><th>GFF</th><th>Sanc.</th><th>Tarj.</th></tr>';
+    echo '<table><tr><th>Pos</th><th>' . $esc($colJugadorRep) . '</th><th>Club</th><th>Equipo</th><th>G</th><th>P</th><th>Ef.</th><th>Pts</th><th>Rnk</th><th>GFF</th><th>Sanc.</th><th>Tarj.</th></tr>';
     $n = 0;
     foreach ($data['participantes'] as $p) {
         $n++;
@@ -161,7 +163,10 @@ if ($tipo === 'clubes_resumido') {
         }
         echo '</table>';
     }
-    echo '<h2>Clasificación</h2><table><tr><th>Pos</th><th>Jugador</th><th>Club</th><th>G</th><th>P</th><th>Pts</th></tr>';
+    $esParejasCons = in_array((int)($torneo['modalidad'] ?? 0), [2, 4], true);
+    $colJugCons = $esParejasCons ? 'Pareja' : 'Jugador';
+    $titClas = $esParejasCons ? 'Clasificación por pareja' : 'Clasificación';
+    echo '<h2>' . $esc($titClas) . '</h2><table><tr><th>Pos</th><th>' . $esc($colJugCons) . '</th><th>Club</th><th>G</th><th>P</th><th>Pts</th></tr>';
     $n = 0;
     foreach ($data['participantes'] as $p) {
         $n++;

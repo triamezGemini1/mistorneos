@@ -679,8 +679,9 @@ final class CargaMasivaEquiposSitioService
 
     /**
      * Convierte texto a UTF-8 válido, quita BOM, intenta Latin-1/Windows-1252 si hace falta y aplica NFC.
+     * Público para reutilizar en carga masiva de parejas u otros importadores.
      */
-    private static function normalizarTextoUtf8(string $s): string
+    public static function normalizarTextoUtf8(string $s): string
     {
         if ($s === '') {
             return '';
@@ -725,7 +726,13 @@ final class CargaMasivaEquiposSitioService
      * @param list<list<string|string>> $rows
      * @return list<list<string>>
      */
-    private static function normalizarFilasUtf8(array $rows): array
+    /**
+     * Normaliza todas las celdas a UTF-8 (reutilizable por carga masiva parejas).
+     *
+     * @param list<list<mixed>> $rows
+     * @return list<list<string>>
+     */
+    public static function normalizarFilasUtf8(array $rows): array
     {
         $out = [];
         foreach ($rows as $row) {
@@ -744,6 +751,20 @@ final class CargaMasivaEquiposSitioService
      * @param string|null $errorDetalle se rellena si falla la lectura
      * @return list<list<string>>
      */
+    /**
+     * Lectura de filas para cargas masivas (equipos/parejas). Reutiliza la misma normalización UTF-8.
+     *
+     * @return list<list<string>>
+     */
+    public static function leerFilasDesdeArchivo(string $path, string $originalName, ?string &$errorDetalle = null): array
+    {
+        $ext = strtolower(pathinfo($originalName, PATHINFO_EXTENSION));
+        if ($ext === '' || $ext === 'tsv') {
+            $ext = 'txt';
+        }
+        return self::leerFilas($path, $ext, $errorDetalle);
+    }
+
     private static function leerFilas(string $path, string $ext, ?string &$errorDetalle = null): array
     {
         $errorDetalle = null;

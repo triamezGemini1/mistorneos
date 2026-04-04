@@ -389,6 +389,8 @@ tailwind.config = {
                                     <a href="<?php echo $base_url . ($use_standalone ? '?' : '&'); ?>action=inscribir_equipo_sitio&torneo_id=<?php echo $torneo['id']; ?><?php echo $es_modalidad_parejas ? '&abrir_form=1' : ''; ?>" class="tw-btn bg-amber-500 hover:bg-amber-600 text-white"><i class="fas fa-user-plus"></i> <?php echo $es_modalidad_parejas ? 'Inscribir pareja' : 'Inscribir en Sitio'; ?></a>
                                     <?php if ($es_modalidad_equipos): ?>
                                     <a href="<?php echo $base_url . ($use_standalone ? '?' : '&'); ?>action=carga_masiva_equipos_sitio&torneo_id=<?php echo $torneo['id']; ?>" class="tw-btn bg-amber-700 hover:bg-amber-800 text-white ml-1"><i class="fas fa-file-upload"></i> Carga masiva</a>
+                                    <?php elseif ($es_modalidad_parejas): ?>
+                                    <a href="<?php echo $base_url . ($use_standalone ? '?' : '&'); ?>action=carga_masiva_parejas_sitio&torneo_id=<?php echo $torneo['id']; ?>" class="tw-btn bg-amber-700 hover:bg-amber-800 text-white ml-1"><i class="fas fa-file-upload"></i> Carga masiva parejas</a>
                                     <?php endif; ?>
                                 <?php elseif ($es_modalidad_parejas_fijas): ?>
                                     <a href="<?php echo $base_url . ($use_standalone ? '?' : '&'); ?>action=gestionar_inscripciones_parejas_fijas&torneo_id=<?php echo $torneo['id']; ?>" class="tw-btn bg-blue-500 hover:bg-blue-600 text-white"><i class="fas fa-clipboard-list"></i> Gestionar Inscripciones</a>

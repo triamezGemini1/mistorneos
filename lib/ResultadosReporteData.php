@@ -13,6 +13,62 @@ final class ResultadosReporteData
     public const SQL_GFF_SUBQUERY = '(SELECT COUNT(*) FROM partiresul pr_gff WHERE pr_gff.id_usuario = i.id_usuario AND pr_gff.id_torneo = i.torneo_id AND pr_gff.ff = 1)';
 
     /**
+     * Modalidad parejas (2) o parejas fijas (4): una fila por codigo_equipo con ambos nombres en nombre_completo.
+     *
+     * @param list<array<string, mixed>> $filas Filas ya ordenadas (p. ej. por posición).
+     * @return list<array<string, mixed>>
+     */
+    public static function colapsarFilasPorPareja(array $filas, PDO $pdo, int $torneoId): array
+    {
+        $stmtParejas = $pdo->prepare("
+            SELECT i.codigo_equipo, u.nombre AS nombre_completo
+            FROM inscritos i
+            INNER JOIN usuarios u ON i.id_usuario = u.id
+            WHERE i.torneo_id = ?
+              AND i.codigo_equipo IS NOT NULL
+              AND TRIM(i.codigo_equipo) != ''
+              AND i.codigo_equipo != '000-000'
+            ORDER BY i.codigo_equipo ASC, u.nombre ASC
+        ");
+        $stmtParejas->execute([$torneoId]);
+        $nombresPorCodigo = [];
+        foreach ($stmtParejas->fetchAll(PDO::FETCH_ASSOC) as $filaPareja) {
+            $codigo = trim((string)($filaPareja['codigo_equipo'] ?? ''));
+            $nombre = trim((string)($filaPareja['nombre_completo'] ?? ''));
+            if ($codigo === '' || $nombre === '') {
+                continue;
+            }
+            if (!isset($nombresPorCodigo[$codigo])) {
+                $nombresPorCodigo[$codigo] = [];
+            }
+            $nombresPorCodigo[$codigo][] = $nombre;
+        }
+
+        $vistos = [];
+        $salida = [];
+        foreach ($filas as $p) {
+            $codigo = trim((string)($p['codigo_equipo'] ?? ''));
+            if ($codigo === '' || $codigo === '000-000') {
+                $salida[] = $p;
+                continue;
+            }
+            if (isset($vistos[$codigo])) {
+                continue;
+            }
+            $vistos[$codigo] = true;
+            $nombres = array_values(array_unique($nombresPorCodigo[$codigo] ?? []));
+            $parejaDisplay = implode(' / ', array_slice($nombres, 0, 2));
+            if ($parejaDisplay !== '') {
+                $p['nombre_completo'] = $parejaDisplay;
+            }
+            $p['id_usuario'] = $codigo;
+            $salida[] = $p;
+        }
+
+        return $salida;
+    }
+
+    /**
      * @return array{torneo: array, participantes: array, resumen_clubes: array, equipos: array, rondas: array}
      */
     public static function cargar(PDO $pdo, int $torneoId, array $torneo): array
@@ -66,6 +122,11 @@ final class ResultadosReporteData
             }
         }
         unset($p);
+
+        $modalidad = (int)($torneo['modalidad'] ?? 0);
+        if (in_array($modalidad, [2, 4], true)) {
+            $participantes = self::colapsarFilasPorPareja($participantes, $pdo, $torneoId);
+        }
 
         $sqlClubes = "
             SELECT
