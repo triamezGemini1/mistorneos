@@ -1,9 +1,9 @@
 /**
- * Panel ~13" (1200px–1440px) y cuadrícula 10".
+ * Panel ~13"–14" (portátiles 1100px–1680px de ancho) y cuadrícula 10".
  * Cargar después de Bootstrap.
  */
 
-@media (min-width: 1200px) and (max-width: 1440px) {
+@media (min-width: 1100px) and (max-width: 1680px) {
   .table > :not(caption) > * > *,
   .table td,
   .table th {
@@ -94,8 +94,59 @@
   }
 
   body.page-torneo-gestion-index .ds-torneo-gestion-13 h1.h3,
-  body.page-torneo-gestion-index .ds-torneo-gestion-13 h2.h4 {
-    font-size: 1.2rem;
+  body.page-torneo-gestion-index .ds-torneo-gestion-13 h1.h5,
+  body.page-torneo-gestion-index .ds-torneo-gestion-13 h2.h4,
+  body.page-torneo-gestion-index .ds-torneo-gestion-13 h2.h5 {
+    font-size: 1.05rem !important;
+    margin-bottom: 0.15rem !important;
+    line-height: 1.25 !important;
+  }
+
+  body.page-torneo-gestion-index .ds-torneo-gestion-13 .text-muted.small,
+  body.page-torneo-gestion-index .ds-torneo-gestion-13 p.text-muted {
+    font-size: 0.8rem !important;
+    line-height: 1.3 !important;
+    margin-bottom: 0 !important;
+  }
+
+  body.page-torneo-gestion-index .ds-torneo-gestion-13 .row.mb-4 {
+    margin-bottom: 0.5rem !important;
+  }
+
+  body.page-torneo-gestion-index .ds-torneo-gestion-13 .row.mb-2:first-of-type {
+    margin-bottom: 0.35rem !important;
+  }
+
+  body.page-torneo-gestion-index .ds-torneo-gestion-13 .btn-group-sm.mb-2 {
+    margin-bottom: 0.25rem !important;
+  }
+
+  /* index-moderno: cabecera y botones grandes */
+  body.page-torneo-gestion-index .ds-torneo-gestion-13 > .mb-3 {
+    margin-bottom: 0.35rem !important;
+  }
+
+  body.page-torneo-gestion-index .ds-torneo-gestion-13 > .d-flex.mb-4 {
+    margin-bottom: 0.5rem !important;
+    gap: 0.35rem !important;
+    align-items: flex-start !important;
+  }
+
+  body.page-torneo-gestion-index .ds-torneo-gestion-13 .btn-lg {
+    padding: 0.35rem 0.65rem !important;
+    font-size: 0.82rem !important;
+    min-height: auto !important;
+    line-height: 1.2 !important;
+  }
+
+  body.page-torneo-gestion-index .ds-torneo-gestion-13 .btn:not(.btn-lg):not(.btn-close) {
+    padding: 0.3rem 0.55rem !important;
+    min-height: 2.1rem !important;
+    font-size: 0.82rem !important;
+  }
+
+  body.page-torneo-gestion-index .ds-torneo-gestion-13 .card-body {
+    padding: 0.35rem 0.5rem !important;
   }
 
   body.page-estadisticas-torneos .ds-estadisticas-torneos-13 h1.h3 {
@@ -110,6 +161,20 @@
   body.page-torneo-gestion:not(.page-torneo-gestion-index) main.container-fluid.py-4 {
     padding-left: 0.65rem !important;
     padding-right: 0.65rem !important;
+  }
+
+  /* Pantallas 13" bajas (768–900px alto): aún menos aire vertical */
+  @media (max-height: 900px) {
+    body.page-torneo-gestion-index main.container-fluid.py-4 {
+      padding-top: 0.45rem !important;
+      padding-bottom: 0.45rem !important;
+    }
+
+    body.page-torneo-gestion-index .ds-torneo-gestion-13 .alert {
+      padding: 0.35rem 0.6rem !important;
+      margin-bottom: 0.35rem !important;
+      font-size: 0.82rem !important;
+    }
   }
 
   /* Ingreso de resultados (~13"): refuerzo en registrar-resultados-v2.php (estilos del módulo van después del head) */

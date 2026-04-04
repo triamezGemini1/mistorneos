@@ -11,9 +11,9 @@ $panel_sep = $use_standalone_list ? '?' : '&';
 ?>
 
 <div class="container-fluid ds-torneo-gestion-13">
-    <div class="row mb-2">
+    <div class="row mb-1 gx-0">
         <div class="col-12">
-            <div class="btn-group btn-group-sm mb-2">
+            <div class="btn-group btn-group-sm mb-1">
                 <a href="<?php echo $base_list; ?>&filtro=por_realizar" class="btn btn-outline-info <?= $filtro_torneos === 'por_realizar' ? 'active' : '' ?>"><i class="fas fa-clock mr-1"></i> Por realizar</a>
                 <a href="<?php echo $base_list; ?>&filtro=en_proceso" class="btn btn-outline-primary <?= $filtro_torneos === 'en_proceso' ? 'active' : '' ?>"><i class="fas fa-play-circle mr-1"></i> En proceso</a>
                 <a href="<?php echo $base_list; ?>&filtro=realizados" class="btn btn-outline-success <?= $filtro_torneos === 'realizados' ? 'active' : '' ?>"><i class="fas fa-check-circle mr-1"></i> Realizados</a>
@@ -21,31 +21,31 @@ $panel_sep = $use_standalone_list ? '?' : '&';
             </div>
         </div>
     </div>
-    <div class="row mb-4">
+    <div class="row mb-2 gx-0">
         <div class="col-12">
-            <div class="d-flex justify-content-between align-items-center flex-wrap">
-                <div>
-                    <h1 class="h3 mb-2">
+            <div class="d-flex justify-content-between align-items-start flex-wrap gap-2">
+                <div class="flex-grow-1" style="min-width: 12rem;">
+                    <h1 class="h5 mb-1">
                         <i class="fas fa-trophy text-primary"></i>
                         <?php
                         echo $filtro_torneos === 'por_realizar' ? 'Por realizar' : ($filtro_torneos === 'en_proceso' ? 'En proceso' : ($filtro_torneos === 'realizados' ? 'Realizados' : 'Gestión de Torneos'));
                         ?>
                     </h1>
-                    <p class="text-muted mb-0">Selecciona un torneo para administrar rondas, mesas, resultados y posiciones.</p>
+                    <p class="text-muted small mb-0">Rondas, mesas, resultados y posiciones.</p>
                 </div>
-                <div class="mt-2 mt-md-0 d-flex flex-wrap gap-2 align-items-center">
-                    <a href="index.php?page=torneo_gestion&action=index" class="btn btn-outline-primary">
-                        <i class="fas fa-eye me-1"></i>Ver y Editar Torneos
+                <div class="d-flex flex-wrap gap-1 align-items-center justify-content-end">
+                    <a href="index.php?page=torneo_gestion&action=index" class="btn btn-sm btn-outline-primary">
+                        <i class="fas fa-eye me-1"></i>Ver / editar
                     </a>
-                    <a href="index.php?page=tournaments&action=new" class="btn btn-success">
-                        <i class="fas fa-plus-circle me-1"></i>Crear Nuevo Torneo
+                    <a href="index.php?page=tournaments&action=new" class="btn btn-sm btn-success">
+                        <i class="fas fa-plus-circle me-1"></i>Nuevo torneo
                     </a>
-                    <a href="index.php?page=estadisticas_torneos" class="btn btn-outline-info">
-                        <i class="fas fa-chart-line me-1"></i>Estadísticas Torneos
+                    <a href="index.php?page=estadisticas_torneos" class="btn btn-sm btn-outline-info">
+                        <i class="fas fa-chart-line me-1"></i>Estadísticas
                     </a>
                     <?php if (!empty($is_admin_general)): ?>
-                    <a href="index.php?page=notificaciones_masivas" class="btn btn-outline-warning">
-                        <i class="fas fa-bell me-1"></i>Notificaciones
+                    <a href="index.php?page=notificaciones_masivas" class="btn btn-sm btn-outline-warning">
+                        <i class="fas fa-bell me-1"></i>Notif.
                     </a>
                     <?php endif; ?>
                 </div>

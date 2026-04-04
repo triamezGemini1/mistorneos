@@ -18,7 +18,7 @@ $is_admin_general = $is_admin_general ?? false;
 
 <div class="ds-torneo-gestion-13">
 <!-- Filtros rápidos (pestañas) -->
-<div class="mb-3">
+<div class="mb-2">
     <div class="btn-group btn-group-sm flex-wrap" role="group">
         <a href="<?php echo $base_url . ($use_standalone ? '?' : '&'); ?>action=index&filtro=por_realizar" class="btn btn-outline-info <?= $filtro_torneos === 'por_realizar' ? 'active' : '' ?>">
             <i class="fas fa-clock me-1"></i> Por realizar
@@ -35,27 +35,27 @@ $is_admin_general = $is_admin_general ?? false;
     </div>
 </div>
 
-<!-- Header con Botón de Crear Torneo -->
-<div class="d-flex justify-content-between align-items-center mb-4">
-    <div>
-        <h2 class="h4 mb-1">
+<!-- Header compacto (~13") -->
+<div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mb-2">
+    <div class="flex-grow-1" style="min-width: 12rem;">
+        <h2 class="h5 mb-1">
             <i class="fas <?= $actual['icono'] ?? 'fa-trophy' ?> text-primary me-2"></i><?php echo htmlspecialchars($actual['titulo']); ?>
         </h2>
-        <p class="text-muted mb-0"><?php echo htmlspecialchars($actual['texto']); ?></p>
+        <p class="text-muted small mb-0"><?php echo htmlspecialchars($actual['texto']); ?></p>
     </div>
-    <div class="d-flex flex-wrap gap-2">
-        <a href="index.php?page=torneo_gestion&action=index" class="btn btn-outline-primary btn-lg shadow-sm">
-            <i class="fas fa-list me-2"></i>Ver y Editar Torneos
+    <div class="d-flex flex-wrap gap-1 justify-content-end">
+        <a href="index.php?page=torneo_gestion&action=index" class="btn btn-sm btn-outline-primary shadow-sm">
+            <i class="fas fa-list me-1"></i>Ver / editar
         </a>
-        <a href="index.php?page=tournaments&action=new" class="btn btn-success btn-lg shadow-sm">
-            <i class="fas fa-plus-circle me-2"></i>Crear Nuevo Torneo
+        <a href="index.php?page=tournaments&action=new" class="btn btn-sm btn-success shadow-sm">
+            <i class="fas fa-plus-circle me-1"></i>Nuevo torneo
         </a>
-        <a href="index.php?page=estadisticas_torneos" class="btn btn-outline-info btn-lg shadow-sm">
-            <i class="fas fa-chart-line me-2"></i>Estadísticas Torneos
+        <a href="index.php?page=estadisticas_torneos" class="btn btn-sm btn-outline-info shadow-sm">
+            <i class="fas fa-chart-line me-1"></i>Estadísticas
         </a>
         <?php if ($is_admin_general): ?>
-        <a href="index.php?page=notificaciones_masivas" class="btn btn-outline-warning btn-lg shadow-sm">
-            <i class="fas fa-bell me-2"></i>Notificaciones
+        <a href="index.php?page=notificaciones_masivas" class="btn btn-sm btn-outline-warning shadow-sm">
+            <i class="fas fa-bell me-1"></i>Notif.
         </a>
         <?php endif; ?>
     </div>
