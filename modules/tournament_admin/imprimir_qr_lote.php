@@ -1,8 +1,12 @@
 <?php
 /**
  * Vista de impresión: tarjetas de identificación en cuadrícula (tamaño tarjeta de crédito).
- * Papel CARTA. Tarjeta 8cm × 5cm. 2 columnas × 5 filas (10 por hoja). Incluye QR personal para ingresar por id/cédula.
+ * Papel CARTA. Tarjeta 8cm × 5cm. 2 columnas × 5 filas (10 por hoja).
+ * QR: acceso a la vista móvil de consultas (mesa, resumen, clasificación) vía torneo_qr_jugador.php (token firmado).
  */
+
+require_once __DIR__ . '/../../lib/app_helpers.php';
+require_once __DIR__ . '/../../lib/TorneoJugadorQrToken.php';
 
 $pdo = DB::pdo();
 $torneo_nombre = isset($torneo['nombre']) ? $torneo['nombre'] : 'Torneo';
@@ -34,6 +38,7 @@ $script = $_SERVER['SCRIPT_NAME'] ?? 'index.php';
 $base_url = ((!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http') . '://' . ($_SERVER['HTTP_HOST'] ?? '') . dirname($script);
 $base_public = rtrim($base_url, '/');
 $url_panel = $base_public . '/' . basename($script) . '?page=torneo_gestion&action=panel&torneo_id=' . (int)$torneo_id;
+$public_consultas_base = rtrim(AppHelpers::getPublicUrl(), '/');
 ?>
 <style>
 * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -183,8 +188,13 @@ $url_panel = $base_public . '/' . basename($script) . '?page=torneo_gestion&acti
                                     $foto_src = $base_public . '/view_image.php?path=' . rawurlencode('upload/' . ltrim($photo_path, '/'));
                                 }
                             }
-                            $url_entrar = $base_public . '/entrar_credencial.php?id=' . $id_jugador;
-                            $qr_src = 'https://api.qrserver.com/v1/create-qr-code/?size=80x80&margin=1&data=' . rawurlencode($url_entrar);
+                            try {
+                                $qr_token = TorneoJugadorQrToken::encode((int) $torneo_id, $id_jugador);
+                                $url_consultas = $public_consultas_base . '/torneo_qr_jugador.php?t=' . rawurlencode($qr_token);
+                            } catch (Throwable $e) {
+                                $url_consultas = $public_consultas_base . '/info_torneo_mesas.php?torneo_id=' . (int) $torneo_id;
+                            }
+                            $qr_src = 'https://api.qrserver.com/v1/create-qr-code/?size=80x80&margin=1&data=' . rawurlencode($url_consultas);
                         ?>
                         <div class="tarjeta-id">
                             <div class="tarjeta-foto">
@@ -199,7 +209,7 @@ $url_panel = $base_public . '/' . basename($script) . '?page=torneo_gestion&acti
                             <div class="tarjeta-id-jugador">#<?= $id_jugador ?></div>
                             <div class="tarjeta-qr-wrap">
                                 <img src="<?= htmlspecialchars($qr_src) ?>" alt="QR" />
-                                <div class="qr-label">Escanear para ingresar</div>
+                                <div class="qr-label">Consulta mesa y resultados</div>
                             </div>
                         </div>
                         <?php endforeach; ?>
