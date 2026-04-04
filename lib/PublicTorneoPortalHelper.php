@@ -35,6 +35,24 @@ final class PublicTorneoPortalHelper
         return $row ?: null;
     }
 
+    /**
+     * Torneo activo para QR de jugador (lectura): incluye torneos finalizados (locked) mientras estén publicados.
+     */
+    public static function getTorneoParaQrJugador(\PDO $pdo, int $torneoId): ?array
+    {
+        $st = $pdo->prepare('SELECT id, nombre, modalidad, rondas, estatus, locked, fechator, lugar FROM tournaments WHERE id = ?');
+        $st->execute([$torneoId]);
+        $row = $st->fetch(\PDO::FETCH_ASSOC);
+        if (!$row) {
+            return null;
+        }
+        if ((int) ($row['estatus'] ?? 0) !== 1) {
+            return null;
+        }
+
+        return $row;
+    }
+
     public static function sessionGetUserId(int $torneoId): ?int
     {
         $bag = $_SESSION[self::SESSION_KEY] ?? null;

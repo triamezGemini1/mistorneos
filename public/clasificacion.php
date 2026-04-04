@@ -11,6 +11,7 @@ require_once __DIR__ . '/../config/db_config.php';
 require_once __DIR__ . '/../lib/app_helpers.php';
 
 $torneo_id = isset($_GET['torneo_id']) ? (int)$_GET['torneo_id'] : 0;
+$highlight_user = isset($_GET['highlight_user']) ? (int)$_GET['highlight_user'] : 0;
 if ($torneo_id <= 0) {
     header('Location: ' . (rtrim(AppHelpers::getPublicUrl(), '/') . '/landing-spa.php'));
     exit;
@@ -113,6 +114,7 @@ $torneo_nombre = $torneo['nombre'] ?? 'Torneo';
         .pos-3 { color: #d97706; }
         .num { text-align: right; white-space: nowrap; }
         .nombre { max-width: 120px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        tr.row-highlight { background: rgba(248, 113, 113, 0.18) !important; outline: 2px solid #f87171; }
         .nombre-link { color: #f1f5f9; text-decoration: none; }
         .nombre-link:hover { color: #38bdf8; text-decoration: underline; }
         .empty { text-align: center; padding: 2rem; color: #64748b; }
@@ -153,8 +155,10 @@ $torneo_nombre = $torneo['nombre'] ?? 'Torneo';
                         foreach ($clasificacion as $row):
                             $pos++;
                             $posClass = $pos <= 3 ? 'pos-' . $pos : '';
+                            $uidRow = (int)($row['id_usuario'] ?? 0);
+                            $hi = ($highlight_user > 0 && $uidRow === $highlight_user);
                         ?>
-                        <tr>
+                        <tr<?= $hi ? ' class="row-highlight" id="jugador-highlight"' : '' ?>>
                             <td class="pos <?= $posClass ?>"><?= $pos ?></td>
                             <td class="nombre"><a href="resumen_jugador.php?torneo_id=<?= (int)$torneo_id ?>&id_usuario=<?= (int)($row['id_usuario'] ?? 0) ?>" class="nombre-link" title="<?= htmlspecialchars($row['nombre_jugador'] ?? '') ?>"><?= htmlspecialchars($row['nombre_jugador'] ?? '—') ?></a></td>
                             <td class="num"><?= (int)($row['ganados'] ?? 0) ?></td>
@@ -168,5 +172,13 @@ $torneo_nombre = $torneo['nombre'] ?? 'Torneo';
             <?php endif; ?>
         </div>
     </div>
+<?php if ($highlight_user > 0): ?>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    var el = document.getElementById('jugador-highlight');
+    if (el) el.scrollIntoView({ block: 'center', behavior: 'smooth' });
+});
+</script>
+<?php endif; ?>
 </body>
 </html>

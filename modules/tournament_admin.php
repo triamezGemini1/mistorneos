@@ -29,6 +29,46 @@ if (!Auth::canAccessTournament($torneo_id)) {
     exit;
 }
 
+// API JSON: enlace QR corto para jugador (POST + CSRF; solo staff del torneo)
+$early_api_action = $_GET['action'] ?? '';
+if ($early_api_action === 'api_torneo_jugador_qr_token' && ($_SERVER['REQUEST_METHOD'] ?? '') === 'POST') {
+    require_once __DIR__ . '/../config/csrf.php';
+    require_once __DIR__ . '/../lib/TorneoJugadorQrToken.php';
+    require_once __DIR__ . '/../lib/PublicInfoTorneoMesasService.php';
+    require_once __DIR__ . '/../lib/app_helpers.php';
+    header('Content-Type: application/json; charset=utf-8');
+    $posted = (string) ($_POST['csrf_token'] ?? '');
+    if ($posted === '' || !hash_equals((string) ($_SESSION['csrf_token'] ?? ''), $posted)) {
+        echo json_encode(['ok' => false, 'message' => 'Sesión expirada. Recargue la página.'], JSON_UNESCAPED_UNICODE);
+        exit;
+    }
+    $tidPost = (int) ($_POST['torneo_id'] ?? 0);
+    if ($tidPost !== $torneo_id || $tidPost <= 0) {
+        echo json_encode(['ok' => false, 'message' => 'Torneo no válido.'], JSON_UNESCAPED_UNICODE);
+        exit;
+    }
+    $uid = (int) ($_POST['id_usuario'] ?? 0);
+    if ($uid <= 0) {
+        echo json_encode(['ok' => false, 'message' => 'Indique el ID de jugador (número).'], JSON_UNESCAPED_UNICODE);
+        exit;
+    }
+    $pdoApi = DB::pdo();
+    if (!PublicInfoTorneoMesasService::estaInscrito($pdoApi, $torneo_id, $uid)) {
+        echo json_encode(['ok' => false, 'message' => 'Ese ID no está inscrito en este torneo.'], JSON_UNESCAPED_UNICODE);
+        exit;
+    }
+    try {
+        $tok = TorneoJugadorQrToken::encode($torneo_id, $uid);
+    } catch (Throwable $e) {
+        echo json_encode(['ok' => false, 'message' => 'No se pudo generar el enlace.'], JSON_UNESCAPED_UNICODE);
+        exit;
+    }
+    $pub = rtrim(AppHelpers::getPublicUrl(), '/');
+    $url = $pub . '/torneo_qr_jugador.php?t=' . rawurlencode($tok);
+    echo json_encode(['ok' => true, 'token' => $tok, 'url' => $url], JSON_UNESCAPED_UNICODE);
+    exit;
+}
+
 // Obtener información del torneo
 $pdo = DB::pdo();
 $stmt = $pdo->prepare("

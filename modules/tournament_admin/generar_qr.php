@@ -9,6 +9,8 @@
  */
 
 $pdo = DB::pdo();
+require_once __DIR__ . '/../../config/csrf.php';
+$csrf_generar_qr = CSRF::token();
 $base_url = app_base_url();
 $script = $_SERVER['SCRIPT_NAME'] ?? 'index.php';
 $base_url = ((!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http') . '://' . ($_SERVER['HTTP_HOST'] ?? '') . dirname($script);
@@ -76,7 +78,7 @@ function generarQRUrl($data, $size = 300) {
                              alt="QR consulta de mesa por ID de jugador" 
                              class="img-fluid mb-3 border rounded p-2 bg-white">
                         <p class="small text-muted mb-2">
-                            <strong>Recomendado.</strong> Tras escanear, el jugador ingresa su <strong>ID de jugador</strong> y la <strong>ronda</strong>. Se abre un <strong>portal</strong> con mesa (resaltada), resumen de participación, listado general, posiciones por equipos (si aplica) y enlace a clasificación. Puede <strong>actualizar</strong> sin volver a escribir el ID mientras el torneo esté en curso.
+                            <strong>Recomendado (genérico).</strong> Tras escanear, el jugador ingresa su <strong>ID de jugador</strong> y la <strong>ronda</strong>. Para un enlace <strong>corto por jugador</strong> use el generador personal abajo (código firmado, sin cédula).
                         </p>
                         <div class="d-grid gap-2">
                             <a href="<?= htmlspecialchars($urls['info_torneo_mesas']) ?>" 
@@ -203,30 +205,26 @@ function generarQRUrl($data, $size = 300) {
             </div>
         </div>
         
-        <!-- QR Personalizado por Cédula -->
-        <div class="card mt-4">
+        <!-- QR personal: token corto (ID jugador) → página móvil mesa + resumen + clasificación -->
+        <div class="card mt-4" id="qr-personal-jugador">
             <div class="card-header bg-success text-white">
                 <h6 class="mb-0">
-                    <i class="fas fa-user me-2"></i>Generar QR Personalizado por Cédula
+                    <i class="fas fa-user me-2"></i>QR personal por ID de jugador (enlace corto)
                 </h6>
             </div>
             <div class="card-body">
                 <p class="text-muted mb-3">
-                    Ingrese la cédula de un atleta para generar un código QR personalizado que incluye acceso a sus mesas y resumen.
+                    El jugador escanea y entra directo a su <strong>mesa</strong> (nombre resaltado), con botones de <strong>resumen</strong>, <strong>clasificación</strong> (individual o equipos) y <strong>actualizar</strong> sin salir. El código del enlace es corto (no usa cédula). Configure <code>APP_KEY</code> en producción para que los enlaces no puedan falsificarse.
                 </p>
                 <form id="formQRPersonalizado" class="row g-3">
+                    <input type="hidden" name="csrf_token" id="csrf_qr_personal" value="<?= htmlspecialchars($csrf_generar_qr, ENT_QUOTES, 'UTF-8') ?>">
                     <div class="col-md-8">
-                        <label for="cedula_qr" class="form-label">Cédula del Atleta</label>
-                        <input type="text" 
-                               class="form-control" 
-                               id="cedula_qr" 
-                               name="cedula" 
-                               placeholder="Ej: V12345678"
-                               required>
-                        <small class="text-muted">Ingrese la cédula sin guiones ni espacios</small>
+                        <label for="id_usuario_qr" class="form-label">ID de jugador (usuarios / inscritos)</label>
+                        <input type="number" min="1" step="1" class="form-control" id="id_usuario_qr" name="id_usuario" placeholder="Ej: 1234" required>
+                        <small class="text-muted">Debe estar inscrito en este torneo</small>
                     </div>
                     <div class="col-md-4 d-flex align-items-end">
-                        <button type="submit" class="btn btn-success w-100">
+                        <button type="submit" class="btn btn-success w-100" id="btnGenQrPersonal">
                             <i class="fas fa-qrcode me-2"></i>Generar QR
                         </button>
                     </div>
@@ -237,46 +235,20 @@ function generarQRUrl($data, $size = 300) {
                         <div class="col-md-6">
                             <div class="card">
                                 <div class="card-header bg-success text-white text-center">
-                                    <h6 class="mb-0">QR Personalizado</h6>
+                                    <h6 class="mb-0">QR personal</h6>
                                 </div>
                                 <div class="card-body text-center">
-                                    <img id="qrPersonalizadoImg" 
-                                         src="" 
-                                         alt="QR Personalizado" 
-                                         class="img-fluid mb-3 border rounded p-2 bg-white">
+                                    <img id="qrPersonalizadoImg" src="" alt="QR" class="img-fluid mb-3 border rounded p-2 bg-white">
+                                    <p class="small text-break text-muted" id="qrPersonalUrlText"></p>
                                     <div class="d-grid gap-2">
-                                        <button type="button" 
-                                                class="btn btn-sm btn-success"
-                                                onclick="descargarQRPersonalizado()">
+                                        <button type="button" class="btn btn-sm btn-success" onclick="descargarQRPersonalizado()">
                                             <i class="fas fa-download me-1"></i>Descargar QR
                                         </button>
-                                        <button type="button" 
-                                                class="btn btn-sm btn-outline-secondary"
-                                                onclick="copiarEnlacePersonalizado()">
-                                            <i class="fas fa-copy me-1"></i>Copiar Enlace
+                                        <button type="button" class="btn btn-sm btn-outline-secondary" onclick="copiarEnlacePersonalizado()">
+                                            <i class="fas fa-copy me-1"></i>Copiar enlace
                                         </button>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="col-md-6">
-                            <div class="card">
-                                <div class="card-header bg-info text-white">
-                                    <h6 class="mb-0">Enlaces Disponibles</h6>
-                                </div>
-                                <div class="card-body">
-                                    <div class="d-grid gap-2">
-                                        <a id="linkGeneral" href="" class="btn btn-sm btn-outline-primary">
-                                            <i class="fas fa-list me-1"></i>Listado General
-                                        </a>
-                                        <a id="linkMesas" href="" class="btn btn-sm btn-outline-info">
-                                            <i class="fas fa-table me-1"></i>Mis Mesas
-                                        </a>
-                                        <a id="linkResumen" href="" class="btn btn-sm btn-outline-success">
-                                            <i class="fas fa-chart-line me-1"></i>Mi Resumen
-                                        </a>
-                                        <a id="linkIncidencias" href="" class="btn btn-sm btn-outline-warning">
-                                            <i class="fas fa-info-circle me-1"></i>Incidencias
+                                        <a id="linkVistaJugador" href="" class="btn btn-sm btn-outline-primary" target="_blank" rel="noopener">
+                                            <i class="fas fa-mobile-alt me-1"></i>Abrir vista móvil
                                         </a>
                                     </div>
                                 </div>
@@ -310,7 +282,7 @@ function generarQRUrl($data, $size = 300) {
                 <li>Descargue o imprima los códigos QR que necesite</li>
                 <li>Coloque los códigos QR en lugares visibles durante el evento</li>
                 <li>Los atletas pueden escanear el código con su teléfono para acceder a la información</li>
-                <li>Para acceso personalizado, genere un QR específico con la cédula del atleta</li>
+                <li>Para acceso personalizado, genere un QR con el <strong>ID de jugador</strong> (enlace corto firmado)</li>
             </ol>
         </div>
     </div>
@@ -318,7 +290,7 @@ function generarQRUrl($data, $size = 300) {
 
 <script>
 let qrPersonalizadoUrl = '';
-let qrPersonalizadoEnlaces = {};
+let qrPersonalizadoLink = '';
 
 function descargarQR(qrUrl, filename) {
     const link = document.createElement('a');
@@ -371,59 +343,54 @@ function mostrarNotificacion(mensaje, tipo) {
     setTimeout(() => alert.remove(), 3000);
 }
 
-// Formulario QR Personalizado
+// Formulario QR personal (ID jugador → token en servidor)
 document.getElementById('formQRPersonalizado').addEventListener('submit', function(e) {
     e.preventDefault();
-    const cedula = document.getElementById('cedula_qr').value.trim();
-    
-    if (!cedula) {
-        mostrarNotificacion('Por favor ingrese una cédula', 'warning');
+    const uid = parseInt(document.getElementById('id_usuario_qr').value, 10);
+    if (!uid || uid < 1) {
+        mostrarNotificacion('Indique un ID de jugador válido', 'warning');
         return;
     }
-    
-    const baseUrl = '<?= htmlspecialchars($base_url) ?>';
-    const torneoId = <?= $torneo_id ?>;
-    
-    // Generar URLs
-    const urlGeneral = `${baseUrl}/public/torneo_info.php?torneo_id=${torneoId}&seccion=general&cedula=${encodeURIComponent(cedula)}`;
-    const urlMesas = `${baseUrl}/public/torneo_info.php?torneo_id=${torneoId}&seccion=mesas&cedula=${encodeURIComponent(cedula)}`;
-    const urlResumen = `${baseUrl}/public/torneo_info.php?torneo_id=${torneoId}&seccion=resumen&cedula=${encodeURIComponent(cedula)}`;
-    const urlIncidencias = `${baseUrl}/public/torneo_info.php?torneo_id=${torneoId}&seccion=incidencias&cedula=${encodeURIComponent(cedula)}`;
-    
-    // Guardar URLs
-    qrPersonalizadoEnlaces = {
-        general: urlGeneral,
-        mesas: urlMesas,
-        resumen: urlResumen,
-        incidencias: urlIncidencias
-    };
-    
-    // Generar QR con URL general (que incluye todas las opciones)
-    qrPersonalizadoUrl = `https://api.qrserver.com/v1/create-qr-code/?size=500x500&data=${encodeURIComponent(urlGeneral)}&format=png&margin=10&qzone=1`;
-    
-    // Mostrar QR
-    document.getElementById('qrPersonalizadoImg').src = qrPersonalizadoUrl;
-    document.getElementById('linkGeneral').href = urlGeneral;
-    document.getElementById('linkMesas').href = urlMesas;
-    document.getElementById('linkResumen').href = urlResumen;
-    document.getElementById('linkIncidencias').href = urlIncidencias;
-    
-    document.getElementById('qrPersonalizadoContainer').style.display = 'block';
-    document.getElementById('qrPersonalizadoContainer').scrollIntoView({ behavior: 'smooth' });
-    
-    mostrarNotificacion('QR personalizado generado exitosamente', 'success');
+    const torneoId = <?= (int) $torneo_id ?>;
+    const csrf = document.getElementById('csrf_qr_personal').value;
+    const fd = new FormData();
+    fd.append('csrf_token', csrf);
+    fd.append('torneo_id', String(torneoId));
+    fd.append('id_usuario', String(uid));
+    const apiUrl = 'index.php?page=tournament_admin&torneo_id=' + torneoId + '&action=api_torneo_jugador_qr_token';
+    const btn = document.getElementById('btnGenQrPersonal');
+    btn.disabled = true;
+    fetch(apiUrl, { method: 'POST', body: fd, credentials: 'same-origin' })
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+            if (!data || !data.ok || !data.url) {
+                mostrarNotificacion((data && data.message) ? data.message : 'No se pudo generar el enlace', 'danger');
+                return;
+            }
+            qrPersonalizadoLink = data.url;
+            qrPersonalizadoUrl = 'https://api.qrserver.com/v1/create-qr-code/?size=500x500&data=' + encodeURIComponent(data.url) + '&format=png&margin=10&qzone=1';
+            document.getElementById('qrPersonalizadoImg').src = qrPersonalizadoUrl;
+            document.getElementById('linkVistaJugador').href = data.url;
+            var elTxt = document.getElementById('qrPersonalUrlText');
+            if (elTxt) elTxt.textContent = data.url;
+            document.getElementById('qrPersonalizadoContainer').style.display = 'block';
+            document.getElementById('qrPersonalizadoContainer').scrollIntoView({ behavior: 'smooth' });
+            mostrarNotificacion('QR generado', 'success');
+        })
+        .catch(function() { mostrarNotificacion('Error de red al generar el QR', 'danger'); })
+        .finally(function() { btn.disabled = false; });
 });
 
 function descargarQRPersonalizado() {
     if (qrPersonalizadoUrl) {
-        const cedula = document.getElementById('cedula_qr').value.trim();
-        descargarQR(qrPersonalizadoUrl, `qr_personalizado_${cedula}_torneo_<?= $torneo_id ?>.png`);
+        const uid = document.getElementById('id_usuario_qr').value.trim();
+        descargarQR(qrPersonalizadoUrl, `qr_jugador_${uid}_torneo_<?= $torneo_id ?>.png`);
     }
 }
 
 function copiarEnlacePersonalizado() {
-    if (qrPersonalizadoEnlaces.general) {
-        copiarEnlace(qrPersonalizadoEnlaces.general);
+    if (qrPersonalizadoLink) {
+        copiarEnlace(qrPersonalizadoLink);
     }
 }
 </script>
