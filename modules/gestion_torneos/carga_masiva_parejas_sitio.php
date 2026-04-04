@@ -171,6 +171,8 @@ $cache_cleanup = $cache_cleanup ?? ['ok' => true, 'message' => '', 'archivos_eli
                         <dd><strong>.xlsx</strong>, <strong>.csv</strong> o <strong>.txt</strong> (tabuladores). Texto normalizado a UTF-8 (NFC) como en la carga de equipos.</dd>
                         <dt>Reglas</dt>
                         <dd>Sin cédulas duplicadas en el archivo. Cada pareja: 2 jugadores válidos (nombre, nacionalidad B/V/E/J/P, ficha mín. 4 dígitos).</dd>
+                        <dt>Código de pareja</dt>
+                        <dd>Se asigna automáticamente como <strong>id del club</strong> (del desplegable, 3 dígitos) + <strong>número de pareja</strong> en el torneo (001, 002…), por ejemplo <code>001-001</code>. Los jugadores <strong>nuevos</strong> quedan con <code>numfvd = 0</code> hasta que se sincronicen con la federación si aplica.</dd>
                     </dl>
                     <a class="btn btn-primary btn-sm mt-3" href="<?= htmlspecialchars($href_plantilla) ?>"><i class="fas fa-download"></i> Descargar plantilla CSV</a>
                 </div>

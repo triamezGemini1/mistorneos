@@ -15,7 +15,7 @@ final class CargaMasivaParejasSitioService
     public static function contenidoPlantillaCsv(): string
     {
         $bom = "\xEF\xBB\xBF";
-        $r0 = 'Torneo parejas — fila 1 título (opcional); fila 2 encabezados; luego parejas (2 filas por pareja). Cabecera alternativa: Nombre equipo; n1; nacionalidad; cedula; telefono; equipo (código numérico); club; organizacion (opc.).';
+        $r0 = 'Torneo parejas — fila 1 título (opcional); fila 2 encabezados; luego parejas (2 filas por pareja). El código de pareja en el sistema será id_club (formulario) + consecutivo, formato 001-001. Columna «equipo» numérica (si existe) no altera ese código.';
         $r1 = 'Número;Nombre del equipo;Nombre y Apellido;nacionalidad;Ficha;Número de telefono';
         $r2 = '1;Pinky y Cerebro;Patricia Guerrera;B;10075198;4125587832';
         $r3 = ';;Issa Mansur;B;10079935;4128483524';
@@ -86,14 +86,12 @@ final class CargaMasivaParejasSitioService
             $jug2 = self::extraerJugador($r2, $map);
             $clubIdx = $map['club'] ?? null;
             $orgIdx = $map['organizacion'] ?? null;
-            $codIdx = $map['equipo_codigo'] ?? null;
             $bloques[] = [
                 'nombre_equipo' => $nombreEquipo,
                 'linea_inicio' => $baseLine + $idx1,
                 'jugadores' => [$jug1, $jug2],
                 'club_id_excel' => self::celEnteroDesdeColumna($r1, $clubIdx),
                 'organizacion_excel' => self::celEnteroDesdeColumna($r1, $orgIdx),
-                'codigo_prefijo_excel' => self::soloDigitosPrefijo($r1, $codIdx),
             ];
         }
         return ['bloques' => $bloques];
@@ -106,14 +104,6 @@ final class CargaMasivaParejasSitioService
         }
         $d = preg_replace('/\D/', '', self::cel($row, $idx));
         return $d !== '' ? (int) $d : 0;
-    }
-
-    private static function soloDigitosPrefijo(array $row, ?int $idx): string
-    {
-        if ($idx === null) {
-            return '';
-        }
-        return preg_replace('/\D/', '', self::cel($row, $idx));
     }
 
     /**
@@ -446,16 +436,14 @@ final class CargaMasivaParejasSitioService
                     $jugadoresPayload[] = ['cedula' => $ced, 'nombre' => $nombreN, 'id_usuario' => 0, 'id_inscrito' => 0];
                 }
 
-                $prefPlantilla = trim((string) ($bloque['codigo_prefijo_excel'] ?? ''));
-                if ($prefPlantilla === '') {
-                    $prefPlantilla = (string) $club_id;
-                }
+                // codigo_equipo = id del club (3 dígitos) + número de pareja en el torneo (consecutivo por club), p. ej. 001-001.
+                // No se usa la columna «equipo» del Excel como prefijo: siempre el club elegido en el formulario.
                 $input = [
                     'torneo_id' => $torneo_id,
                     'equipo_id' => 0,
                     'nombre_equipo' => $nombreEquipo,
                     'club_id' => $club_id,
-                    'codigo_club_prefijo' => $prefPlantilla,
+                    'codigo_club_prefijo' => (string) $club_id,
                     'jugadores' => $jugadoresPayload,
                 ];
                 try {
@@ -931,14 +919,14 @@ final class CargaMasivaParejasSitioService
         $email = 'parejas_' . preg_replace('/\W/', '', $cedDigits) . '@carga-masiva.local';
         $username = 'cp_' . preg_replace('/\W/', '_', $cedDigits) . '_' . substr(bin2hex(random_bytes(3)), 0, 6);
         $hash = Security::hashPassword(bin2hex(random_bytes(8)));
-        $numfvd = $cedDigits !== '' ? $cedDigits : '0';
+        $numfvdNuevo = 0;
 
         try {
             $stmt = $pdo->prepare(
                 'INSERT INTO usuarios (nombre, cedula, nacionalidad, numfvd, sexo, fechnac, email, username, password_hash, role, club_id, entidad, status)
                  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, \'usuario\', ?, ?, \'approved\')'
             );
-            $stmt->execute([$nombre, $cedDigits, $nacStd, $numfvd, $sexo, $fechnac, $email, $username, $hash, $club_id, $entidad_club]);
+            $stmt->execute([$nombre, $cedDigits, $nacStd, $numfvdNuevo, $sexo, $fechnac, $email, $username, $hash, $club_id, $entidad_club]);
             $newId = (int) $pdo->lastInsertId();
             if ($newId > 0 && $telefono !== '') {
                 try {
@@ -955,7 +943,7 @@ final class CargaMasivaParejasSitioService
                     'INSERT INTO usuarios (nombre, cedula, nacionalidad, numfvd, sexo, fechnac, email, username, password_hash, role, club_id, entidad, status)
                      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, \'usuario\', ?, ?, 0)'
                 );
-                $stmt->execute([$nombre, $cedDigits, $nacStd, $numfvd, $sexo, $fechnac, $email, $username, $hash, $club_id, $entidad_club]);
+                $stmt->execute([$nombre, $cedDigits, $nacStd, $numfvdNuevo, $sexo, $fechnac, $email, $username, $hash, $club_id, $entidad_club]);
                 $newId = (int) $pdo->lastInsertId();
                 if ($newId > 0 && $telefono !== '') {
                     try {
